@@ -1,0 +1,291 @@
+---
+template_id: "api_documentation_v1"
+template_name: "API Documentation Template"
+template_version: "1.0.0"
+template_type: "document"
+template_category: "api"
+created_by: "system_architect_agent"
+created_at: "2025-01-27T10:30:00Z"
+usage_scenarios: ["REST API docs", "GraphQL API docs", "WebSocket API docs", "SDK documentation"]
+required_variables: ["title", "author", "project_id", "api_base_url"]
+optional_variables: ["task_id", "version", "authentication_type", "rate_limits", "globs"]
+output_format: "markdown"
+validation_rules: ["title_required", "author_required", "api_base_url_required"]
+globs: "{{globs | default: 'src/api/**/*,src/routes/**/*,src/controllers/**/*,src/handlers/**/*'}}"
+---
+
+# {{title}} - API Documentation
+
+**API Information:**
+- **Author**: {{author}}
+- **Created**: {{system.timestamp}}
+- **Project**: {{project.name}} ({{project.id}})
+- **Base URL**: `{{api_base_url}}`
+- **Version**: {{document.version | default: "1.0.0"}}
+{{#if task.id}}
+- **Related Task**: [{{task.title}}]({{task.url}}) ({{task.id}})
+{{/if}}
+{{#if globs}}
+- **Applies to**: `{{globs}}`
+{{/if}}
+
+---
+
+## Overview
+
+{{description | default: "This document describes the API endpoints, request/response formats, and usage examples."}}
+
+### Base Information
+- **Base URL**: `{{api_base_url}}`
+- **Protocol**: {{protocol | default: "HTTPS"}}
+- **Content Type**: {{content_type | default: "application/json"}}
+
+{{#if authentication_type}}
+### Authentication
+**Type**: {{authentication_type}}
+{{#if auth_description}}
+{{auth_description}}
+{{/if}}
+
+{{#if auth_examples}}
+**Example:**
+```bash
+{{auth_examples}}
+```
+{{/if}}
+{{/if}}
+
+{{#if rate_limits}}
+### Rate Limits
+{{#each rate_limits}}
+- **{{this.endpoint}}**: {{this.limit}} requests per {{this.window}}
+{{/each}}
+{{/if}}
+
+## Endpoints
+
+{{#each endpoints}}
+### {{this.method}} {{this.path}}
+{{#if this.summary}}
+**Summary**: {{this.summary}}
+{{/if}}
+
+**Description**: {{this.description}}
+
+{{#if this.parameters}}
+#### Parameters
+{{#each this.parameters}}
+- **{{this.name}}** ({{this.type}}) - {{this.description}}
+  {{#if this.required}}- **Required**: Yes{{/if}}
+  {{#if this.default}}- **Default**: `{{this.default}}`{{/if}}
+  {{#if this.example}}- **Example**: `{{this.example}}`{{/if}}
+{{/each}}
+{{/if}}
+
+{{#if this.request_body}}
+#### Request Body
+```json
+{{this.request_body}}
+```
+{{/if}}
+
+#### Response
+
+{{#if this.response_examples}}
+{{#each this.response_examples}}
+**{{this.status}} {{this.description}}**
+```json
+{{this.body}}
+```
+{{/each}}
+{{else}}
+```json
+{
+  "status": "success",
+  "data": {}
+}
+```
+{{/if}}
+
+{{#if this.error_codes}}
+#### Error Codes
+{{#each this.error_codes}}
+- **{{this.code}}**: {{this.message}} - {{this.description}}
+{{/each}}
+{{/if}}
+
+{{#if this.examples}}
+#### Examples
+
+{{#each this.examples}}
+**{{this.title}}**
+```bash
+curl -X {{../method}} "{{../../api_base_url}}{{../path}}" \
+  -H "Content-Type: application/json" \
+  {{#if this.headers}}{{#each this.headers}}-H "{{@key}}: {{this}}" \{{/each}}{{/if}}
+  {{#if this.data}}-d '{{this.data}}'{{/if}}
+```
+
+**Response:**
+```json
+{{this.response}}
+```
+{{/each}}
+{{/if}}
+
+---
+
+{{/each}}
+
+## Data Models
+
+{{#if data_models}}
+{{#each data_models}}
+### {{this.name}}
+{{#if this.description}}
+{{this.description}}
+{{/if}}
+
+```typescript
+{{this.schema}}
+```
+
+{{#if this.validation_rules}}
+**Validation Rules:**
+{{#each this.validation_rules}}
+- {{this}}
+{{/each}}
+{{/if}}
+
+{{#if this.example}}
+**Example:**
+```json
+{{this.example}}
+```
+{{/if}}
+
+{{/each}}
+{{/if}}
+
+## SDK Examples
+
+{{#if sdk_examples}}
+{{#each sdk_examples}}
+### {{this.language}}
+{{#if this.installation}}
+**Installation:**
+```bash
+{{this.installation}}
+```
+{{/if}}
+
+**Usage:**
+```{{this.language}}
+{{this.code}}
+```
+{{/each}}
+{{/if}}
+
+## Error Handling
+
+{{#if error_handling}}
+{{error_handling}}
+{{else}}
+### Standard Error Format
+```json
+{
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human readable error message",
+    "details": {}
+  }
+}
+```
+
+### Common Error Codes
+- **400**: Bad Request - Invalid request parameters
+- **401**: Unauthorized - Authentication required
+- **403**: Forbidden - Insufficient permissions
+- **404**: Not Found - Resource not found
+- **429**: Too Many Requests - Rate limit exceeded
+- **500**: Internal Server Error - Server error
+{{/if}}
+
+## Testing
+
+{{#if testing_info}}
+{{testing_info}}
+{{else}}
+### Postman Collection
+{{#if postman_collection_url}}
+[Download Postman Collection]({{postman_collection_url}})
+{{/if}}
+
+### Test Environment
+- **Base URL**: `{{test_base_url | default: api_base_url}}`
+- **Test Data**: Available in `/tests/fixtures/` directory
+{{/if}}
+
+## Changelog
+
+{{#if changelog}}
+{{#each changelog}}
+### Version {{this.version}} - {{this.date}}
+{{#each this.changes}}
+- {{this}}
+{{/each}}
+{{/each}}
+{{/if}}
+
+## 🔄 API Documentation Maintenance
+
+**⚠️ IMPORTANT: Keep This API Documentation Updated**
+
+This API documentation applies to files matching: `{{globs}}`
+
+**When working on API files, agents MUST:**
+1. **Review this documentation** before modifying API endpoints
+2. **Update endpoint documentation** immediately after API changes
+3. **Test all examples** to ensure they work with current implementation
+4. **Update data models** when request/response formats change
+5. **Validate authentication** examples and requirements
+6. **Update error codes** when new errors are introduced
+
+**API Changes Requiring Documentation Updates:**
+{{#if globs}}
+- Any changes to files matching: `{{globs}}`
+{{/if}}
+- New endpoints or route modifications
+- Request/response format changes
+- Authentication method updates
+- Rate limiting changes
+- Error response modifications
+- Status code changes
+- Parameter additions/removals
+- Header requirement changes
+
+**Critical Areas to Update:**
+- **Endpoints**: URL paths, HTTP methods, parameters
+- **Request/Response Examples**: Keep JSON examples current
+- **Authentication**: Update auth examples and requirements
+- **Error Codes**: Add new errors, update messages
+- **Rate Limits**: Update limits and policies
+- **Data Models**: Schema changes and validation rules
+
+**Testing Requirements:**
+- Verify all curl examples work
+- Test authentication examples
+- Validate response formats
+- Check error scenarios
+
+**How to Update:**
+1. Use `api_documentation_v1` template with current API state
+2. Test all endpoints before documenting
+3. Update version number in changelog
+4. Notify frontend/client developers of breaking changes
+5. Update related SDK documentation if applicable
+
+---
+*Generated by: {{agent.name}} on {{system.timestamp}}*
+*Project: {{project.name}} | Branch: {{system.git_branch}}*
+*API Files: {{globs}}* 

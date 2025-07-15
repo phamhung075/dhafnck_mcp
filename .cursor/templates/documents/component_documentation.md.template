@@ -1,0 +1,342 @@
+---
+template_id: "component_documentation_v1"
+template_name: "Component Documentation Template"
+template_version: "1.0.0"
+template_type: "document"
+template_category: "frontend"
+created_by: "system_architect_agent"
+created_at: "2025-01-27T10:30:00Z"
+usage_scenarios: ["React components", "Vue components", "Angular components", "Web components"]
+required_variables: ["title", "author", "project_id", "component_name"]
+optional_variables: ["task_id", "version", "component_type", "props", "globs"]
+output_format: "markdown"
+validation_rules: ["title_required", "author_required", "component_name_required"]
+globs: "{{globs | default: 'src/components/**/*,src/ui/**/*,src/views/**/*,src/pages/**/*'}}"
+---
+
+# {{title}} - Component Documentation
+
+**Component Information:**
+- **Author**: {{author}}
+- **Created**: {{system.timestamp}}
+- **Project**: {{project.name}} ({{project.id}})
+- **Component**: `{{component_name}}`
+- **Type**: {{component_type | default: "React Component"}}
+- **Version**: {{document.version | default: "1.0.0"}}
+{{#if task.id}}
+- **Related Task**: [{{task.title}}]({{task.url}}) ({{task.id}})
+{{/if}}
+{{#if globs}}
+- **Applies to**: `{{globs}}`
+{{/if}}
+
+---
+
+## Overview
+
+{{description | default: "This document describes the component's purpose, usage, and implementation details."}}
+
+### Purpose
+{{#if purpose}}
+{{purpose}}
+{{else}}
+The `{{component_name}}` component is designed to {{component_purpose | default: "provide functionality for the application"}}.
+{{/if}}
+
+### Key Features
+{{#if features}}
+{{#each features}}
+- {{this}}
+{{/each}}
+{{else}}
+- Reusable and configurable
+- Follows design system guidelines
+- Accessible and responsive
+{{/if}}
+
+## Usage
+
+### Basic Usage
+```{{language | default: "tsx"}}
+import { {{component_name}} } from '{{import_path | default: "./components"}}';
+
+function App() {
+  return (
+    <{{component_name}} 
+      {{#if basic_props}}{{#each basic_props}}{{@key}}={{this}} {{/each}}{{/if}}
+    />
+  );
+}
+```
+
+{{#if advanced_usage}}
+### Advanced Usage
+```{{language | default: "tsx"}}
+{{advanced_usage}}
+```
+{{/if}}
+
+## Props / API
+
+{{#if props}}
+{{#each props}}
+### `{{this.name}}`
+- **Type**: `{{this.type}}`
+- **Required**: {{#if this.required}}Yes{{else}}No{{/if}}
+{{#if this.default}}
+- **Default**: `{{this.default}}`
+{{/if}}
+- **Description**: {{this.description}}
+
+{{#if this.example}}
+**Example:**
+```{{../../language | default: "tsx"}}
+<{{../../component_name}} {{this.name}}={{this.example}} />
+```
+{{/if}}
+
+{{/each}}
+{{else}}
+### Props Interface
+```typescript
+interface {{component_name}}Props {
+  // Define props here
+}
+```
+{{/if}}
+
+## Events / Callbacks
+
+{{#if events}}
+{{#each events}}
+### `{{this.name}}`
+- **Type**: `{{this.type}}`
+- **Description**: {{this.description}}
+
+{{#if this.example}}
+**Example:**
+```{{../../language | default: "tsx"}}
+<{{../../component_name}} {{this.name}}={{this.example}} />
+```
+{{/if}}
+
+{{/each}}
+{{/if}}
+
+## Styling
+
+{{#if styling}}
+{{styling}}
+{{else}}
+### CSS Classes
+The component uses the following CSS classes:
+- `.{{component_name | lower}}` - Main container
+- `.{{component_name | lower}}__element` - Sub-elements
+- `.{{component_name | lower}}--modifier` - Modifiers
+
+### CSS Custom Properties
+```css
+.{{component_name | lower}} {
+  --primary-color: #007bff;
+  --secondary-color: #6c757d;
+  --border-radius: 4px;
+}
+```
+{{/if}}
+
+## Accessibility
+
+{{#if accessibility}}
+{{accessibility}}
+{{else}}
+### ARIA Support
+- Proper ARIA labels and roles
+- Keyboard navigation support
+- Screen reader compatibility
+- Focus management
+
+### Keyboard Navigation
+- `Tab` - Navigate between interactive elements
+- `Enter/Space` - Activate buttons and links
+- `Escape` - Close modals or dropdowns
+{{/if}}
+
+## Examples
+
+{{#if examples}}
+{{#each examples}}
+### {{this.title}}
+{{#if this.description}}
+{{this.description}}
+{{/if}}
+
+```{{../language | default: "tsx"}}
+{{this.code}}
+```
+
+{{#if this.result}}
+**Result:**
+{{this.result}}
+{{/if}}
+
+{{/each}}
+{{else}}
+### Default Example
+```{{language | default: "tsx"}}
+<{{component_name}} />
+```
+
+### With Props
+```{{language | default: "tsx"}}
+<{{component_name}} 
+  variant="primary"
+  size="large"
+  onClick={() => console.log('clicked')}
+>
+  Click me
+</{{component_name}}>
+```
+{{/if}}
+
+## Testing
+
+{{#if testing}}
+{{testing}}
+{{else}}
+### Unit Tests
+```{{test_language | default: "typescript"}}
+import { render, screen } from '@testing-library/react';
+import { {{component_name}} } from './{{component_name}}';
+
+test('renders {{component_name}} component', () => {
+  render(<{{component_name}} />);
+  // Add assertions here
+});
+```
+
+### Integration Tests
+```{{test_language | default: "typescript"}}
+// Add integration test examples
+```
+{{/if}}
+
+## Performance
+
+{{#if performance}}
+{{performance}}
+{{else}}
+### Optimization Notes
+- Component is memoized to prevent unnecessary re-renders
+- Heavy computations are memoized with `useMemo`
+- Event handlers are memoized with `useCallback`
+{{/if}}
+
+## Browser Support
+
+{{#if browser_support}}
+{{browser_support}}
+{{else}}
+- Chrome 80+
+- Firefox 75+
+- Safari 13+
+- Edge 80+
+{{/if}}
+
+## Dependencies
+
+{{#if dependencies}}
+### Internal Dependencies
+{{#each dependencies.internal}}
+- `{{this.name}}` - {{this.description}}
+{{/each}}
+
+### External Dependencies
+{{#each dependencies.external}}
+- `{{this.name}}` ({{this.version}}) - {{this.description}}
+{{/each}}
+{{/if}}
+
+## Migration Guide
+
+{{#if migration}}
+{{migration}}
+{{else}}
+### Breaking Changes
+- None in current version
+
+### Deprecations
+- None in current version
+{{/if}}
+
+## Related Components
+
+{{#if related_components}}
+{{#each related_components}}
+- [`{{this.name}}`]({{this.path}}) - {{this.description}}
+{{/each}}
+{{/if}}
+
+## Troubleshooting
+
+{{#if troubleshooting}}
+{{troubleshooting}}
+{{else}}
+### Common Issues
+1. **Component not rendering**: Check that all required props are provided
+2. **Styling issues**: Verify CSS classes are properly imported
+3. **Event handlers not working**: Ensure proper event binding
+{{/if}}
+
+## 🔄 Component Documentation Maintenance
+
+**⚠️ IMPORTANT: Keep This Component Documentation Updated**
+
+This component documentation applies to files matching: `{{globs}}`
+
+**When working on component files, agents MUST:**
+1. **Review this documentation** before modifying component interfaces
+2. **Update props documentation** when component APIs change
+3. **Test all usage examples** to ensure they work with current implementation
+4. **Update styling documentation** when CSS/styling changes
+5. **Validate accessibility** examples and requirements
+6. **Update state management** documentation when logic changes
+
+**Component Changes Requiring Documentation Updates:**
+{{#if globs}}
+- Any changes to files matching: `{{globs}}`
+{{/if}}
+- Props interface modifications (new props, type changes, defaults)
+- Event handler changes or new events
+- Styling updates (CSS classes, theme variables, responsive behavior)
+- State management changes
+- Accessibility improvements
+- Performance optimizations
+- Component composition changes
+- Hook usage modifications
+
+**Critical Areas to Update:**
+- **Props Interface**: Types, required props, default values
+- **Usage Examples**: Code examples and live demos
+- **Styling**: CSS classes, theme integration, responsive behavior
+- **Events**: Event handlers and callback signatures
+- **State Management**: Internal state and external state integration
+- **Accessibility**: ARIA attributes and keyboard navigation
+
+**Testing Requirements:**
+- Verify all code examples compile and run
+- Test component with different prop combinations
+- Validate styling across different themes/breakpoints
+- Check accessibility compliance
+- Test event handlers and callbacks
+
+**How to Update:**
+1. Use `component_documentation_v1` template with current component state
+2. Test component with updated props/features
+3. Update version number and changelog
+4. Notify design system maintainers of breaking changes
+5. Update related Storybook stories if applicable
+
+---
+*Generated by: {{agent.name}} on {{system.timestamp}}*
+*Project: {{project.name}} | Branch: {{system.git_branch}}*
+*Component Files: {{globs}}* 

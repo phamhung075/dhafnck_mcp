@@ -1,0 +1,259 @@
+"""Database Source Manager - Single source of truth for database paths"""
+
+import os
+import sys
+from pathlib import Path
+from typing import Optional
+from enum import Enum
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class DatabaseMode(Enum):
+    """Database execution modes"""
+    TEST = "test"           # pytest execution
+    NORMAL = "normal"       # normal local execution  
+    DOCKER = "docker"       # docker container execution
+    STDIN = "stdin"         # stdin/local project execution
+
+
+class DatabaseSourceManager:
+    """
+    Single source of truth for database path management.
+    
+    Determines which database to use based on execution context:
+    - Test mode (pytest): dhafnck_mcp_test.db
+    - Normal mode: dhafnck_mcp.db  
+    - Docker mode: database in docker
+    - Stdin mode: local database in project
+    """
+    
+    _instance: Optional['DatabaseSourceManager'] = None
+    _current_mode: Optional[DatabaseMode] = None
+    _database_path: Optional[str] = None
+    
+    def __new__(cls) -> 'DatabaseSourceManager':
+        """Singleton pattern to ensure single database source"""
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+    
+    def __init__(self):
+        """Initialize database source manager"""
+        if not hasattr(self, '_initialized'):
+            self._initialized = True
+            self._detect_mode()
+            self._set_database_path()
+    
+    def _detect_mode(self) -> None:
+        """Detect the current execution mode"""
+        # Check for pytest execution
+        if 'pytest' in sys.modules or 'PYTEST_CURRENT_TEST' in os.environ:
+            self._current_mode = DatabaseMode.TEST
+            logger.info("Detected TEST mode (pytest)")
+            return
+            
+        # Check for docker execution
+        if os.path.exists('/.dockerenv') or os.environ.get('DOCKER_CONTAINER'):
+            self._current_mode = DatabaseMode.DOCKER
+            logger.info("Detected DOCKER mode")
+            return
+            
+        # Check for stdin mode (MCP server context)
+        if hasattr(sys.stdin, 'isatty') and not sys.stdin.isatty():
+            self._current_mode = DatabaseMode.STDIN
+            logger.info("Detected STDIN mode (MCP server)")
+            return
+            
+        # Default to normal mode
+        self._current_mode = DatabaseMode.NORMAL
+        logger.info("Detected NORMAL mode")
+    
+    def _find_project_root(self) -> Path:
+        """Find project root by looking for dhafnck_mcp_main directory"""
+        current_path = Path(__file__).resolve()
+        
+        # Walk up the directory tree looking for dhafnck_mcp_main
+        while current_path.parent != current_path:
+            if (current_path / "dhafnck_mcp_main").exists():
+                return current_path
+            current_path = current_path.parent
+        
+        # If not found, use current working directory as fallback
+        cwd = Path.cwd()
+        if (cwd / "dhafnck_mcp_main").exists():
+            return cwd
+            
+        # Last resort - use the directory containing dhafnck_mcp_main
+        current_path = Path(__file__).resolve()
+        while current_path.parent != current_path:
+            if current_path.name == "dhafnck_mcp_main":
+                return current_path.parent
+            current_path = current_path.parent
+        
+        # Docker-aware fallback path - strictly use /app in Docker
+        if os.path.exists('/.dockerenv') or os.environ.get('DOCKER_CONTAINER'):
+            # In Docker container, strictly use /app directory as per Dockerfile
+            return Path("/app")
+        else:
+            # Outside Docker, use current working directory
+            return Path.cwd()
+    
+    def _set_database_path(self) -> None:
+        """Set database path based on detected mode"""
+        # Check for explicit MCP_DB_PATH environment variable first
+        explicit_db_path = os.environ.get('MCP_DB_PATH')
+        if explicit_db_path:
+            self._database_path = explicit_db_path
+            logger.info(f"Database path set from MCP_DB_PATH: {self._database_path}")
+            return
+        
+        # Find project root by looking for dhafnck_mcp_main directory
+        project_root = self._find_project_root()
+        
+        if self._current_mode == DatabaseMode.TEST:
+            # Use test database for pytest
+            self._database_path = str(project_root / "dhafnck_mcp_main" / "database" / "data" / "dhafnck_mcp_test.db")
+            
+        elif self._current_mode == DatabaseMode.DOCKER:
+            # Use docker database path - strictly /data/ directory as per Dockerfile
+            docker_db_path = os.environ.get('DOCKER_DB_PATH', '/data/dhafnck_mcp.db')
+            self._database_path = docker_db_path
+            
+        elif self._current_mode == DatabaseMode.STDIN:
+            # Use local project database for MCP stdin mode
+            self._database_path = str(project_root / "dhafnck_mcp_main" / "database" / "data" / "dhafnck_mcp.db")
+            
+        else:  # NORMAL mode
+            # Use main database for normal execution
+            self._database_path = str(project_root / "dhafnck_mcp_main" / "database" / "data" / "dhafnck_mcp.db")
+        
+        logger.info(f"Database path set to: {self._database_path}")
+    
+    def get_database_path(self) -> str:
+        """
+        Get the current database path.
+        
+        Returns:
+            str: Absolute path to the database file
+            
+        Raises:
+            RuntimeError: If multiple database sources are detected
+        """
+        # Check if MCP_DB_PATH environment variable changed since initialization
+        explicit_db_path = os.environ.get('MCP_DB_PATH')
+        if explicit_db_path and explicit_db_path != self._database_path:
+            logger.info(f"MCP_DB_PATH changed to: {explicit_db_path}, updating database path")
+            self._database_path = explicit_db_path
+        
+        if self._database_path is None:
+            raise RuntimeError("Database path not initialized")
+            
+        # Validate single source rule
+        self._validate_single_source()
+        
+        # Log every access for debugging
+        logger.debug(f"Database path requested: {self._database_path} (mode: {self._current_mode.value})")
+        
+        return self._database_path
+    
+    def get_mode(self) -> DatabaseMode:
+        """Get the current database mode"""
+        return self._current_mode
+    
+    def _validate_single_source(self) -> None:
+        """
+        Validate that only one database source is active.
+        
+        Raises:
+            RuntimeError: If multiple database sources are detected
+        """
+        project_root = self._find_project_root()
+        main_db = project_root / "dhafnck_mcp_main" / "database" / "data" / "dhafnck_mcp.db"
+        test_db = project_root / "dhafnck_mcp_main" / "database" / "data" / "dhafnck_mcp_test.db"
+        
+        # Check if both databases exist and have recent activity
+        main_exists = main_db.exists()
+        test_exists = test_db.exists()
+        
+        if main_exists and test_exists:
+            # Check modification times
+            main_mtime = main_db.stat().st_mtime if main_exists else 0
+            test_mtime = test_db.stat().st_mtime if test_exists else 0
+            
+            # If both were modified recently (within 1 hour), it's an error
+            import time
+            current_time = time.time()
+            recent_threshold = 3600  # 1 hour
+            
+            main_recent = (current_time - main_mtime) < recent_threshold
+            test_recent = (current_time - test_mtime) < recent_threshold
+            
+            if main_recent and test_recent and self._current_mode != DatabaseMode.TEST:
+                logger.error(f"Multiple active databases detected:")
+                logger.error(f"  Main DB: {main_db} (modified {current_time - main_mtime:.0f}s ago)")
+                logger.error(f"  Test DB: {test_db} (modified {current_time - test_mtime:.0f}s ago)")
+                raise RuntimeError(
+                    "ERROR: Multiple database sources detected! "
+                    f"Both main and test databases have recent activity. "
+                    f"Current mode: {self._current_mode.value}. "
+                    f"Expected database: {self._database_path}"
+                )
+    
+    def force_mode(self, mode: DatabaseMode) -> None:
+        """
+        Force a specific database mode (for testing/debugging).
+        
+        Args:
+            mode: The database mode to force
+        """
+        logger.warning(f"Forcing database mode to: {mode.value}")
+        self._current_mode = mode
+        self._set_database_path()
+    
+    def get_info(self) -> dict:
+        """Get current database source information"""
+        return {
+            "mode": self._current_mode.value if self._current_mode else None,
+            "database_path": self._database_path,
+            "is_docker": self._current_mode == DatabaseMode.DOCKER,
+            "is_test": self._current_mode == DatabaseMode.TEST,
+            "is_stdin": self._current_mode == DatabaseMode.STDIN,
+            "is_normal": self._current_mode == DatabaseMode.NORMAL
+        }
+    
+    @classmethod
+    def clear_instance(cls) -> None:
+        """Clear the singleton instance (mainly for testing)"""
+        cls._instance = None
+        cls._current_mode = None
+        cls._database_path = None
+        logger.info("DatabaseSourceManager singleton cleared")
+
+
+# Global instance
+database_source_manager = DatabaseSourceManager()
+
+
+def get_database_path() -> str:
+    """
+    Get the current database path based on execution context.
+    
+    Returns:
+        str: Absolute path to the database file
+        
+    Raises:
+        RuntimeError: If multiple database sources are detected
+    """
+    return database_source_manager.get_database_path()
+
+
+def get_database_mode() -> DatabaseMode:
+    """Get the current database mode"""
+    return database_source_manager.get_mode()
+
+
+def get_database_info() -> dict:
+    """Get current database source information"""
+    return database_source_manager.get_info()

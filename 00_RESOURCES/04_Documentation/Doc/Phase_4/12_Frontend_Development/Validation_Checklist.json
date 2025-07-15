@@ -1,0 +1,12 @@
+{
+  "validationChecklist": [
+    "Development standards and conventions are clearly defined",
+    "Component architecture and design guidelines are specified",
+    "State management strategy is documented",
+    "API integration and data fetching practices are included",
+    "Testing and QA processes are described",
+    "Performance optimization techniques are specified",
+    "Accessibility and internationalization practices are included",
+    "All example tables and checklists are present"
+  ]
+} 
