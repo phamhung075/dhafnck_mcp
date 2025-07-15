@@ -1,12 +1,13 @@
-import { Check, Eye, Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, Eye, Pencil, Play, Plus, Trash2, Users } from "lucide-react";
 import { useEffect, useState } from "react";
-import { deleteSubtask, listSubtasks, createSubtask as newSubtask, updateSubtask as saveSubtask, Subtask } from "../api";
+import { deleteSubtask, listSubtasks, createSubtask as newSubtask, updateSubtask as saveSubtask, Subtask, listAgents, getAvailableAgents, callAgent } from "../api";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Separator } from "./ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { Checkbox } from "./ui/checkbox";
 
 interface SubtaskListProps {
   projectId: string;
@@ -42,6 +43,13 @@ export function SubtaskList({ projectId, taskTreeId, parentTaskId }: SubtaskList
   const [showDetails, setShowDetails] = useState<Subtask | null>(null);
   const [form, setForm] = useState<Partial<Subtask>>({ title: "", description: "", priority: "medium", status: "todo" });
   const [saving, setSaving] = useState(false);
+  const [agents, setAgents] = useState<any[]>([]);
+  const [availableAgents, setAvailableAgents] = useState<string[]>([]);
+  const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
+  const [assigningSubtask, setAssigningSubtask] = useState<Subtask | null>(null);
+  const [callingAgent, setCallingAgent] = useState(false);
+  const [agentResponses, setAgentResponses] = useState<Record<string, any>>({});
 
   const fetchSubtasks = () => {
     setLoading(true);
@@ -54,6 +62,18 @@ export function SubtaskList({ projectId, taskTreeId, parentTaskId }: SubtaskList
   useEffect(() => {
     fetchSubtasks();
   }, [projectId, taskTreeId, parentTaskId]);
+
+  useEffect(() => {
+    // Fetch registered agents from project
+    listAgents(projectId)
+      .then(setAgents)
+      .catch((e) => console.error('Error fetching agents:', e));
+    
+    // Fetch available agents from agent library
+    getAvailableAgents()
+      .then(setAvailableAgents)
+      .catch((e) => console.error('Error fetching available agents:', e));
+  }, [projectId]);
 
   const handleCreate = async () => {
     setSaving(true);
@@ -93,17 +113,53 @@ export function SubtaskList({ projectId, taskTreeId, parentTaskId }: SubtaskList
     }
   };
 
+  const openAssignDialog = (subtask: Subtask) => {
+    setAssigningSubtask(subtask);
+    setSelectedAgents(subtask.assignees || []);
+    setShowAssignDialog(true);
+  };
+
+  const handleAssignAgents = async () => {
+    if (!assigningSubtask) return;
+    
+    setSaving(true);
+    console.log('Assigning agents to subtask:', assigningSubtask.id, 'Agents:', selectedAgents);
+    
+    try {
+      const result = await saveSubtask(parentTaskId, assigningSubtask.id, { assignees: selectedAgents });
+      console.log('Assignment result:', result);
+      setShowAssignDialog(false);
+      setAssigningSubtask(null);
+      setSelectedAgents([]);
+      setAgentResponses({});
+      await fetchSubtasks();
+    } catch (e) {
+      console.error('Error assigning agents:', e);
+      alert(`Failed to assign agents: ${e instanceof Error ? e.message : 'Unknown error'}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleAgentSelection = (agentId: string) => {
+    setSelectedAgents(prev => 
+      prev.includes(agentId) 
+        ? prev.filter(id => id !== agentId)
+        : [...prev, agentId]
+    );
+  };
+
   if (loading) return <div className="text-xs text-muted-foreground px-2 py-1">Loading subtasks...</div>;
   if (error) return <div className="text-xs text-destructive px-2 py-1">Error: {error}</div>;
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto bg-gray-100 rounded-lg p-4 border border-gray-200">
       <div className="flex justify-end mb-2 gap-2">
         <Button size="sm" variant="default" className="flex items-center gap-1" onClick={() => { setShowCreate(true); setForm({ title: "", description: "", priority: "medium", status: "pending" }); }}>
           <Plus className="w-4 h-4" /> New Subtask
         </Button>
       </div>
-      <Table>
+      <Table className="bg-white rounded-lg shadow-md border border-gray-300">
         <TableHeader>
           <TableRow>
             <TableHead>Title</TableHead>
@@ -148,6 +204,9 @@ export function SubtaskList({ projectId, taskTreeId, parentTaskId }: SubtaskList
                     <Button size="icon" variant="ghost" className="hover:bg-primary/10" onClick={() => setShowDetails(subtask)} title="View details">
                       <Eye className="w-4 h-4 text-muted-foreground" />
                     </Button>
+                    <Button size="icon" variant="ghost" className="hover:bg-primary/10" onClick={() => openAssignDialog(subtask)} title="Assign agents">
+                      <Users className="w-4 h-4 text-muted-foreground" />
+                    </Button>
                     <Button size="icon" variant="ghost" className="hover:bg-primary/10" onClick={() => handleEdit(subtask)} title="Edit subtask">
                       <Pencil className="w-4 h-4 text-muted-foreground" />
                     </Button>
@@ -163,7 +222,7 @@ export function SubtaskList({ projectId, taskTreeId, parentTaskId }: SubtaskList
       </Table>
       {/* Create Subtask Dialog */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>New Subtask</DialogTitle>
           </DialogHeader>
@@ -230,7 +289,7 @@ export function SubtaskList({ projectId, taskTreeId, parentTaskId }: SubtaskList
       </Dialog>
       {/* Edit Subtask Dialog */}
       <Dialog open={!!showEdit} onOpenChange={v => { if (!v) setShowEdit(null); }}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Edit Subtask</DialogTitle>
           </DialogHeader>
@@ -315,7 +374,7 @@ export function SubtaskList({ projectId, taskTreeId, parentTaskId }: SubtaskList
       </Dialog>
       {/* Delete Subtask Dialog */}
       <Dialog open={!!showDelete} onOpenChange={v => { if (!v) setShowDelete(null); }}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Delete Subtask</DialogTitle>
           </DialogHeader>
@@ -499,6 +558,139 @@ export function SubtaskList({ projectId, taskTreeId, parentTaskId }: SubtaskList
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDetails(null)}>
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Agents Dialog */}
+      <Dialog open={showAssignDialog} onOpenChange={(v) => { 
+        if (!v) { 
+          setShowAssignDialog(false); 
+          setAssigningSubtask(null);
+          setSelectedAgents([]);
+          setAgentResponses({});
+        }
+      }}>
+        <DialogContent className="max-w-5xl w-[90vw]">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-left">Assign Agents to Subtask</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-gray-50 p-3 rounded">
+              <h4 className="font-medium text-sm mb-1">Subtask: {assigningSubtask?.title}</h4>
+              {assigningSubtask?.assignees && assigningSubtask.assignees.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Currently assigned: {assigningSubtask.assignees.join(', ')}
+                </p>
+              )}
+            </div>
+            
+            <Separator />
+            
+            <div>
+              <h4 className="font-medium text-sm mb-3">Project Registered Agents</h4>
+              {agents.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No agents registered in this project</p>
+              ) : (
+                <div className="space-y-2 max-h-[350px] overflow-y-auto border rounded p-2">
+                  {agents.map((agent) => (
+                    <div key={agent.id || agent.name} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
+                      <Checkbox
+                        id={`subtask-${agent.id || agent.name}`}
+                        checked={selectedAgents.includes(agent.id || agent.name)}
+                        onCheckedChange={() => toggleAgentSelection(agent.id || agent.name)}
+                      />
+                      <label
+                        htmlFor={`subtask-${agent.id || agent.name}`}
+                        className="flex-1 cursor-pointer"
+                      >
+                        <div>
+                          <p className="font-medium text-sm">{agent.name}</p>
+                          {agent.id && (
+                            <p className="text-xs text-muted-foreground">ID: {agent.id}</p>
+                          )}
+                        </div>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <Separator />
+            
+            <div>
+              <h4 className="font-medium text-sm mb-3">Available Agents from Library</h4>
+              <div className="space-y-2 max-h-[500px] overflow-y-auto border rounded p-2">
+                {availableAgents.map((agentName) => (
+                  <div key={agentName} className="border rounded p-2 hover:bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`subtask-lib-${agentName}`}
+                          checked={selectedAgents.includes(agentName)}
+                          onCheckedChange={() => toggleAgentSelection(agentName)}
+                        />
+                        <label
+                          htmlFor={`subtask-lib-${agentName}`}
+                          className="cursor-pointer"
+                        >
+                          <p className="font-medium text-sm">{agentName}</p>
+                          <p className="text-xs text-muted-foreground">From agent library</p>
+                        </label>
+                      </div>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        onClick={async () => {
+                          setCallingAgent(true);
+                          try {
+                            const result = await callAgent(agentName);
+                            setAgentResponses(prev => ({
+                              ...prev,
+                              [agentName]: result
+                            }));
+                          } catch (e) {
+                            console.error('Error calling agent:', e);
+                            setAgentResponses(prev => ({
+                              ...prev,
+                              [agentName]: { error: 'Failed to activate agent', details: e }
+                            }));
+                          } finally {
+                            setCallingAgent(false);
+                          }
+                        }}
+                        disabled={callingAgent}
+                        title="Activate this agent"
+                      >
+                        <Play className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    {agentResponses[agentName] && (
+                      <div className="mt-2 p-2 bg-gray-100 rounded">
+                        <p className="text-xs font-medium mb-1">Call Agent Response:</p>
+                        <pre className="text-xs overflow-x-auto whitespace-pre-wrap bg-white p-2 rounded border">
+                          {JSON.stringify(agentResponses[agentName], null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowAssignDialog(false); setAssigningSubtask(null); }}>
+              Cancel
+            </Button>
+            <Button 
+              variant="default" 
+              onClick={handleAssignAgents}
+              disabled={saving}
+            >
+              {saving ? "Saving..." : "Assign Agents"}
             </Button>
           </DialogFooter>
         </DialogContent>

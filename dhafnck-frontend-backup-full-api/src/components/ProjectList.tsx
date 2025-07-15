@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronRight, Eye, FileText, Folder, GitBranchPlus, Pencil, Plus, Trash2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { createBranch, createProject, deleteProject, listProjects, Project, updateProject, getProjectContext, getTaskContext } from "../api";
+import { createBranch, createProject, deleteProject, listProjects, Project, updateProject, getProjectContext, getTaskContext, getTaskCount } from "../api";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
@@ -28,22 +28,85 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect }) => {
   const [form, setForm] = useState<{ name: string; description: string }>({ name: "", description: "" });
   const [saving, setSaving] = useState(false);
   const [openProjects, setOpenProjects] = useState<Record<string, boolean>>({});
+  const [taskCounts, setTaskCounts] = useState<Record<string, number>>({});
 
   const toggleProject = (projectId: string) => {
     setOpenProjects(prev => ({ ...prev, [projectId]: !prev[projectId] }));
   };
 
-  const fetchProjects = () => {
+  const refreshTaskCounts = async () => {
+    const countPromises: Promise<{ id: string; count: number }>[] = [];
+    
+    for (const project of projects) {
+      if (project.task_trees) {
+        for (const tree of Object.values(project.task_trees)) {
+          countPromises.push(
+            getTaskCount(tree.id)
+              .then(count => ({ id: tree.id, count }))
+              .catch(e => {
+                console.error(`Error fetching task count for branch ${tree.id}:`, e);
+                return { id: tree.id, count: 0 };
+              })
+          );
+        }
+      }
+    }
+    
+    const results = await Promise.all(countPromises);
+    const counts: Record<string, number> = {};
+    results.forEach(({ id, count }) => {
+      counts[id] = count;
+    });
+    setTaskCounts(counts);
+  };
+
+  const fetchProjects = async () => {
     setLoading(true);
-    listProjects()
-      .then(setProjects)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+    try {
+      const projectsData = await listProjects();
+      setProjects(projectsData);
+      
+      // Fetch task counts for all branches in parallel
+      const countPromises: Promise<{ id: string; count: number }>[] = [];
+      
+      for (const project of projectsData) {
+        if (project.task_trees) {
+          for (const tree of Object.values(project.task_trees)) {
+            countPromises.push(
+              getTaskCount(tree.id)
+                .then(count => ({ id: tree.id, count }))
+                .catch(e => {
+                  console.error(`Error fetching task count for branch ${tree.id}:`, e);
+                  return { id: tree.id, count: 0 };
+                })
+            );
+          }
+        }
+      }
+      
+      const results = await Promise.all(countPromises);
+      const counts: Record<string, number> = {};
+      results.forEach(({ id, count }) => {
+        counts[id] = count;
+      });
+      setTaskCounts(counts);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     fetchProjects();
   }, []);
+
+  // Refresh task counts when projects change
+  useEffect(() => {
+    if (projects.length > 0) {
+      refreshTaskCounts();
+    }
+  }, [projects]);
 
   const handleCreate = async () => {
     setSaving(true);
@@ -127,6 +190,11 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect }) => {
                   {openProjects[project.id] ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                   <Folder className="w-4 h-4" />
                   <span className="font-semibold text-sm truncate text-left" title={project.name}>{project.name}</span>
+                  {!openProjects[project.id] && project.task_trees && Object.keys(project.task_trees).length > 0 && (
+                    <Badge variant="outline" className="text-xs ml-2">
+                      {Object.keys(project.task_trees).length}
+                    </Badge>
+                  )}
                 </div>
                 <div className="absolute right-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white shadow-lg rounded-md p-1 z-50">
                   <Button size="icon" variant="ghost" aria-label="View Details" onClick={() => setShowProjectDetails(project)}>
@@ -171,7 +239,10 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect }) => {
                             onSelect && onSelect(project.id, tree.id);
                           }}
                         >
-                          <span className="truncate text-left w-full">{tree.name}</span>
+                          <span className="truncate text-left flex-1">{tree.name}</span>
+                          <Badge variant="secondary" className="text-xs ml-2">
+                            {taskCounts[tree.id] ?? '...'}
+                          </Badge>
                         </Button>
                         <div className="absolute right-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white shadow-lg rounded-md p-1 z-50">
                           <Button 
@@ -214,26 +285,28 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect }) => {
       )}
       {/* Dialogs */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent>
+        <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>New Project</DialogTitle>
+            <DialogTitle className="text-base">New Project</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             <Input
               placeholder="Project name"
               value={form.name}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm(f => ({ ...f, name: e.target.value }))}
               autoFocus
+              className="h-8 text-sm"
             />
             <Input
               placeholder="Description (optional)"
               value={form.description}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm(f => ({ ...f, description: e.target.value }))}
+              className="h-8 text-sm"
             />
           </div>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setShowCreate(false)}>Cancel</Button>
-            <Button variant="default" onClick={handleCreate} disabled={!form.name.trim()}>
+          <DialogFooter className="mt-3">
+            <Button variant="secondary" onClick={() => setShowCreate(false)} size="sm">Cancel</Button>
+            <Button variant="default" onClick={handleCreate} disabled={!form.name.trim()} size="sm">
               Create
             </Button>
           </DialogFooter>
@@ -241,28 +314,30 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect }) => {
       </Dialog>
 
       <Dialog open={!!showCreateBranch} onOpenChange={(v) => !v && setShowCreateBranch(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>New Branch in {showCreateBranch?.name}</DialogTitle>
+            <DialogTitle className="text-base">New Branch in {showCreateBranch?.name}</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             <Input
               placeholder="Branch name"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               autoFocus
               disabled={saving}
+              className="h-8 text-sm"
             />
             <Input
               placeholder="Description (optional)"
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               disabled={saving}
+              className="h-8 text-sm"
             />
           </div>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setShowCreateBranch(null)} disabled={saving}>Cancel</Button>
-            <Button onClick={handleCreateBranch} disabled={saving || !form.name.trim()}>
+          <DialogFooter className="mt-3">
+            <Button variant="secondary" onClick={() => setShowCreateBranch(null)} disabled={saving} size="sm">Cancel</Button>
+            <Button onClick={handleCreateBranch} disabled={saving || !form.name.trim()} size="sm">
               {saving ? "Creating..." : "Create"}
             </Button>
           </DialogFooter>
@@ -270,26 +345,28 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect }) => {
       </Dialog>
 
       <Dialog open={!!showEdit} onOpenChange={(v: boolean) => { if (!v) setShowEdit(null); }}>
-        <DialogContent>
+        <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Edit Project</DialogTitle>
+            <DialogTitle className="text-base">Edit Project</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             <Input
               placeholder="Project name"
               value={form.name}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm(f => ({ ...f, name: e.target.value }))}
               autoFocus
+              className="h-8 text-sm"
             />
             <Input
               placeholder="Description (optional)"
               value={form.description}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm(f => ({ ...f, description: e.target.value }))}
+              className="h-8 text-sm"
             />
           </div>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setShowEdit(null)}>Cancel</Button>
-            <Button variant="default" onClick={handleEdit} disabled={!form.name.trim()}>
+          <DialogFooter className="mt-3">
+            <Button variant="secondary" onClick={() => setShowEdit(null)} size="sm">Cancel</Button>
+            <Button variant="default" onClick={handleEdit} disabled={!form.name.trim()} size="sm">
               Save
             </Button>
           </DialogFooter>
@@ -297,14 +374,14 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect }) => {
       </Dialog>
 
       <Dialog open={!!showDelete} onOpenChange={(v: boolean) => { if (!v) setShowDelete(null); }}>
-        <DialogContent>
+        <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Delete Project</DialogTitle>
+            <DialogTitle className="text-base">Delete Project</DialogTitle>
           </DialogHeader>
-          <p>Are you sure you want to delete this project? This action cannot be undone.</p>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setShowDelete(null)}>Cancel</Button>
-            <Button variant="default" className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={handleDelete}>Delete</Button>
+          <p className="text-sm">Are you sure you want to delete this project? This action cannot be undone.</p>
+          <DialogFooter className="mt-3">
+            <Button variant="secondary" onClick={() => setShowDelete(null)} size="sm">Cancel</Button>
+            <Button variant="default" className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={handleDelete} size="sm">Delete</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

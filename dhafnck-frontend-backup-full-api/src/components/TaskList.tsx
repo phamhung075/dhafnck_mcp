@@ -1,6 +1,6 @@
-import { Eye, FileText, Minus, Pencil, Plus, Trash2 } from "lucide-react";
+import { Eye, FileText, Link, Minus, Pencil, Play, Plus, Trash2, Users } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { listTasks, Task, updateTask, getTaskContext } from "../api";
+import { listTasks, Task, updateTask, getTaskContext, listAgents, getAvailableAgents, callAgent, getTask } from "../api";
 import { SubtaskList } from "./SubtaskList";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "./ui/input";
 import { Separator } from "./ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { Checkbox } from "./ui/checkbox";
 
 interface TaskListProps {
   projectId: string;
@@ -31,14 +32,63 @@ const TaskList: React.FC<TaskListProps> = ({ projectId, taskTreeId }) => {
     status: "todo"
   });
   const [saving, setSaving] = useState(false);
+  const [agents, setAgents] = useState<any[]>([]);
+  const [availableAgents, setAvailableAgents] = useState<string[]>([]);
+  const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
+  const [assigningTask, setAssigningTask] = useState<Task | null>(null);
+  const [callingAgent, setCallingAgent] = useState(false);
+  const [agentResponses, setAgentResponses] = useState<Record<string, any>>({});
+  const [dependencyTitles, setDependencyTitles] = useState<Record<string, string>>({});
+  const [hoveredDependency, setHoveredDependency] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
     listTasks({ git_branch_id: taskTreeId })
-      .then(setTasks)
+      .then(async (taskList) => {
+        setTasks(taskList);
+        
+        // Fetch titles for all dependencies
+        const depTitles: Record<string, string> = {};
+        const uniqueDeps = new Set<string>();
+        
+        taskList.forEach(task => {
+          if (task.dependencies && task.dependencies.length > 0) {
+            task.dependencies.forEach((dep: string) => uniqueDeps.add(dep));
+          }
+        });
+        
+        // Fetch dependency task details in parallel
+        const depPromises = Array.from(uniqueDeps).map(async (depId) => {
+          try {
+            const depTask = await getTask(depId);
+            if (depTask) {
+              depTitles[depId] = depTask.title;
+            }
+          } catch (e) {
+            console.error(`Error fetching dependency ${depId}:`, e);
+            depTitles[depId] = depId.substring(0, 8) + '...';
+          }
+        });
+        
+        await Promise.all(depPromises);
+        setDependencyTitles(depTitles);
+      })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [projectId, taskTreeId]);
+
+  useEffect(() => {
+    // Fetch registered agents from project
+    listAgents(projectId)
+      .then(setAgents)
+      .catch((e) => console.error('Error fetching agents:', e));
+    
+    // Fetch available agents from agent library
+    getAvailableAgents()
+      .then(setAvailableAgents)
+      .catch((e) => console.error('Error fetching agents:', e));
+  }, [projectId]);
 
   const toggleTaskExpansion = (taskId: string) => {
     setExpandedTasks(prev => ({ ...prev, [taskId]: !prev[taskId] }));
@@ -105,6 +155,47 @@ const TaskList: React.FC<TaskListProps> = ({ projectId, taskTreeId }) => {
     }
   };
 
+  const openAssignDialog = (task: Task) => {
+    setAssigningTask(task);
+    setSelectedAgents(task.assignees || []);
+    setShowAssignDialog(true);
+  };
+
+  const handleAssignAgents = async () => {
+    if (!assigningTask) return;
+    
+    setSaving(true);
+    console.log('Assigning agents to task:', assigningTask.id, 'Agents:', selectedAgents);
+    
+    try {
+      const updated = await updateTask(assigningTask.id, { assignees: selectedAgents });
+      console.log('Assignment result:', updated);
+      
+      if (updated) {
+        setTasks(prevTasks => 
+          prevTasks.map(t => t.id === assigningTask.id ? { ...t, assignees: selectedAgents } : t)
+        );
+        setShowAssignDialog(false);
+        setAssigningTask(null);
+        setSelectedAgents([]);
+        setAgentResponses({});
+      }
+    } catch (e) {
+      console.error('Error assigning agents:', e);
+      alert(`Failed to assign agents: ${e instanceof Error ? e.message : 'Unknown error'}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleAgentSelection = (agentId: string) => {
+    setSelectedAgents(prev => 
+      prev.includes(agentId) 
+        ? prev.filter(id => id !== agentId)
+        : [...prev, agentId]
+    );
+  };
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'urgent': return 'destructive';
@@ -141,24 +232,65 @@ const TaskList: React.FC<TaskListProps> = ({ projectId, taskTreeId }) => {
           <TableHead>Title</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Priority</TableHead>
+          <TableHead>Dependencies</TableHead>
+          <TableHead>Assignees</TableHead>
           <TableHead>Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {tasks.map(task => (
           <React.Fragment key={task.id}>
-            <TableRow>
+            <TableRow className={hoveredDependency === task.id ? "bg-yellow-100 transition-colors" : ""}>
               <TableCell>
                 <Button variant="ghost" size="icon" onClick={() => toggleTaskExpansion(task.id)}>
                   {expandedTasks[task.id] ? <Minus /> : <Plus />}
                 </Button>
               </TableCell>
-              <TableCell>{task.title}</TableCell>
+              <TableCell>
+                {task.title}
+                {hoveredDependency === task.id && (
+                  <span className="ml-2 text-xs text-yellow-700">(dependency)</span>
+                )}
+              </TableCell>
               <TableCell>
                 <Badge>{task.status}</Badge>
               </TableCell>
               <TableCell>
                 <Badge variant="secondary">{task.priority}</Badge>
+              </TableCell>
+              <TableCell>
+                {task.dependencies && task.dependencies.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {task.dependencies.map((dep: string, index: number) => (
+                      <Badge 
+                        key={index} 
+                        variant="outline" 
+                        className="text-xs flex items-center gap-1 cursor-pointer hover:bg-yellow-200"
+                        title={`Depends on: ${dependencyTitles[dep] || dep}`}
+                        onMouseEnter={() => setHoveredDependency(dep)}
+                        onMouseLeave={() => setHoveredDependency(null)}
+                      >
+                        <Link className="w-3 h-3" />
+                        {dependencyTitles[dep] ? 
+                          (dependencyTitles[dep].length > 20 ? 
+                            dependencyTitles[dep].substring(0, 20) + '...' : 
+                            dependencyTitles[dep]
+                          ) : 
+                          dep.substring(0, 8) + '...'
+                        }
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground">None</span>
+                )}
+              </TableCell>
+              <TableCell>
+                {task.assignees && task.assignees.length > 0 ? (
+                  <span className="text-sm">{task.assignees.join(', ')}</span>
+                ) : (
+                  <span className="text-sm text-muted-foreground">Unassigned</span>
+                )}
               </TableCell>
               <TableCell>
                 <Button 
@@ -189,6 +321,14 @@ const TaskList: React.FC<TaskListProps> = ({ projectId, taskTreeId }) => {
                 </Button>
                 <Button 
                   variant="ghost" 
+                  size="icon"
+                  onClick={() => openAssignDialog(task)}
+                  title="Assign agents"
+                >
+                  <Users />
+                </Button>
+                <Button 
+                  variant="ghost" 
                   size="icon" 
                   title="Edit task"
                   onClick={() => openEditDialog(task)}
@@ -202,7 +342,7 @@ const TaskList: React.FC<TaskListProps> = ({ projectId, taskTreeId }) => {
             </TableRow>
             {expandedTasks[task.id] && (
               <TableRow>
-                <TableCell colSpan={5}>
+                <TableCell colSpan={7}>
                   <SubtaskList
                     key={task.id} // Ensures re-mount on task change
                     projectId={projectId}
@@ -238,6 +378,12 @@ const TaskList: React.FC<TaskListProps> = ({ projectId, taskTreeId }) => {
                 Priority: {selectedTask?.priority || 'medium'}
               </Badge>
             </div>
+            {selectedTask?.assignees && selectedTask.assignees.length > 0 && (
+              <div className="mt-3">
+                <span className="text-sm text-muted-foreground">Assigned to: </span>
+                <span className="text-sm font-medium">{selectedTask.assignees.join(', ')}</span>
+              </div>
+            )}
           </div>
 
           {/* All Task Details */}
@@ -426,7 +572,7 @@ const TaskList: React.FC<TaskListProps> = ({ projectId, taskTreeId }) => {
 
     {/* Edit Task Dialog */}
     <Dialog open={showEditDialog} onOpenChange={closeEditDialog}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="text-left">Edit Task</DialogTitle>
         </DialogHeader>
@@ -640,6 +786,139 @@ const TaskList: React.FC<TaskListProps> = ({ projectId, taskTreeId }) => {
         <DialogFooter>
           <Button variant="outline" onClick={() => setShowTaskContext(null)}>
             Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    {/* Assign Agents Dialog */}
+    <Dialog open={showAssignDialog} onOpenChange={(v) => { 
+      if (!v) { 
+        setShowAssignDialog(false); 
+        setAssigningTask(null);
+        setSelectedAgents([]);
+        setAgentResponses({});
+      }
+    }}>
+      <DialogContent className="max-w-5xl w-[90vw]">
+        <DialogHeader>
+          <DialogTitle className="text-xl text-left">Assign Agents to Task</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="bg-gray-50 p-3 rounded">
+            <h4 className="font-medium text-sm mb-1">Task: {assigningTask?.title}</h4>
+            {assigningTask?.assignees && assigningTask.assignees.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Currently assigned: {assigningTask.assignees.join(', ')}
+              </p>
+            )}
+          </div>
+          
+          <Separator />
+          
+          <div>
+            <h4 className="font-medium text-sm mb-3">Project Registered Agents</h4>
+            {agents.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No agents registered in this project</p>
+            ) : (
+              <div className="space-y-2 max-h-[350px] overflow-y-auto border rounded p-2">
+                {agents.map((agent) => (
+                  <div key={agent.id || agent.name} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
+                    <Checkbox
+                      id={agent.id || agent.name}
+                      checked={selectedAgents.includes(agent.id || agent.name)}
+                      onCheckedChange={() => toggleAgentSelection(agent.id || agent.name)}
+                    />
+                    <label
+                      htmlFor={agent.id || agent.name}
+                      className="flex-1 cursor-pointer"
+                    >
+                      <div>
+                        <p className="font-medium text-sm">{agent.name}</p>
+                        {agent.id && (
+                          <p className="text-xs text-muted-foreground">ID: {agent.id}</p>
+                        )}
+                      </div>
+                    </label>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          <Separator />
+          
+          <div>
+            <h4 className="font-medium text-sm mb-3">Available Agents from Library</h4>
+            <div className="space-y-2 max-h-[500px] overflow-y-auto border rounded p-2">
+              {availableAgents.map((agentName) => (
+                <div key={agentName} className="border rounded p-2 hover:bg-gray-50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`lib-${agentName}`}
+                        checked={selectedAgents.includes(agentName)}
+                        onCheckedChange={() => toggleAgentSelection(agentName)}
+                      />
+                      <label
+                        htmlFor={`lib-${agentName}`}
+                        className="cursor-pointer"
+                      >
+                        <p className="font-medium text-sm">{agentName}</p>
+                        <p className="text-xs text-muted-foreground">From agent library</p>
+                      </label>
+                    </div>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
+                      onClick={async () => {
+                        setCallingAgent(true);
+                        try {
+                          const result = await callAgent(agentName);
+                          setAgentResponses(prev => ({
+                            ...prev,
+                            [agentName]: result
+                          }));
+                        } catch (e) {
+                          console.error('Error calling agent:', e);
+                          setAgentResponses(prev => ({
+                            ...prev,
+                            [agentName]: { error: 'Failed to activate agent', details: e }
+                          }));
+                        } finally {
+                          setCallingAgent(false);
+                        }
+                      }}
+                      disabled={callingAgent}
+                      title="Activate this agent"
+                    >
+                      <Play className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  {agentResponses[agentName] && (
+                    <div className="mt-2 p-2 bg-gray-100 rounded">
+                      <p className="text-xs font-medium mb-1">Call Agent Response:</p>
+                      <pre className="text-xs overflow-x-auto whitespace-pre-wrap bg-white p-2 rounded border">
+                        {JSON.stringify(agentResponses[agentName], null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => { setShowAssignDialog(false); setAssigningTask(null); }}>
+            Cancel
+          </Button>
+          <Button 
+            variant="default" 
+            onClick={handleAssignAgents}
+            disabled={saving}
+          >
+            {saving ? "Saving..." : "Assign Agents"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -15,18 +15,42 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
     if (open) document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open, onOpenChange]);
+  
+  React.useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [open]);
+  
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => onOpenChange(false)}>
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-md mx-auto p-0 relative" onClick={e => e.stopPropagation()}>
-        {children}
+    <div className="fixed inset-0 z-50 bg-black/60" onClick={() => onOpenChange(false)}>
+      <div className="fixed inset-0 overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center p-4">
+          {children}
+        </div>
       </div>
     </div>
   );
 }
 
 export function DialogContent({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <div className={cn("p-6", className)}>{children}</div>;
+  return (
+    <div 
+      className={cn(
+        "bg-white dark:bg-gray-900 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 w-full mx-auto p-6 relative",
+        className
+      )}
+      onClick={e => e.stopPropagation()}
+    >
+      {children}
+    </div>
+  );
 }
 
 export function DialogHeader({ children, className }: { children: React.ReactNode; className?: string }) {

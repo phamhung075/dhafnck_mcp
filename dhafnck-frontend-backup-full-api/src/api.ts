@@ -11,6 +11,7 @@ export interface Task {
     status: string;
     priority: string;
     subtasks: Subtask[];
+    assignees?: string[];
     [key: string]: any;
 }
 
@@ -20,6 +21,7 @@ export interface Subtask {
     description: string;
     status: string;
     priority: string;
+    assignees?: string[];
     [key: string]: any;
 }
 
@@ -89,6 +91,12 @@ const MCP_HEADERS = {
 
 function withMcpHeaders(extra: Record<string, string> = {}) {
   return { ...MCP_HEADERS, ...extra };
+}
+
+// Get task count for a branch
+export async function getTaskCount(git_branch_id: string): Promise<number> {
+  const tasks = await listTasks({ git_branch_id });
+  return tasks.length;
 }
 
 // --- Task Management ---
@@ -893,4 +901,151 @@ export async function validateRule(rule_id: string): Promise<any> {
     } catch {}
   }
   return null;
+}
+
+// --- Agent Management ---
+export async function listAgents(project_id: string): Promise<any[]> {
+  const body = {
+    jsonrpc: "2.0",
+    method: "tools/call",
+    params: {
+      name: "manage_agent",
+      arguments: { 
+        action: "list",
+        project_id: project_id
+      }
+    },
+    id: getRpcId(),
+  };
+
+  const res = await fetch(`${API_BASE}`, {
+    method: "POST",
+    headers: withMcpHeaders(),
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  
+  if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
+    try {
+      const toolResult = JSON.parse(data.result.content[0].text);
+      return toolResult.agents || [];
+    } catch {
+      return [];
+    }
+  }
+  
+  return [];
+}
+
+// Get available agents from the agent library folder
+export async function getAvailableAgents(): Promise<string[]> {
+  // These are the agent names from the dhafnck_mcp_main/agent-library/agents folder
+  // In a real implementation, this would be fetched from the backend
+  return [
+    "@adaptive_deployment_strategist_agent",
+    "@algorithmic_problem_solver_agent",
+    "@analytics_setup_agent",
+    "@brainjs_ml_agent",
+    "@branding_agent",
+    "@campaign_manager_agent",
+    "@code_reviewer_agent",
+    "@coding_agent",
+    "@community_strategy_agent",
+    "@compliance_scope_agent",
+    "@compliance_testing_agent",
+    "@content_strategy_agent",
+    "@core_concept_agent",
+    "@debugger_agent",
+    "@deep_research_agent",
+    "@design_qa_analyst",
+    "@design_qa_analyst_agent",
+    "@design_system_agent",
+    "@development_orchestrator_agent",
+    "@devops_agent",
+    "@documentation_agent",
+    "@efficiency_optimization_agent",
+    "@elicitation_agent",
+    "@ethical_review_agent",
+    "@exploratory_tester_agent",
+    "@functional_tester_agent",
+    "@generic_purpose_agent",
+    "@graphic_design_agent",
+    "@growth_hacking_idea_agent",
+    "@health_monitor_agent",
+    "@idea_generation_agent",
+    "@idea_refinement_agent",
+    "@incident_learning_agent",
+    "@knowledge_evolution_agent",
+    "@lead_testing_agent",
+    "@market_research_agent",
+    "@marketing_strategy_orchestrator",
+    "@marketing_strategy_orchestrator_agent",
+    "@mcp_configuration_agent",
+    "@mcp_researcher_agent",
+    "@nlu_processor_agent",
+    "@performance_load_tester_agent",
+    "@prd_architect_agent",
+    "@project_initiator_agent",
+    "@prototyping_agent",
+    "@remediation_agent",
+    "@root_cause_analysis_agent",
+    "@scribe_agent",
+    "@security_auditor_agent",
+    "@security_penetration_tester_agent",
+    "@seo_sem_agent",
+    "@social_media_setup_agent",
+    "@swarm_scaler_agent",
+    "@system_architect_agent",
+    "@task_deep_manager_agent",
+    "@task_planning_agent",
+    "@task_sync_agent",
+    "@tech_spec_agent",
+    "@technology_advisor_agent",
+    "@test_case_generator_agent",
+    "@test_orchestrator_agent",
+    "@uat_coordinator_agent",
+    "@uber_orchestrator_agent",
+    "@ui_designer_agent",
+    "@ui_designer_expert_shadcn_agent",
+    "@usability_heuristic_agent",
+    "@user_feedback_collector_agent",
+    "@ux_researcher_agent",
+    "@video_production_agent",
+    "@visual_regression_testing_agent",
+    "@workflow_architect_agent"
+  ];
+}
+
+// Call/activate an agent
+export async function callAgent(name_agent: string): Promise<any> {
+  const body = {
+    jsonrpc: "2.0",
+    method: "tools/call",
+    params: {
+      name: "call_agent",
+      arguments: { 
+        name_agent: name_agent
+      }
+    },
+    id: getRpcId(),
+  };
+
+  const res = await fetch(`${API_BASE}`, {
+    method: "POST",
+    headers: withMcpHeaders(),
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  
+  if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
+    try {
+      const toolResult = JSON.parse(data.result.content[0].text);
+      return toolResult;
+    } catch (e) {
+      console.error('Error parsing call agent response:', e);
+      return { success: false, error: 'Failed to parse response' };
+    }
+  }
+  
+  return { success: false, error: 'No response from server' };
 } 
