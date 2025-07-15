@@ -1,38 +1,27 @@
-import React from 'react';
+import { useState } from 'react';
 import './App.css';
-import './styles/globals.css';
-import './styles/accessibility.css';
-import { MainApplication } from './components/MainApplication';
-// import SimpleApp from './SimpleApp';
-import { AccessibilityProvider, SkipLinks } from './utils/AccessibilityUtils';
-import { EnhancedErrorBoundary, setupGlobalErrorHandling } from './components/common/EnhancedErrorBoundary';
-
-// Setup global error handling
-setupGlobalErrorHandling();
+import ProjectList from './components/ProjectList';
+import TaskList from './components/TaskList';
 
 function App() {
+  const [selection, setSelection] = useState<{ projectId: string, branchId: string } | null>(null);
+
   return (
-    <EnhancedErrorBoundary enableReporting={true} maxRetries={3}>
-      <AccessibilityProvider>
-        <div className="min-h-screen bg-gray-50">
-          {/* Skip Links for Keyboard Navigation */}
-          <SkipLinks links={[
-            { href: '#main-content', text: 'Skip to main content' },
-            { href: '#primary-navigation', text: 'Skip to navigation' },
-            { href: '#search', text: 'Skip to search' }
-          ]} />
-          
-          {/* Main Application */}
-          <div id="main-content" role="main">
-            <MainApplication
-              initialAgent="@uber_orchestrator_agent"
-              initialProject={undefined}
-            />
-          </div>
+    <div className="flex h-screen bg-background text-foreground">
+      <aside className="w-1/4 min-w-[300px] max-w-[400px] border-r p-4 overflow-y-auto">
+        <ProjectList onSelect={(projectId: string, branchId: string) => setSelection({ projectId, branchId })} />
+      </aside>
+      <main className="flex-1 flex flex-col p-4">
+        <div className="flex-1 overflow-y-auto">
+          {selection ? (
+            <TaskList key={`${selection.projectId}-${selection.branchId}`} projectId={selection.projectId} taskTreeId={selection.branchId} />
+          ) : (
+            <div className="text-center text-muted-foreground mt-10">Select a project and branch to see tasks.</div>
+          )}
         </div>
-      </AccessibilityProvider>
-    </EnhancedErrorBoundary>
-  );
+      </main>
+    </div>
+  )
 }
 
 export default App;

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { mcpApi, Rule, listRules, createRule, updateRule, deleteRule, validateRule } from "../api/enhanced";
+import { createRule, deleteRule, listRules, Rule, updateRule, validateRule } from "../api";
 import { Alert } from "./ui/alert";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";

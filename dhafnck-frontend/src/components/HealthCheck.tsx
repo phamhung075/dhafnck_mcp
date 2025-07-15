@@ -62,7 +62,7 @@ const HealthCheck: React.FC = () => {
   let errorMsg = "Server not healthy";
   if (status && !status.success) {
     if (typeof status.error === "object" && status.error !== null) {
-      errorMsg = (status.error as any).message || JSON.stringify(status.error);
+      errorMsg = status.error.message || JSON.stringify(status.error);
     } else if (typeof status.error === "string") {
       errorMsg = status.error;
     }

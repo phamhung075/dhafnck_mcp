@@ -1,11 +1,12 @@
-import { Check, Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, ChevronRight, Eye, Pencil, Plus, Trash2, X } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { mcpApi, Task } from "../api/enhanced";
+import { createTask, deleteTask, listTasks, listSubtasks, Subtask, Task, updateTask } from "../api";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Input } from "./ui/input";
+import { Separator } from "./ui/separator";
 
 interface SimpleTaskManagerProps {
   projectId?: string;
@@ -19,8 +20,10 @@ const SimpleTaskManager: React.FC<SimpleTaskManagerProps> = ({
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showDialog, setShowDialog] = useState<'create' | 'edit' | 'delete' | null>(null);
+  const [showDialog, setShowDialog] = useState<'create' | 'edit' | 'delete' | 'details' | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+  const [loadingSubtasks, setLoadingSubtasks] = useState(false);
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -32,7 +35,7 @@ const SimpleTaskManager: React.FC<SimpleTaskManagerProps> = ({
     setLoading(true);
     setError(null);
     try {
-      const taskList = await mcpApi.getTasks(taskTreeId);
+      const taskList = await listTasks({ project_id: projectId, git_branch_name: taskTreeId });
       setTasks(taskList);
     } catch (err: any) {
       setError(err.message || "Failed to fetch tasks");
@@ -50,7 +53,13 @@ const SimpleTaskManager: React.FC<SimpleTaskManagerProps> = ({
     
     setSaving(true);
     try {
-      await mcpApi.createTask(taskTreeId, form.title, form.description, form.priority);
+      await createTask({
+        title: form.title,
+        description: form.description,
+        priority: form.priority,
+        project_id: projectId,
+        git_branch_name: taskTreeId
+      });
       setShowDialog(null);
       setForm({ title: "", description: "", priority: "medium" });
       fetchTasks();
@@ -66,8 +75,7 @@ const SimpleTaskManager: React.FC<SimpleTaskManagerProps> = ({
     
     setSaving(true);
     try {
-      await mcpApi.manageTask('update', {
-        task_id: selectedTask.id,
+      await updateTask(selectedTask.id, {
         title: form.title,
         description: form.description,
         priority: form.priority
@@ -88,7 +96,7 @@ const SimpleTaskManager: React.FC<SimpleTaskManagerProps> = ({
     
     setSaving(true);
     try {
-      await mcpApi.manageTask('delete', { task_id: selectedTask.id });
+      await deleteTask(selectedTask.id);
       setShowDialog(null);
       setSelectedTask(null);
       fetchTasks();
@@ -119,9 +127,26 @@ const SimpleTaskManager: React.FC<SimpleTaskManagerProps> = ({
     setShowDialog('delete');
   };
 
+  const openDetailsDialog = async (task: Task) => {
+    setSelectedTask(task);
+    setShowDialog('details');
+    setLoadingSubtasks(true);
+    setSubtasks([]);
+    
+    try {
+      const subtaskList = await listSubtasks(task.id);
+      setSubtasks(subtaskList);
+    } catch (err: any) {
+      setError(err.message || "Failed to fetch subtasks");
+    } finally {
+      setLoadingSubtasks(false);
+    }
+  };
+
   const closeDialog = () => {
     setShowDialog(null);
     setSelectedTask(null);
+    setSubtasks([]);
     setForm({ title: "", description: "", priority: "medium" });
   };
 
@@ -197,7 +222,16 @@ const SimpleTaskManager: React.FC<SimpleTaskManagerProps> = ({
                       <Button
                         size="sm"
                         variant="ghost"
+                        onClick={() => openDetailsDialog(task)}
+                        title="View details"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
                         onClick={() => openEditDialog(task)}
+                        title="Edit task"
                       >
                         <Pencil className="w-4 h-4" />
                       </Button>
@@ -205,6 +239,7 @@ const SimpleTaskManager: React.FC<SimpleTaskManagerProps> = ({
                         size="sm"
                         variant="ghost"
                         onClick={() => openDeleteDialog(task)}
+                        title="Delete task"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -325,6 +360,127 @@ const SimpleTaskManager: React.FC<SimpleTaskManagerProps> = ({
                   Delete
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Task Details Dialog */}
+      <Dialog open={showDialog === 'details'} onOpenChange={closeDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Task Details</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Task Information */}
+            <div>
+              <h3 className="text-lg font-semibold">{selectedTask?.title}</h3>
+              {selectedTask?.description && (
+                <p className="text-sm text-muted-foreground mt-1">{selectedTask.description}</p>
+              )}
+              <div className="flex gap-2 mt-2">
+                <Badge variant={getStatusColor(selectedTask?.status || 'pending')}>
+                  {selectedTask?.status?.replace('_', ' ') || 'pending'}
+                </Badge>
+                <Badge variant={getPriorityColor(selectedTask?.priority || 'medium')}>
+                  {selectedTask?.priority || 'medium'}
+                </Badge>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Subtasks Section */}
+            <div>
+              <h4 className="font-medium mb-3 flex items-center gap-2">
+                <ChevronRight className="w-4 h-4" />
+                Subtasks {subtasks.length > 0 && `(${subtasks.length})`}
+              </h4>
+              
+              {loadingSubtasks ? (
+                <div className="text-center py-4">
+                  <div className="text-sm text-muted-foreground">Loading subtasks...</div>
+                </div>
+              ) : subtasks.length === 0 ? (
+                <div className="text-sm text-muted-foreground py-4 text-center">
+                  No subtasks found for this task
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {subtasks.map((subtask, index) => (
+                    <div key={subtask.id} className="border rounded-md p-3 hover:bg-gray-50">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <h5 className="font-medium text-sm">
+                            {index + 1}. {subtask.title}
+                          </h5>
+                          {subtask.description && (
+                            <p className="text-xs text-muted-foreground mt-1">{subtask.description}</p>
+                          )}
+                        </div>
+                        <div className="flex gap-1 ml-2">
+                          <Badge variant={getStatusColor(subtask.status)} className="text-xs">
+                            {subtask.status?.replace('_', ' ') || 'pending'}
+                          </Badge>
+                          <Badge variant={getPriorityColor(subtask.priority)} className="text-xs">
+                            {subtask.priority || 'medium'}
+                          </Badge>
+                        </div>
+                      </div>
+                      {/* Display additional subtask properties if available */}
+                      {subtask.assignees && subtask.assignees.length > 0 && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Assignees: {Array.isArray(subtask.assignees) ? subtask.assignees.join(', ') : subtask.assignees}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Additional Task Details */}
+            {selectedTask && (
+              <div className="space-y-2 text-sm">
+                <Separator />
+                <div className="grid grid-cols-2 gap-2">
+                  {selectedTask.estimated_effort && (
+                    <div>
+                      <span className="text-muted-foreground">Estimated Effort:</span> {selectedTask.estimated_effort}
+                    </div>
+                  )}
+                  {selectedTask.due_date && (
+                    <div>
+                      <span className="text-muted-foreground">Due Date:</span> {new Date(selectedTask.due_date).toLocaleDateString()}
+                    </div>
+                  )}
+                  {selectedTask.created_at && (
+                    <div>
+                      <span className="text-muted-foreground">Created:</span> {new Date(selectedTask.created_at).toLocaleDateString()}
+                    </div>
+                  )}
+                  {selectedTask.updated_at && (
+                    <div>
+                      <span className="text-muted-foreground">Updated:</span> {new Date(selectedTask.updated_at).toLocaleDateString()}
+                    </div>
+                  )}
+                </div>
+                {selectedTask.labels && selectedTask.labels.length > 0 && (
+                  <div className="flex gap-1 items-center">
+                    <span className="text-muted-foreground">Labels:</span>
+                    {selectedTask.labels.map((label: string) => (
+                      <Badge key={label} variant="outline" className="text-xs">
+                        {label}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDialog}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
