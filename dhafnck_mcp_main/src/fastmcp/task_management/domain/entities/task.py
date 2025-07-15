@@ -3,21 +3,30 @@
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import List, Optional, Dict, Any, Union
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
-from ..value_objects.task_id import TaskId
-from ..value_objects.task_status import TaskStatus
-from ..value_objects.priority import Priority
-from ..value_objects.progress import ProgressType, ProgressSnapshot, ProgressTimeline, ProgressCalculationStrategy
-from ..enums.estimated_effort import EstimatedEffort, EffortLevel
+from ...domain.value_objects.task_status import TaskStatusEnum
 from ..enums.agent_roles import AgentRole, resolve_legacy_role
 from ..enums.common_labels import CommonLabel, LabelValidator
-from ..events.task_events import TaskCreated, TaskUpdated, TaskDeleted, TaskRetrieved
-from ..events.progress_events import ProgressUpdated, ProgressMilestoneReached, ProgressTypeCompleted
-from ...domain.value_objects.task_status import TaskStatusEnum
+from ..enums.estimated_effort import EffortLevel, EstimatedEffort
+from ..events.progress_events import (
+    ProgressMilestoneReached,
+    ProgressTypeCompleted,
+    ProgressUpdated,
+)
+from ..events.task_events import TaskCreated, TaskDeleted, TaskRetrieved, TaskUpdated
 from ..exceptions.vision_exceptions import MissingCompletionSummaryError
+from ..value_objects.priority import Priority
+from ..value_objects.progress import (
+    ProgressCalculationStrategy,
+    ProgressSnapshot,
+    ProgressTimeline,
+    ProgressType,
+)
+from ..value_objects.task_id import TaskId
+from ..value_objects.task_status import TaskStatus
 
 
 @dataclass
@@ -26,30 +35,30 @@ class Task:
     
     title: str
     description: str
-    id: Optional[TaskId] = None
-    status: Optional[TaskStatus] = None
-    priority: Optional[Priority] = None
-    git_branch_id: Optional[str] = None
+    id: TaskId | None = None
+    status: TaskStatus | None = None
+    priority: Priority | None = None
+    git_branch_id: str | None = None
     details: str = ""
     estimated_effort: str = ""
-    assignees: List[str] = field(default_factory=list)
-    labels: List[str] = field(default_factory=list)
-    dependencies: List[TaskId] = field(default_factory=list)
-    subtasks: List[Dict[str, Any]] = field(default_factory=list)
-    due_date: Optional[str] = None
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-    context_id: Optional[str] = None  # New field: tracks if context is up-to-date
+    assignees: list[str] = field(default_factory=list)
+    labels: list[str] = field(default_factory=list)
+    dependencies: list[TaskId] = field(default_factory=list)
+    subtasks: list[dict[str, Any]] = field(default_factory=list)
+    due_date: str | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    context_id: str | None = None  # New field: tracks if context is up-to-date
     
     # Progress tracking fields
     overall_progress: float = 0.0  # 0-100 percentage
-    progress_timeline: Optional[ProgressTimeline] = None
+    progress_timeline: ProgressTimeline | None = None
     
     # Domain events
-    _events: List[Any] = field(default_factory=list, init=False)
+    _events: list[Any] = field(default_factory=list, init=False)
     
     # Vision System fields (not persisted directly on task)
-    _completion_summary: Optional[str] = field(default=None, init=False)
+    _completion_summary: str | None = field(default=None, init=False)
     
     def __post_init__(self):
         """Validate task data after initialization"""
@@ -244,7 +253,7 @@ class Task:
             updated_at=self.updated_at
         ))
     
-    def update_assignees(self, assignees: List[str]) -> None:
+    def update_assignees(self, assignees: list[str]) -> None:
         """Update task assignees"""
         # Debug: Log incoming assignees
         logging.debug(f"[update_assignees] Incoming assignees: {assignees}")
@@ -284,7 +293,7 @@ class Task:
             updated_at=self.updated_at
         ))
     
-    def add_assignee(self, assignee: Union[str, AgentRole]) -> None:
+    def add_assignee(self, assignee: str | AgentRole) -> None:
         """Add an assignee to the task"""
         # Handle both string and AgentRole enum inputs
         if isinstance(assignee, AgentRole):
@@ -328,7 +337,7 @@ class Task:
                 updated_at=self.updated_at
             ))
     
-    def remove_assignee(self, assignee: Union[str, AgentRole]) -> None:
+    def remove_assignee(self, assignee: str | AgentRole) -> None:
         """Remove an assignee from the task"""
         # Handle both string and AgentRole enum inputs
         if isinstance(assignee, AgentRole):
@@ -353,7 +362,7 @@ class Task:
         """Check if task has a specific assignee"""
         return assignee in self.assignees
     
-    def get_primary_assignee(self) -> Optional[str]:
+    def get_primary_assignee(self) -> str | None:
         """Get the primary (first) assignee"""
         return self.assignees[0] if self.assignees else None
     
@@ -365,7 +374,7 @@ class Task:
         """Check if task has multiple assignees"""
         return len(self.assignees) > 1
     
-    def get_assignees_info(self) -> List[Dict[str, Any]]:
+    def get_assignees_info(self) -> list[dict[str, Any]]:
         """Get role information for all assignees"""
         assignees_info = []
         
@@ -404,7 +413,7 @@ class Task:
         
         return assignees_info
     
-    def update_labels(self, labels: List[str]) -> None:
+    def update_labels(self, labels: list[str]) -> None:
         """Update task labels with flexible validation"""
         # Allow all labels - the repository will handle normalization and creation
         validated_labels = []
@@ -430,7 +439,7 @@ class Task:
             updated_at=self.updated_at
         ))
     
-    def update_due_date(self, due_date: Optional[str]) -> None:
+    def update_due_date(self, due_date: str | None) -> None:
         """Update task due date with validation"""
         if due_date is not None:
             try:
@@ -460,8 +469,8 @@ class Task:
             deleted_at=datetime.now(timezone.utc)
         ))
 
-    def update_details_legacy(self, title: Optional[str] = None, description: Optional[str] = None, 
-                      details: Optional[str] = None, assignees: Optional[List[str]] = None) -> None:
+    def update_details_legacy(self, title: str | None = None, description: str | None = None, 
+                      details: str | None = None, assignees: list[str] | None = None) -> None:
         """Update task details"""
         changes = {}
         
@@ -525,7 +534,7 @@ class Task:
         # Handle both TaskId objects and string values
         return dependency_id.value in [dep.value if hasattr(dep, 'value') else str(dep) for dep in self.dependencies]
     
-    def get_dependency_ids(self) -> List[str]:
+    def get_dependency_ids(self) -> list[str]:
         """Get list of dependency IDs as strings"""
         # Handle both TaskId objects and string values
         return [dep.value if hasattr(dep, 'value') else str(dep) for dep in self.dependencies]
@@ -550,7 +559,7 @@ class Task:
         # In a full implementation, you'd need to check the entire dependency graph
         return False
     
-    def add_label(self, label: Union[str, CommonLabel]) -> None:
+    def add_label(self, label: str | CommonLabel) -> None:
         """Add a label to the task with enum validation"""
         # Handle both string and CommonLabel enum inputs
         if isinstance(label, CommonLabel):
@@ -573,7 +582,7 @@ class Task:
             self.labels.append(valid_label)
             self.updated_at = datetime.now(timezone.utc)
     
-    def remove_label(self, label: Union[str, CommonLabel]) -> None:
+    def remove_label(self, label: str | CommonLabel) -> None:
         """Remove a label from the task"""
         # Handle both string and CommonLabel enum inputs
         if isinstance(label, CommonLabel):
@@ -586,7 +595,7 @@ class Task:
             self.updated_at = datetime.now(timezone.utc)
     
     def add_subtask(self, subtask_title: str = None, title: str = None, description: str = None, 
-                   assignee: str = None, estimated_effort: str = None, **kwargs) -> Dict[str, Any]:
+                   assignee: str = None, estimated_effort: str = None, **kwargs) -> dict[str, Any]:
         """Add a subtask to the task with flexible parameter support"""
         # Handle dictionary input (test compatibility)
         if isinstance(subtask_title, dict):
@@ -657,9 +666,14 @@ class Task:
         # Return the subtask dictionary
         return subtask_data
     
-    def remove_subtask(self, subtask_id: Union[int, str]) -> bool:
+    def remove_subtask(self, subtask_id: int | str) -> bool:
         """Remove a subtask by ID (supports both integer and hierarchical IDs)"""
         for i, subtask in enumerate(self.subtasks):
+            # Ensure subtask is a dictionary, skip if not
+            if not isinstance(subtask, dict):
+                logger.warning(f"Skipping invalid subtask (not a dict): {subtask}")
+                continue
+                
             current_id = subtask.get("id")
             # Normalize comparison - handle both old integer IDs and new hierarchical IDs
             if self._subtask_ids_match(current_id, subtask_id):
@@ -677,9 +691,14 @@ class Task:
                 return True
         return False
     
-    def update_subtask(self, subtask_id: Union[int, str], updates: Dict[str, Any]) -> bool:
+    def update_subtask(self, subtask_id: int | str, updates: dict[str, Any]) -> bool:
         """Update a subtask by ID (supports both integer and hierarchical IDs)"""
         for subtask in self.subtasks:
+            # Ensure subtask is a dictionary, skip if not
+            if not isinstance(subtask, dict):
+                logger.warning(f"Skipping invalid subtask (not a dict): {subtask}")
+                continue
+                
             current_id = subtask.get("id")
             # Normalize comparison - handle both old integer IDs and new hierarchical IDs
             if self._subtask_ids_match(current_id, subtask_id):
@@ -698,11 +717,11 @@ class Task:
                 return True
         return False
     
-    def complete_subtask(self, subtask_id: Union[int, str]) -> bool:
+    def complete_subtask(self, subtask_id: int | str) -> bool:
         """Mark a subtask as completed using status field"""
         return self.update_subtask(subtask_id, {"status": "done"})
     
-    def complete_task(self, completion_summary: Optional[str] = None, context_updated_at: Optional[datetime] = None) -> None:
+    def complete_task(self, completion_summary: str | None = None, context_updated_at: datetime | None = None) -> None:
         """
         Complete the task by setting status to done.
         
@@ -751,7 +770,11 @@ class Task:
         
         # Complete all subtasks using status field
         for subtask in self.subtasks:
-            subtask["status"] = "done"
+            # Ensure subtask is a dictionary, skip if not
+            if isinstance(subtask, dict):
+                subtask["status"] = "done"
+            else:
+                logger.warning(f"Skipping invalid subtask during completion (not a dict): {subtask}")
         
         # Update task status to done
         old_status = self.status
@@ -778,20 +801,25 @@ class Task:
                 updated_at=self.updated_at
             ))
     
-    def get_subtask(self, subtask_id: Union[int, str]) -> Optional[Dict[str, Any]]:
+    def get_subtask(self, subtask_id: int | str) -> dict[str, Any] | None:
         """Get a subtask by ID (supports both integer and hierarchical IDs)"""
         for subtask in self.subtasks:
+            # Ensure subtask is a dictionary, skip if not
+            if not isinstance(subtask, dict):
+                logger.warning(f"Skipping invalid subtask (not a dict): {subtask}")
+                continue
+                
             current_id = subtask.get("id")
             # Normalize comparison - handle both old integer IDs and new hierarchical IDs
             if self._subtask_ids_match(current_id, subtask_id):
                 return subtask
         return None
     
-    def get_subtask_by_id(self, subtask_id: Union[int, str]) -> Optional[Dict[str, Any]]:
+    def get_subtask_by_id(self, subtask_id: int | str) -> dict[str, Any] | None:
         """Get a subtask by ID - alias for get_subtask for backward compatibility"""
         return self.get_subtask(subtask_id)
     
-    def _subtask_ids_match(self, current_id: Union[int, str], target_id: Union[int, str]) -> bool:
+    def _subtask_ids_match(self, current_id: int | str, target_id: int | str) -> bool:
         """Helper method to compare subtask IDs regardless of type"""
         # Convert both to strings for comparison
         current_str = str(current_id)
@@ -812,13 +840,16 @@ class Task:
         
         return False
     
-    def get_subtask_progress(self) -> Dict[str, Any]:
+    def get_subtask_progress(self) -> dict[str, Any]:
         """Get subtask completion progress using status field"""
         if not self.subtasks:
             return {"total": 0, "completed": 0, "percentage": 0}
         
-        total = len(self.subtasks)
-        completed = sum(1 for st in self.subtasks if st.get("status") == "done")
+        # Filter out invalid subtasks (not dictionaries)
+        valid_subtasks = [st for st in self.subtasks if isinstance(st, dict)]
+        
+        total = len(valid_subtasks)
+        completed = sum(1 for st in valid_subtasks if st.get("status") == "done")
         percentage = round((completed / total) * 100, 1) if total > 0 else 0
         
         return {
@@ -859,7 +890,7 @@ class Task:
         except ValueError:
             return False
     
-    def get_suggested_labels(self, context: str = "") -> List[str]:
+    def get_suggested_labels(self, context: str = "") -> list[str]:
         """Get suggested labels based on task content and context"""
         suggestions = []
         
@@ -881,7 +912,7 @@ class Task:
         except ValueError:
             return "medium"
     
-    def get_assignee_role_info(self) -> Optional[Dict[str, Any]]:
+    def get_assignee_role_info(self) -> dict[str, Any] | None:
         """Get role information for the primary assignee (first assignee)"""
         if not self.assignees:
             return None
@@ -943,11 +974,11 @@ class Task:
         """Check if task has an updated context (context_id is not None)"""
         return self.context_id is not None
     
-    def get_completion_summary(self) -> Optional[str]:
+    def get_completion_summary(self) -> str | None:
         """Get the completion summary if task was completed with one"""
         return getattr(self, '_completion_summary', None)
     
-    def can_be_completed(self, context_updated_at: Optional[datetime] = None) -> bool:
+    def can_be_completed(self, context_updated_at: datetime | None = None) -> bool:
         """
         Check if task can be completed.
         
@@ -978,8 +1009,8 @@ class Task:
         return True
     
     def update_progress(self, progress_type: ProgressType, percentage: float, 
-                       description: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None,
-                       agent_id: Optional[str] = None) -> None:
+                       description: str | None = None, metadata: dict[str, Any] | None = None,
+                       agent_id: str | None = None) -> None:
         """
         Update task progress for a specific progress type.
         
@@ -1004,7 +1035,7 @@ class Task:
             old_percentage = latest_snapshot.percentage
         
         # Create new progress snapshot
-        from ..value_objects.progress import ProgressStatus, ProgressMetadata
+        from ..value_objects.progress import ProgressMetadata, ProgressStatus
         
         # Determine status based on percentage
         if percentage == 0:
@@ -1105,6 +1136,11 @@ class Task:
         
         subtask_data = []
         for subtask in self.subtasks:
+            # Ensure subtask is a dictionary, skip if not
+            if not isinstance(subtask, dict):
+                logger.warning(f"Skipping invalid subtask (not a dict): {subtask}")
+                continue
+                
             status = subtask.get("status", "todo")
             if not include_blocked and status == "blocked":
                 continue
@@ -1176,7 +1212,7 @@ class Task:
         
         return snapshots[-1].percentage  # Return latest
     
-    def get_progress_timeline_data(self, hours: int = 24) -> List[Dict[str, Any]]:
+    def get_progress_timeline_data(self, hours: int = 24) -> list[dict[str, Any]]:
         """Get progress timeline data for the last N hours."""
         if self.progress_timeline is None:
             return []
@@ -1191,7 +1227,7 @@ class Task:
         
         return len(self.progress_timeline.get_snapshots_by_type(progress_type)) > 0
     
-    def get_events(self) -> List[Any]:
+    def get_events(self) -> list[Any]:
         """Get and clear domain events"""
         events = self._events.copy()
         self._events.clear()
@@ -1205,7 +1241,7 @@ class Task:
             retrieved_at=datetime.now(timezone.utc)
         ))
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert task to dictionary representation"""
         # Handle assignees - convert AgentRole enums to strings
         assignees_list = []
@@ -1246,9 +1282,13 @@ class Task:
     
     def migrate_subtask_ids(self) -> None:
         """Migrate old integer subtask IDs to new hierarchical format"""
-        from ..value_objects.task_id import TaskId
         
         for subtask in self.subtasks:
+            # Ensure subtask is a dictionary, skip if not
+            if not isinstance(subtask, dict):
+                logger.warning(f"Skipping invalid subtask during migration (not a dict): {subtask}")
+                continue
+                
             if isinstance(subtask.get("id"), int):
                 old_id = subtask["id"]
                 try:
@@ -1258,13 +1298,36 @@ class Task:
                 except Exception:
                     # Keep old ID if conversion fails
                     pass
+    
+    def clean_invalid_subtasks(self) -> int:
+        """Remove invalid subtasks (non-dict entries) from the subtasks list.
         
-        if any(isinstance(st.get("id"), int) for st in self.subtasks):
+        Returns:
+            Number of invalid subtasks removed
+        """
+        initial_count = len(self.subtasks)
+        valid_subtasks = [st for st in self.subtasks if isinstance(st, dict)]
+        removed_count = initial_count - len(valid_subtasks)
+        
+        if removed_count > 0:
+            logger.warning(f"Removed {removed_count} invalid subtasks from task {self.id}")
+            self.subtasks = valid_subtasks
             self.updated_at = datetime.now(timezone.utc)
+            
+            # Raise domain event for cleanup
+            self._events.append(TaskUpdated(
+                task_id=self.id,
+                field_name="subtasks",
+                old_value=f"removed_{removed_count}_invalid_subtasks",
+                new_value=self.subtasks,
+                updated_at=self.updated_at
+            ))
+        
+        return removed_count
     
     @classmethod
     def create(cls, id: TaskId, title: str, description: str, 
-               status: Optional[TaskStatus] = None, priority: Optional[Priority] = None,
+               status: TaskStatus | None = None, priority: Priority | None = None,
                **kwargs) -> 'Task':
         """Factory method to create a new task"""
         if status is None:

@@ -81,6 +81,47 @@ def fix_database_permissions():
     except Exception as e:
         print(f"❌ Unexpected error: {e}")
 
+def rebuild_frontend_after_restore():
+    """Rebuild frontend container after database restore to ensure UI shows new data.
+    
+    This ensures that the frontend displays the restored data correctly by:
+    1. Stopping the current frontend container
+    2. Rebuilding it with the latest code (no cache)
+    3. Starting the updated container
+    """
+    print("  📦 Stopping current frontend container...")
+    try:
+        # Stop frontend container
+        subprocess.run([
+            "docker-compose", "-f", "dhafnck_mcp_main/docker/docker-compose.yml", 
+            "down", "dhafnck-frontend"
+        ], capture_output=True, text=True, check=True)
+        
+        print("  🔨 Rebuilding frontend with latest code...")
+        # Rebuild frontend container without cache
+        subprocess.run([
+            "docker-compose", "-f", "dhafnck_mcp_main/docker/docker-compose.yml", 
+            "build", "dhafnck-frontend", "--no-cache"
+        ], check=True)
+        
+        print("  🚀 Starting updated frontend container...")
+        # Start updated frontend
+        subprocess.run([
+            "docker-compose", "-f", "dhafnck_mcp_main/docker/docker-compose.yml", 
+            "up", "-d", "dhafnck-frontend"
+        ], check=True)
+        
+        print("✅ Frontend rebuilt successfully!")
+        print("🌐 Frontend available at: http://localhost:3800")
+        print("💡 Your restored data should now be visible in the UI")
+        
+    except subprocess.CalledProcessError as e:
+        print(f"⚠️ Warning: Frontend rebuild failed: {e}")
+        print("💡 You may need to manually rebuild the frontend container")
+        print("   Run: docker-compose -f dhafnck_mcp_main/docker/docker-compose.yml build dhafnck-frontend --no-cache")
+    except Exception as e:
+        print(f"❌ Unexpected error during frontend rebuild: {e}")
+
 def main():
     choices = [
         "Start (normal - production mode) - Stable, production-ready setup",
@@ -92,9 +133,14 @@ def main():
         "Show logs - View real-time output from containers",
         "Shell into container - Access bash shell inside container",
         "Restart containers - Stop and restart selected mode",
-        "Rebuild frontend only - Rebuild just the frontend container",
+        "Build backend only - Rebuild just the backend container",
+        "Build frontend only - Rebuild just the frontend container",
+        "Build both - Rebuild both backend and frontend containers",
+        "Clean backend only - Remove backend container and image",
+        "Clean frontend only - Remove frontend container and image",
+        "Clean both - Remove both backend and frontend containers/images",
         "Clean & Rebuild (full reset) - Remove and rebuild everything",
-        "Import/Restore SQLite DB - Copy database into container",
+        "Import/Restore SQLite DB - Copy database into container and rebuild frontend",
         "Fix Database Permissions - Fix readonly database errors",
         "Inspect MCP Server - Open MCP inspector at http://localhost:8000/mcp/",
         "Exit - Close this menu"
@@ -382,7 +428,9 @@ def main():
                 subprocess.run(["docker", "compose"] + compose_files + ["up", "-d"])
         elif choice_main == "Import/Restore SQLite DB":
             print("\nImporting/Restoring SQLite Database:")
-            print("- This action allows you to copy a SQLite database file into the container.")
+            print("- This action copies a SQLite database file into the container.")
+            print("- Automatically fixes database permissions after import.")
+            print("- Rebuilds the frontend container to ensure UI displays restored data.")
             print("- You will be prompted to select which database (Main or Test) to restore.")
             print("- Ensure the container is running to successfully import the database.\n")
             db_choice = questionary.select(
@@ -411,6 +459,11 @@ def main():
                     print(f"Successfully imported {host_file} to {db_path} in container.")
                     print("🔧 Fixing permissions for imported database...")
                     fix_database_permissions()
+                    
+                    # Auto-rebuild frontend to ensure UI shows restored data
+                    print("🔄 Rebuilding frontend to display restored data...")
+                    rebuild_frontend_after_restore()
+                    
                 except subprocess.CalledProcessError as e:
                     print(f"Failed to import DB: {e}")
         elif choice_main == "Fix Database Permissions":
