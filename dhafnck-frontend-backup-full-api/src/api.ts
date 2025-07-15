@@ -195,14 +195,43 @@ export async function updateTask(task_id: string, updates: Partial<Task>): Promi
     body: JSON.stringify(body),
   });
   const data = await res.json();
+  
+  
   if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
     try {
       const toolResult = JSON.parse(data.result.content[0].text);
-      if (toolResult.success && toolResult.task) {
-        return toolResult.task;
+      
+      // Check if success is true, even if task is not returned
+      if (toolResult.success) {
+        // Return a dummy task object if task is not in response
+        return toolResult.task || { id: task_id, ...updates } as Task;
       }
-    } catch {}
+      
+      // If not successful, check for error message
+      if (toolResult.error) {
+        const errorMessage = typeof toolResult.error === 'string' 
+          ? toolResult.error 
+          : toolResult.error.message || JSON.stringify(toolResult.error);
+        throw new Error(errorMessage);
+      }
+      
+      // If no success and no error
+      throw new Error('Unexpected response from server');
+    } catch (e) {
+      // If it's already an Error, throw it, otherwise create a new Error
+      if (e instanceof Error) {
+        throw e;
+      } else {
+        throw new Error(String(e));
+      }
+    }
   }
+  
+  // Check for error in response
+  if (data.error) {
+    throw new Error(data.error.message || 'Unknown error');
+  }
+  
   return null;
 }
 
@@ -304,14 +333,37 @@ export async function updateSubtask(task_id: string, id: string, updates: any): 
     body: JSON.stringify(body),
   });
   const data = await res.json();
+  
+  
   if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
     try {
       const toolResult = JSON.parse(data.result.content[0].text);
-      if (toolResult.success && toolResult.subtask) {
-        return toolResult.subtask;
+      
+      if (toolResult.success) {
+        return toolResult.subtask || { id, ...updates };
       }
-    } catch {}
+      
+      if (toolResult.error) {
+        const errorMessage = typeof toolResult.error === 'string' 
+          ? toolResult.error 
+          : toolResult.error.message || JSON.stringify(toolResult.error);
+        throw new Error(errorMessage);
+      }
+      
+      throw new Error('Unexpected response from server');
+    } catch (e) {
+      if (e instanceof Error) {
+        throw e;
+      } else {
+        throw new Error(String(e));
+      }
+    }
   }
+  
+  if (data.error) {
+    throw new Error(data.error.message || 'Unknown error');
+  }
+  
   return null;
 }
 
@@ -395,6 +447,71 @@ export async function removeDependency(task_id: string, dependency_id: string): 
     } catch {}
   }
   return false;
+}
+
+// --- Context Management ---
+export async function getTaskContext(task_id: string): Promise<any> {
+  const body = {
+    jsonrpc: "2.0",
+    method: "tools/call",
+    params: {
+      name: "manage_hierarchical_context",
+      arguments: { 
+        action: "resolve",
+        level: "task",
+        context_id: task_id,
+        force_refresh: false
+      }
+    },
+    id: getRpcId(),
+  };
+  const res = await fetch(`${API_BASE}`, {
+    method: "POST",
+    headers: withMcpHeaders(),
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
+    try {
+      const toolResult = JSON.parse(data.result.content[0].text);
+      return toolResult;
+    } catch (e) {
+      console.error('Error parsing task context:', e);
+    }
+  }
+  return null;
+}
+
+export async function getProjectContext(project_id: string): Promise<any> {
+  const body = {
+    jsonrpc: "2.0",
+    method: "tools/call",
+    params: {
+      name: "manage_hierarchical_context",
+      arguments: { 
+        action: "resolve",
+        level: "project",
+        context_id: project_id,
+        force_refresh: false
+      }
+    },
+    id: getRpcId(),
+  };
+  const res = await fetch(`${API_BASE}`, {
+    method: "POST",
+    headers: withMcpHeaders(),
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
+    try {
+      const toolResult = JSON.parse(data.result.content[0].text);
+      return toolResult;
+    } catch (e) {
+      console.error('Error parsing project context:', e);
+    }
+  }
+  return null;
 }
 
 // --- Project Management ---
