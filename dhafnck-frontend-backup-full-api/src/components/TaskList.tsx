@@ -247,10 +247,14 @@ const TaskList: React.FC<TaskListProps> = ({ projectId, taskTreeId }) => {
                 </Button>
               </TableCell>
               <TableCell>
-                {task.title}
-                {hoveredDependency === task.id && (
-                  <span className="ml-2 text-xs text-yellow-700">(dependency)</span>
-                )}
+                <div className="flex items-center gap-2">
+                  <span>{task.title}</span>
+                  {task.subtasks && task.subtasks.length > 0 && (
+                    <Badge variant="outline" className="text-xs ml-1">
+                      {task.subtasks.length}
+                    </Badge>
+                  )}
+                </div>
               </TableCell>
               <TableCell>
                 <Badge>{task.status}</Badge>
