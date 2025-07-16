@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from .context_inheritance_service import ContextInheritanceService
 from .context_delegation_service import ContextDelegationService
 from .context_cache_service import ContextCacheService
-from ...infrastructure.repositories.sqlite.hierarchical_context_repository import SQLiteHierarchicalContextRepository
+from ...infrastructure.repositories.orm.hierarchical_context_repository import ORMHierarchicalContextRepository
 from ...infrastructure.repositories.hierarchical_context_repository_factory import HierarchicalContextRepositoryFactory
 
 logger = logging.getLogger(__name__)
@@ -47,7 +47,7 @@ class HierarchicalContextService:
     """
     
     def __init__(self, 
-                 repository: Optional[SQLiteHierarchicalContextRepository] = None,
+                 repository: Optional[ORMHierarchicalContextRepository] = None,
                  inheritance_service: Optional[ContextInheritanceService] = None,
                  delegation_service: Optional[ContextDelegationService] = None,
                  cache_service: Optional[ContextCacheService] = None):

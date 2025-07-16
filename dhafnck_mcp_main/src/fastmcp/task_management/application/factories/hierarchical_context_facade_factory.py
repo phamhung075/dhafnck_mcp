@@ -11,7 +11,7 @@ from ..services.hierarchical_context_service import HierarchicalContextService
 from ..services.context_inheritance_service import ContextInheritanceService
 from ..services.context_delegation_service import ContextDelegationService
 from ..services.context_cache_service import ContextCacheService
-from ...infrastructure.repositories.sqlite.hierarchical_context_repository import SQLiteHierarchicalContextRepository
+from ...infrastructure.repositories.orm.hierarchical_context_repository import ORMHierarchicalContextRepository
 from ...infrastructure.repositories.hierarchical_context_repository_factory import HierarchicalContextRepositoryFactory
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ class HierarchicalContextFacadeFactory:
     - Repositories handle data persistence
     """
     
-    def __init__(self, repository: Optional[SQLiteHierarchicalContextRepository] = None):
+    def __init__(self, repository: Optional[ORMHierarchicalContextRepository] = None):
         """
         Initialize the hierarchical context facade factory.
         

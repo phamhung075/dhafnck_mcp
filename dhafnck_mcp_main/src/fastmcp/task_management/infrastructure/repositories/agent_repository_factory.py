@@ -6,7 +6,6 @@ from typing import Optional, Dict, Any, Type
 from enum import Enum
 
 from ...domain.repositories.agent_repository import AgentRepository
-from .sqlite.agent_repository import SQLiteAgentRepository
 from .orm.agent_repository import ORMAgentRepository
 
 logger = logging.getLogger(__name__)
@@ -14,7 +13,6 @@ logger = logging.getLogger(__name__)
 
 class AgentRepositoryType(Enum):
     """Available agent repository implementation types"""
-    SQLITE = "sqlite"
     ORM = "orm"
     IN_MEMORY = "in_memory"
     MOCK = "mock"
@@ -25,7 +23,6 @@ class AgentRepositoryFactory:
     
     _instances: Dict[str, AgentRepository] = {}
     _repository_types: Dict[AgentRepositoryType, Type[AgentRepository]] = {
-        AgentRepositoryType.SQLITE: SQLiteAgentRepository,
         AgentRepositoryType.ORM: ORMAgentRepository,
     }
     
@@ -73,13 +70,13 @@ class AgentRepositoryFactory:
     @classmethod
     def _get_default_type(cls) -> AgentRepositoryType:
         """Get default repository type from environment"""
-        env_type = os.getenv("MCP_AGENT_REPOSITORY_TYPE", "sqlite").lower()
+        env_type = os.getenv("MCP_AGENT_REPOSITORY_TYPE", "orm").lower()
         
         try:
             return AgentRepositoryType(env_type)
         except ValueError:
-            logger.warning(f"Invalid agent repository type '{env_type}', using sqlite")
-            return AgentRepositoryType.SQLITE
+            logger.warning(f"Invalid agent repository type '{env_type}', using orm")
+            return AgentRepositoryType.ORM
     
     @classmethod
     def _generate_cache_key(
@@ -107,19 +104,17 @@ class AgentRepositoryFactory:
         repository_class = cls._repository_types[repository_type]
         
         try:
-            if repository_type == AgentRepositoryType.SQLITE:
-                return repository_class(db_path=db_path, user_id=user_id, **kwargs)
-            elif repository_type == AgentRepositoryType.ORM:
+            if repository_type == AgentRepositoryType.ORM:
                 return repository_class(user_id=user_id, **kwargs)
             else:
                 return repository_class(user_id=user_id, **kwargs)
                 
         except Exception as e:
             logger.error(f"Failed to create {repository_type.value} agent repository: {e}")
-            # Fallback to SQLite if possible
-            if repository_type != AgentRepositoryType.SQLITE:
-                logger.info("Falling back to SQLite agent repository")
-                return SQLiteAgentRepository(db_path=db_path, user_id=user_id)
+            # Fallback to ORM if possible
+            if repository_type != AgentRepositoryType.ORM:
+                logger.info("Falling back to ORM agent repository")
+                return ORMAgentRepository(user_id=user_id)
             raise
     
     @classmethod
@@ -170,13 +165,13 @@ class AgentRepositoryConfig:
     def _validate_type(self, repository_type: Optional[str]) -> AgentRepositoryType:
         """Validate and convert repository type"""
         if repository_type is None:
-            return AgentRepositoryType.SQLITE
+            return AgentRepositoryType.ORM
         
         try:
             return AgentRepositoryType(repository_type.lower())
         except ValueError:
-            logger.warning(f"Invalid agent repository type '{repository_type}', using sqlite")
-            return AgentRepositoryType.SQLITE
+            logger.warning(f"Invalid agent repository type '{repository_type}', using orm")
+            return AgentRepositoryType.ORM
     
     def create_repository(self) -> AgentRepository:
         """Create repository from this configuration"""
@@ -245,20 +240,18 @@ def create_agent_repository(
     repo_type = AgentRepositoryType(repository_type.lower()) if repository_type else None
     return AgentRepositoryFactory.create(
         repository_type=repo_type,
-        user_id=user_id,
-        db_path=db_path
+        user_id=user_id
     )
 
 
 def get_sqlite_agent_repository(
     user_id: str = "default_id",
     db_path: Optional[str] = None
-) -> SQLiteAgentRepository:
-    """Get SQLite agent repository instance"""
+) -> ORMAgentRepository:
+    """Get ORM agent repository instance (SQLite method deprecated)"""
     return AgentRepositoryFactory.create(
-        repository_type=AgentRepositoryType.SQLITE,
-        user_id=user_id,
-        db_path=db_path
+        repository_type=AgentRepositoryType.ORM,
+        user_id=user_id
     )
 
 

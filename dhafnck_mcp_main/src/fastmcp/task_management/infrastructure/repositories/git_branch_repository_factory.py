@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 class GitBranchRepositoryType(Enum):
     """Available git branch repository types"""
     JSON = "json"
-    SQLITE = "sqlite"
     ORM = "orm"
     MEMORY = "memory"
 
@@ -57,13 +56,7 @@ class GitBranchRepositoryFactory:
         
         # Create repository instance based on type
         try:
-            if repository_type == GitBranchRepositoryType.SQLITE:
-                from .sqlite.git_branch_repository import SQLiteGitBranchRepository
-                repository = SQLiteGitBranchRepository(
-                    user_id=user_id,
-                    **kwargs
-                )
-            elif repository_type == GitBranchRepositoryType.ORM:
+            if repository_type == GitBranchRepositoryType.ORM:
                 from .orm.git_branch_repository import ORMGitBranchRepository
                 repository = ORMGitBranchRepository(
                     user_id=user_id,
@@ -91,20 +84,8 @@ class GitBranchRepositoryFactory:
     @classmethod
     def _get_default_type(cls) -> GitBranchRepositoryType:
         """Get default repository type from environment or fallback"""
-        env_type = os.getenv("MCP_GIT_BRANCH_REPOSITORY_TYPE", "orm").lower()
-        
-        # Check if DATABASE_TYPE is set to determine ORM vs SQLite
-        database_type = os.getenv("DATABASE_TYPE", "").lower()
-        if database_type in ["postgresql", "postgres"]:
-            env_type = "orm"  # Force ORM for PostgreSQL
-        elif database_type == "sqlite" and env_type == "orm":
-            env_type = "sqlite"  # Fall back to SQLite implementation for SQLite DB
-        
-        try:
-            return GitBranchRepositoryType(env_type)
-        except ValueError:
-            logger.warning(f"Unknown repository type in environment: {env_type}, using ORM")
-            return GitBranchRepositoryType.ORM
+        # Always use ORM
+        return GitBranchRepositoryType.ORM
     
     @classmethod
     def register_type(
@@ -137,12 +118,6 @@ class GitBranchRepositoryFactory:
 
 # Register default repository types
 try:
-    from .sqlite.git_branch_repository import SQLiteGitBranchRepository
-    GitBranchRepositoryFactory.register_type(GitBranchRepositoryType.SQLITE, SQLiteGitBranchRepository)
-except ImportError:
-    logger.warning("SQLiteGitBranchRepository not available")
-
-try:
     from .orm.git_branch_repository import ORMGitBranchRepository
     GitBranchRepositoryFactory.register_type(GitBranchRepositoryType.ORM, ORMGitBranchRepository)
 except ImportError:
@@ -158,9 +133,9 @@ def get_default_repository(user_id: str = "default_id") -> GitBranchRepository:
 
 
 def get_sqlite_repository(user_id: str = "default_id", **kwargs) -> GitBranchRepository:
-    """Get SQLite git branch repository"""
+    """Get ORM git branch repository (SQLite method deprecated)"""
     return GitBranchRepositoryFactory.create(
-        repository_type=GitBranchRepositoryType.SQLITE,
+        repository_type=GitBranchRepositoryType.ORM,
         user_id=user_id,
         **kwargs
     )

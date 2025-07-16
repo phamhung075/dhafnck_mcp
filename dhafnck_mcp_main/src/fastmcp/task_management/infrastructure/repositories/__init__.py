@@ -4,37 +4,31 @@
 # from .json_task_repository import JsonTaskRepository, InMemoryTaskRepository
 
 # Project repositories
-from .sqlite.project_repository import SQLiteProjectRepository
+from .orm.project_repository import ORMProjectRepository
 from .project_repository_factory import ProjectRepositoryFactory, create_project_repository, get_default_repository
 
 # Agent repositories
-from .sqlite.agent_repository import SQLiteAgentRepository
+from .orm.agent_repository import ORMAgentRepository
 from .agent_repository_factory import AgentRepositoryFactory, create_agent_repository, get_default_agent_repository
 
 # Context repositories
-from .sqlite.hierarchical_context_repository import SQLiteHierarchicalContextRepository
+from .orm.hierarchical_context_repository import ORMHierarchicalContextRepository
 # Alias for backward compatibility
-SQLiteContextRepository = SQLiteHierarchicalContextRepository
-
-# Agent coordination repositories
-from .sqlite.agent_coordination_repository import AgentCoordinationRepository
+ORMContextRepository = ORMHierarchicalContextRepository
 
 __all__ = [
     # Project repositories
-    "SQLiteProjectRepository",
+    "ORMProjectRepository",
     "ProjectRepositoryFactory", 
     "create_project_repository",
     "get_default_repository",
     
     # Agent repositories
-    "SQLiteAgentRepository", 
+    "ORMAgentRepository", 
     "AgentRepositoryFactory",
     "create_agent_repository",
     "get_default_agent_repository",
     
     # Context repositories
-    "SQLiteContextRepository",
-    
-    # Agent coordination repositories
-    "AgentCoordinationRepository",
+    "ORMContextRepository",
 ] 

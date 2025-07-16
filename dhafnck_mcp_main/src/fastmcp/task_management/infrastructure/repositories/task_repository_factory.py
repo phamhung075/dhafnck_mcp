@@ -5,9 +5,7 @@ from pathlib import Path
 import os
 
 from ...domain.repositories.task_repository import TaskRepository
-from .sqlite.task_repository import SQLiteTaskRepository
 from .orm.task_repository import ORMTaskRepository
-# Removed problematic tool_path import
 
 
 def _find_project_root() -> Path:
@@ -56,7 +54,7 @@ class TaskRepositoryFactory:
     """Factory for creating task repositories with hierarchical user/project/tree structure"""
     
     def __init__(self, base_path: Optional[str] = None, default_user_id: str = "default_id", 
-                 project_root: Optional[Path] = None, storage_type: str = "sqlite"):
+                 project_root: Optional[Path] = None):
         """
         Initialize repository factory
         
@@ -64,12 +62,10 @@ class TaskRepositoryFactory:
             base_path: Base path for task storage (defaults to project root)
             default_user_id: Default user ID for single-user mode
             project_root: Injected project root for testing or custom environments
-            storage_type: Type of storage to use ('sqlite' or 'json')
         """
         self.project_root = project_root or _find_project_root()
         self.base_path = base_path or str(self.project_root / ".cursor" / "rules" / "tasks")
         self.default_user_id = default_user_id
-        self.storage_type = storage_type
     
     def create_repository(self, project_id: str, git_branch_name: str = "main", user_id: Optional[str] = None) -> TaskRepository:
         """
@@ -92,29 +88,12 @@ class TaskRepositoryFactory:
         if not user_id:
             user_id = self.default_user_id
         
-        # Check database type from environment
-        database_type = os.getenv("DATABASE_TYPE", "sqlite").lower()
-        
-        if database_type == "postgresql":
-            # Use ORM repository for PostgreSQL
-            return ORMTaskRepository(
-                project_id=project_id,
-                git_branch_name=git_branch_name,
-                user_id=user_id
-            )
-        else:
-            # Use SQLite database
-            env_db_path = os.getenv("MCP_DB_PATH")
-            if env_db_path:
-                db_path = env_db_path
-            else:
-                db_path = self.project_root / "dhafnck_mcp_main" / "database" / "data" / "dhafnck_mcp.db"
-            return SQLiteTaskRepository(
-                db_path=str(db_path),
-                project_id=project_id,
-                git_branch_name=git_branch_name,
-                user_id=user_id
-            )
+        # Always use ORM repository
+        return ORMTaskRepository(
+            project_id=project_id,
+            git_branch_name=git_branch_name,
+            user_id=user_id
+        )
 
     def create_repository_with_git_branch_id(self, project_id: str, git_branch_name: str, user_id: str, git_branch_id: str) -> TaskRepository:
         """
@@ -132,45 +111,27 @@ class TaskRepositoryFactory:
         Returns:
             TaskRepository instance scoped to the git_branch_id
         """
-        # Check database type from environment
-        database_type = os.getenv("DATABASE_TYPE", "sqlite").lower()
-        
-        if database_type == "postgresql":
-            # Use ORM repository for PostgreSQL
-            return ORMTaskRepository(
-                git_branch_id=git_branch_id,
-                project_id=project_id,
-                git_branch_name=git_branch_name,
-                user_id=user_id
-            )
-        else:
-            # Use SQLite database
-            env_db_path = os.getenv("MCP_DB_PATH")
-            if env_db_path:
-                db_path = env_db_path
-            else:
-                db_path = self.project_root / "dhafnck_mcp_main" / "database" / "data" / "dhafnck_mcp.db"
-            return SQLiteTaskRepository(
-                db_path=str(db_path),
-                git_branch_id=git_branch_id,
-                project_id=project_id,
-                git_branch_name=git_branch_name,
-                user_id=user_id
-            )
+        # Always use ORM repository
+        return ORMTaskRepository(
+            git_branch_id=git_branch_id,
+            project_id=project_id,
+            git_branch_name=git_branch_name,
+            user_id=user_id
+        )
     
     def create_sqlite_repository(self, project_id: str, git_branch_name: str = "main", 
                                 user_id: Optional[str] = None, db_path: Optional[str] = None) -> TaskRepository:
         """
-        Create a SQLite task repository
+        Create a task repository (now always uses ORM)
         
         Args:
             project_id: Project identifier (REQUIRED)
             git_branch_name: Task tree identifier (defaults to "main")
             user_id: User identifier (defaults to default_user_id)
-            db_path: Custom database path (optional)
+            db_path: Custom database path (optional, ignored for ORM)
             
         Returns:
-            SQLiteTaskRepository instance
+            ORMTaskRepository instance
         """
         if not project_id:
             raise ValueError("project_id is required")
@@ -181,11 +142,8 @@ class TaskRepositoryFactory:
         if not user_id:
             user_id = self.default_user_id
         
-        if not db_path:
-            db_path = self.project_root / "dhafnck_mcp_main" / "database" / "data" / "dhafnck_mcp.db"
-        
-        return SQLiteTaskRepository(
-            db_path=str(db_path),
+        # Always use ORM repository
+        return ORMTaskRepository(
             project_id=project_id,
             git_branch_name=git_branch_name,
             user_id=user_id
@@ -202,21 +160,12 @@ class TaskRepositoryFactory:
         Returns:
             TaskRepository instance with system-level access
         """
-        if self.storage_type == "sqlite":
-            # Use SQLite database
-            env_db_path = os.getenv("MCP_DB_PATH")
-            if env_db_path:
-                db_path = env_db_path
-            elif not db_path:
-                db_path = self.project_root / "dhafnck_mcp_main" / "database" / "data" / "dhafnck_mcp.db"
-            
-            # Create repository with no context restrictions (all parameters None)
-            return SQLiteTaskRepository(
-                db_path=str(db_path),
-                project_id=None,
-                git_branch_name=None,
-                user_id=None
-            )
+        # Always use ORM repository
+        return ORMTaskRepository(
+            project_id=None,
+            git_branch_name=None,
+            user_id=None
+        )
     
     def get_all_user_repositories(self, user_id: Optional[str] = None) -> dict[str, dict[str, TaskRepository]]:
         """

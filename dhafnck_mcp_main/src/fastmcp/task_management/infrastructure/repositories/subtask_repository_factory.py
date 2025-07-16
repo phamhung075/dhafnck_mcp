@@ -5,9 +5,7 @@ from pathlib import Path
 import os
 
 from ...domain.repositories.subtask_repository import SubtaskRepository
-from .sqlite.subtask_repository import SQLiteSubtaskRepository
 from .orm.subtask_repository import ORMSubtaskRepository
-# Removed problematic tool_path import
 
 
 def _find_project_root() -> Path:
@@ -56,7 +54,7 @@ class SubtaskRepositoryFactory:
     """Factory for creating subtask repositories with hierarchical user/project/tree structure"""
     
     def __init__(self, base_path: Optional[str] = None, default_user_id: str = "default_id", 
-                 project_root: Optional[Path] = None, storage_type: str = "sqlite"):
+                 project_root: Optional[Path] = None):
         """
         Initialize subtask repository factory
         
@@ -64,15 +62,10 @@ class SubtaskRepositoryFactory:
             base_path: Base path for subtask storage (defaults to project root)
             default_user_id: Default user ID for single-user mode
             project_root: Injected project root for testing or custom environments
-            storage_type: Type of storage to use ('sqlite' or 'orm')
         """
         self.project_root = project_root or _find_project_root()
         self.base_path = base_path or str(self.project_root / ".cursor" / "rules" / "subtasks")
         self.default_user_id = default_user_id
-        self.storage_type = storage_type
-        
-        # Check environment variable for database type
-        self.database_type = os.getenv("DATABASE_TYPE", "sqlite").lower()
     
     def create_subtask_repository(self, project_id: str, git_branch_name: str = "main", user_id: Optional[str] = None) -> SubtaskRepository:
         """
@@ -95,49 +88,22 @@ class SubtaskRepositoryFactory:
         if not user_id:
             user_id = self.default_user_id
         
-        # Check for ORM mode first (preferred for new implementations)
-        if self.database_type == "postgresql" or self.storage_type == "orm":
-            return ORMSubtaskRepository()
-        elif self.storage_type == "sqlite":
-            # Use SQLite database
-            env_db_path = os.getenv("MCP_DB_PATH")
-            if env_db_path:
-                db_path = env_db_path
-            else:
-                db_path = self.project_root / "dhafnck_mcp_main" / "database" / "data" / "dhafnck_mcp.db"
-            return SQLiteSubtaskRepository(
-                db_path=str(db_path),
-                project_id=project_id,
-                git_branch_name=git_branch_name,
-                user_id=user_id
-            )
-        else:
-            # Default fallback to SQLite
-            env_db_path = os.getenv("MCP_DB_PATH")
-            if env_db_path:
-                db_path = env_db_path
-            else:
-                db_path = self.project_root / "dhafnck_mcp_main" / "database" / "data" / "dhafnck_mcp.db"
-            return SQLiteSubtaskRepository(
-                db_path=str(db_path),
-                project_id=project_id,
-                git_branch_name=git_branch_name,
-                user_id=user_id
-            )
+        # Always use ORM repository
+        return ORMSubtaskRepository()
     
     def create_sqlite_subtask_repository(self, project_id: str, git_branch_name: str = "main", 
                                         user_id: Optional[str] = None, db_path: Optional[str] = None) -> SubtaskRepository:
         """
-        Create a SQLite subtask repository
+        Create a subtask repository (now always uses ORM)
         
         Args:
             project_id: Project identifier (REQUIRED)
             git_branch_name: Task tree identifier (defaults to "main")
             user_id: User identifier (defaults to default_user_id)
-            db_path: Custom database path (optional)
+            db_path: Custom database path (optional, ignored for ORM)
             
         Returns:
-            SQLiteSubtaskRepository instance
+            ORMSubtaskRepository instance
         """
         if not project_id:
             raise ValueError("project_id is required")
@@ -148,15 +114,8 @@ class SubtaskRepositoryFactory:
         if not user_id:
             user_id = self.default_user_id
         
-        if not db_path:
-            db_path = self.project_root / "dhafnck_mcp_main" / "database" / "data" / "dhafnck_mcp.db"
-        
-        return SQLiteSubtaskRepository(
-            db_path=str(db_path),
-            project_id=project_id,
-            git_branch_name=git_branch_name,
-            user_id=user_id
-        )
+        # Always use ORM repository
+        return ORMSubtaskRepository()
     
     def create_orm_subtask_repository(self) -> SubtaskRepository:
         """
@@ -182,16 +141,8 @@ class SubtaskRepositoryFactory:
         if not user_id:
             user_id = self.default_user_id
         
-        if self.storage_type == "sqlite":
-            # For SQLite, check if database file exists
-            env_db_path = os.getenv("MCP_DB_PATH")
-            if env_db_path:
-                db_path = Path(env_db_path)
-            else:
-                db_path = self.project_root / "dhafnck_mcp_main" / "database" / "data" / "dhafnck_mcp.db"
-            return db_path.exists()
-        
-        return False
+        # Always return True for ORM repositories
+        return True
     
     def get_subtask_db_path(self, project_id: str, git_branch_name: str = "main", user_id: Optional[str] = None) -> str:
         """

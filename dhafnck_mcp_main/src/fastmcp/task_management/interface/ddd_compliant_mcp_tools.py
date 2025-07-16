@@ -198,13 +198,11 @@ class DDDCompliantMCPTools:
             from ..application.services.work_distribution_service import WorkDistributionService
             
             # Initialize repositories for Vision System
-            from ..infrastructure.repositories.sqlite.vision_repository import SQLiteVisionRepository
-            from ..infrastructure.repositories.sqlite.agent_coordination_repository import AgentCoordinationRepository
-            
-            self._vision_repository = SQLiteVisionRepository()
+            # Note: Vision system will be refactored to use ORM repositories
+            self._vision_repository = None  # SQLiteVisionRepository removed
             self._hint_repository = None  # HintRepository is abstract
             self._progress_event_store = None  # ProgressEventStore is abstract
-            self._agent_coordination_repository = AgentCoordinationRepository()
+            self._agent_coordination_repository = None  # AgentCoordinationRepository removed
             
             # Initialize services with mock repository
             self._vision_enrichment_service = VisionEnrichmentService(

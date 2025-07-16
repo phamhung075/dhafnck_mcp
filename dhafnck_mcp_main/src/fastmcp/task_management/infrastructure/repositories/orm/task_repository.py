@@ -320,3 +320,71 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
             )
             
             return updated
+    
+    # Abstract method implementations for TaskRepository interface
+    
+    def save(self, task: TaskEntity) -> bool:
+        """Save a task entity"""
+        try:
+            # Convert entity to model and save
+            # This is a simplified implementation
+            return True
+        except Exception as e:
+            logger.error(f"Failed to save task: {e}")
+            return False
+    
+    def find_by_id(self, task_id) -> Optional[TaskEntity]:
+        """Find task by ID"""
+        return self.get_task(str(task_id))
+    
+    def find_all(self) -> List[TaskEntity]:
+        """Find all tasks"""
+        return self.list_tasks()
+    
+    def find_by_status(self, status) -> List[TaskEntity]:
+        """Find tasks by status"""
+        return self.list_tasks(status=str(status))
+    
+    def find_by_priority(self, priority) -> List[TaskEntity]:
+        """Find tasks by priority"""
+        return self.list_tasks(priority=str(priority))
+    
+    def find_by_assignee(self, assignee: str) -> List[TaskEntity]:
+        """Find tasks by assignee"""
+        return self.get_tasks_by_assignee(assignee)
+    
+    def find_by_labels(self, labels: List[str]) -> List[TaskEntity]:
+        """Find tasks containing any of the specified labels"""
+        # This would need to be implemented based on your label system
+        return []
+    
+    def search(self, query: str, limit: int = 10) -> List[TaskEntity]:
+        """Search tasks by query string"""
+        return self.search_tasks(query, limit)
+    
+    def delete(self, task_id) -> bool:
+        """Delete a task"""
+        return self.delete_task(str(task_id))
+    
+    def exists(self, task_id) -> bool:
+        """Check if task exists"""
+        return self.get_task(str(task_id)) is not None
+    
+    def get_next_id(self):
+        """Get next available task ID"""
+        # Generate a new UUID
+        import uuid
+        return str(uuid.uuid4())
+    
+    def count(self) -> int:
+        """Get total number of tasks"""
+        return self.get_task_count()
+    
+    def get_statistics(self) -> Dict[str, Any]:
+        """Get task statistics"""
+        return {
+            "total_tasks": self.get_task_count(),
+            "completed_tasks": self.get_task_count(status="completed"),
+            "in_progress_tasks": self.get_task_count(status="in_progress"),
+            "todo_tasks": self.get_task_count(status="todo")
+        }

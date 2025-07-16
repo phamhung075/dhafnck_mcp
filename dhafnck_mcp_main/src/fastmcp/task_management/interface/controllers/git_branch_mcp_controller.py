@@ -412,12 +412,12 @@ class GitBranchMCPController:
         try:
             # Get the project_id from facade context or find it from the branch
             # Since we need the repository directly, let's use it
-            from ...infrastructure.repositories.sqlite.git_branch_repository import SQLiteGitBranchRepository
+            from ...infrastructure.repositories.orm.git_branch_repository import ORMGitBranchRepository
             import asyncio
             import threading
             
             # Create repository instance
-            repo = SQLiteGitBranchRepository()
+            repo = ORMGitBranchRepository()
             
             # Get branch statistics
             result = None
@@ -519,11 +519,11 @@ class GitBranchMCPController:
         """
         try:
             # Use the git branch repository directly to find the branch by name
-            from ...infrastructure.repositories.sqlite.git_branch_repository import SQLiteGitBranchRepository
+            from ...infrastructure.repositories.orm.git_branch_repository import ORMGitBranchRepository
             import asyncio
             import threading
             
-            repo = SQLiteGitBranchRepository()
+            repo = ORMGitBranchRepository()
             
             # Handle async operation in a sync context
             result = None

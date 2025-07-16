@@ -5,7 +5,6 @@ from pathlib import Path
 import os
 
 from ...domain.repositories.template_repository import TemplateRepositoryInterface
-from .sqlite.template_repository import SQLiteTemplateRepository
 from .orm.template_repository import ORMTemplateRepository
 
 
@@ -65,49 +64,29 @@ class TemplateRepositoryFactory:
     
     def create_repository(self, db_path: Optional[str] = None) -> TemplateRepositoryInterface:
         """
-        Create a template repository based on database type configuration
+        Create a template repository (always uses ORM)
         
         Args:
-            db_path: Custom database path for SQLite (optional)
+            db_path: Custom database path (optional, ignored for ORM)
             
         Returns:
-            TemplateRepositoryInterface instance
+            ORMTemplateRepository instance
         """
-        # Check database type from environment
-        database_type = os.getenv("DATABASE_TYPE", "sqlite").lower()
-        
-        if database_type == "postgresql":
-            # Use ORM repository for PostgreSQL
-            return ORMTemplateRepository()
-        else:
-            # Use SQLite database
-            if not db_path:
-                env_db_path = os.getenv("MCP_DB_PATH")
-                if env_db_path:
-                    db_path = env_db_path
-                else:
-                    db_path = self.project_root / "dhafnck_mcp_main" / "database" / "data" / "dhafnck_mcp.db"
-            
-            return SQLiteTemplateRepository(db_path=str(db_path))
+        # Always use ORM repository
+        return ORMTemplateRepository()
     
     def create_sqlite_repository(self, db_path: Optional[str] = None) -> TemplateRepositoryInterface:
         """
-        Create a SQLite template repository
+        Create a template repository (now always uses ORM)
         
         Args:
-            db_path: Custom database path (optional)
+            db_path: Custom database path (optional, ignored for ORM)
             
         Returns:
-            SQLiteTemplateRepository instance
+            ORMTemplateRepository instance
         """
-        if not db_path:
-            env_db_path = os.getenv("MCP_DB_PATH")
-            if env_db_path:
-                db_path = env_db_path
-            else:
-                db_path = self.project_root / "dhafnck_mcp_main" / "database" / "data" / "dhafnck_mcp.db"
-        
-        return SQLiteTemplateRepository(db_path=str(db_path))
+        # Always use ORM repository
+        return ORMTemplateRepository()
     
     def create_orm_repository(self) -> TemplateRepositoryInterface:
         """

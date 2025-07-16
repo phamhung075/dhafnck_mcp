@@ -9,7 +9,8 @@ from pathlib import Path
 from typing import Optional, Dict, Any
 
 from ..task_management.domain.repositories.task_repository import TaskRepository
-from ..task_management.infrastructure.repositories.sqlite.vision_repository import SQLiteVisionRepository
+# Note: Vision repository will be refactored to use ORM
+# from ..task_management.infrastructure.repositories.orm.vision_repository import ORMVisionRepository
 from .vision_enrichment_service import VisionEnrichmentService
 from ..task_management.application.services.vision_analytics_service import VisionAnalyticsService
 
@@ -21,7 +22,7 @@ def create_vision_services(
     task_repository: TaskRepository,
     db_config: Optional[Dict[str, Any]] = None,
     config_path: Optional[Path] = None
-) -> tuple[SQLiteVisionRepository, VisionEnrichmentService, VisionAnalyticsService]:
+) -> tuple[None, VisionEnrichmentService, VisionAnalyticsService]:
     """Create and initialize all vision system services.
     
     Args:
@@ -32,13 +33,9 @@ def create_vision_services(
     Returns:
         Tuple of (vision_repository, enrichment_service, analytics_service)
     """
-    # Create vision repository (SQLite)
-    # Convert db_config to db_path if needed
-    db_path = None
-    if db_config and 'database' in db_config:
-        db_path = db_config['database']
-    vision_repository = SQLiteVisionRepository(db_path=db_path)
-    logger.info("Vision repository initialized")
+    # Vision repository temporarily disabled during SQLite removal
+    vision_repository = None
+    logger.info("Vision repository disabled (will be refactored to use ORM)")
     
     # Create enrichment service
     enrichment_service = VisionEnrichmentService(
