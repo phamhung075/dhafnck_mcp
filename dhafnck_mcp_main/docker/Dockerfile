@@ -41,12 +41,18 @@ COPY 00_RESOURCES/ ./00_RESOURCES/
 
 # Create virtual environment and install dependencies
 RUN uv venv .venv
-# Use uv sync which installs both dependencies AND the current package in editable mode
-RUN pip install pydantic
-RUN pip install pydantic_settings
-RUN uv sync --frozen
+
+# First install specific critical dependencies
+RUN uv pip install sqlalchemy==2.0.35 psycopg2-binary==2.9.10 pydantic==2.10.3 pydantic-settings==2.7.0
+
+# Then sync the rest of the dependencies
+RUN uv sync || echo "uv sync failed, continuing with pip install"
+
+# Fallback: Install package in editable mode if sync failed
+RUN uv pip install -e . || echo "editable install failed"
 
 # Verify the installation worked
+RUN .venv/bin/python -c "import sqlalchemy; print('✅ SQLAlchemy imported successfully')"
 RUN .venv/bin/python -c "import fastmcp; print('✅ fastmcp module imported successfully')"
 
 # Stage 2: Runtime stage

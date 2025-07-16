@@ -2,7 +2,6 @@
 # Usage: docker-compose -f docker-compose.yml -f docker-compose.redis.yml up
 # This adds Redis for persistent MCP sessions
 
-version: '3.8'
 
 services:
   # Redis service for session persistence
@@ -12,7 +11,7 @@ services:
     ports:
       - "${REDIS_PORT:-6379}:6379"
     environment:
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-dev_redis_password_123}
     command: >
       redis-server
       --appendonly yes
@@ -46,7 +45,7 @@ services:
     environment:
       # Redis Configuration
       - REDIS_URL=redis://redis:6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-dev_redis_password_123}
       
       # Enhanced EventStore Configuration for Last-Event-ID Support
       - PREFER_REDIS=true
@@ -115,7 +114,7 @@ services:
       - "${REDIS_UI_PORT:-8081}:8081"
     environment:
       - REDIS_HOSTS=local:redis:6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-dev_redis_password_123}
     depends_on:
       redis:
         condition: service_healthy

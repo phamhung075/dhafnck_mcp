@@ -147,7 +147,8 @@ class SQLiteVisionRepository(SQLiteBaseRepository):
     def _add_default_objectives(self) -> None:
         """Add default vision objectives if none exist"""
         with self._get_connection() as conn:
-            count = conn.execute("SELECT COUNT(*) FROM vision_objectives").fetchone()[0]
+            result = conn.execute("SELECT COUNT(*) as count FROM vision_objectives").fetchone()
+            count = result['count'] if result else 0
             if count > 0:
                 return
             

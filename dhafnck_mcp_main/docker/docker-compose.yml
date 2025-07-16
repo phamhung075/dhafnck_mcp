@@ -26,8 +26,8 @@ services:
       PROJECTS_FILE_PATH: /data/projects/projects.json
       CURSOR_RULES_DIR: /data/rules
       AGENT_LIBRARY_DIR_PATH: /app/agent-library
-      DHAFNCK_AUTH_ENABLED: true
-      DHAFNCK_MVP_MODE: false
+      DHAFNCK_AUTH_ENABLED: false
+      DHAFNCK_MVP_MODE: true
       SUPABASE_URL: ""
       SUPABASE_ANON_KEY: ""
       DHAFNCK_TOKEN: ""
@@ -56,7 +56,7 @@ services:
       - ./config:/app/config:ro
       
       # Development mode: mount source code (comment out for production)
-      # - ./src:/app/src:ro  # Commented out for self-contained container
+      - ../src:/app/src:ro  # Mount source code for development
     
     # Health check for HTTP mode (check health endpoint)
     healthcheck:
@@ -130,7 +130,7 @@ services:
   dhafnck-frontend:
     build:
       context: ../../dhafnck-frontend
-      dockerfile: Dockerfile
+      dockerfile: docker/Dockerfile
     image: dhafnck/frontend:latest
     container_name: dhafnck-frontend
     restart: unless-stopped

@@ -259,17 +259,25 @@ class SQLiteRowCompat:
     """
     Compatibility wrapper for SQLite Row objects.
     
-    Provides dict-like access to row data from SQLAlchemy result rows.
+    Provides both dict-like and list-like access to row data from SQLAlchemy result rows.
+    Supports both column name access (row['column_name']) and numeric indexing (row[0]).
     """
     
     def __init__(self, row):
         """Initialize with SQLAlchemy result row"""
         self._row = row
         self._data = dict(row._mapping) if row else {}
+        # Store values as list for numeric indexing
+        self._values = list(row) if row else []
     
     def __getitem__(self, key):
-        """Get item by key (dict-like access)"""
-        return self._data[key]
+        """Get item by key (dict-like access) or index (list-like access)"""
+        if isinstance(key, int):
+            # Numeric indexing - return value by position
+            return self._values[key] if key < len(self._values) else None
+        else:
+            # String key - return value by column name
+            return self._data[key]
     
     def __contains__(self, key):
         """Check if key exists"""

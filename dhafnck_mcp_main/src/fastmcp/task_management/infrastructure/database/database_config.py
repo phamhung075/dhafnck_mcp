@@ -8,7 +8,7 @@ making it easy to switch between databases based on environment configuration.
 import os
 import logging
 from typing import Optional, Dict, Any
-from sqlalchemy import create_engine, Engine, event, pool
+from sqlalchemy import create_engine, Engine, event, pool, text
 from sqlalchemy.orm import sessionmaker, Session, DeclarativeBase
 from sqlalchemy.pool import NullPool, QueuePool
 
@@ -110,11 +110,11 @@ class DatabaseConfig:
             # Test connection
             with self.engine.connect() as conn:
                 if database_url.startswith("postgresql"):
-                    result = conn.execute("SELECT version()")
+                    result = conn.execute(text("SELECT version()"))
                     version = result.scalar()
                     logger.info(f"Connected to PostgreSQL: {version}")
                 else:
-                    result = conn.execute("SELECT sqlite_version()")
+                    result = conn.execute(text("SELECT sqlite_version()"))
                     version = result.scalar()
                     logger.info(f"Connected to SQLite: {version}")
             

@@ -168,7 +168,7 @@ services:
   dhafnck-frontend:
     build:
       context: ../../dhafnck-frontend
-      dockerfile: Dockerfile
+      dockerfile: docker/Dockerfile
     image: dhafnck/frontend:latest
     container_name: dhafnck-frontend
     restart: unless-stopped
