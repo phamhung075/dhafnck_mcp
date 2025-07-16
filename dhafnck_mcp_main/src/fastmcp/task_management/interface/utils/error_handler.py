@@ -1,11 +1,13 @@
 """Centralized error handler for user-friendly error messages and recovery instructions."""
 
 import sqlite3
-import logging
 from typing import Dict, Any, Optional, Type, Union
 from enum import Enum
 
-logger = logging.getLogger(__name__)
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError as SQLAlchemyIntegrityError, DatabaseError
+from ...infrastructure.logging import TaskManagementLogger
+
+logger = TaskManagementLogger.get_logger(__name__)
 
 
 class ErrorCode(Enum):
@@ -59,7 +61,7 @@ class UserFriendlyErrorHandler:
         context = context or {}
         
         # Handle specific exception types
-        if isinstance(exception, sqlite3.Error):
+        if isinstance(exception, (sqlite3.Error, SQLAlchemyError)):
             return UserFriendlyErrorHandler._handle_database_error(exception, operation, context)
         
         if isinstance(exception, ValueError):
@@ -89,11 +91,11 @@ class UserFriendlyErrorHandler:
     
     @staticmethod
     def _handle_database_error(
-        exception: sqlite3.Error, 
+        exception: Union[sqlite3.Error, SQLAlchemyError], 
         operation: str, 
         context: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Handle SQLite database errors with user-friendly messages."""
+        """Handle SQLite and SQLAlchemy database errors with user-friendly messages."""
         
         error_str = str(exception).lower()
         
@@ -401,9 +403,16 @@ def handle_operation_error(operation: str):
             # Implementation
     """
     def decorator(func):
-        def wrapper(*args, **kwargs):
+        import asyncio
+        import functools
+        
+        async def async_wrapper(*args, **kwargs):
             try:
-                return func(*args, **kwargs)
+                # Log operation start
+                logger.debug(f"Starting {operation}", extra={"operation": operation})
+                result = await func(*args, **kwargs)
+                logger.debug(f"Completed {operation} successfully", extra={"operation": operation})
+                return result
             except Exception as e:
                 # Extract context from function arguments if available
                 context = {}
@@ -411,6 +420,51 @@ def handle_operation_error(operation: str):
                     context = {k: v for k, v in args[1].__dict__.items() 
                               if isinstance(v, (str, int, float, bool))}
                 
+                # Log the error with full context
+                logger.error(
+                    f"Error in {operation}: {str(e)}",
+                    exc_info=True,
+                    extra={
+                        "operation": operation,
+                        "error_type": type(e).__name__,
+                        "context": context
+                    }
+                )
+                
                 return UserFriendlyErrorHandler.handle_error(e, operation, context)
-        return wrapper
+        
+        @functools.wraps(func)
+        def sync_wrapper(*args, **kwargs):
+            try:
+                # Log operation start
+                logger.debug(f"Starting {operation}", extra={"operation": operation})
+                result = func(*args, **kwargs)
+                logger.debug(f"Completed {operation} successfully", extra={"operation": operation})
+                return result
+            except Exception as e:
+                # Extract context from function arguments if available
+                context = {}
+                if len(args) > 1 and hasattr(args[1], '__dict__'):
+                    context = {k: v for k, v in args[1].__dict__.items() 
+                              if isinstance(v, (str, int, float, bool))}
+                
+                # Log the error with full context
+                logger.error(
+                    f"Error in {operation}: {str(e)}",
+                    exc_info=True,
+                    extra={
+                        "operation": operation,
+                        "error_type": type(e).__name__,
+                        "context": context
+                    }
+                )
+                
+                return UserFriendlyErrorHandler.handle_error(e, operation, context)
+        
+        # Return appropriate wrapper based on function type
+        if asyncio.iscoroutinefunction(func):
+            return async_wrapper
+        else:
+            return sync_wrapper
+            
     return decorator

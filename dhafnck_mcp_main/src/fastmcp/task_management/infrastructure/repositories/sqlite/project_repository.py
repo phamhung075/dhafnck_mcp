@@ -16,7 +16,7 @@ from ....domain.value_objects.task_status import TaskStatus
 from ....domain.value_objects.priority import Priority
 # Removed problematic tool_path import
 from ...database.database_source_manager import get_database_path, get_database_info
-from ...database.database_initializer import initialize_database, clear_initialized_cache
+from ...database.database_initializer import initialize_database, reset_initialization_cache
 
 logger = logging.getLogger(__name__)
 

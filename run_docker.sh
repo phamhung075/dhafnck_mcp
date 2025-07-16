@@ -1,12 +1,13 @@
 #!/bin/bash
 
 # This script manages the startup of Docker environments for the project.
-# It supports two primary modes: development (--dev or -d) and normal mode.
+# It supports three primary modes: development (--dev or -d), postgresql (--postgresql or -p), and normal mode.
 # - Development mode integrates additional tools like MCP inspector for debugging and hot reload.
-# - Normal mode runs the standard Docker setup via dhafnck_mcp_main/docker/mcp-docker.py for production-like or standard operations.
+# - PostgreSQL mode runs the system with PostgreSQL database instead of SQLite for production-ready setup.
+# - Normal mode runs the standard Docker setup via dhafnck_mcp_main/docker/mcp-docker.py for interactive configuration.
 # The script handles environment activation and process management, ensuring dependencies are met before execution.
 
-# Check for dev mode flag
+# Check for mode flags
 if [ "$1" = "--dev" ] || [ "$1" = "-d" ]; then
   echo "Starting Docker dev mode with MCP inspector..."
   
@@ -55,6 +56,36 @@ if [ "$1" = "--dev" ] || [ "$1" = "-d" ]; then
   # Waits for background processes to complete or for user interruption
   # Run as the final step to maintain script execution until stopped
   wait
+elif [ "$1" = "--postgresql" ] || [ "$1" = "-p" ]; then
+  echo "Starting Docker PostgreSQL mode..."
+  
+  # Activate the virtual environment
+  if [ -d ".venv" ]; then
+    source .venv/bin/activate
+  else
+    echo "Virtual environment (.venv) not found. Please create it with 'python3 -m venv .venv' and install dependencies."
+    exit 1
+  fi
+  
+  # Start PostgreSQL mode containers
+  echo "Starting PostgreSQL containers (detached)..."
+  docker compose -f dhafnck_mcp_main/docker/docker-compose.postgresql.yml up -d --build
+  
+  # Wait for containers to be ready
+  echo "Waiting for containers to be ready..."
+  sleep 10
+  
+  # Show container status
+  echo "Container status:"
+  docker compose -f dhafnck_mcp_main/docker/docker-compose.postgresql.yml ps
+  
+  echo "PostgreSQL mode started successfully!"
+  echo "Frontend will be available at http://localhost:3800"
+  echo "PostgreSQL will be available at localhost:5432"
+  echo "MCP Server will be available at http://localhost:8000"
+  echo ""
+  echo "To view logs: docker compose -f dhafnck_mcp_main/docker/docker-compose.postgresql.yml logs -f"
+  echo "To stop: docker compose -f dhafnck_mcp_main/docker/docker-compose.postgresql.yml down"
 else
   # Normal mode - activate the virtual environment and run dhafnck_mcp_main/docker/mcp-docker.py
   # Normal mode delegates to dhafnck_mcp_main/docker/mcp-docker.py for standard Docker operations

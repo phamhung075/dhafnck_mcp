@@ -1,9 +1,34 @@
 """Task Domain Exceptions"""
 
+from typing import Optional, Dict, Any, List
+from enum import Enum
+
+
+class ErrorSeverity(Enum):
+    """Error severity levels."""
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
 
 class TaskDomainError(Exception):
     """Base exception for task domain errors"""
-    pass
+    
+    def __init__(
+        self,
+        message: str,
+        error_code: Optional[str] = None,
+        severity: ErrorSeverity = ErrorSeverity.MEDIUM,
+        context: Optional[Dict[str, Any]] = None,
+        recoverable: bool = True
+    ):
+        """Initialize base task domain error."""
+        super().__init__(message)
+        self.error_code = error_code or self.__class__.__name__
+        self.severity = severity
+        self.context = context or {}
+        self.recoverable = recoverable
 
 
 class TaskNotFoundError(TaskDomainError):
@@ -12,7 +37,7 @@ class TaskNotFoundError(TaskDomainError):
     def __init__(self, message_or_task_id):
         if isinstance(message_or_task_id, str) and "not found" in message_or_task_id:
             # Already a formatted message
-            super().__init__(message_or_task_id)
+            message = message_or_task_id
             # Extract task_id from message if possible
             try:
                 import re
@@ -23,7 +48,15 @@ class TaskNotFoundError(TaskDomainError):
         else:
             # Raw task_id passed
             self.task_id = message_or_task_id
-            super().__init__(f"Task with ID {message_or_task_id} not found")
+            message = f"Task with ID {message_or_task_id} not found"
+            
+        super().__init__(
+            message=message,
+            error_code="TASK_NOT_FOUND",
+            severity=ErrorSeverity.MEDIUM,
+            context={"task_id": self.task_id},
+            recoverable=False
+        )
 
 
 class InvalidTaskStateError(TaskDomainError):
@@ -66,6 +99,27 @@ class ProjectNotFoundError(TaskDomainError):
 
 class TaskCompletionError(TaskDomainError):
     """Raised when a task cannot be completed due to business rule violations"""
+    
+    def __init__(self, message: str):
+        super().__init__(message)
+
+
+class TaskCreationError(TaskDomainError):
+    """Raised when a task cannot be created"""
+    
+    def __init__(self, message: str):
+        super().__init__(message)
+
+
+class TaskUpdateError(TaskDomainError):
+    """Raised when a task cannot be updated"""
+    
+    def __init__(self, message: str):
+        super().__init__(message)
+
+
+class DuplicateTaskError(TaskDomainError):
+    """Raised when attempting to create a duplicate task"""
     
     def __init__(self, message: str):
         super().__init__(message) 

@@ -24,6 +24,10 @@ dependencies = [
     "redis>=5.0.0", # Redis client for session persistence
     "pytest-asyncio>=1.0.0",
     "pybars3>=0.9.7",
+    # Database ORM dependencies
+    "sqlalchemy>=2.0.0",
+    "psycopg2-binary>=2.9.0",  # PostgreSQL adapter
+    "alembic>=1.13.0",  # Database migrations
 ]
 requires-python = ">=3.10"
 readme = "README.md"

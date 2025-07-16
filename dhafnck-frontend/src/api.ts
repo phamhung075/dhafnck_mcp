@@ -530,6 +530,38 @@ export async function getProjectContext(project_id: string): Promise<any> {
   return null;
 }
 
+export async function getGlobalContext(): Promise<any> {
+  const body = {
+    jsonrpc: "2.0",
+    method: "tools/call",
+    params: {
+      name: "manage_hierarchical_context",
+      arguments: { 
+        action: "resolve",
+        level: "global",
+        context_id: "global_singleton",
+        force_refresh: false
+      }
+    },
+    id: getRpcId(),
+  };
+  const res = await fetch(`${API_BASE}`, {
+    method: "POST",
+    headers: withMcpHeaders(),
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
+    try {
+      const toolResult = JSON.parse(data.result.content[0].text);
+      return toolResult;
+    } catch (e) {
+      console.error('Error parsing global context:', e);
+    }
+  }
+  return null;
+}
+
 // --- Project Management ---
 export async function listProjects(): Promise<Project[]> {
   const body = {

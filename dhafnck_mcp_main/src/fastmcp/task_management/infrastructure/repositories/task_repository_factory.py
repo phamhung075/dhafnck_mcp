@@ -6,6 +6,7 @@ import os
 
 from ...domain.repositories.task_repository import TaskRepository
 from .sqlite.task_repository import SQLiteTaskRepository
+from .orm.task_repository import ORMTaskRepository
 # Removed problematic tool_path import
 
 
@@ -75,7 +76,17 @@ class TaskRepositoryFactory:
         if not user_id:
             user_id = self.default_user_id
         
-        if self.storage_type == "sqlite":
+        # Check database type from environment
+        database_type = os.getenv("DATABASE_TYPE", "sqlite").lower()
+        
+        if database_type == "postgresql":
+            # Use ORM repository for PostgreSQL
+            return ORMTaskRepository(
+                project_id=project_id,
+                git_branch_name=git_branch_name,
+                user_id=user_id
+            )
+        else:
             # Use SQLite database
             env_db_path = os.getenv("MCP_DB_PATH")
             if env_db_path:
@@ -105,7 +116,18 @@ class TaskRepositoryFactory:
         Returns:
             TaskRepository instance scoped to the git_branch_id
         """
-        if self.storage_type == "sqlite":
+        # Check database type from environment
+        database_type = os.getenv("DATABASE_TYPE", "sqlite").lower()
+        
+        if database_type == "postgresql":
+            # Use ORM repository for PostgreSQL
+            return ORMTaskRepository(
+                git_branch_id=git_branch_id,
+                project_id=project_id,
+                git_branch_name=git_branch_name,
+                user_id=user_id
+            )
+        else:
             # Use SQLite database
             env_db_path = os.getenv("MCP_DB_PATH")
             if env_db_path:

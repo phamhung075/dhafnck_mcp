@@ -60,13 +60,15 @@ ENV FASTMCP_LOG_LEVEL=INFO
 ENV FASTMCP_ENABLE_RICH_TRACEBACKS=0
 ENV DATA_STORAGE_MODE=internal
 ENV MCP_DB_PATH=/data/dhafnck_mcp.db
+ENV DOCKER_CONTAINER=1
+ENV LOG_DIR=/data/logs
 
 # Create non-root user for security
 RUN groupadd -r dhafnck && useradd -r -g dhafnck -s /bin/false dhafnck
 
 # Create directories
 WORKDIR /app
-RUN mkdir -p /data /data/rules /data/resources /app/logs /app/rules && \
+RUN mkdir -p /data /data/rules /data/resources /data/logs /app/logs /app/rules && \
     chown -R dhafnck:dhafnck /app /data
 
 # Copy Python environment from builder

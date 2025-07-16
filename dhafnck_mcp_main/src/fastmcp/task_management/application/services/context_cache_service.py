@@ -6,11 +6,12 @@ resolution overhead in the hierarchical context system.
 """
 
 import json
-import logging
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timezone, timedelta
 
-logger = logging.getLogger(__name__)
+from ...infrastructure.logging import TaskManagementLogger, log_operation
+
+logger = TaskManagementLogger.get_logger(__name__)
 
 class ContextCacheService:
     """
@@ -32,33 +33,97 @@ class ContextCacheService:
     
     def get_context(self, level: str, context_id: str) -> Optional[Dict[str, Any]]:
         """Sync wrapper for get_cached_context"""
-        # For now, return None to indicate no cache hit
-        # In a real implementation, you'd use asyncio.run or similar
-        return None
+        try:
+            import asyncio
+            # Try to get or create event loop
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # If loop is running, we can't use run_until_complete
+                    # This is a limitation - return None to indicate cache miss
+                    logger.debug(f"Event loop running, skipping cache for {level}:{context_id}")
+                    return None
+                else:
+                    return loop.run_until_complete(self.get_cached_context(level, context_id))
+            except RuntimeError:
+                # No event loop exists, create one
+                return asyncio.run(self.get_cached_context(level, context_id))
+        except Exception as e:
+            logger.warning(f"Error in sync cache get for {level}:{context_id}: {e}")
+            return None
     
     def set_context(self, level: str, context_id: str, context: Dict[str, Any]) -> None:
         """Sync wrapper for cache_resolved_context"""
-        # For now, do nothing
-        # In a real implementation, you'd use asyncio.run or similar
-        pass
+        try:
+            import asyncio
+            # For caching, we need additional parameters, so we'll use basic values
+            dependencies_hash = "manual_cache"
+            resolution_path = [level]
+            
+            # Try to get or create event loop
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # If loop is running, we can't use run_until_complete
+                    # This is a limitation - skip caching
+                    logger.debug(f"Event loop running, skipping cache set for {level}:{context_id}")
+                    return
+                else:
+                    loop.run_until_complete(
+                        self.cache_resolved_context(level, context_id, context, dependencies_hash, resolution_path)
+                    )
+            except RuntimeError:
+                # No event loop exists, create one
+                asyncio.run(
+                    self.cache_resolved_context(level, context_id, context, dependencies_hash, resolution_path)
+                )
+        except Exception as e:
+            logger.warning(f"Error in sync cache set for {level}:{context_id}: {e}")
     
     def invalidate_context(self, level: str, context_id: str) -> None:
         """Sync wrapper for invalidate_context_cache"""
-        # For now, do nothing
-        # In a real implementation, you'd use asyncio.run or similar
-        pass
+        try:
+            import asyncio
+            # Try to get or create event loop
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # If loop is running, we can't use run_until_complete
+                    # This is a limitation - skip invalidation
+                    logger.debug(f"Event loop running, skipping cache invalidation for {level}:{context_id}")
+                    return
+                else:
+                    loop.run_until_complete(self.invalidate_context_cache(level, context_id))
+            except RuntimeError:
+                # No event loop exists, create one
+                asyncio.run(self.invalidate_context_cache(level, context_id))
+        except Exception as e:
+            logger.warning(f"Error in sync cache invalidation for {level}:{context_id}: {e}")
     
     def clear_cache(self) -> None:
         """Sync wrapper for clear_all_cache"""
-        # For now, do nothing
-        # In a real implementation, you'd use asyncio.run or similar
-        pass
+        try:
+            import asyncio
+            # Try to get or create event loop
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # If loop is running, we can't use run_until_complete
+                    # This is a limitation - skip clearing
+                    logger.debug("Event loop running, skipping cache clear")
+                    return
+                else:
+                    loop.run_until_complete(self.clear_all_cache())
+            except RuntimeError:
+                # No event loop exists, create one
+                asyncio.run(self.clear_all_cache())
+        except Exception as e:
+            logger.warning(f"Error in sync cache clear: {e}")
     
     def invalidate_context_cache(self, level: str, context_id: str) -> None:
         """Sync version for compatibility"""
-        # For now, do nothing
-        # In a real implementation, you'd use asyncio.run or similar
-        pass
+        # This just calls the existing invalidate_context method
+        self.invalidate_context(level, context_id)
     
     # ===============================================
     # CACHE RETRIEVAL

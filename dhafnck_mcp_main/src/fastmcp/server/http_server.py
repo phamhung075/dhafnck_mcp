@@ -26,6 +26,8 @@ from starlette.middleware.cors import CORSMiddleware
 
 from fastmcp.server.auth.auth import OAuthProvider
 from fastmcp.utilities.logging import get_logger
+# Temporarily disable error middleware to fix circular import
+# from .error_middleware import ErrorHandlingMiddleware
 
 if TYPE_CHECKING:
     from fastmcp.server.server import FastMCP
@@ -129,6 +131,10 @@ def create_base_app(
     """
     # Always add RequestContextMiddleware as the outermost middleware
     middleware.append(Middleware(RequestContextMiddleware))
+    
+    # Add error handling middleware
+    # Temporarily disabled to fix circular import
+    # middleware.append(Middleware(ErrorHandlingMiddleware))
     
     # Add CORS middleware to allow requests from frontend
     if cors_origins is None:

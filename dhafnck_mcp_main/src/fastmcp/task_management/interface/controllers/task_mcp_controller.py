@@ -1097,15 +1097,15 @@ class TaskMCPController:
         if git_branch_id:
             logger.debug(f"Looking up project_id for git_branch_id {git_branch_id}")
             try:
-                from ...infrastructure.database.database_source_manager import get_database_path
-                import sqlite3
+                from ...infrastructure.database.session_manager import get_session_manager
+                from sqlalchemy import text
                 
-                db_path = get_database_path()
-                with sqlite3.connect(db_path) as conn:
+                session_manager = get_session_manager()
+                with session_manager.get_session() as session:
                     # Look up project_id and branch name from git_branch_id
-                    result = conn.execute(
-                        'SELECT project_id, name FROM project_task_trees WHERE id = ?',
-                        (git_branch_id,)
+                    result = session.execute(
+                        text('SELECT project_id, name FROM project_task_trees WHERE id = :git_branch_id'),
+                        {'git_branch_id': git_branch_id}
                     ).fetchone()
                     
                     if result:
@@ -1125,14 +1125,14 @@ class TaskMCPController:
         if task_id:
             logger.debug(f"Deriving context for task_id {task_id}")
             try:
-                from ...infrastructure.database.database_source_manager import get_database_path
-                import sqlite3
+                from ...infrastructure.database.session_manager import get_session_manager
+                from sqlalchemy import text
                 
-                db_path = get_database_path()
-                with sqlite3.connect(db_path) as conn:
-                    result = conn.execute(
-                        'SELECT git_branch_id FROM tasks WHERE id = ?',
-                        (task_id,)
+                session_manager = get_session_manager()
+                with session_manager.get_session() as session:
+                    result = session.execute(
+                        text('SELECT git_branch_id FROM tasks WHERE id = :task_id'),
+                        {'task_id': task_id}
                     ).fetchone()
                     
                     if result and result[0]:
@@ -1142,9 +1142,9 @@ class TaskMCPController:
                         self._resolved_git_branch_id = found_git_branch_id
                         
                         # Now look up the actual project_id for this git_branch_id
-                        branch_result = conn.execute(
-                            'SELECT project_id, name FROM project_task_trees WHERE id = ?',
-                            (found_git_branch_id,)
+                        branch_result = session.execute(
+                            text('SELECT project_id, name FROM project_task_trees WHERE id = :git_branch_id'),
+                            {'git_branch_id': found_git_branch_id}
                         ).fetchone()
                         
                         if branch_result:

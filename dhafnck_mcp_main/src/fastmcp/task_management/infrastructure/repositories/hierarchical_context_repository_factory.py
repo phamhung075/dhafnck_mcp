@@ -1,11 +1,11 @@
 """Hierarchical Context Repository Factory for Context Management System"""
 
-from typing import Optional
+from typing import Optional, Union
 from pathlib import Path
 import os
 
 from .sqlite.hierarchical_context_repository import SQLiteHierarchicalContextRepository
-# Removed problematic tool_path import
+from .orm.hierarchical_context_repository import ORMHierarchicalContextRepository
 
 
 def _find_project_root() -> Path:
@@ -48,7 +48,7 @@ class HierarchicalContextRepositoryFactory:
         self.project_root = project_root or _find_project_root()
         self.base_path = base_path or str(self.project_root / "dhafnck_mcp_main" / "database" / "data")
     
-    def create_hierarchical_context_repository(self, db_path: Optional[str] = None) -> SQLiteHierarchicalContextRepository:
+    def create_hierarchical_context_repository(self, db_path: Optional[str] = None) -> Union[SQLiteHierarchicalContextRepository, ORMHierarchicalContextRepository]:
         """
         Create a hierarchical context repository
         
@@ -56,16 +56,23 @@ class HierarchicalContextRepositoryFactory:
             db_path: Custom database path (optional)
             
         Returns:
-            SQLiteHierarchicalContextRepository instance
+            Repository instance based on DATABASE_TYPE environment variable
         """
-        if not db_path:
-            env_db_path = os.getenv("MCP_DB_PATH")
-            if env_db_path:
-                db_path = env_db_path
-            else:
-                db_path = str(self.project_root / "dhafnck_mcp_main" / "database" / "data" / "dhafnck_mcp.db")
+        database_type = os.getenv("DATABASE_TYPE", "sqlite").lower()
         
-        return SQLiteHierarchicalContextRepository(db_path=db_path)
+        if database_type == "sqlite":
+            # Use SQLite repository
+            if not db_path:
+                env_db_path = os.getenv("MCP_DB_PATH")
+                if env_db_path:
+                    db_path = env_db_path
+                else:
+                    db_path = str(self.project_root / "dhafnck_mcp_main" / "database" / "data" / "dhafnck_mcp.db")
+            
+            return SQLiteHierarchicalContextRepository(db_path=db_path)
+        else:
+            # Use ORM repository for PostgreSQL or other databases
+            return ORMHierarchicalContextRepository()
     
     def validate_database_exists(self) -> bool:
         """

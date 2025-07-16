@@ -10,6 +10,77 @@ import json
 import shutil
 from typing import Optional
 
+# Try to import PostgreSQL support
+try:
+    import psycopg2
+    HAS_POSTGRESQL = True
+except ImportError:
+    HAS_POSTGRESQL = False
+
+# Docker command detection
+def get_docker_command():
+    """Detect the appropriate Docker command to use."""
+    # First, try native docker
+    try:
+        subprocess.run(["docker", "--version"], capture_output=True, check=True)
+        return "docker"
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        pass
+    
+    # If native docker not found, try Windows Docker via WSL
+    windows_docker = "/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe"
+    if os.path.exists(windows_docker):
+        try:
+            subprocess.run([windows_docker, "--version"], capture_output=True, check=True)
+            return windows_docker
+        except subprocess.CalledProcessError:
+            print("⚠️  Docker Desktop found but not running. Please start Docker Desktop on Windows.")
+            sys.exit(1)
+    
+    print("❌ Docker not found. Please either:")
+    print("   1. Enable Docker Desktop WSL integration in Settings → Resources → WSL Integration")
+    print("   2. Or start Docker Desktop on Windows")
+    sys.exit(1)
+
+def get_docker_compose_command():
+    """Detect the appropriate docker-compose command to use."""
+    docker_cmd = get_docker_command()
+    
+    # If using Windows Docker, use its compose
+    if "docker.exe" in docker_cmd:
+        compose_path = docker_cmd.replace("docker.exe", "docker-compose.exe")
+        if os.path.exists(compose_path):
+            return compose_path
+    
+    # Try docker compose (newer style)
+    try:
+        subprocess.run([docker_cmd, "compose", "version"], capture_output=True, check=True)
+        return [docker_cmd, "compose"]
+    except subprocess.CalledProcessError:
+        pass
+    
+    # Try docker-compose (older style)
+    try:
+        subprocess.run(["docker-compose", "--version"], capture_output=True, check=True)
+        return "docker-compose"
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        pass
+    
+    print("❌ Docker Compose not found.")
+    sys.exit(1)
+
+# Helper function to flatten docker compose command
+def flatten_compose_command(compose_cmd):
+    """Convert docker compose command to a list."""
+    if isinstance(compose_cmd, list):
+        return compose_cmd
+    else:
+        return [compose_cmd]
+
+# Get Docker commands once at startup
+DOCKER = get_docker_command()
+DOCKER_COMPOSE = get_docker_compose_command()
+
 def get_compose_files(mode):
     """Get the appropriate compose files for each mode
     Returns a list of compose file arguments for Docker Compose.
@@ -45,6 +116,11 @@ def get_compose_files(mode):
         # Requires Redis service to be defined and started alongside main app
         # Run after base config; depends on main app setup before adding persistence layer
         return base_files + ["-f", "dhafnck_mcp_main/docker/docker-compose.redis.yml"]
+    elif mode == "postgresql":
+        # PostgreSQL mode uses PostgreSQL instead of SQLite
+        # Provides production-ready database with JSONB support
+        # Run for production-like setup with full database capabilities
+        return ["-f", "dhafnck_mcp_main/docker/docker-compose.postgresql.yml"]
     else:
         # Fallback to base config if mode is unrecognized
         return base_files
@@ -60,19 +136,19 @@ def fix_database_permissions():
     try:
         # Check if container is running
         result = subprocess.run(
-            ["docker", "ps", "--filter", "name=dhafnck-mcp-server", "--format", "{{.Names}}"], 
+            [DOCKER, "ps", "--filter", "name=dhafnck-mcp-server", "--format", "{{.Names}}"], 
             capture_output=True, text=True, check=True
         )
         
         if "dhafnck-mcp-server" in result.stdout:
             # Fix database file ownership and permissions
             subprocess.run([
-                "docker", "exec", "--user", "root", "dhafnck-mcp-server", 
+                DOCKER, "exec", "--user", "root", "dhafnck-mcp-server", 
                 "chown", "dhafnck:dhafnck", "/data/dhafnck_mcp.db"
             ], check=True)
             
             subprocess.run([
-                "docker", "exec", "--user", "root", "dhafnck-mcp-server", 
+                DOCKER, "exec", "--user", "root", "dhafnck-mcp-server", 
                 "chmod", "664", "/data/dhafnck_mcp.db"
             ], check=True)
             
@@ -125,6 +201,49 @@ def rebuild_frontend_after_restore():
         print("   Run: docker-compose -f dhafnck_mcp_main/docker/docker-compose.yml build dhafnck-frontend --no-cache")
     except Exception as e:
         print(f"❌ Unexpected error during frontend rebuild: {e}")
+
+def verify_postgresql_database() -> bool:
+    """Verify PostgreSQL database connection and integrity"""
+    print("🔍 Verifying PostgreSQL database connection...")
+    
+    if not HAS_POSTGRESQL:
+        print("❌ PostgreSQL support not available. Please install psycopg2: pip install psycopg2-binary")
+        return False
+    
+    try:
+        # Connect to PostgreSQL in container
+        result = subprocess.run([
+            "docker", "exec", "dhafnck-postgres", "psql", 
+            "-U", "dhafnck_user", "-d", "dhafnck_mcp",
+            "-c", "SELECT 1;"
+        ], capture_output=True, text=True, timeout=10)
+        
+        if result.returncode == 0:
+            print("✅ PostgreSQL database connection successful")
+            
+            # Check for main tables
+            result = subprocess.run([
+                "docker", "exec", "dhafnck-postgres", "psql", 
+                "-U", "dhafnck_user", "-d", "dhafnck_mcp",
+                "-c", "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';"
+            ], capture_output=True, text=True, timeout=10)
+            
+            if "global_contexts" in result.stdout and "project_contexts" in result.stdout:
+                print("✅ Database schema tables found")
+                return True
+            else:
+                print("⚠️ Database schema tables not found. Database may need initialization.")
+                return False
+        else:
+            print(f"❌ PostgreSQL connection failed: {result.stderr}")
+            return False
+            
+    except subprocess.TimeoutExpired:
+        print("❌ PostgreSQL connection timed out")
+        return False
+    except Exception as e:
+        print(f"❌ Error verifying PostgreSQL database: {e}")
+        return False
 
 def verify_database_integrity(db_path: str) -> bool:
     """Verify database integrity and fix common issues"""
@@ -427,7 +546,8 @@ def main():
     if debug:
         print("🐛 Debug mode enabled - temporary files will be created for troubleshooting")
     choices = [
-        "Start (normal - production mode) - Stable, production-ready setup",
+        "Start (normal - production mode) - Stable, production-ready setup with SQLite",
+        "Start (postgresql - PostgreSQL mode) - Production-ready setup with PostgreSQL",
         "Start (development - with debug & hot reload) - Debug mode with live code updates",
         "Start (local - no auth, local development) - Simplified, no-auth for local testing",
         "Start (redis - with Redis session persistence) - Adds Redis for session storage",
@@ -446,6 +566,7 @@ def main():
         "Import/Restore SQLite DB - Copy database into container",
         "Restore Database (Advanced) - Restore with verification and repair",
         "Verify Database - Check database integrity and fix issues",
+        "Verify PostgreSQL Database - Check PostgreSQL connection and schema",
         "Fix Database Permissions - Fix readonly database errors",
         "Inspect MCP Server - Open MCP inspector at http://localhost:8000/mcp/",
         "Exit - Close this menu"
@@ -465,14 +586,29 @@ def main():
             # - Runs with default settings from base compose file
             # - No debug or hot reload; optimized for stability
             # - Should be started first to establish baseline functionality
-            print("\nStarting in Normal Mode (Production-like environment):")
+            print("\nStarting in Normal Mode (Production-like environment with SQLite):")
             print("- This mode uses the base configuration for a stable, production-ready setup.")
+            print("- Uses SQLite database for simplicity and portability.")
             print("- No debugging or hot reload features are enabled.")
             print("- Frontend will be available at http://localhost:3800")
             print("- Recommended to run this mode first to verify core functionality before other modes.\n")
             compose_files = get_compose_files("normal")
-            subprocess.run(["docker", "compose"] + compose_files + ["up"])
+            subprocess.run(flatten_compose_command(DOCKER_COMPOSE) + compose_files + ["up"])
             fix_database_permissions()
+        elif choice_main == "Start (postgresql - PostgreSQL mode)":
+            # PostgreSQL mode: Production environment with PostgreSQL
+            # - Uses PostgreSQL instead of SQLite for production-ready database
+            # - Supports JSONB operations and better performance
+            # - Includes Redis for session management
+            print("\nStarting in PostgreSQL Mode (Production environment with PostgreSQL):")
+            print("- This mode uses PostgreSQL database for production-ready setup.")
+            print("- Supports JSONB operations and better performance than SQLite.")
+            print("- Includes Redis for session management.")
+            print("- Database will be initialized with schema on first run.")
+            print("- Frontend will be available at http://localhost:3800")
+            print("- PostgreSQL will be available at localhost:5432\n")
+            compose_files = get_compose_files("postgresql")
+            subprocess.run(flatten_compose_command(DOCKER_COMPOSE) + compose_files + ["up"])
         elif choice_main == "Start (development - with debug & hot reload)":
             # Development mode: Enables debugging and hot reload
             # - Depends on base configuration being functional
@@ -484,7 +620,7 @@ def main():
             print("- Frontend will be available at http://localhost:3800")
             print("- Ensure Normal Mode works first, as this mode depends on a stable base setup.\n")
             compose_files = get_compose_files("dev-fast")
-            subprocess.run(["docker", "compose"] + compose_files + ["up"])
+            subprocess.run(flatten_compose_command(DOCKER_COMPOSE) + compose_files + ["up"])
             fix_database_permissions()
         elif choice_main == "Start (local - no auth, local development)":
             # Local mode: Simplified setup for local development
@@ -497,7 +633,7 @@ def main():
             print("- Frontend will be available at http://localhost:3800")
             print("- Run after verifying Normal Mode to ensure the base setup is functional.\n")
             compose_files = get_compose_files("local")
-            subprocess.run(["docker", "compose"] + compose_files + ["up"])
+            subprocess.run(flatten_compose_command(DOCKER_COMPOSE) + compose_files + ["up"])
             fix_database_permissions()
         elif choice_main == "Start (redis - with Redis session persistence)":
             # Redis mode: Adds session persistence with Redis
@@ -510,7 +646,7 @@ def main():
             print("- Frontend will be available at http://localhost:3800")
             print("- Run after Normal Mode to confirm core app functionality before adding persistence.\n")
             compose_files = get_compose_files("redis")
-            subprocess.run(["docker", "compose"] + compose_files + ["up"])
+            subprocess.run(flatten_compose_command(DOCKER_COMPOSE) + compose_files + ["up"])
             fix_database_permissions()
         elif choice_main == "Run E2E tests":
             # Use development mode for testing
@@ -520,22 +656,22 @@ def main():
             print("- Executes tests using pytest inside the container.")
             print("- Ensure Development Mode setup is functional before running tests.\n")
             compose_files = get_compose_files("dev-fast")
-            subprocess.run(["docker", "compose"] + compose_files + ["up", "-d"])
+            subprocess.run(flatten_compose_command(DOCKER_COMPOSE) + compose_files + ["up", "-d"])
             # Copy the latest e2e tests into the running container
-            subprocess.run(["docker", "cp", "dhafnck_mcp_main/tests/e2e", "dhafnck-mcp-server:/app/tests/"])
+            subprocess.run([DOCKER, "cp", "dhafnck_mcp_main/tests/e2e", "dhafnck-mcp-server:/app/tests/"])
             subprocess.run([
-                "docker", "exec", "-it", "dhafnck-mcp-server",
+                DOCKER, "exec", "-it", "dhafnck-mcp-server",
                 "pytest", "/app/tests/e2e"
             ])
         elif choice_main == "Stop containers":
             # Stop all possible configurations
             print("\nStopping All Containers:")
-            print("- This action will stop containers across all modes (Normal, Development, Local, Redis).")
+            print("- This action will stop containers across all modes (Normal, PostgreSQL, Development, Local, Redis).")
             print("- Ensures a clean shutdown of all running services.")
             print("- Run this before switching modes or to free up system resources.\n")
-            for mode in ["normal", "development", "dev-fast", "local", "redis"]:
+            for mode in ["normal", "postgresql", "development", "dev-fast", "local", "redis"]:
                 compose_files = get_compose_files(mode)
-                subprocess.run(["docker", "compose"] + compose_files + ["down"], 
+                subprocess.run(flatten_compose_command(DOCKER_COMPOSE) + compose_files + ["down"], 
                              capture_output=True, text=True)  # Suppress output for cleanup
         elif choice_main == "Show logs":
             # Ask which mode to show logs for
@@ -547,6 +683,7 @@ def main():
                 "Which mode's logs do you want to see?",
                 choices=[
                     "Normal",
+                    "PostgreSQL",
                     "Development",
                     "Local",
                     "Redis"
@@ -554,25 +691,28 @@ def main():
             ).ask()
             mode_map = {
                 "Normal": "normal",
+                "PostgreSQL": "postgresql",
                 "Development": "dev-fast",
                 "Local": "local",
                 "Redis": "redis"
             }
             mode_key = mode_map[mode_choice]
             compose_files = get_compose_files(mode_key)
-            subprocess.run(["docker", "compose"] + compose_files + ["logs", "-f"])
+            subprocess.run(flatten_compose_command(DOCKER_COMPOSE) + compose_files + ["logs", "-f"])
         elif choice_main == "Shell into container":
             container_choice = questionary.select(
                 "Which container do you want to shell into?",
                 choices=[
                     "Backend (dhafnck-mcp-server)",
                     "Frontend (dhafnck-frontend)",
+                    "PostgreSQL (dhafnck-postgres)",
                     "Redis (dhafnck-redis)"
                 ]
             ).ask()
             container_map = {
                 "Backend (dhafnck-mcp-server)": "dhafnck-mcp-server",
                 "Frontend (dhafnck-frontend)": "dhafnck-frontend",
+                "PostgreSQL (dhafnck-postgres)": "dhafnck-postgres",
                 "Redis (dhafnck-redis)": "dhafnck-redis"
             }
             container_name = container_map[container_choice]
@@ -580,7 +720,20 @@ def main():
             print(f"- This action opens a shell inside the {container_name} container.")
             print("- Useful for debugging or manual configuration within the container.")
             print("- Ensure the container is running before attempting to access the shell.\n")
-            shell_cmd = "/bin/bash" if container_name != "dhafnck-frontend" else "/bin/sh"
+            # Choose appropriate shell based on container
+            if container_name == "dhafnck-frontend":
+                shell_cmd = "/bin/sh"
+            elif container_name == "dhafnck-postgres":
+                # For PostgreSQL, offer direct psql access
+                print("Opening PostgreSQL shell (psql)...")
+                subprocess.run([
+                    "docker", "exec", "-it", container_name, 
+                    "psql", "-U", "dhafnck_user", "-d", "dhafnck_mcp"
+                ])
+                continue
+            else:
+                shell_cmd = "/bin/bash"
+            
             subprocess.run([
                 "docker", "exec", "-it", container_name, shell_cmd
             ])
@@ -594,6 +747,7 @@ def main():
                 "Which mode do you want to restart?",
                 choices=[
                     "Normal",
+                    "PostgreSQL",
                     "Development",
                     "Local",
                     "Redis"
@@ -601,14 +755,15 @@ def main():
             ).ask()
             mode_map = {
                 "Normal": "normal",
+                "PostgreSQL": "postgresql",
                 "Development": "dev-fast",
                 "Local": "local",
                 "Redis": "redis"
             }
             mode_key = mode_map[mode_choice]
             compose_files = get_compose_files(mode_key)
-            subprocess.run(["docker", "compose"] + compose_files + ["down"])
-            subprocess.run(["docker", "compose"] + compose_files + ["up", "-d"])
+            subprocess.run(flatten_compose_command(DOCKER_COMPOSE) + compose_files + ["down"])
+            subprocess.run(flatten_compose_command(DOCKER_COMPOSE) + compose_files + ["up", "-d"])
         elif choice_main == "Rebuild frontend only":
             print("\nRebuilding Frontend Container:")
             print("- This will stop, remove, and rebuild only the frontend container.")
@@ -616,9 +771,9 @@ def main():
             print("- Other services will remain running.\n")
             
             # Stop and remove frontend container and image
-            subprocess.run(["docker", "stop", "dhafnck-frontend"], capture_output=True, text=True)
-            subprocess.run(["docker", "rm", "dhafnck-frontend"], capture_output=True, text=True)
-            subprocess.run(["docker", "rmi", "dhafnck/frontend:latest"], capture_output=True, text=True)
+            subprocess.run([DOCKER, "stop", "dhafnck-frontend"], capture_output=True, text=True)
+            subprocess.run([DOCKER, "rm", "dhafnck-frontend"], capture_output=True, text=True)
+            subprocess.run([DOCKER, "rmi", "dhafnck/frontend:latest"], capture_output=True, text=True)
             
             # Get current mode to rebuild with correct compose files
             mode_choice = questionary.select(
@@ -641,9 +796,9 @@ def main():
             
             # Rebuild and start frontend
             print("Building frontend container...")
-            subprocess.run(["docker", "compose"] + compose_files + ["build", "--no-cache", "dhafnck-frontend"])
+            subprocess.run(flatten_compose_command(DOCKER_COMPOSE) + compose_files + ["build", "--no-cache", "dhafnck-frontend"])
             print("Starting frontend container...")
-            subprocess.run(["docker", "compose"] + compose_files + ["up", "-d", "dhafnck-frontend"])
+            subprocess.run(flatten_compose_command(DOCKER_COMPOSE) + compose_files + ["up", "-d", "dhafnck-frontend"])
             print("\nFrontend rebuild complete! Available at http://localhost:3800")
         elif choice_main == "Clean & Rebuild (full reset)":
             # Ask which mode to clean and rebuild
@@ -697,12 +852,12 @@ def main():
                 # Stop all configurations
                 for mode in ["normal", "development", "dev-fast", "local", "redis"]:
                     compose_files = get_compose_files(mode)
-                    subprocess.run(["docker", "compose"] + compose_files + ["down", "-v", "--rmi", "all", "--remove-orphans"], 
+                    subprocess.run(flatten_compose_command(DOCKER_COMPOSE) + compose_files + ["down", "-v", "--rmi", "all", "--remove-orphans"], 
                                  capture_output=True, text=True)
                 
                 # Clean Docker system and remove frontend image
-                subprocess.run(["docker", "rmi", "dhafnck/frontend:latest"], capture_output=True, text=True)
-                subprocess.run(["docker", "builder", "prune", "-f"])
+                subprocess.run([DOCKER, "rmi", "dhafnck/frontend:latest"], capture_output=True, text=True)
+                subprocess.run([DOCKER, "builder", "prune", "-f"])
                 
                 # Ask which mode to rebuild after cleaning all
                 rebuild_choice = questionary.select(
@@ -722,8 +877,8 @@ def main():
                 }
                 rebuild_key = rebuild_map[rebuild_choice]
                 compose_files = get_compose_files(rebuild_key)
-                subprocess.run(["docker", "compose"] + compose_files + ["build", "--no-cache"])
-                subprocess.run(["docker", "compose"] + compose_files + ["up", "-d"])
+                subprocess.run(flatten_compose_command(DOCKER_COMPOSE) + compose_files + ["build", "--no-cache"])
+                subprocess.run(flatten_compose_command(DOCKER_COMPOSE) + compose_files + ["up", "-d"])
                 
                 # Show completion message with backup info
                 print(f"\n✅ Clean & Rebuild completed successfully!")
@@ -735,10 +890,10 @@ def main():
                 print(f"\n⚠️  This will stop and remove containers, images, and volumes for {mode_choice} mode, then rebuild.\n")
                 # Clean only the selected mode
                 compose_files = get_compose_files(mode_key)
-                subprocess.run(["docker", "compose"] + compose_files + ["down", "-v", "--rmi", "all", "--remove-orphans"])
-                subprocess.run(["docker", "builder", "prune", "-f"])
-                subprocess.run(["docker", "compose"] + compose_files + ["build", "--no-cache"])
-                subprocess.run(["docker", "compose"] + compose_files + ["up", "-d"])
+                subprocess.run(flatten_compose_command(DOCKER_COMPOSE) + compose_files + ["down", "-v", "--rmi", "all", "--remove-orphans"])
+                subprocess.run([DOCKER, "builder", "prune", "-f"])
+                subprocess.run(flatten_compose_command(DOCKER_COMPOSE) + compose_files + ["build", "--no-cache"])
+                subprocess.run(flatten_compose_command(DOCKER_COMPOSE) + compose_files + ["up", "-d"])
                 
                 # Show completion message with backup info
                 print(f"\n✅ Clean & Rebuild completed successfully!")
@@ -819,6 +974,18 @@ def main():
                 print("\n✅ Database verification completed successfully!")
             else:
                 print("\n❌ Database verification found issues. Check the output above for details.")
+        elif choice_main == "Verify PostgreSQL Database":
+            print("\nPostgreSQL Database Verification:")
+            print("- This action checks PostgreSQL connection and schema.")
+            print("- Verifies that required tables exist and are accessible.")
+            print("- Tests database connectivity from within the container.")
+            print("- Useful for troubleshooting PostgreSQL setup issues.\n")
+            
+            success = verify_postgresql_database()
+            if success:
+                print("\n✅ PostgreSQL database verification completed successfully!")
+            else:
+                print("\n❌ PostgreSQL database verification failed. Check the output above for details.")
         elif choice_main == "Fix Database Permissions":
             print("\nFixing Database Permissions:")
             print("- This action fixes database file ownership issues that cause 'readonly database' errors.")

@@ -7,6 +7,7 @@ from enum import Enum
 
 from ...domain.repositories.agent_repository import AgentRepository
 from .sqlite.agent_repository import SQLiteAgentRepository
+from .orm.agent_repository import ORMAgentRepository
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +15,7 @@ logger = logging.getLogger(__name__)
 class AgentRepositoryType(Enum):
     """Available agent repository implementation types"""
     SQLITE = "sqlite"
+    ORM = "orm"
     IN_MEMORY = "in_memory"
     MOCK = "mock"
 
@@ -24,6 +26,7 @@ class AgentRepositoryFactory:
     _instances: Dict[str, AgentRepository] = {}
     _repository_types: Dict[AgentRepositoryType, Type[AgentRepository]] = {
         AgentRepositoryType.SQLITE: SQLiteAgentRepository,
+        AgentRepositoryType.ORM: ORMAgentRepository,
     }
     
     @classmethod
@@ -106,6 +109,8 @@ class AgentRepositoryFactory:
         try:
             if repository_type == AgentRepositoryType.SQLITE:
                 return repository_class(db_path=db_path, user_id=user_id, **kwargs)
+            elif repository_type == AgentRepositoryType.ORM:
+                return repository_class(user_id=user_id, **kwargs)
             else:
                 return repository_class(user_id=user_id, **kwargs)
                 
@@ -254,6 +259,18 @@ def get_sqlite_agent_repository(
         repository_type=AgentRepositoryType.SQLITE,
         user_id=user_id,
         db_path=db_path
+    )
+
+
+def get_orm_agent_repository(
+    user_id: str = "default_id",
+    project_id: Optional[str] = None
+) -> ORMAgentRepository:
+    """Get ORM agent repository instance"""
+    return AgentRepositoryFactory.create(
+        repository_type=AgentRepositoryType.ORM,
+        user_id=user_id,
+        project_id=project_id
     )
 
 

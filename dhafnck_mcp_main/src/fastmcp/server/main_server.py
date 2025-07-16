@@ -11,14 +11,14 @@ from pathlib import Path
 current_dir = Path(__file__).parent
 sys.path.insert(0, str(current_dir))
 
+# Import and initialize custom logging
+from fastmcp.task_management.infrastructure.logging import init_logging
+
 # Ensure the logs directory exists
 os.makedirs("logs", exist_ok=True)
 
-# Configure basic logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# Initialize the custom logging system
+init_logging()
 
 def create_main_server(name: Optional[str] = None):
     """Create and configure the main FastMCP server with task management integration"""

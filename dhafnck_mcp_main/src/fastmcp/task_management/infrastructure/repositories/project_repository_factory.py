@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 class RepositoryType(Enum):
     """Available repository implementation types"""
     SQLITE = "sqlite"
+    POSTGRESQL = "postgresql"
     IN_MEMORY = "in_memory"
     MOCK = "mock"
 
@@ -70,7 +71,8 @@ class ProjectRepositoryFactory:
     @classmethod
     def _get_default_type(cls) -> RepositoryType:
         """Get default repository type from environment"""
-        env_type = os.getenv("MCP_PROJECT_REPOSITORY_TYPE", "sqlite").lower()
+        # Check for DATABASE_TYPE first, then MCP_PROJECT_REPOSITORY_TYPE
+        env_type = os.getenv("DATABASE_TYPE", os.getenv("MCP_PROJECT_REPOSITORY_TYPE", "sqlite")).lower()
         
         try:
             return RepositoryType(env_type)
@@ -98,6 +100,10 @@ class ProjectRepositoryFactory:
     ) -> ProjectRepository:
         """Create repository instance of specified type"""
         
+        # Lazy import ORM repository to avoid circular imports
+        if repository_type == RepositoryType.POSTGRESQL:
+            cls._register_orm_repository()
+        
         if repository_type not in cls._repository_types:
             raise ValueError(f"Unsupported repository type: {repository_type.value}")
         
@@ -106,6 +112,8 @@ class ProjectRepositoryFactory:
         try:
             if repository_type == RepositoryType.SQLITE:
                 return repository_class(db_path=db_path, user_id=user_id, **kwargs)
+            elif repository_type == RepositoryType.POSTGRESQL:
+                return repository_class(**kwargs)
             else:
                 return repository_class(user_id=user_id, **kwargs)
                 
@@ -116,6 +124,18 @@ class ProjectRepositoryFactory:
                 logger.info("Falling back to SQLite repository")
                 return SQLiteProjectRepository(db_path=db_path, user_id=user_id)
             raise
+    
+    @classmethod
+    def _register_orm_repository(cls):
+        """Register ORM repository type when needed"""
+        if RepositoryType.POSTGRESQL not in cls._repository_types:
+            try:
+                from .orm.project_repository import ORMProjectRepository
+                cls._repository_types[RepositoryType.POSTGRESQL] = ORMProjectRepository
+                logger.info("Registered ORM Project Repository for PostgreSQL")
+            except ImportError as e:
+                logger.warning(f"Failed to import ORM Project Repository: {e}")
+                raise ValueError("ORM Project Repository not available")
     
     @classmethod
     def register_type(

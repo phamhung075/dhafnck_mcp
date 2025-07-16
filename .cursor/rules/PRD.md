@@ -10,10 +10,10 @@ alwaysApply: false
 DhafnckMCP - AI Agent Orchestration Platform
 
 ### Product_Version
-0.1.0
+2.1.0
 
 ### Product_Description
-A comprehensive enterprise-grade AI agent orchestration platform that provides multi-tier task management, real-time agent coordination, advanced context preservation, and autonomous workflow management. Features 70+ specialized AI agents, 12+ MCP tool categories, Vision System, and multi-tier architecture supporting frontend applications, database integration, and sophisticated agent orchestration capabilities.
+A sophisticated enterprise-grade AI agent orchestration platform built on Domain-Driven Design (DDD) principles, providing advanced multi-agent coordination, hierarchical context management, and autonomous workflow execution. Features 60+ specialized AI agents, 15+ MCP tool categories, Vision System with 6-phase enhancement, and enterprise-grade architecture supporting real-time collaboration, SQLite database integration, and comprehensive agent orchestration capabilities through the MCP (Model Context Protocol) framework.
 
 ### Target_Users
 - Enterprise Development Teams requiring multi-agent AI coordination
@@ -45,13 +45,14 @@ A comprehensive enterprise-grade AI agent orchestration platform that provides m
 ## SOLUTION_OVERVIEW
 ### Core_Solution
 Comprehensive AI agent orchestration platform providing:
-1. Multi-Tier Enterprise Architecture - Frontend, core server, and database layers
-2. Advanced Agent Orchestration - 70+ specialized agents with intelligent coordination
-3. Comprehensive MCP Tool Ecosystem - 12+ categories with 50+ individual tools
-4. Vision System - 6-phase AI enhancement and analytics platform
-5. Real-Time Monitoring - Connection health, performance metrics, and diagnostics
-6. Enterprise Compliance - Audit trails, validation, and governance features
-7. Autonomous Operation - Self-managing agents with continuous coordination
+1. **Domain-Driven Design Architecture** - Clean architecture with domain, application, infrastructure, and interface layers
+2. **MCP Protocol Integration** - Advanced Model Context Protocol implementation for seamless agent communication
+3. **60+ Specialized AI Agents** - Categorized agents with dynamic loading and execution capabilities
+4. **15+ MCP Tool Categories** - Comprehensive tool ecosystem for task management, agent coordination, and workflow automation
+5. **Vision System** - 6-phase AI enhancement with hierarchical context inheritance (Global → Project → Task)
+6. **SQLite Database Integration** - Robust data persistence with atomic operations and real-time synchronization
+7. **Enterprise Security & Compliance** - Audit trails, policy validation, and comprehensive governance features
+8. **Autonomous Multi-Agent Coordination** - Self-managing agents with intelligent work distribution and load balancing
 
 ### Key_Benefits
 - Enterprise-Scale Orchestration supporting large-scale multi-agent deployments
@@ -63,48 +64,59 @@ Comprehensive AI agent orchestration platform providing:
 - Scalable Architecture with multi-tier design supporting enterprise requirements
 
 ## FUNCTIONAL_REQUIREMENTS
-### FR001_Multi_Tier_Architecture
+### FR001_Domain_Driven_Design_Architecture
 - Status: IMPLEMENTED
 - Priority: CRITICAL
-- Description: Enterprise-grade multi-tier architecture with frontend, server, and database
+- Description: Enterprise-grade DDD architecture with clean separation of concerns
 - Components:
-  - Frontend Layer: React + TypeScript + Tailwind UI
-  - Core MCP Server: Python + FastMCP + DDD architecture
-  - Database Layer: Supabase + PostgreSQL with real-time sync
-  - Agent Library: 70+ specialized agents with YAML configurations
-  - Vision System: 6-phase AI enhancement platform
-  - Connection Management: Real-time health monitoring
+  - **Domain Layer**: Rich entities (Task, Agent, Project, Context), value objects, and business logic
+  - **Application Layer**: Use cases, facades, DTOs, and event handlers
+  - **Infrastructure Layer**: SQLite repositories, caching, database management
+  - **Interface Layer**: MCP controllers and tool registration
+  - **Frontend Layer**: React + TypeScript + Tailwind UI with basic task management
+  - **Agent Library**: 60+ specialized agents with YAML configurations and dynamic loading
+  - **Vision System**: 6-phase AI enhancement with hierarchical context inheritance
+  - **Connection Management**: Real-time health monitoring and diagnostics
 
 ### FR002_MCP_Tool_Ecosystem
 - Status: IMPLEMENTED
 - Priority: CRITICAL
-- Description: 12+ categories of MCP tools providing complete platform functionality
+- Description: 15+ categories of MCP tools providing complete platform functionality
 - Tool_Categories:
-  1. Task Management Tools - Full CRUD with context integration
-  2. Subtask Management Tools - Hierarchical task decomposition
-  3. Context Management Tools - Advanced context preservation and insights
-  4. Project Management Tools - Project lifecycle and health monitoring
-  5. Git Branch Management Tools - Branch-based task organization
-  6. Agent Management Tools - Agent registration and coordination
-  7. Agent Invocation Tools - Dynamic agent loading and execution
-  8. Connection Management Tools - Health monitoring and diagnostics
-  9. Compliance Tools - Audit trails and validation
-  10. Rule Management Tools - Rule orchestration and hierarchy
-  11. File Resource Tools - File system integration
-  12. Cursor Rules Tools - IDE integration and rule generation
+  1. **Task Management Tools** - Full CRUD with context integration and workflow guidance
+  2. **Subtask Management Tools** - Hierarchical task decomposition with progress tracking
+  3. **Context Management Tools** - Advanced context preservation and AI insights
+  4. **Hierarchical Context Tools** - Global → Project → Task inheritance with delegation
+  5. **Project Management Tools** - Project lifecycle, health monitoring, and cleanup
+  6. **Git Branch Management Tools** - Branch-based task organization with agent assignment
+  7. **Agent Management Tools** - Agent registration, coordination, and rebalancing
+  8. **Agent Invocation Tools** - Dynamic agent loading and execution with 60+ agents
+  9. **Connection Management Tools** - Health monitoring, diagnostics, and status broadcasting
+  10. **Compliance Tools** - Audit trails, policy validation, and security monitoring
+  11. **Rule Management Tools** - Rule orchestration, hierarchy, and client synchronization
+  12. **File Resource Tools** - File system integration and resource management
+  13. **Cursor Rules Tools** - IDE integration and rule generation
+  14. **Delegation Queue Tools** - Manual review and approval workflow for context delegation
+  15. **Context Validation Tools** - Inheritance chain validation and debugging
 
 ### FR003_Agent_Orchestration_System
 - Status: IMPLEMENTED
 - Priority: CRITICAL
-- Description: Sophisticated multi-agent coordination with 70+ specialized agents
+- Description: Sophisticated multi-agent coordination with 60+ specialized agents using dynamic loading and capability-based assignment
 - Agent_Categories:
-  - Development Agents: 15+ agents for coding, debugging, architecture, testing
-  - Design Agents: 8+ agents for UI/UX, graphics, design systems
-  - DevOps Agents: 10+ agents for deployment, security, performance
-  - Analytics Agents: 8+ agents for market research, user feedback, metrics
-  - Management Agents: 12+ agents for project planning, orchestration
-  - Marketing Agents: 10+ agents for campaigns, content, SEO, social media
-  - Specialized Agents: 15+ agents for compliance, ethics, documentation
+  - **Development Agents**: coding_agent, debugger_agent, system_architect_agent, tech_spec_agent, development_orchestrator_agent
+  - **Design Agents**: ui_designer_agent, design_system_agent, ux_researcher_agent, graphic_design_agent, design_qa_analyst_agent
+  - **DevOps Agents**: devops_agent, security_auditor_agent, performance_load_tester_agent, security_penetration_tester_agent
+  - **Analytics Agents**: analytics_setup_agent, market_research_agent, user_feedback_collector_agent, efficiency_optimization_agent
+  - **Management Agents**: project_initiator_agent, task_planning_agent, uber_orchestrator_agent, workflow_architect_agent, swarm_scaler_agent
+  - **Marketing Agents**: campaign_manager_agent, content_strategy_agent, seo_sem_agent, marketing_strategy_orchestrator_agent, social_media_setup_agent
+  - **Specialized Agents**: compliance_scope_agent, ethical_review_agent, incident_learning_agent, documentation_agent, deep_research_agent, mcp_configuration_agent
+- Agent_Features:
+  - Dynamic loading and execution through call_agent MCP tool
+  - YAML-based configuration with metadata and capabilities
+  - Capability-based work assignment and load balancing
+  - Multi-agent collaboration with structured handoffs
+  - Real-time agent coordination and monitoring
 
 ### FR004_Vision_System
 - Status: IMPLEMENTED
@@ -153,19 +165,24 @@ Comprehensive AI agent orchestration platform providing:
 
 ## TECHNICAL_SPECIFICATIONS
 ### Technology_Stack
-- Frontend: React + TypeScript + Tailwind CSS
-- Backend: Python 3.8+ + FastMCP 2.0 + DDD Architecture
-- Database: Supabase + PostgreSQL with real-time capabilities
-- Agent System: YAML-based configuration with 70+ agents
-- Vision System: AI enhancement platform with 6 phases
-- Monitoring: Real-time health monitoring and diagnostics
+- **Frontend**: React 19.1.0 + TypeScript + Tailwind CSS + Radix UI
+- **Backend**: Python 3.10+ + FastMCP 2.0 + Domain-Driven Design Architecture
+- **Database**: SQLite with atomic operations + Redis caching for session persistence
+- **Agent System**: YAML-based configuration with 60+ agents and dynamic loading
+- **Vision System**: 6-phase AI enhancement with hierarchical context inheritance
+- **Authentication**: Authlib with multi-provider support (OAuth, JWT)
+- **Monitoring**: Real-time health monitoring, diagnostics, and performance metrics
+- **MCP Protocol**: Advanced Model Context Protocol implementation
 
 ### Architecture_Components
-- Frontend Layer: dhafnck-frontend/ (React + TypeScript + Tailwind)
-- Core MCP Server: dhafnck_mcp_main/ (Python + FastMCP + DDD)
-- Database Layer: dhafnck-db-server/ (Supabase + PostgreSQL)
-- Agent Library: agent-library/ (70+ specialized AI agents)
-- Configuration: .cursor/rules/ (Platform rules and config)
+- **Frontend Layer**: dhafnck-frontend/ (React + TypeScript + Tailwind + basic task management)
+- **Core MCP Server**: dhafnck_mcp_main/ (Python + FastMCP + DDD + SQLite)
+- **Domain Layer**: src/fastmcp/task_management/domain/ (Entities, value objects, domain services)
+- **Application Layer**: src/fastmcp/task_management/application/ (Use cases, facades, DTOs)
+- **Infrastructure Layer**: src/fastmcp/task_management/infrastructure/ (Repositories, external services)
+- **Interface Layer**: src/fastmcp/task_management/interface/ (MCP controllers and tools)
+- **Agent Library**: agent-library/ (60+ specialized AI agents with YAML configurations)
+- **Configuration**: .cursor/rules/ (Platform rules and cursor IDE integration)
 
 ### System_Requirements
 - Performance: Sub-second response times across all operations
@@ -176,62 +193,67 @@ Comprehensive AI agent orchestration platform providing:
 
 ## SUCCESS_METRICS
 ### Primary_Metrics
-- Multi-Tier Architecture: Complete 3-tier enterprise architecture
-- Agent Orchestration: 70+ agents with sophisticated coordination
-- Tool Ecosystem: 12+ tool categories with 50+ individual tools
-- Vision System: 6-phase AI enhancement platform operational
-- Enterprise Features: Compliance, monitoring, and governance
+- **Domain-Driven Design Architecture**: Complete DDD implementation with clean separation of concerns
+- **Agent Orchestration**: 60+ specialized agents with dynamic loading and capability-based assignment
+- **MCP Tool Ecosystem**: 15+ tool categories with comprehensive workflow automation
+- **Vision System**: 6-phase AI enhancement with hierarchical context inheritance operational
+- **Enterprise Features**: Comprehensive compliance, audit trails, and governance capabilities
 
 ### Performance_Metrics
-- Task Operations: < 100ms for complex multi-tier operations
-- Agent Coordination: < 500ms for multi-agent workflow orchestration
-- Database Sync: < 200ms for real-time synchronization
-- Health Monitoring: < 50ms for health check operations
-- Vision Analytics: < 1 second for AI insight generation
+- **Task Operations**: < 100ms for complex multi-agent operations
+- **Agent Coordination**: < 500ms for multi-agent workflow orchestration
+- **Database Operations**: < 200ms for SQLite atomic operations
+- **Health Monitoring**: < 50ms for connection health checks
+- **Vision Analytics**: < 1 second for AI insight generation and context enhancement
 
 ### Business_Metrics
-- User Adoption: 50+ concurrent users supported
-- Task Volume: 10,000+ tasks per project handled
-- Agent Efficiency: 20% improvement in task completion velocity
-- Context Quality: 90% completeness score
-- Error Rate: < 5% of all operations
+- **Concurrent Operations**: 100+ concurrent agents supported
+- **Task Volume**: 10,000+ tasks per project with hierarchical subtask management
+- **Agent Efficiency**: 30% improvement in task completion velocity through intelligent coordination
+- **Context Quality**: 95% completeness score with hierarchical inheritance
+- **Error Rate**: < 3% of all operations with comprehensive error handling
 
 ## CURRENT_STATUS
 ### Implementation_Status
-- Multi-Tier Architecture: COMPLETE
-- Agent Orchestration Platform: COMPLETE (70+ agents)
-- Tool Ecosystem: COMPLETE (12+ categories, 50+ tools)
-- Vision System: COMPLETE (6 phases)
-- Enterprise Compliance: COMPLETE
-- Real-Time Monitoring: COMPLETE
-- Database Integration: COMPLETE
-- Autonomous Operation: COMPLETE
+- **Domain-Driven Design Architecture**: COMPLETE (Domain, Application, Infrastructure, Interface layers)
+- **Agent Orchestration Platform**: COMPLETE (60+ specialized agents with dynamic loading)
+- **MCP Tool Ecosystem**: COMPLETE (15+ categories with comprehensive workflow automation)
+- **Vision System**: COMPLETE (6-phase AI enhancement with hierarchical context inheritance)
+- **Enterprise Compliance**: COMPLETE (Audit trails, policy validation, security monitoring)
+- **Real-Time Monitoring**: COMPLETE (Health checks, diagnostics, performance metrics)
+- **Database Integration**: COMPLETE (SQLite with atomic operations, Redis caching)
+- **Autonomous Operation**: COMPLETE (Self-managing agents with intelligent coordination)
 
 ### Active_Development
-- Advanced Analytics - Enhanced vision system analytics and insights
-- Performance Optimization - Multi-tier performance improvements
-- Extended Agent Library - Additional specialized agents and capabilities
-- Enterprise Integration - External system integrations and APIs
-- Advanced Workflows - Sophisticated multi-agent workflow patterns
+- **Frontend Enhancement** - Advanced agent orchestration visualization and real-time updates
+- **Performance Optimization** - Multi-layer caching and async processing improvements
+- **Extended Agent Library** - Additional specialized agents and enhanced capabilities
+- **Database Migration** - Optional PostgreSQL integration for enterprise deployments
+- **Advanced Workflows** - Complex multi-agent workflow patterns and orchestration
 
 ### Planned_Enhancements
-- Cloud Deployment - Kubernetes and cloud-native deployment options
-- Enterprise SSO - Integration with enterprise authentication systems
-- Advanced Analytics - Machine learning insights and predictive analytics
-- API Ecosystem - Comprehensive REST and GraphQL APIs
-- Plugin Architecture - Third-party extensions and integrations
+- **Real-Time Frontend** - WebSocket integration for live updates and monitoring
+- **Enterprise SSO** - Enhanced authentication with enterprise identity systems
+- **Advanced Analytics** - Machine learning insights and predictive analytics dashboard
+- **API Ecosystem** - Comprehensive REST and GraphQL APIs for external integrations
+- **Cloud Deployment** - Kubernetes and cloud-native deployment configurations
+- **Plugin Architecture** - Third-party extensions and custom agent development
 
 ## DEPLOYMENT_INFORMATION
 ### Production_Deployment
 - Environment: Production
 - Version: 2.1.0
 - Release Date: 2025-01-12
-- Deployment Type: Multi-tier enterprise deployment
-- Infrastructure: On-premise and cloud-ready
+- Deployment Type: Domain-driven design architecture with MCP protocol integration
+- Infrastructure: On-premise deployment with enterprise-grade capabilities
+- Database: SQLite with atomic operations and Redis caching
+- Agent System: Dynamic loading of 60+ specialized agents
+- Frontend: Basic React application with task management capabilities
 
 ### System_Locations
-- Project Root: /home/daihungpham/agentic-project/
-- Frontend: /home/daihungpham/agentic-project/dhafnck-frontend/
-- Core Server: /home/daihungpham/agentic-project/dhafnck_mcp_main/
-- Database: /home/daihungpham/agentic-project/dhafnck-db-server/
-- Documentation: /home/daihungpham/agentic-project/.cursor/rules/
+- **Project Root**: /home/daihungpham/agentic-project/
+- **Frontend**: /home/daihungpham/agentic-project/dhafnck-frontend/ (React + TypeScript + Tailwind)
+- **Core Server**: /home/daihungpham/agentic-project/dhafnck_mcp_main/ (Python + FastMCP + DDD)
+- **Agent Library**: /home/daihungpham/agentic-project/dhafnck_mcp_main/agent-library/ (60+ agents)
+- **Database**: SQLite databases with atomic operations and Redis caching
+- **Documentation**: /home/daihungpham/agentic-project/.cursor/rules/ (Platform rules and configuration)

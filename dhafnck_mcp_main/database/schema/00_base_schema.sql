@@ -292,7 +292,7 @@ CREATE TABLE IF NOT EXISTS global_contexts (
     organization_id TEXT NOT NULL DEFAULT 'default_org',
     
     -- Core organizational configuration
-    autonomous_rules JSONB NOT NULL DEFAULT '{
+    autonomous_rules TEXT NOT NULL DEFAULT '{
         "ai_enabled": true,
         "auto_task_creation": true,
         "context_switching_threshold": 70,
@@ -301,21 +301,21 @@ CREATE TABLE IF NOT EXISTS global_contexts (
         "decision_confidence_minimum": 50
     }',
     
-    security_policies JSONB NOT NULL DEFAULT '{
+    security_policies TEXT NOT NULL DEFAULT '{
         "mfa_required": false,
         "secure_coding_required": true,
         "audit_trail_enabled": true,
         "compliance_checks": ["basic"]
     }',
     
-    coding_standards JSONB NOT NULL DEFAULT '{
+    coding_standards TEXT NOT NULL DEFAULT '{
         "style": "typescript_strict",
         "review_required": true,
         "test_coverage_minimum": 80,
         "documentation_required": true
     }',
     
-    workflow_templates JSONB NOT NULL DEFAULT '{
+    workflow_templates TEXT NOT NULL DEFAULT '{
         "estimation_required": true,
         "subtask_creation": "encouraged",
         "completion_summary_required": true,
@@ -323,7 +323,7 @@ CREATE TABLE IF NOT EXISTS global_contexts (
     }',
     
     -- Delegation configuration
-    delegation_rules JSONB NOT NULL DEFAULT '{
+    delegation_rules TEXT NOT NULL DEFAULT '{
         "auto_delegate": {
             "security_issues": true,
             "compliance_violations": true,
@@ -354,7 +354,7 @@ CREATE TABLE IF NOT EXISTS project_contexts (
     parent_global_id TEXT DEFAULT 'global_singleton',
     
     -- Project-specific configuration
-    team_preferences JSONB NOT NULL DEFAULT '{
+    team_preferences TEXT NOT NULL DEFAULT '{
         "default_priority": "medium",
         "auto_assign_enabled": false,
         "notification_preferences": {
@@ -368,7 +368,7 @@ CREATE TABLE IF NOT EXISTS project_contexts (
         }
     }',
     
-    technology_stack JSONB NOT NULL DEFAULT '{
+    technology_stack TEXT NOT NULL DEFAULT '{
         "backend": ["python", "fastapi"],
         "frontend": ["typescript", "react"],
         "database": ["sqlite", "postgresql"],
@@ -376,7 +376,7 @@ CREATE TABLE IF NOT EXISTS project_contexts (
         "monitoring": ["prometheus", "grafana"]
     }',
     
-    project_workflow JSONB NOT NULL DEFAULT '{
+    project_workflow TEXT NOT NULL DEFAULT '{
         "branch_strategy": "git_flow",
         "ci_cd_pipeline": "github_actions",
         "deployment_strategy": "blue_green",
@@ -388,7 +388,7 @@ CREATE TABLE IF NOT EXISTS project_contexts (
         }
     }',
     
-    local_standards JSONB NOT NULL DEFAULT '{
+    local_standards TEXT NOT NULL DEFAULT '{
         "naming_conventions": {
             "variables": "snake_case",
             "functions": "snake_case",
@@ -403,10 +403,10 @@ CREATE TABLE IF NOT EXISTS project_contexts (
     }',
     
     -- Override capabilities for global settings
-    global_overrides JSONB NOT NULL DEFAULT '{}',
+    global_overrides TEXT NOT NULL DEFAULT '{}',
     
     -- Project-specific delegation rules
-    delegation_rules JSONB NOT NULL DEFAULT '{
+    delegation_rules TEXT NOT NULL DEFAULT '{
         "delegate_to_global": {
             "security_patterns": true,
             "reusable_components": true,
@@ -446,7 +446,7 @@ CREATE TABLE IF NOT EXISTS task_contexts (
     parent_project_context_id TEXT NOT NULL,
     
     -- Task-specific data
-    task_data JSONB NOT NULL DEFAULT '{
+    task_data TEXT NOT NULL DEFAULT '{
         "metadata": {},
         "objective": {},
         "requirements": {},
@@ -458,10 +458,10 @@ CREATE TABLE IF NOT EXISTS task_contexts (
     }',
     
     -- Local overrides for inherited settings
-    local_overrides JSONB NOT NULL DEFAULT '{}',
+    local_overrides TEXT NOT NULL DEFAULT '{}',
     
     -- Implementation and execution details
-    implementation_notes JSONB NOT NULL DEFAULT '{
+    implementation_notes TEXT NOT NULL DEFAULT '{
         "approach": "",
         "challenges": [],
         "solutions": [],
@@ -470,7 +470,7 @@ CREATE TABLE IF NOT EXISTS task_contexts (
     }',
     
     -- Delegation configuration and triggers
-    delegation_triggers JSONB NOT NULL DEFAULT '{
+    delegation_triggers TEXT NOT NULL DEFAULT '{
         "patterns": {
             "security_discovery": "global",
             "team_improvement": "project",
@@ -494,10 +494,10 @@ CREATE TABLE IF NOT EXISTS task_contexts (
     -- Inheritance control
     inheritance_disabled BOOLEAN DEFAULT FALSE,
     force_local_only BOOLEAN DEFAULT FALSE,
-    custom_inheritance_rules JSONB DEFAULT '{}',
+    custom_inheritance_rules TEXT DEFAULT '{}',
     
     -- Performance optimization (cached resolved context)
-    resolved_context JSONB DEFAULT NULL,
+    resolved_context TEXT DEFAULT NULL,
     resolved_at TIMESTAMP DEFAULT NULL,
     dependencies_hash TEXT DEFAULT NULL,
     
@@ -554,7 +554,7 @@ CREATE TABLE IF NOT EXISTS context_delegations (
     target_id TEXT NOT NULL,
     
     -- Delegation content and metadata
-    delegated_data JSONB NOT NULL,
+    delegated_data TEXT NOT NULL,
     delegation_reason TEXT NOT NULL,
     trigger_type TEXT DEFAULT 'manual' CHECK (trigger_type IN ('manual', 'auto_threshold', 'auto_pattern', 'ai_initiated')),
     confidence_score REAL DEFAULT NULL,
@@ -566,7 +566,7 @@ CREATE TABLE IF NOT EXISTS context_delegations (
     rejected_reason TEXT DEFAULT NULL,
     
     -- Impact tracking
-    impact_assessment JSONB DEFAULT '{}',
+    impact_assessment TEXT DEFAULT '{}',
     implementation_status TEXT DEFAULT 'pending' CHECK (implementation_status IN ('pending', 'implemented', 'rejected', 'expired')),
     
     -- Metadata
@@ -583,7 +583,7 @@ CREATE TABLE IF NOT EXISTS context_inheritance_cache (
     context_level TEXT NOT NULL CHECK (context_level IN ('task', 'project', 'global')),
     
     -- Cached resolved context data
-    resolved_context JSONB NOT NULL,
+    resolved_context TEXT NOT NULL,
     dependencies_hash TEXT NOT NULL,
     resolution_path TEXT NOT NULL,
     
@@ -611,16 +611,16 @@ CREATE TABLE IF NOT EXISTS context_propagations (
     change_type TEXT NOT NULL CHECK (change_type IN ('create', 'update', 'delete', 'delegation')),
     
     -- Affected contexts
-    affected_contexts JSONB NOT NULL,
+    affected_contexts TEXT NOT NULL,
     
     -- Change details
-    changes_summary JSONB NOT NULL,
-    propagation_rules_applied JSONB DEFAULT '{}',
+    changes_summary TEXT NOT NULL,
+    propagation_rules_applied TEXT DEFAULT '{}',
     
     -- Status tracking
     propagation_status TEXT DEFAULT 'pending' CHECK (propagation_status IN ('pending', 'in_progress', 'completed', 'failed')),
     completion_percentage REAL DEFAULT 0.0,
-    error_details JSONB DEFAULT NULL,
+    error_details TEXT DEFAULT NULL,
     
     -- Metadata
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -664,7 +664,7 @@ CREATE TABLE IF NOT EXISTS templates (
     id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
     name TEXT NOT NULL UNIQUE,
     type TEXT NOT NULL,
-    content JSONB NOT NULL,
+    content TEXT NOT NULL,
     description TEXT DEFAULT '',
     category TEXT DEFAULT 'general',
     tags TEXT DEFAULT '[]',
@@ -698,7 +698,7 @@ CREATE TABLE IF NOT EXISTS template_usage (
 -- Template cache
 CREATE TABLE IF NOT EXISTS template_cache (
     cache_key TEXT PRIMARY KEY,
-    template_data JSONB NOT NULL,
+    template_data TEXT NOT NULL,
     expires_at TIMESTAMP NOT NULL,
     hit_count INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -779,8 +779,8 @@ CREATE TABLE IF NOT EXISTS audit_log (
     table_name TEXT NOT NULL,
     operation TEXT NOT NULL,
     record_id TEXT NOT NULL,
-    old_values JSONB DEFAULT NULL,
-    new_values JSONB DEFAULT NULL,
+    old_values TEXT DEFAULT NULL,
+    new_values TEXT DEFAULT NULL,
     changed_by TEXT DEFAULT 'system',
     changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     session_id TEXT DEFAULT NULL,

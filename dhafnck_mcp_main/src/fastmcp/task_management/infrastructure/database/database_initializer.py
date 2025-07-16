@@ -1,22 +1,23 @@
 """
 Centralized Database Initializer for DhafnckMCP
 
-This module provides a single point of truth for initializing the SQLite database,
-ensuring that all required schemas (project, task, context, etc.) are created
-consistently.
+This module provides a single point of truth for initializing the database,
+ensuring that all required schemas are created consistently.
+Now uses SQLAlchemy ORM to support both SQLite and PostgreSQL.
 """
 
-import sqlite3
 import os
 import logging
+import threading
+from pathlib import Path
+from typing import Optional
 
-# Removed problematic tool_path import
+from .database_config import get_db_config
+from .init_database import init_database as sqlalchemy_init_database
 
 logger = logging.getLogger(__name__)
 
 # Use a lock to prevent race conditions during initialization
-# Although tests run sequentially, this is good practice for future concurrency
-import threading
 db_init_lock = threading.Lock()
 
 # Keep track of initialized databases to avoid redundant IO
@@ -25,10 +26,7 @@ _initialized_dbs = set()
 
 def _find_project_root() -> str:
     """Find project root by looking for dhafnck_mcp_main directory"""
-    import os
-    
     # Primary approach - use the directory containing dhafnck_mcp_main
-    # This is the most reliable when we're inside the dhafnck_mcp_main directory
     current_path = os.path.abspath(__file__)
     while os.path.dirname(current_path) != current_path:
         if os.path.basename(current_path) == "dhafnck_mcp_main":
@@ -50,139 +48,75 @@ def _find_project_root() -> str:
     # Absolute fallback
     return "/home/daihungpham/agentic-project"
 
-def initialize_database(db_path: str):
-    """
-    Initializes the database at the given path with all required schemas.
-    This function is idempotent and thread-safe.
 
-    Args:
-        db_path: The absolute path to the SQLite database file.
+def initialize_database(db_path: Optional[str] = None):
     """
-    global _initialized_dbs
+    Initialize the database with all required schemas.
     
-    # If this specific DB path has been initialized in this session, skip
-    if db_path in _initialized_dbs:
-        return
-
+    This function now uses SQLAlchemy ORM to create tables,
+    supporting both SQLite and PostgreSQL based on DATABASE_TYPE.
+    
+    Args:
+        db_path: Optional database path (for backward compatibility with SQLite)
+                 Ignored when using PostgreSQL.
+    """
+    database_type = os.getenv("DATABASE_TYPE", "sqlite").lower()
+    
+    # For PostgreSQL, we don't need db_path as it uses DATABASE_URL
+    if database_type == "postgresql":
+        db_identifier = "postgresql"
+    else:
+        # For SQLite, use provided path or default
+        if not db_path:
+            from .database_source_manager import DatabaseSourceManager
+            manager = DatabaseSourceManager()
+            db_path = manager.get_database_path()
+        db_identifier = os.path.abspath(db_path)
+    
+    # Skip if already initialized (thread-safe check)
     with db_init_lock:
-        # Double-check after acquiring the lock
-        if db_path in _initialized_dbs:
+        if db_identifier in _initialized_dbs:
+            logger.debug(f"Database already initialized: {db_identifier}")
             return
-            
-        logger.info(f"Initializing database at {db_path}...")
+        
+        logger.info(f"Initializing database: {db_identifier}")
+        
         try:
-            # Ensure the directory for the database file exists (skip for in-memory databases)
-            if db_path != ":memory:" and os.path.dirname(db_path):
-                os.makedirs(os.path.dirname(db_path), exist_ok=True)
+            # Use SQLAlchemy to initialize database
+            sqlalchemy_init_database()
             
-            # Connect to the database (this will create the file if it doesn't exist)
-            with sqlite3.connect(db_path) as conn:
-                # Start with foreign keys disabled to avoid issues during initialization
-                conn.execute("PRAGMA foreign_keys = OFF")
-                project_root = _find_project_root()
-                
-                # Modernized schema structure v6.0 - Single execution order
-                # All tables, relationships, and dependencies are properly defined in order
-                schema_files = [
-                    "00_base_schema.sql",           # All core tables and relationships
-                    "01_agent_coordination_fix.sql", # Fix agent coordination tables
-                    "01_indexes_triggers.sql",      # Performance indexes and triggers
-                    "02_views_statistics.sql",      # Views and analytics
-                    "03_initial_data.sql"           # Default data and configuration
-                ]
-                
-                # Execute schema files in order
-                for schema_file in schema_files:
-                    schema_path = os.path.join(project_root, "dhafnck_mcp_main", "database", "schema", schema_file)
-                    if os.path.exists(schema_path):
-                        try:
-                            with open(schema_path, 'r', encoding='utf-8') as f:
-                                schema_sql = f.read()
-                            logger.info(f"Executing modernized schema: {schema_file}")
-                            
-                            # Execute the schema
-                            conn.executescript(schema_sql)
-                            
-                            # Verify critical tables after base schema
-                            if schema_file == "00_base_schema.sql":
-                                cursor = conn.cursor()
-                                
-                                # Verify core tables exist
-                                critical_tables = [
-                                    'projects', 'project_task_trees', 'tasks', 'task_subtasks', 'task_assignees',
-                                    'project_agents', 'labels', 'task_labels', 
-                                    'global_contexts', 'project_contexts', 'task_contexts',
-                                    'templates', 'checklists'
-                                ]
-                                
-                                cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name IN ({','.join(['?' for _ in critical_tables])})", critical_tables)
-                                tables_created = [row[0] for row in cursor.fetchall()]
-                                
-                                missing_tables = set(critical_tables) - set(tables_created)
-                                if missing_tables:
-                                    raise Exception(f"Critical tables not created! Missing: {missing_tables}")
-                                logger.info(f"Verified {len(tables_created)} critical tables created successfully")
-                            
-                            logger.info(f"Successfully executed modernized schema: {schema_file}")
-                        except Exception as e:
-                            logger.error(f"Error executing modernized schema {schema_file}: {e}")
-                            raise
-                    else:
-                        logger.warning(f"Modernized schema file not found, skipping: {schema_path}")
-                        
-                # Note: Initial data is now included in 03_initial_data.sql
-                
-                # Final verification - ensure all critical systems are operational
-                cursor = conn.cursor()
-                
-                # Verify comprehensive table structure
-                cursor.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
-                all_tables = [row[0] for row in cursor.fetchall()]
-                logger.info(f"Database initialized with {len(all_tables)} tables: {', '.join(all_tables)}")
-                
-                
-                # Verify default data
-                cursor.execute("SELECT COUNT(*) FROM global_contexts")
-                global_context_count = cursor.fetchone()[0]
-                if global_context_count == 0:
-                    logger.warning("No global context found - initial data may not have loaded properly")
-                else:
-                    logger.info(f"Global context initialized successfully ({global_context_count} record(s))")
-                
-                cursor.execute("SELECT COUNT(*) FROM projects WHERE id = 'default_project'")
-                default_project_count = cursor.fetchone()[0]
-                if default_project_count == 0:
-                    logger.warning("Default project not found - initial data may not have loaded properly")
-                else:
-                    logger.info("Default project initialized successfully")
-                
-                conn.commit()
-                
-                # Re-enable foreign keys after all initialization is complete
-                conn.execute("PRAGMA foreign_keys = ON")
-                conn.commit()
+            # Mark as initialized
+            _initialized_dbs.add(db_identifier)
+            logger.info(f"Database initialized successfully: {db_identifier}")
             
-            # Mark this database as initialized for this session
-            _initialized_dbs.add(db_path)
-            logger.info(f"Database {db_path} initialized successfully.")
-
-        except sqlite3.Error as e:
-            logger.critical(f"A critical SQLite error occurred during database initialization: {e}", exc_info=True)
-            raise
         except Exception as e:
-            logger.critical(f"An unexpected critical error occurred during database initialization: {e}", exc_info=True)
+            logger.error(f"Failed to initialize database: {e}")
             raise
 
-def clear_initialized_cache():
-    """Clears the cache of initialized databases. Mainly for testing purposes."""
-    global _initialized_dbs
-    with db_init_lock:
-        _initialized_dbs.clear()
-    logger.info("Initialized database cache cleared.")
 
-def force_reinitialize_database(db_path: str):
-    """Force reinitialize database even if already marked as initialized."""
+def reset_initialization_cache():
+    """Reset the initialization cache - useful for testing"""
     global _initialized_dbs
-    with db_init_lock:
-        _initialized_dbs.discard(db_path)
-    initialize_database(db_path) 
+    _initialized_dbs = set()
+
+
+# Backward compatibility function
+def get_schema_path() -> str:
+    """
+    Get the path to the schema file.
+    
+    This function is kept for backward compatibility but is no longer used
+    when using SQLAlchemy ORM.
+    """
+    project_root = _find_project_root()
+    schema_path = os.path.join(project_root, "dhafnck_mcp_main", "database", "schema", "00_base_schema.sql")
+    
+    if not os.path.exists(schema_path):
+        # Try alternative path
+        alt_path = os.path.join(project_root, "database", "schema", "00_base_schema.sql")
+        if os.path.exists(alt_path):
+            schema_path = alt_path
+        else:
+            raise FileNotFoundError(f"Schema file not found at {schema_path} or {alt_path}")
+    
+    return schema_path

@@ -5,9 +5,9 @@ git branch ID, or task ID by checking against the database.
 """
 
 import logging
-import sqlite3
 from typing import Tuple, Optional
-from ...infrastructure.database.database_source_manager import get_database_path
+from ...infrastructure.database.session_manager import get_session_manager
+from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
@@ -29,12 +29,12 @@ class ContextIDDetector:
             - project_id is the associated project ID (None for unknown)
         """
         try:
-            db_path = get_database_path()
-            with sqlite3.connect(db_path) as conn:
+            session_manager = get_session_manager()
+            with session_manager.get_session() as session:
                 # Check if it's a project ID
-                result = conn.execute(
-                    'SELECT id FROM projects WHERE id = ?',
-                    (context_id,)
+                result = session.execute(
+                    text('SELECT id FROM projects WHERE id = :context_id'),
+                    {'context_id': context_id}
                 ).fetchone()
                 
                 if result:
@@ -42,9 +42,9 @@ class ContextIDDetector:
                     return ("project", context_id)
                 
                 # Check if it's a git branch ID (stored in project_task_trees)
-                result = conn.execute(
-                    'SELECT project_id FROM project_task_trees WHERE id = ?',
-                    (context_id,)
+                result = session.execute(
+                    text('SELECT project_id FROM project_task_trees WHERE id = :context_id'),
+                    {'context_id': context_id}
                 ).fetchone()
                 
                 if result:
@@ -53,14 +53,14 @@ class ContextIDDetector:
                     return ("git_branch", project_id)
                 
                 # Check if it's a task ID
-                result = conn.execute(
-                    '''
+                result = session.execute(
+                    text('''
                     SELECT t.id, pt.project_id 
                     FROM tasks t
                     JOIN project_task_trees pt ON t.git_branch_id = pt.id
-                    WHERE t.id = ?
-                    ''',
-                    (context_id,)
+                    WHERE t.id = :context_id
+                    '''),
+                    {'context_id': context_id}
                 ).fetchone()
                 
                 if result:

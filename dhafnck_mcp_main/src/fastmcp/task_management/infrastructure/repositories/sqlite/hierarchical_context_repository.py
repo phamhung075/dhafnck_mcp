@@ -1,15 +1,16 @@
 """SQLite Hierarchical Context Repository Implementation"""
 
 import json
-import logging
 import sqlite3
 import uuid
 from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime, timezone
 
 from .base_repository import SQLiteBaseRepository
+from ...database.database_adapter import DatabaseAdapter
+from ...logging import TaskManagementLogger, log_operation
 
-logger = logging.getLogger(__name__)
+logger = TaskManagementLogger.get_logger(__name__)
 
 
 class SQLiteHierarchicalContextRepository(SQLiteBaseRepository):
@@ -39,9 +40,12 @@ class SQLiteHierarchicalContextRepository(SQLiteBaseRepository):
     # GLOBAL CONTEXT OPERATIONS
     # ===============================================
     
+    @log_operation("create_global_context")
     def create_global_context(self, global_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """Create global context"""
         try:
+            logger.info(f"Creating global context with id: {global_id}")
+            
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
@@ -61,11 +65,16 @@ class SQLiteHierarchicalContextRepository(SQLiteBaseRepository):
                 ))
                 conn.commit()
                 
+                logger.debug(f"Successfully created global context: {global_id}")
+                
                 # Return the created context
                 return self.get_global_context(global_id)
                 
+        except sqlite3.IntegrityError as e:
+            logger.error(f"Integrity error creating global context {global_id}: {e}")
+            raise
         except Exception as e:
-            logger.error(f"Error creating global context: {e}")
+            logger.error(f"Unexpected error creating global context {global_id}: {e}", exc_info=True)
             raise
     
     def get_global_context(self, global_id: str = "global_singleton") -> Optional[Dict[str, Any]]:
@@ -105,10 +114,42 @@ class SQLiteHierarchicalContextRepository(SQLiteBaseRepository):
     def update_global_context(self, global_id: str, updates: Dict[str, Any]) -> bool:
         """Update global context"""
         try:
+            # Get current context first
+            current_context = self.get_global_context(global_id)
+            if not current_context:
+                # If no context exists, create one with default values
+                default_data = {
+                    "autonomous_rules": {},
+                    "security_policies": {},
+                    "coding_standards": {},
+                    "workflow_templates": {},
+                    "delegation_rules": {},
+                    "organization_id": "default_org"
+                }
+                current_context = self.create_global_context(global_id, default_data)
+            
             # Build dynamic update query
             set_clauses = []
             params = []
             
+            # Handle custom data by merging with existing fields
+            # Store custom organizational data in autonomous_rules for now
+            if any(field not in ["autonomous_rules", "security_policies", "coding_standards", 
+                               "workflow_templates", "delegation_rules", "organization_id"] 
+                   for field in updates.keys()):
+                # We have custom data that needs to be stored
+                custom_data = {k: v for k, v in updates.items() 
+                             if k not in ["autonomous_rules", "security_policies", "coding_standards", 
+                                        "workflow_templates", "delegation_rules", "organization_id"]}
+                
+                # Merge custom data with existing autonomous_rules
+                merged_autonomous_rules = current_context.get("autonomous_rules", {})
+                merged_autonomous_rules.update(custom_data)
+                
+                set_clauses.append("autonomous_rules = ?")
+                params.append(json.dumps(merged_autonomous_rules))
+            
+            # Handle standard fields
             for field, value in updates.items():
                 if field in ["autonomous_rules", "security_policies", "coding_standards", 
                            "workflow_templates", "delegation_rules"]:
