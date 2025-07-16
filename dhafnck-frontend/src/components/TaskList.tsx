@@ -1,6 +1,6 @@
 import { Eye, FileText, Link, Minus, Pencil, Plus, Trash2, Users } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { listTasks, Task, updateTask, getTaskContext, listAgents, getAvailableAgents, getTask, callAgent } from "../api";
+import { listTasks, Task, Subtask, updateTask, getTaskContext, listAgents, getAvailableAgents, getTask, callAgent } from "../api";
 import { SubtaskList } from "./SubtaskList";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -190,7 +190,7 @@ const TaskList: React.FC<TaskListProps> = ({ projectId, taskTreeId }) => {
   };
 
   // Agent Response Dialog
-  const handleCallAgent = async (agentName: string, task: Task) => {
+  const handleCallAgent = async (agentName: string, task: Task | Subtask) => {
     try {
       console.log('Calling agent:', agentName, 'for task:', task.title);
       const result = await callAgent(agentName);

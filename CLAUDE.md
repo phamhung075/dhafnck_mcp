@@ -1,5 +1,10 @@
 # DhafnckMCP AI Agent Operation Rules v9.0
 
+## 🚨 VERY IMPORTANT MOST WEIGHT RULE
+**CRITICAL**: If NOT call agent mcp__dhafnck_mcp_http__call_agent(name_agent="...") for switch role then do NOT work. You have NO permission to work on projects if no agent role active.
+**MANDATORY**: You MUST have task on server for working. If no task exists, create it using mcp__dhafnck_mcp_http__manage_task action="create".
+**PROHIBITED**: You do NOT have permission to free run on projects. ALL work MUST be tracked through the task management system.
+
 ## ⚡ QUICK REFERENCE - IMMEDIATE ACTIONS
 
 ### 🚨 CRITICAL STARTUP SEQUENCE (MANDATORY)

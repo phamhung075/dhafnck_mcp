@@ -30,7 +30,20 @@ class GetSubtasksUseCase:
             }
         else:
             # Fallback to existing task entity method for backward compatibility
-            subtasks_data = task.subtasks
+            # Clean subtask assignees before returning
+            task.clean_subtask_assignees()
+            
+            # Ensure each subtask has proper assignees field
+            subtasks_data = []
+            for subtask in task.subtasks:
+                if isinstance(subtask, dict):
+                    # Ensure assignees is always a list
+                    if 'assignees' not in subtask:
+                        subtask['assignees'] = []
+                    elif not isinstance(subtask['assignees'], list):
+                        subtask['assignees'] = []
+                    subtasks_data.append(subtask)
+            
             progress = task.get_subtask_progress()
         
         return {

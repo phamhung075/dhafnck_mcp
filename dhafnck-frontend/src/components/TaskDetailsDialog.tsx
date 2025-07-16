@@ -3,7 +3,7 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Separator } from "./ui/separator";
-import { Task } from "../api";
+import { Task, Subtask } from "../api";
 import ClickableAssignees from "./ClickableAssignees";
 
 interface TaskDetailsDialogProps {
@@ -11,7 +11,7 @@ interface TaskDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
   task: Task | null;
   onClose: () => void;
-  onAgentClick: (agentName: string, task: Task) => void;
+  onAgentClick: (agentName: string, task: Task | Subtask) => void;
 }
 
 export const TaskDetailsDialog: React.FC<TaskDetailsDialogProps> = ({

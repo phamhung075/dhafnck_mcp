@@ -1,11 +1,11 @@
 import React from "react";
 import { Badge } from "./ui/badge";
-import { Task } from "../api";
+import { Task, Subtask } from "../api";
 
 interface ClickableAssigneesProps {
   assignees: string[];
-  task: Task;
-  onAgentClick: (agentName: string, task: Task) => void;
+  task: Task | Subtask;
+  onAgentClick: (agentName: string, task: Task | Subtask) => void;
   variant?: "default" | "secondary" | "destructive" | "outline";
   className?: string;
   showAsString?: boolean; // Option to show as comma-separated string instead of badges

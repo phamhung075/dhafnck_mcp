@@ -693,6 +693,9 @@ class Task:
     
     def update_subtask(self, subtask_id: int | str, updates: dict[str, Any]) -> bool:
         """Update a subtask by ID (supports both integer and hierarchical IDs)"""
+        # First clean subtask assignees to prevent string issues
+        self.clean_subtask_assignees()
+        
         for subtask in self.subtasks:
             # Ensure subtask is a dictionary, skip if not
             if not isinstance(subtask, dict):
@@ -703,6 +706,25 @@ class Task:
             # Normalize comparison - handle both old integer IDs and new hierarchical IDs
             if self._subtask_ids_match(current_id, subtask_id):
                 old_subtask = subtask.copy()
+                
+                # Handle assignees field specially to ensure it's always a list
+                if 'assignees' in updates:
+                    if updates['assignees'] is None:
+                        updates['assignees'] = []
+                    elif isinstance(updates['assignees'], str):
+                        # Handle string representations
+                        if updates['assignees'] == '[]' or updates['assignees'] == '':
+                            updates['assignees'] = []
+                        else:
+                            try:
+                                import json
+                                parsed = json.loads(updates['assignees'])
+                                updates['assignees'] = parsed if isinstance(parsed, list) else [updates['assignees']]
+                            except:
+                                updates['assignees'] = [updates['assignees']]
+                    elif not isinstance(updates['assignees'], list):
+                        updates['assignees'] = []
+                
                 subtask.update(updates)
                 self.updated_at = datetime.now(timezone.utc)
                 
@@ -1354,4 +1376,53 @@ class Task:
             created_at=task.created_at
         ))
         
-        return task 
+        return task
+    
+    def clean_subtask_assignees(self) -> int:
+        """
+        Clean subtask assignees field to ensure it's always a list.
+        Fixes issues where assignees might be stored as '[]' string or other invalid formats.
+        Returns the number of subtasks that were fixed.
+        """
+        fixed_count = 0
+        
+        for subtask in self.subtasks:
+            if not isinstance(subtask, dict):
+                continue
+            
+            # Get current assignees value
+            assignees = subtask.get('assignees')
+            
+            # Fix various invalid formats
+            if assignees is None:
+                subtask['assignees'] = []
+                fixed_count += 1
+            elif isinstance(assignees, str):
+                # Handle string representations like "[]" or '["user1", "user2"]'
+                if assignees == '[]' or assignees == '':
+                    subtask['assignees'] = []
+                    fixed_count += 1
+                else:
+                    try:
+                        # Try to parse JSON string
+                        import json
+                        parsed = json.loads(assignees)
+                        if isinstance(parsed, list):
+                            subtask['assignees'] = parsed
+                        else:
+                            subtask['assignees'] = [assignees]
+                        fixed_count += 1
+                    except:
+                        # If not JSON, treat as single assignee
+                        subtask['assignees'] = [assignees]
+                        fixed_count += 1
+            elif not isinstance(assignees, list):
+                # Convert any other non-list type to empty list
+                subtask['assignees'] = []
+                fixed_count += 1
+        
+        if fixed_count > 0:
+            self.updated_at = datetime.now(timezone.utc)
+            logger.info(f"Fixed assignees in {fixed_count} subtasks for task {self.id}")
+        
+        return fixed_count 

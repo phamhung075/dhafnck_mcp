@@ -8,6 +8,8 @@ import { Input } from "./ui/input";
 import { Separator } from "./ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Checkbox } from "./ui/checkbox";
+import ClickableAssignees from "./ClickableAssignees";
+import AgentResponseDialog from "./AgentResponseDialog";
 
 interface SubtaskListProps {
   projectId: string;
@@ -50,6 +52,14 @@ export function SubtaskList({ projectId, taskTreeId, parentTaskId }: SubtaskList
   const [assigningSubtask, setAssigningSubtask] = useState<Subtask | null>(null);
   const [callingAgent, setCallingAgent] = useState(false);
   const [agentResponses, setAgentResponses] = useState<Record<string, any>>({});
+  const [showAgentResponse, setShowAgentResponse] = useState(false);
+  const [currentAgentResponse, setCurrentAgentResponse] = useState<{
+    agent: string;
+    task: string;
+    response?: any;
+    error?: string;
+    timestamp: string;
+  } | null>(null);
 
   const fetchSubtasks = () => {
     setLoading(true);
@@ -149,6 +159,39 @@ export function SubtaskList({ projectId, taskTreeId, parentTaskId }: SubtaskList
     );
   };
 
+  const handleCallAgent = async (agentName: string, subtask: Subtask) => {
+    try {
+      console.log('Calling agent:', agentName, 'for subtask:', subtask.title);
+      const result = await callAgent(agentName);
+      
+      // Set response data and show dialog
+      setCurrentAgentResponse({
+        agent: agentName,
+        task: subtask.title,
+        response: result,
+        timestamp: new Date().toISOString()
+      });
+      setShowAgentResponse(true);
+      
+    } catch (e) {
+      console.error('Error calling agent:', e);
+      
+      // Set error data and show dialog
+      setCurrentAgentResponse({
+        agent: agentName,
+        task: subtask.title,
+        error: e instanceof Error ? e.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
+      setShowAgentResponse(true);
+    }
+  };
+
+  const closeAgentResponseDialog = () => {
+    setShowAgentResponse(false);
+    setCurrentAgentResponse(null);
+  };
+
   if (loading) return <div className="text-xs text-muted-foreground px-2 py-1">Loading subtasks...</div>;
   if (error) return <div className="text-xs text-destructive px-2 py-1">Error: {error}</div>;
 
@@ -189,8 +232,13 @@ export function SubtaskList({ projectId, taskTreeId, parentTaskId }: SubtaskList
                     {subtask.priority || "medium"}
                   </Badge>
                 </TableCell>
-                <TableCell className="max-w-xs truncate">
-                  {subtask.assignees?.length ? subtask.assignees.join(", ") : <span className="text-muted-foreground text-xs">—</span>}
+                <TableCell className="max-w-xs">
+                  <ClickableAssignees
+                    assignees={subtask.assignees || []}
+                    task={subtask}
+                    onAgentClick={handleCallAgent}
+                    variant="secondary"
+                  />
                 </TableCell>
                 <TableCell>
                   {subtask.due_date ? (
@@ -494,19 +542,12 @@ export function SubtaskList({ projectId, taskTreeId, parentTaskId }: SubtaskList
                   <div>
                     <span className="text-muted-foreground font-medium">Assignees:</span>
                     <div className="mt-1">
-                      {Array.isArray(showDetails.assignees) ? (
-                        <div className="flex flex-wrap gap-1">
-                          {showDetails.assignees.map((assignee: string, index: number) => (
-                            <Badge key={index} variant="secondary" className="px-2">
-                              {assignee}
-                            </Badge>
-                          ))}
-                        </div>
-                      ) : (
-                        <Badge variant="secondary" className="px-2">
-                          {showDetails.assignees}
-                        </Badge>
-                      )}
+                      <ClickableAssignees
+                        assignees={Array.isArray(showDetails.assignees) ? showDetails.assignees : [showDetails.assignees]}
+                        task={showDetails}
+                        onAgentClick={handleCallAgent}
+                        variant="secondary"
+                      />
                     </div>
                   </div>
                 )}
@@ -695,6 +736,14 @@ export function SubtaskList({ projectId, taskTreeId, parentTaskId }: SubtaskList
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* Agent Response Dialog */}
+      <AgentResponseDialog
+        open={showAgentResponse}
+        onOpenChange={setShowAgentResponse}
+        agentResponse={currentAgentResponse}
+        onClose={closeAgentResponseDialog}
+      />
     </div>
   );
 } 
