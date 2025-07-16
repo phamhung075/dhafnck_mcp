@@ -104,7 +104,7 @@ export async function listTasks(params: any = {}): Promise<Task[]> {
   const { git_branch_id, project_id = "default_project", git_branch_name = "main", user_id = "default_id", ...rest } = params;
   const filteredParams = {
     action: "list",
-    git_branch_id: git_branch_id || git_branch_name,
+    ...(git_branch_id ? { git_branch_id } : { git_branch_name }),
     ...rest
   };
   const body = {
@@ -348,7 +348,15 @@ export async function updateSubtask(task_id: string, id: string, updates: any): 
       const toolResult = JSON.parse(data.result.content[0].text);
       
       if (toolResult.success) {
-        return toolResult.subtask || { id, ...updates };
+        // Handle nested subtask structure from API response
+        if (toolResult.subtask) {
+          // Check if subtask has nested subtask property
+          if (toolResult.subtask.subtask) {
+            return toolResult.subtask.subtask;
+          }
+          return toolResult.subtask;
+        }
+        return { id, ...updates };
       }
       
       if (toolResult.error) {

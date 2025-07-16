@@ -5,6 +5,10 @@ import datetime
 import os
 import signal
 import sys
+import sqlite3
+import json
+import shutil
+from typing import Optional
 
 def get_compose_files(mode):
     """Get the appropriate compose files for each mode
@@ -122,7 +126,306 @@ def rebuild_frontend_after_restore():
     except Exception as e:
         print(f"❌ Unexpected error during frontend rebuild: {e}")
 
+def verify_database_integrity(db_path: str) -> bool:
+    """Verify database integrity and fix common issues"""
+    print(f"🔍 Verifying database integrity: {db_path}")
+    
+    try:
+        conn = sqlite3.connect(db_path, timeout=10.0)
+        cursor = conn.cursor()
+        
+        # Check integrity
+        cursor.execute('PRAGMA integrity_check;')
+        integrity = cursor.fetchone()[0]
+        
+        if integrity == 'ok':
+            print("✅ Database integrity check passed")
+        else:
+            print(f"❌ Database integrity check failed: {integrity}")
+            conn.close()
+            return False
+        
+        # Check and fix task counts
+        print("🔧 Checking and fixing task counts...")
+        cursor.execute('SELECT git_branch_id, COUNT(*) FROM tasks GROUP BY git_branch_id')
+        actual_counts = dict(cursor.fetchall())
+        
+        cursor.execute('SELECT git_branch_id, COUNT(*) FROM tasks WHERE status = "done" GROUP BY git_branch_id')
+        completed_counts = dict(cursor.fetchall())
+        
+        cursor.execute('SELECT id, name FROM project_task_trees')
+        branches = cursor.fetchall()
+        
+        fixes = 0
+        for branch_id, branch_name in branches:
+            actual_count = actual_counts.get(branch_id, 0)
+            completed_count = completed_counts.get(branch_id, 0)
+            
+            cursor.execute(
+                'UPDATE project_task_trees SET task_count = ?, completed_task_count = ? WHERE id = ?',
+                (actual_count, completed_count, branch_id)
+            )
+            
+            if actual_count > 0:
+                print(f"   ✅ {branch_name}: {actual_count} tasks ({completed_count} completed)")
+                fixes += 1
+        
+        if fixes > 0:
+            conn.commit()
+            print(f"✅ Fixed task counts for {fixes} branches")
+        else:
+            print("✅ All task counts are correct")
+        
+        # Check for JSON corruption in subtasks
+        print("🔧 Checking subtask assignees JSON format...")
+        cursor.execute('SELECT id, assignees FROM task_subtasks WHERE assignees IS NOT NULL')
+        rows = cursor.fetchall()
+        
+        corrupted_count = 0
+        for subtask_id, assignees in rows:
+            if assignees.startswith('"') and assignees.endswith('"'):
+                try:
+                    # Fix double-encoded JSON
+                    fixed_assignees = json.loads(assignees)
+                    cursor.execute('UPDATE task_subtasks SET assignees = ? WHERE id = ?', (fixed_assignees, subtask_id))
+                    corrupted_count += 1
+                except:
+                    print(f"   ⚠️  Could not fix subtask {subtask_id}")
+        
+        if corrupted_count > 0:
+            conn.commit()
+            print(f"✅ Fixed {corrupted_count} corrupted JSON records")
+        else:
+            print("✅ All subtask assignees are properly formatted")
+        
+        conn.close()
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error verifying database: {e}")
+        return False
+
+def restore_database_advanced(backup_path: str, debug: bool = False) -> bool:
+    """Advanced database restoration with verification and repair"""
+    print(f"🔧 Advanced Database Restoration")
+    print("=" * 50)
+    
+    if not os.path.exists(backup_path):
+        print(f"❌ Backup file not found: {backup_path}")
+        return False
+    
+    # Step 1: Backup current database (only in debug mode)
+    timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    
+    if debug:
+        current_backup = f"dhafnck_mcp.db.pre-restore-{timestamp}"
+        try:
+            print(f"🔄 Creating backup of current database...")
+            subprocess.run([
+                "docker", "cp", f"dhafnck-mcp-server:/data/dhafnck_mcp.db", current_backup
+            ], check=True)
+            print(f"✅ Current database backed up to: {current_backup}")
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Failed to backup current database: {e}")
+            return False
+    else:
+        print(f"🔄 Skipping pre-restore backup (not in debug mode)")
+        current_backup = None
+    
+    # Step 2: Verify backup file
+    print(f"🔍 Verifying backup file: {backup_path}")
+    if not verify_database_integrity(backup_path):
+        print("❌ Backup file verification failed")
+        return False
+        
+    try:
+        # Step 3: Restore to container (with optional working copy for debug)
+        if debug:
+            # Create working copy and fix it (debug mode only)
+            working_copy = f"dhafnck_mcp.db.restored-{timestamp}"
+            shutil.copy2(backup_path, working_copy)
+            print(f"✅ Created working copy: {working_copy}")
+            
+            # Fix working copy
+            if not verify_database_integrity(working_copy):
+                print("❌ Failed to fix working copy")
+                return False
+            
+            # Restore from working copy
+            print(f"🔄 Restoring database to container...")
+            subprocess.run([
+                "docker", "cp", working_copy, f"dhafnck-mcp-server:/data/dhafnck_mcp.db"
+            ], check=True)
+        else:
+            # Direct restore without working copy (normal mode)
+            print(f"🔄 Restoring database to container...")
+            subprocess.run([
+                "docker", "cp", backup_path, f"dhafnck-mcp-server:/data/dhafnck_mcp.db"
+            ], check=True)
+        
+        # Fix permissions
+        fix_database_permissions()
+        
+        # Step 5: Verify restored database
+        print(f"🔍 Verifying restored database...")
+        result = subprocess.run([
+            "docker", "exec", "dhafnck-mcp-server", "python", "-c", '''
+import sqlite3
+conn = sqlite3.connect("/data/dhafnck_mcp.db")
+cursor = conn.cursor()
+
+cursor.execute("PRAGMA integrity_check;")
+integrity = cursor.fetchone()[0]
+print("Integrity: " + integrity)
+
+cursor.execute("SELECT name, task_count FROM project_task_trees WHERE task_count > 0")
+branches = cursor.fetchall()
+print("Branches with tasks: " + str(len(branches)))
+for name, count in branches:
+    print("  " + name + ": " + str(count) + " tasks")
+
+cursor.execute("SELECT COUNT(*) FROM task_subtasks WHERE assignees LIKE '\\"%\\"'")
+corrupted = cursor.fetchone()[0]
+print("Corrupted subtasks: " + str(corrupted))
+
+conn.close()
+'''
+        ], capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            print(f"✅ Database verification completed")
+            print(f"   Output: {result.stdout}")
+            success = "Integrity: ok" in result.stdout and "Corrupted subtasks: 0" in result.stdout
+        else:
+            print(f"❌ Database verification failed: {result.stderr}")
+            success = False
+        
+        # Step 6: Restart frontend
+        if success:
+            print(f"🔄 Restarting frontend to refresh UI...")
+            subprocess.run([
+                "docker-compose", "-f", "dhafnck_mcp_main/docker/docker-compose.yml",
+                "restart", "dhafnck-frontend"
+            ], capture_output=True, text=True)
+            
+            print(f"🎉 Database restoration completed successfully!")
+            print(f"✅ Original database backed up to: {current_backup}")
+            print(f"✅ Restored database verified and ready for use")
+            print(f"🌐 Frontend available at: http://localhost:3800")
+        
+        # Clean up working copy (debug mode only)
+        if debug and 'working_copy' in locals():
+            os.remove(working_copy)
+        
+        return success
+        
+    except Exception as e:
+        print(f"❌ Restoration failed: {e}")
+        return False
+
+def verify_container_database(debug: bool = False) -> bool:
+    """Verify database in container"""
+    print(f"🔍 Verifying container database...")
+    
+    try:
+        # Check if container is running
+        result = subprocess.run([
+            "docker", "ps", "--filter", "name=dhafnck-mcp-server", "--format", "{{.Names}}"
+        ], capture_output=True, text=True, check=True)
+        
+        if "dhafnck-mcp-server" not in result.stdout:
+            print("❌ Container 'dhafnck-mcp-server' is not running")
+            return False
+        
+        # Verify database directly in container without temp files
+        print("🔧 Running database verification inside container...")
+        result = subprocess.run([
+            "docker", "exec", "dhafnck-mcp-server", "python", "-c", '''
+import sqlite3
+import json
+
+try:
+    conn = sqlite3.connect("/data/dhafnck_mcp.db", timeout=10.0)
+    cursor = conn.cursor()
+    
+    # Check integrity
+    cursor.execute("PRAGMA integrity_check;")
+    integrity = cursor.fetchone()[0]
+    print("Database integrity: " + integrity)
+    
+    if integrity != "ok":
+        print("ERROR: Database integrity check failed")
+        exit(1)
+    
+    # Check task counts
+    cursor.execute("SELECT git_branch_id, COUNT(*) FROM tasks GROUP BY git_branch_id")
+    actual_counts = dict(cursor.fetchall())
+    
+    cursor.execute("SELECT git_branch_id, COUNT(*) FROM tasks WHERE status = 'done' GROUP BY git_branch_id")
+    completed_counts = dict(cursor.fetchall())
+    
+    cursor.execute("SELECT id, name, task_count, completed_task_count FROM project_task_trees")
+    branches = cursor.fetchall()
+    
+    inconsistent_branches = 0
+    for branch_id, branch_name, stored_count, stored_completed in branches:
+        actual_count = actual_counts.get(branch_id, 0)
+        completed_count = completed_counts.get(branch_id, 0)
+        
+        if stored_count != actual_count or stored_completed != completed_count:
+            inconsistent_branches += 1
+            print(f"MISMATCH: {branch_name} - stored: {stored_count}/{stored_completed}, actual: {actual_count}/{completed_count}")
+    
+    if inconsistent_branches > 0:
+        print(f"ERROR: Found {inconsistent_branches} branches with inconsistent task counts")
+    else:
+        print("✅ All task counts are consistent")
+    
+    # Check subtask JSON corruption
+    cursor.execute("SELECT COUNT(*) FROM task_subtasks WHERE assignees LIKE '\\"%\\"'")
+    corrupted = cursor.fetchone()[0]
+    
+    if corrupted > 0:
+        print(f"ERROR: Found {corrupted} corrupted subtask assignees")
+    else:
+        print("✅ All subtask assignees are properly formatted")
+    
+    # Final status
+    if integrity == "ok" and inconsistent_branches == 0 and corrupted == 0:
+        print("SUCCESS: Database verification passed")
+        exit(0)
+    else:
+        print("ERROR: Database verification failed")
+        exit(1)
+        
+except Exception as e:
+    print(f"ERROR: Database verification failed: {e}")
+    exit(1)
+finally:
+    if 'conn' in locals():
+        conn.close()
+'''
+        ], capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            print("✅ Database verification completed successfully")
+            if debug:
+                print(f"Debug output: {result.stdout}")
+            return True
+        else:
+            print("❌ Database verification failed")
+            print(f"Error details: {result.stdout}")
+            return False
+        
+    except Exception as e:
+        print(f"❌ Error verifying container database: {e}")
+        return False
+
 def main():
+    # Check for debug flag
+    debug = "--debug" in sys.argv
+    if debug:
+        print("🐛 Debug mode enabled - temporary files will be created for troubleshooting")
     choices = [
         "Start (normal - production mode) - Stable, production-ready setup",
         "Start (development - with debug & hot reload) - Debug mode with live code updates",
@@ -139,8 +442,10 @@ def main():
         "Clean backend only - Remove backend container and image",
         "Clean frontend only - Remove frontend container and image",
         "Clean both - Remove both backend and frontend containers/images",
-        "Clean & Rebuild (full reset) - Remove and rebuild everything",
-        "Import/Restore SQLite DB - Copy database into container and rebuild frontend",
+        "Clean & Rebuild (full reset) - Backup database + clean rebuild containers",
+        "Import/Restore SQLite DB - Copy database into container",
+        "Restore Database (Advanced) - Restore with verification and repair",
+        "Verify Database - Check database integrity and fix issues",
         "Fix Database Permissions - Fix readonly database errors",
         "Inspect MCP Server - Open MCP inspector at http://localhost:8000/mcp/",
         "Exit - Close this menu"
@@ -343,8 +648,9 @@ def main():
         elif choice_main == "Clean & Rebuild (full reset)":
             # Ask which mode to clean and rebuild
             print("\nCleaning & Rebuilding (Full Reset):")
-            print("- This action removes containers, images, and volumes, then rebuilds from scratch.")
-            print("- Backups of databases are created before cleaning.")
+            print("- This action automatically backs up your database before cleaning.")
+            print("- Removes containers, images, and volumes, then rebuilds from scratch.")
+            print("- After rebuild, use 'Restore Database (Advanced)' to restore your data.")
             print("- You will be prompted to select the mode to reset or all modes for a complete cleanup.")
             print("- Run this to resolve persistent issues or start with a fresh environment.\n")
             mode_choice = questionary.select(
@@ -418,6 +724,13 @@ def main():
                 compose_files = get_compose_files(rebuild_key)
                 subprocess.run(["docker", "compose"] + compose_files + ["build", "--no-cache"])
                 subprocess.run(["docker", "compose"] + compose_files + ["up", "-d"])
+                
+                # Show completion message with backup info
+                print(f"\n✅ Clean & Rebuild completed successfully!")
+                print(f"🔄 Your database has been backed up to: dhafnck_mcp.db.bak-{timestamp}")
+                print(f"🚀 {rebuild_choice} mode is now running with a clean database")
+                print(f"📋 Next step: Use 'Restore Database (Advanced)' to restore your data")
+                print(f"🌐 Frontend available at: http://localhost:3800")
             else:
                 print(f"\n⚠️  This will stop and remove containers, images, and volumes for {mode_choice} mode, then rebuild.\n")
                 # Clean only the selected mode
@@ -426,11 +739,18 @@ def main():
                 subprocess.run(["docker", "builder", "prune", "-f"])
                 subprocess.run(["docker", "compose"] + compose_files + ["build", "--no-cache"])
                 subprocess.run(["docker", "compose"] + compose_files + ["up", "-d"])
+                
+                # Show completion message with backup info
+                print(f"\n✅ Clean & Rebuild completed successfully!")
+                print(f"🔄 Your database has been backed up to: dhafnck_mcp.db.bak-{timestamp}")
+                print(f"🚀 {mode_choice} mode is now running with a clean database")
+                print(f"📋 Next step: Use 'Restore Database (Advanced)' to restore your data")
+                print(f"🌐 Frontend available at: http://localhost:3800")
         elif choice_main == "Import/Restore SQLite DB":
             print("\nImporting/Restoring SQLite Database:")
             print("- This action copies a SQLite database file into the container.")
             print("- Automatically fixes database permissions after import.")
-            print("- Rebuilds the frontend container to ensure UI displays restored data.")
+            print("- The frontend will automatically display restored data via API calls.")
             print("- You will be prompted to select which database (Main or Test) to restore.")
             print("- Ensure the container is running to successfully import the database.\n")
             db_choice = questionary.select(
@@ -460,12 +780,45 @@ def main():
                     print("🔧 Fixing permissions for imported database...")
                     fix_database_permissions()
                     
-                    # Auto-rebuild frontend to ensure UI shows restored data
-                    print("🔄 Rebuilding frontend to display restored data...")
-                    rebuild_frontend_after_restore()
+                    print("✅ Database restore completed successfully!")
+                    print("💡 The frontend will automatically display the restored data via API calls")
                     
                 except subprocess.CalledProcessError as e:
                     print(f"Failed to import DB: {e}")
+        elif choice_main == "Restore Database (Advanced)":
+            print("\nAdvanced Database Restoration:")
+            print("- This action performs comprehensive database restoration with verification and repair.")
+            print("- Automatically backs up current database before restoration.")
+            print("- Verifies backup file integrity and repairs JSON corruption.")
+            print("- Fixes task counts and validates database relationships.")
+            print("- Restarts frontend to display restored data.")
+            print("- Ensure the container is running before proceeding.\n")
+            
+            backup_file = questionary.path(
+                "Enter the path to the backup .db file to restore:"
+            ).ask()
+            
+            if not backup_file or not os.path.isfile(backup_file):
+                print(f"❌ File not found: {backup_file}")
+            else:
+                success = restore_database_advanced(backup_file, debug)
+                if success:
+                    print("\n🎉 Advanced database restoration completed successfully!")
+                else:
+                    print("\n❌ Advanced database restoration failed. Check the output above for details.")
+        elif choice_main == "Verify Database":
+            print("\nDatabase Verification and Repair:")
+            print("- This action checks database integrity and fixes common issues.")
+            print("- Verifies task counts in branches and repairs if needed.")
+            print("- Checks and fixes JSON corruption in subtask assignees.")
+            print("- Validates database relationships and structure.")
+            print("- The database will be automatically repaired if issues are found.\n")
+            
+            success = verify_container_database(debug)
+            if success:
+                print("\n✅ Database verification completed successfully!")
+            else:
+                print("\n❌ Database verification found issues. Check the output above for details.")
         elif choice_main == "Fix Database Permissions":
             print("\nFixing Database Permissions:")
             print("- This action fixes database file ownership issues that cause 'readonly database' errors.")

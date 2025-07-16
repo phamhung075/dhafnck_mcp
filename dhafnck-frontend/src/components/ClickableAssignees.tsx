@@ -19,7 +19,29 @@ export const ClickableAssignees: React.FC<ClickableAssigneesProps> = ({
   className = "",
   showAsString = false
 }) => {
-  if (!assignees || assignees.length === 0) {
+  // Debug logging
+  console.log('ClickableAssignees received:', {
+    assignees,
+    isArray: Array.isArray(assignees),
+    length: assignees?.length,
+    taskTitle: task.title,
+    stringified: JSON.stringify(assignees)
+  });
+
+  // Clean up assignees data to handle any edge cases
+  let cleanAssignees: string[] = [];
+  
+  if (Array.isArray(assignees)) {
+    // Filter out any invalid entries like "[", "]", " ", etc.
+    cleanAssignees = assignees.filter(assignee => {
+      if (typeof assignee !== 'string') return false;
+      const trimmed = assignee.trim();
+      // Remove single bracket characters or empty strings
+      return trimmed && trimmed !== '[' && trimmed !== ']' && trimmed !== '[]';
+    });
+  }
+
+  if (!cleanAssignees || cleanAssignees.length === 0) {
     return <span className="text-sm text-muted-foreground">Unassigned</span>;
   }
 
@@ -27,7 +49,7 @@ export const ClickableAssignees: React.FC<ClickableAssigneesProps> = ({
     // Show as clickable text (for backward compatibility)
     return (
       <span className="text-sm font-medium">
-        {assignees.map((assignee, index) => (
+        {cleanAssignees.map((assignee, index) => (
           <React.Fragment key={index}>
             <span
               className="cursor-pointer hover:text-primary underline decoration-dotted"
@@ -36,7 +58,7 @@ export const ClickableAssignees: React.FC<ClickableAssigneesProps> = ({
             >
               {assignee}
             </span>
-            {index < assignees.length - 1 && ", "}
+            {index < cleanAssignees.length - 1 && ", "}
           </React.Fragment>
         ))}
       </span>
@@ -46,7 +68,7 @@ export const ClickableAssignees: React.FC<ClickableAssigneesProps> = ({
   // Show as clickable badges
   return (
     <div className={`flex flex-wrap gap-1 ${className}`}>
-      {assignees.map((assignee: string, index: number) => (
+      {cleanAssignees.map((assignee: string, index: number) => (
         <Badge
           key={index}
           variant={variant}

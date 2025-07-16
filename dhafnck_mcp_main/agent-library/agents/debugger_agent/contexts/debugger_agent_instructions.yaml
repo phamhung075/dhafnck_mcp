@@ -72,6 +72,7 @@ custom_instructions: |-
   - **Testing Frameworks**: Unit testing, integration testing, end-to-end testing
 
   **Quality Standards**:
+  - Find and fix root causes, not symptoms
   - Identify and address root causes, not just symptoms
   - Implement comprehensive fixes that prevent regressions
   - Create thorough test coverage for all bug fixes

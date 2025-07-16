@@ -64,7 +64,18 @@ export function SubtaskList({ projectId, taskTreeId, parentTaskId }: SubtaskList
   const fetchSubtasks = () => {
     setLoading(true);
     listSubtasks(parentTaskId)
-      .then(setSubtasks)
+      .then(data => {
+        console.log('Fetched subtasks:', data);
+        data.forEach((subtask, index) => {
+          console.log(`Subtask ${index} assignees:`, {
+            raw: subtask.assignees,
+            type: typeof subtask.assignees,
+            isArray: Array.isArray(subtask.assignees),
+            stringified: JSON.stringify(subtask.assignees)
+          });
+        });
+        setSubtasks(data);
+      })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   };
@@ -124,8 +135,19 @@ export function SubtaskList({ projectId, taskTreeId, parentTaskId }: SubtaskList
   };
 
   const openAssignDialog = (subtask: Subtask) => {
+    console.log('Opening assign dialog for subtask:', subtask);
     setAssigningSubtask(subtask);
-    setSelectedAgents(subtask.assignees || []);
+    
+    // Clean existing assignees to avoid invalid data
+    const existingAssignees = Array.isArray(subtask.assignees) 
+      ? subtask.assignees.filter(a => {
+          const trimmed = (a || '').toString().trim();
+          return trimmed && trimmed !== '[' && trimmed !== ']' && trimmed !== '[]';
+        })
+      : [];
+    
+    console.log('Existing assignees after cleaning:', existingAssignees);
+    setSelectedAgents(existingAssignees);
     setShowAssignDialog(true);
   };
 
@@ -133,11 +155,28 @@ export function SubtaskList({ projectId, taskTreeId, parentTaskId }: SubtaskList
     if (!assigningSubtask) return;
     
     setSaving(true);
-    console.log('Assigning agents to subtask:', assigningSubtask.id, 'Agents:', selectedAgents);
+    
+    // Clean selected agents to ensure no invalid data
+    const cleanedAgents = selectedAgents.filter(agent => {
+      const trimmed = agent.trim();
+      return trimmed && trimmed !== '[' && trimmed !== ']' && trimmed !== '[]';
+    });
+    
+    console.log('Assigning agents to subtask:', assigningSubtask.id, 'Agents:', cleanedAgents);
     
     try {
-      const result = await saveSubtask(parentTaskId, assigningSubtask.id, { assignees: selectedAgents });
+      const result = await saveSubtask(parentTaskId, assigningSubtask.id, { assignees: cleanedAgents });
       console.log('Assignment result:', result);
+      
+      if (!result) {
+        throw new Error('No response from server');
+      }
+      
+      // Verify the update was successful
+      if (result.assignees) {
+        console.log('Successfully updated assignees to:', result.assignees);
+      }
+      
       setShowAssignDialog(false);
       setAssigningSubtask(null);
       setSelectedAgents([]);
@@ -145,6 +184,12 @@ export function SubtaskList({ projectId, taskTreeId, parentTaskId }: SubtaskList
       await fetchSubtasks();
     } catch (e) {
       console.error('Error assigning agents:', e);
+      console.error('Error details:', {
+        error: e,
+        taskId: parentTaskId,
+        subtaskId: assigningSubtask?.id,
+        agents: cleanedAgents
+      });
       alert(`Failed to assign agents: ${e instanceof Error ? e.message : 'Unknown error'}`);
     } finally {
       setSaving(false);

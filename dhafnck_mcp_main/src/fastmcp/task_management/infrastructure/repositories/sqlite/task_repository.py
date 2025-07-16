@@ -197,7 +197,7 @@ class SQLiteTaskRepository(SQLiteBaseRepository, TaskRepository):
                     'description': row['description'],
                     'status': row['status'],
                     'priority': row['priority'],
-                    'assignees': row['assignees'],
+                    'assignees': self._parse_json_assignees(row['assignees']),
                     'estimated_effort': row['estimated_effort'] or '',
                     'completed': (row['status'] == 'done')  # Derived field for Task entity compatibility
                 }
@@ -239,6 +239,23 @@ class SQLiteTaskRepository(SQLiteBaseRepository, TaskRepository):
         normalized = normalized.strip('-')
         
         return normalized
+    
+    def _parse_json_assignees(self, assignees_json: str) -> List[str]:
+        """Parse JSON assignees string with robust error handling"""
+        if not assignees_json:
+            return []
+        
+        try:
+            # Try to parse as JSON
+            parsed = json.loads(assignees_json)
+            if isinstance(parsed, list):
+                return parsed
+            else:
+                logger.warning(f"Assignees JSON is not a list: {assignees_json}")
+                return []
+        except json.JSONDecodeError:
+            logger.warning(f"Invalid JSON in assignees field: {assignees_json}")
+            return []
     
     def _save_task_relations_in_transaction(self, conn: sqlite3.Connection, task: Task):
         """Save task relations within an existing transaction"""
@@ -370,7 +387,7 @@ class SQLiteTaskRepository(SQLiteBaseRepository, TaskRepository):
                         subtask.get('description', ''),
                         subtask.get('status', 'todo'),
                         subtask.get('priority', 'medium'),
-                        subtask.get('assignees', '[]'),
+                        json.dumps(subtask.get('assignees', [])),
                         subtask.get('estimated_effort', '')
                     )
                 )
