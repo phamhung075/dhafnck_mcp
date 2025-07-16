@@ -210,19 +210,48 @@ class SQLiteAgentRepository(AgentRepository):
             raise
     
     def assign_agent_to_tree(self, project_id: str, agent_id: str, git_branch_id: str) -> Dict[str, Any]:
-        """Assign an agent to a task tree"""
+        """Assign an agent to a task tree, auto-registering the agent if it doesn't exist"""
         try:
             # Ensure project exists
             self._ensure_project_exists(project_id)
             
             with self._get_connection() as conn:
-                # Verify agent exists
+                # Check if agent exists, if not auto-register it
                 cursor = conn.execute(
                     "SELECT id FROM project_agents WHERE id = ? AND project_id = ?",
                     (agent_id, project_id)
                 )
-                if not cursor.fetchone():
-                    raise AgentNotFoundError(f"Agent {agent_id} not found in project {project_id}")
+                agent_exists = cursor.fetchone()
+                
+                if not agent_exists:
+                    # Auto-register the agent with default settings
+                    logger.info(f"Auto-registering agent {agent_id} in project {project_id}")
+                    try:
+                        # Use agent_id as-is for the database ID to match the assignment lookup
+                        # Extract agent name from agent_id (remove @ prefix if present)
+                        agent_name = agent_id.lstrip('@')
+                        
+                        # Insert new agent with default settings
+                        now = datetime.now(timezone.utc).isoformat()
+                        conn.execute('''
+                            INSERT INTO project_agents (
+                                id, project_id, name, description, call_agent, capabilities,
+                                specializations, preferred_languages, preferred_frameworks,
+                                status, max_concurrent_tasks, current_workload, completed_tasks,
+                                average_task_duration, success_rate, work_hours, timezone,
+                                priority_preference, created_at, updated_at
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ''', (
+                            agent_id, project_id, agent_name, f"Auto-registered agent {agent_name}", agent_id,
+                            json.dumps([]), json.dumps([]), json.dumps([]), json.dumps([]),
+                            AgentStatus.AVAILABLE.value, 1, 0, 0, 0.0, 100.0, json.dumps({}),
+                            "UTC", "high", now, now))
+                        
+                        logger.info(f"Successfully auto-registered agent {agent_id} in project {project_id}")
+                        
+                    except Exception as reg_error:
+                        logger.error(f"Failed to auto-register agent {agent_id}: {reg_error}")
+                        raise AgentNotFoundError(f"Agent {agent_id} not found in project {project_id} and auto-registration failed: {str(reg_error)}")
                 
                 # Verify task tree exists
                 cursor = conn.execute(
@@ -240,7 +269,8 @@ class SQLiteAgentRepository(AgentRepository):
                 if cursor.fetchone():
                     return {
                         "success": True,
-                        "message": f"Agent {agent_id} already assigned to tree {git_branch_id}"
+                        "message": f"Agent {agent_id} already assigned to tree {git_branch_id}",
+                        "auto_registered": not agent_exists
                     }
                 
                 # Create assignment
@@ -258,10 +288,14 @@ class SQLiteAgentRepository(AgentRepository):
                 logger.info(f"Assigned agent {agent_id} to tree {git_branch_id} in project {project_id}")
                 return {
                     "success": True,
-                    "message": f"Agent {agent_id} assigned to tree {git_branch_id}"
+                    "message": f"Agent {agent_id} assigned to tree {git_branch_id}",
+                    "auto_registered": not agent_exists
                 }
                 
-        except (ProjectNotFoundError, AgentNotFoundError):
+        except (ProjectNotFoundError):
+            raise
+        except AgentNotFoundError:
+            # Re-raise agent not found errors (from auto-registration failure)
             raise
         except Exception as e:
             logger.error(f"Error assigning agent {agent_id} to tree {git_branch_id}: {e}")

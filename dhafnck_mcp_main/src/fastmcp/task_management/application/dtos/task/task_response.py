@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from typing import List, Optional, Dict, Any
 from datetime import datetime
+from .dependency_info import DependencyRelationships
 
 @dataclass
 class TaskResponse:
@@ -24,6 +25,7 @@ class TaskResponse:
     git_branch_id: Optional[str] = None  # Links to git_branch which contains project and user info
     context_id: Optional[str] = None
     context_data: Optional[Dict[str, Any]] = None
+    dependency_relationships: Optional[DependencyRelationships] = None  # Enhanced dependency information
     
     def __init__(
             self, 
@@ -43,7 +45,8 @@ class TaskResponse:
             updated_at: Optional[datetime], 
             git_branch_id: Optional[str] = None,  # Following clean relationship chain
             context_id: Optional[str] = None,
-            context_data: Optional[Dict[str, Any]] = None 
+            context_data: Optional[Dict[str, Any]] = None,
+            dependency_relationships: Optional[DependencyRelationships] = None 
         ):
         """Initialize TaskResponse following clean relationship chain with git_branch_id, context_id, and context_data"""
         self.id = id
@@ -62,9 +65,11 @@ class TaskResponse:
         self.created_at = created_at
         self.updated_at = updated_at
         self.context_id = context_id
-        self.context_data = context_data    
+        self.context_data = context_data
+        self.dependency_relationships = dependency_relationships    
     @classmethod
-    def from_domain(cls, task, context_data: Optional[Dict[str, Any]] = None) -> 'TaskResponse':
+    def from_domain(cls, task, context_data: Optional[Dict[str, Any]] = None, 
+                   dependency_relationships: Optional[DependencyRelationships] = None) -> 'TaskResponse':
         """Create response DTO from domain entity with optional context data"""
         task_dict = task.to_dict()
         
@@ -95,5 +100,6 @@ class TaskResponse:
             updated_at=updated_at,
             git_branch_id=task_dict.get("git_branch_id"),  # Following clean relationship chain
             context_id=task_dict.get("context_id"),
-            context_data=context_data
+            context_data=context_data,
+            dependency_relationships=dependency_relationships
         ) 

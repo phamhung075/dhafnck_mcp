@@ -62,6 +62,8 @@ class TaskWorkflowGuidance(WorkflowGuidanceInterface):
                 ]
         elif action == "list":
             enhanced_response["workflow_guidance"]["overview"] = self._generate_list_overview(response)
+            # Add dependency overview for list actions
+            enhanced_response["workflow_guidance"]["dependency_overview"] = self._generate_dependency_overview(response)
         elif action == "complete":
             enhanced_response["workflow_guidance"]["completion_checklist"] = [
                 "✅ All acceptance criteria met",
@@ -71,6 +73,11 @@ class TaskWorkflowGuidance(WorkflowGuidanceInterface):
                 "✅ Testing notes documented",
                 "✅ Any follow-up tasks created"
             ]
+        elif action == "get":
+            # Add dependency-specific guidance for get actions
+            task = response.get("task", {})
+            if task.get("dependency_relationships"):
+                enhanced_response["workflow_guidance"]["dependency_guidance"] = self._generate_dependency_guidance(task)
         
         # Add AI reminders for certain actions
         if action in ["create", "get", "next"]:
@@ -672,3 +679,88 @@ class TaskWorkflowGuidance(WorkflowGuidanceInterface):
             overview["recommendations"].append("Start working on pending tasks")
             
         return overview
+    
+    def _generate_dependency_overview(self, response: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate dependency overview for list action"""
+        tasks = response.get("tasks", [])
+        
+        overview = {
+            "total_tasks": len(tasks),
+            "blocked_tasks": 0,
+            "blocking_tasks": 0,
+            "ready_tasks": 0,
+            "dependency_chains": 0,
+            "recommendations": []
+        }
+        
+        for task in tasks:
+            dep_summary = task.get("dependency_summary", {})
+            if dep_summary.get("is_blocked"):
+                overview["blocked_tasks"] += 1
+            if dep_summary.get("is_blocking_others"):
+                overview["blocking_tasks"] += 1
+            if dep_summary.get("can_start"):
+                overview["ready_tasks"] += 1
+        
+        # Add recommendations
+        if overview["blocked_tasks"] > 0:
+            overview["recommendations"].append(f"🚧 {overview['blocked_tasks']} task(s) are blocked - work on dependencies first")
+        
+        if overview["blocking_tasks"] > 0:
+            overview["recommendations"].append(f"🔓 {overview['blocking_tasks']} task(s) are blocking others - prioritize these")
+        
+        if overview["ready_tasks"] > 0:
+            overview["recommendations"].append(f"✅ {overview['ready_tasks']} task(s) are ready to start")
+        
+        return overview
+    
+    def _generate_dependency_guidance(self, task: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate dependency-specific guidance for a task"""
+        dep_rel = task.get("dependency_relationships", {})
+        
+        guidance = {
+            "dependency_status": "unknown",
+            "recommendations": [],
+            "dependency_chain_info": [],
+            "workflow_actions": []
+        }
+        
+        summary = dep_rel.get("summary", {})
+        workflow = dep_rel.get("workflow", {})
+        
+        # Determine dependency status
+        if summary.get("can_start"):
+            guidance["dependency_status"] = "ready"
+            guidance["recommendations"].append("✅ Task is ready to start - no blocking dependencies")
+        elif summary.get("is_blocked"):
+            guidance["dependency_status"] = "blocked"
+            guidance["recommendations"].append("🚧 Task is blocked by dependencies")
+        else:
+            guidance["dependency_status"] = "waiting"
+            guidance["recommendations"].append("⏳ Task is waiting for dependencies to complete")
+        
+        # Add workflow actions
+        guidance["workflow_actions"] = workflow.get("next_actions", [])
+        
+        # Add dependency chain information
+        for chain in dep_rel.get("dependency_chains", []):
+            chain_info = {
+                "chain_id": chain["chain_id"],
+                "status": chain["chain_status"],
+                "progress": f"{chain['completed_tasks']}/{chain['total_tasks']} tasks completed",
+                "completion_percentage": chain["completion_percentage"]
+            }
+            if chain.get("next_task"):
+                chain_info["next_task"] = chain["next_task"]["title"]
+            guidance["dependency_chain_info"].append(chain_info)
+        
+        # Add blocking information
+        blocking_info = workflow.get("blocking_info", {})
+        if blocking_info.get("is_blocked"):
+            guidance["blocking_details"] = {
+                "blocking_tasks": len(blocking_info.get("blocking_tasks", [])),
+                "blocking_chains": len(blocking_info.get("blocking_chains", [])),
+                "resolution_suggestions": blocking_info.get("resolution_suggestions", [])
+            }
+        
+        return guidance

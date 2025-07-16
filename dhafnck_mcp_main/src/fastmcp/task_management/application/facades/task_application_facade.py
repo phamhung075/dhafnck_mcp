@@ -78,6 +78,10 @@ class TaskApplicationFacade:
         # Dedicated service for context creation & sync
         from ..services.task_context_sync_service import TaskContextSyncService
         self._task_context_sync_service = TaskContextSyncService(task_repository, context_service)
+        
+        # Initialize dependency resolver service
+        from ..services.dependency_resolver_service import DependencyResolverService
+        self._dependency_resolver = DependencyResolverService(task_repository)
     
     async def _derive_context_from_git_branch_id(self, git_branch_id: str) -> Dict[str, Optional[str]]:
         """Derive project_id and git_branch_name from git_branch_id using git branch repository"""
@@ -251,7 +255,7 @@ class TaskApplicationFacade:
             logger.error(f"Unexpected error in update_task: {e}")
             return {"success": False, "action": "update", "error": f"Unexpected error: {str(e)}"}
     
-    def get_task(self, task_id: str, include_context: bool = True) -> Dict[str, Any]:
+    def get_task(self, task_id: str, include_context: bool = True, include_dependencies: bool = True) -> Dict[str, Any]:
         """Get a task by ID with optional context data (sync-friendly)."""
         import asyncio
         try:
@@ -282,7 +286,81 @@ class TaskApplicationFacade:
             )
 
             if task_response:
+                # Resolve dependencies if requested
+                dependency_relationships = None
+                if include_dependencies:
+                    try:
+                        dependency_relationships = self._dependency_resolver.resolve_dependencies(task_id)
+                    except Exception as e:
+                        logger.warning(f"Failed to resolve dependencies for task {task_id}: {e}")
+                
+                # Convert to dict and include dependency relationships
                 task_dict = asdict(task_response)
+                if dependency_relationships:
+                    task_dict["dependency_relationships"] = {
+                        "task_id": dependency_relationships.task_id,
+                        "depends_on": [
+                            {
+                                "task_id": dep.task_id,
+                                "title": dep.title,
+                                "status": dep.status,
+                                "priority": dep.priority,
+                                "completion_percentage": dep.completion_percentage,
+                                "is_blocking": dep.is_blocking,
+                                "is_blocked": dep.is_blocked,
+                                "estimated_effort": dep.estimated_effort,
+                                "assignees": dep.assignees,
+                                "updated_at": dep.updated_at.isoformat() if dep.updated_at else None
+                            } for dep in dependency_relationships.depends_on
+                        ],
+                        "blocks": [
+                            {
+                                "task_id": dep.task_id,
+                                "title": dep.title,
+                                "status": dep.status,
+                                "priority": dep.priority,
+                                "completion_percentage": dep.completion_percentage,
+                                "is_blocking": dep.is_blocking,
+                                "is_blocked": dep.is_blocked,
+                                "estimated_effort": dep.estimated_effort,
+                                "assignees": dep.assignees,
+                                "updated_at": dep.updated_at.isoformat() if dep.updated_at else None
+                            } for dep in dependency_relationships.blocks
+                        ],
+                        "dependency_chains": [
+                            {
+                                "chain_id": chain.chain_id,
+                                "chain_status": chain.chain_status,
+                                "total_tasks": chain.total_tasks,
+                                "completed_tasks": chain.completed_tasks,
+                                "blocked_tasks": chain.blocked_tasks,
+                                "completion_percentage": chain.completion_percentage,
+                                "is_blocked": chain.is_blocked,
+                                "next_task": {
+                                    "task_id": chain.next_task.task_id,
+                                    "title": chain.next_task.title,
+                                    "status": chain.next_task.status
+                                } if chain.next_task else None
+                            } for chain in dependency_relationships.upstream_chains
+                        ],
+                        "summary": {
+                            "total_dependencies": dependency_relationships.total_dependencies,
+                            "completed_dependencies": dependency_relationships.completed_dependencies,
+                            "blocked_dependencies": dependency_relationships.blocked_dependencies,
+                            "can_start": dependency_relationships.can_start,
+                            "is_blocked": dependency_relationships.is_blocked,
+                            "is_blocking_others": dependency_relationships.is_blocking_others,
+                            "dependency_summary": dependency_relationships.dependency_summary,
+                            "dependency_completion_percentage": dependency_relationships.dependency_completion_percentage
+                        },
+                        "workflow": {
+                            "next_actions": dependency_relationships.next_actions,
+                            "blocking_reasons": dependency_relationships.blocking_reasons,
+                            "blocking_info": dependency_relationships.get_blocking_chain_info(),
+                            "workflow_guidance": dependency_relationships.get_workflow_guidance()
+                        }
+                    }
+                
                 # Apply unified context format
                 task_dict = ContextResponseFactory.apply_to_task_response(task_dict)
                 return {
@@ -417,16 +495,50 @@ class TaskApplicationFacade:
             logger.error(f"Unexpected error in complete_task: {e}")
             return {"success": False, "action": "complete", "error": f"Unexpected error: {str(e)}"}
     
-    def list_tasks(self, request: ListTasksRequest) -> Dict[str, Any]:
+    def list_tasks(self, request: ListTasksRequest, include_dependencies: bool = False) -> Dict[str, Any]:
         """List tasks with optional filtering"""
         try:
             # Execute use case
             response = self._list_tasks_use_case.execute(request)
             
+            # Convert tasks to dict and optionally include dependency summaries
+            tasks_list = []
+            for task in response.tasks:
+                task_dict = asdict(task)
+                
+                # Add dependency summary if requested
+                if include_dependencies:
+                    try:
+                        dependency_relationships = self._dependency_resolver.resolve_dependencies(task.id)
+                        task_dict["dependency_summary"] = {
+                            "total_dependencies": dependency_relationships.total_dependencies,
+                            "completed_dependencies": dependency_relationships.completed_dependencies,
+                            "can_start": dependency_relationships.can_start,
+                            "is_blocked": dependency_relationships.is_blocked,
+                            "is_blocking_others": dependency_relationships.is_blocking_others,
+                            "dependency_completion_percentage": dependency_relationships.dependency_completion_percentage,
+                            "dependency_text": dependency_relationships.dependency_summary,
+                            "blocking_reasons": dependency_relationships.blocking_reasons[:3] if dependency_relationships.blocking_reasons else []  # Show first 3 reasons
+                        }
+                    except Exception as e:
+                        logger.warning(f"Failed to resolve dependencies for task {task.id}: {e}")
+                        task_dict["dependency_summary"] = {
+                            "total_dependencies": 0,
+                            "completed_dependencies": 0,
+                            "can_start": True,
+                            "is_blocked": False,
+                            "is_blocking_others": False,
+                            "dependency_completion_percentage": 100.0,
+                            "dependency_text": "No dependencies",
+                            "blocking_reasons": []
+                        }
+                
+                tasks_list.append(task_dict)
+            
             return {
                 "success": True,
                 "action": "list",
-                "tasks": [asdict(task) for task in response.tasks],
+                "tasks": tasks_list,
                 "count": response.count,
                 "filters_applied": response.filters_applied
             }

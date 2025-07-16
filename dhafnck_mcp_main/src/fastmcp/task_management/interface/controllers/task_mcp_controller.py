@@ -326,7 +326,7 @@ class TaskMCPController:
                 return result
             elif action == "get":
                 # Always load context for get to provide better AI assistance
-                result = self._handle_get_task(facade, task_id, True)  # Force include_context=True
+                result = self._handle_get_task(facade, task_id, True, True)  # Force include_context=True, include_dependencies=True
                 
                 # Add workflow hints (now always included)
                 if result.get("success") and task_id:
@@ -688,6 +688,7 @@ class TaskMCPController:
         facade: TaskApplicationFacade,
         task_id: Optional[str],
         include_context: bool = False,
+        include_dependencies: bool = True,
     ) -> Dict[str, Any]:
         """Handle get task request synchronously (backward-compatible)."""
         if not task_id:
@@ -702,7 +703,7 @@ class TaskMCPController:
 
         try:
             # Direct synchronous call to facade (which is also synchronous)
-            result = facade.get_task(task_id, include_context)
+            result = facade.get_task(task_id, include_context, include_dependencies)
             
             # Ensure result is a dictionary before accessing it
             if not isinstance(result, dict):
@@ -807,7 +808,7 @@ class TaskMCPController:
             limit=limit
         )
         
-        result = facade.list_tasks(request)
+        result = facade.list_tasks(request, include_dependencies=True)
         
         # Ensure result is a dictionary before accessing it
         if not isinstance(result, dict):

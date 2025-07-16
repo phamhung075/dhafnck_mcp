@@ -227,16 +227,48 @@ class ORMAgentRepository(BaseORMRepository[Agent], AgentRepository):
             )
     
     def assign_agent_to_tree(self, project_id: str, agent_id: str, git_branch_id: str) -> Dict[str, Any]:
-        """Assign an agent to a task tree"""
+        """Assign an agent to a task tree, auto-registering the agent if it doesn't exist"""
         try:
             # Get agent
             agent = self.get_by_id(agent_id)
+            auto_registered = False
+            
             if not agent:
-                raise ResourceNotFoundException(
-                    message=f"Agent {agent_id} not found",
-                    resource_type="agent",
-                    resource_id=agent_id
-                )
+                # Auto-register the agent with default settings
+                logger.info(f"Auto-registering agent {agent_id} in project {project_id}")
+                try:
+                    # Use agent_id as-is for the database ID to match the assignment lookup
+                    # Extract agent name from agent_id (remove @ prefix if present)
+                    agent_name = agent_id.lstrip('@')
+                    
+                    # Create agent entity
+                    agent_entity = AgentEntity(
+                        id=agent_id,
+                        name=agent_name,
+                        description=f"Auto-registered agent {agent_name} for project {project_id}",
+                        created_at=datetime.now(),
+                        updated_at=datetime.now()
+                    )
+                    
+                    # Convert to model dict
+                    model_dict = self._entity_to_model_dict(agent_entity)
+                    
+                    # Add call_agent to model_metadata
+                    model_dict["model_metadata"]["call_agent"] = agent_id
+                    
+                    # Create agent in database
+                    agent = self.create(**model_dict)
+                    auto_registered = True
+                    
+                    logger.info(f"Successfully auto-registered agent {agent_id} in project {project_id}")
+                    
+                except Exception as reg_error:
+                    logger.error(f"Failed to auto-register agent {agent_id}: {reg_error}")
+                    raise ResourceNotFoundException(
+                        message=f"Agent {agent_id} not found and auto-registration failed: {str(reg_error)}",
+                        resource_type="agent",
+                        resource_id=agent_id
+                    )
             
             # Update agent model_metadata to include assignment
             model_metadata = agent.model_metadata or {}
@@ -245,7 +277,8 @@ class ORMAgentRepository(BaseORMRepository[Agent], AgentRepository):
             if git_branch_id in assigned_trees:
                 return {
                     "success": True,
-                    "message": f"Agent {agent_id} already assigned to tree {git_branch_id}"
+                    "message": f"Agent {agent_id} already assigned to tree {git_branch_id}",
+                    "auto_registered": auto_registered
                 }
             
             assigned_trees.add(git_branch_id)
@@ -259,10 +292,12 @@ class ORMAgentRepository(BaseORMRepository[Agent], AgentRepository):
             logger.info(f"Assigned agent {agent_id} to tree {git_branch_id} in project {project_id}")
             return {
                 "success": True,
-                "message": f"Agent {agent_id} assigned to tree {git_branch_id}"
+                "message": f"Agent {agent_id} assigned to tree {git_branch_id}",
+                "auto_registered": auto_registered
             }
             
         except ResourceNotFoundException:
+            # Re-raise resource not found errors (from auto-registration failure)
             raise
         except Exception as e:
             logger.error(f"Error assigning agent {agent_id} to tree {git_branch_id}: {e}")
