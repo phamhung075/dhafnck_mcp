@@ -1,19 +1,19 @@
-"""Context ID Type Detector
+"""Context ID Type Detector using ORM
 
 This module provides utilities to detect whether a given ID is a project ID, 
-git branch ID, or task ID by checking against the database.
+git branch ID, or task ID by checking against the ORM database.
 """
 
 import logging
 from typing import Tuple, Optional
-from ...infrastructure.database.session_manager import get_session_manager
-from sqlalchemy import text
+from ...infrastructure.database.database_config import get_session
+from ...infrastructure.database.models import Project, ProjectTaskTree, Task
 
 logger = logging.getLogger(__name__)
 
 
 class ContextIDDetector:
-    """Detects the type of a given ID by checking against database tables"""
+    """Detects the type of a given ID by checking against database tables using ORM"""
     
     @staticmethod
     def detect_id_type(context_id: str) -> Tuple[str, Optional[str]]:
@@ -28,45 +28,32 @@ class ContextIDDetector:
             - id_type is one of: "project", "git_branch", "task", "unknown"
             - project_id is the associated project ID (None for unknown)
         """
+        if not context_id:
+            logger.warning("Empty context_id provided")
+            return ("unknown", None)
+            
         try:
-            session_manager = get_session_manager()
-            with session_manager.get_session() as session:
+            with get_session() as session:
                 # Check if it's a project ID
-                result = session.execute(
-                    text('SELECT id FROM projects WHERE id = :context_id'),
-                    {'context_id': context_id}
-                ).fetchone()
-                
-                if result:
+                project = session.query(Project).filter_by(id=context_id).first()
+                if project:
                     logger.debug(f"ID {context_id} identified as project ID")
                     return ("project", context_id)
                 
                 # Check if it's a git branch ID (stored in project_task_trees)
-                result = session.execute(
-                    text('SELECT project_id FROM project_task_trees WHERE id = :context_id'),
-                    {'context_id': context_id}
-                ).fetchone()
-                
-                if result:
-                    project_id = result[0]
-                    logger.debug(f"ID {context_id} identified as git branch ID with project {project_id}")
-                    return ("git_branch", project_id)
+                branch = session.query(ProjectTaskTree).filter_by(id=context_id).first()
+                if branch:
+                    logger.debug(f"ID {context_id} identified as git branch ID with project {branch.project_id}")
+                    return ("git_branch", branch.project_id)
                 
                 # Check if it's a task ID
-                result = session.execute(
-                    text('''
-                    SELECT t.id, pt.project_id 
-                    FROM tasks t
-                    JOIN project_task_trees pt ON t.git_branch_id = pt.id
-                    WHERE t.id = :context_id
-                    '''),
-                    {'context_id': context_id}
-                ).fetchone()
-                
-                if result:
-                    project_id = result[1]
-                    logger.debug(f"ID {context_id} identified as task ID with project {project_id}")
-                    return ("task", project_id)
+                task = session.query(Task).filter_by(id=context_id).first()
+                if task:
+                    # Get the project ID via the git branch
+                    branch = session.query(ProjectTaskTree).filter_by(id=task.git_branch_id).first()
+                    if branch:
+                        logger.debug(f"ID {context_id} identified as task ID with project {branch.project_id}")
+                        return ("task", branch.project_id)
                 
                 # ID not found in any table
                 logger.warning(f"ID {context_id} not found in any table")

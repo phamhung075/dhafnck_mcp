@@ -17,8 +17,8 @@ from fastmcp.task_management.application.facades.task_application_facade import 
 from fastmcp.task_management.application.factories.hierarchical_context_facade_factory import HierarchicalContextFacadeFactory
 
 # Import repository interfaces for mocking
-from fastmcp.task_management.infrastructure.repositories.sqlite.task_repository import SQLiteTaskRepository
-from fastmcp.task_management.infrastructure.repositories.sqlite.hierarchical_context_repository import SQLiteHierarchicalContextRepository
+from fastmcp.task_management.infrastructure.repositories.orm.task_repository import ORMTaskRepository
+from fastmcp.task_management.infrastructure.repositories.orm.hierarchical_context_repository import ORMHierarchicalContextRepository
 
 
 @pytest.fixture
@@ -98,8 +98,8 @@ def hierarchical_context_facade_mock():
 
 
 @pytest.fixture
-def sqlite_task_repository_mock():
-    """Mock for SQLite task repository with new interface"""
+def orm_task_repository_mock():
+    """Mock for ORM task repository with new interface"""
     mock = Mock()
     
     # Standard CRUD operations
@@ -141,8 +141,8 @@ def sqlite_task_repository_mock():
 
 
 @pytest.fixture
-def sqlite_hierarchical_context_repository_mock():
-    """Mock for SQLite hierarchical context repository"""
+def orm_hierarchical_context_repository_mock():
+    """Mock for ORM hierarchical context repository"""
     mock = Mock()
     
     mock.create_context.return_value = "context-id-123"
@@ -358,7 +358,7 @@ def reset_mocks():
 @pytest.fixture
 def full_task_context_setup(
     hierarchical_context_service_mock,
-    sqlite_task_repository_mock,
+    orm_task_repository_mock,
     task_application_facade_mock,
     sample_task_data,
     sample_context_data
@@ -366,7 +366,7 @@ def full_task_context_setup(
     """Complete setup for testing task operations with context"""
     return {
         "context_service": hierarchical_context_service_mock,
-        "task_repository": sqlite_task_repository_mock,
+        "task_repository": orm_task_repository_mock,
         "task_facade": task_application_facade_mock,
         "task_data": sample_task_data,
         "context_data": sample_context_data

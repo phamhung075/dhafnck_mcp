@@ -48,8 +48,8 @@ def sample_task_tree():
         updated_at=now
     )
     task_tree.assigned_agent_id = "@coding_agent"
-    task_tree.priority = Priority.HIGH
-    task_tree.status = TaskStatus.IN_PROGRESS
+    task_tree.priority = Priority.high()
+    task_tree.status = TaskStatus.in_progress()
     return task_tree
 
 
@@ -400,8 +400,8 @@ class TestORMGitBranchRepository:
             mock_task_tree.created_at = datetime.now(timezone.utc)
             mock_task_tree.updated_at = datetime.now(timezone.utc)
             mock_task_tree.assigned_agent_id = "@coding_agent"
-            mock_task_tree.status = TaskStatus.IN_PROGRESS
-            mock_task_tree.priority = Priority.HIGH
+            mock_task_tree.status = TaskStatus.in_progress()
+            mock_task_tree.priority = Priority.high()
             mock_find.return_value = [mock_task_tree]
             
             result = await repository.list_git_branches("project-456")

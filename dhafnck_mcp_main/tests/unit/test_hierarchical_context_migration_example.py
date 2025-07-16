@@ -89,8 +89,8 @@ class TestHierarchicalContextMigrationExample:
         assert result["context_id"] == "test-context-123"
         hierarchical_context_facade_mock.create.assert_called_once_with(**create_request)
 
-    def test_task_repository_with_sqlite_pattern(self, sqlite_task_repository_mock):
-        """Test task repository using new SQLite pattern"""
+    def test_task_repository_with_orm_pattern(self, orm_task_repository_mock):
+        """Test task repository using new ORM pattern"""
         # Arrange
         task_data = {
             "title": "Test Task",
@@ -99,15 +99,15 @@ class TestHierarchicalContextMigrationExample:
         }
         
         # Act
-        task_id = sqlite_task_repository_mock.create(task_data)
-        retrieved_task = sqlite_task_repository_mock.get_by_id(task_id)
+        task_id = orm_task_repository_mock.create(task_data)
+        retrieved_task = orm_task_repository_mock.get_by_id(task_id)
         
-        # Assert - New SQLite repository expectations
+        # Assert - New ORM repository expectations
         assert task_id == "task-id-123"
         assert retrieved_task["id"] == "task-id-123"
         assert retrieved_task["title"] == "Test Task"
-        sqlite_task_repository_mock.create.assert_called_once_with(task_data)
-        sqlite_task_repository_mock.get_by_id.assert_called_once_with(task_id)
+        orm_task_repository_mock.create.assert_called_once_with(task_data)
+        orm_task_repository_mock.get_by_id.assert_called_once_with(task_id)
 
     def test_task_facade_with_workflow_guidance(self, task_application_facade_mock):
         """Test task facade with new workflow guidance features"""

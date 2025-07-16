@@ -179,6 +179,9 @@ class DatabaseException(TaskManagementException):
             context["operation"] = operation
         if table:
             context["table"] = table
+        
+        # Remove error_code from kwargs if present to avoid conflict
+        kwargs.pop('error_code', None)
             
         super().__init__(
             message=message,
@@ -303,3 +306,38 @@ class ConfigurationException(TaskManagementException):
             context=context,
             **kwargs
         )
+
+
+class RepositoryError(DatabaseException):
+    """Raised when repository operations fail."""
+    
+    def __init__(
+        self,
+        message: str,
+        repository: Optional[str] = None,
+        **kwargs
+    ):
+        """Initialize repository exception."""
+        context = kwargs.get("context", {})
+        if repository:
+            context["repository"] = repository
+            
+        # Remove error_code from kwargs if present to avoid conflict
+        kwargs.pop('error_code', None)
+        
+        super().__init__(
+            message=message,
+            error_code="REPOSITORY_ERROR",
+            operation="repository",
+            **kwargs
+        )
+
+
+class NotFoundError(ResourceNotFoundException):
+    """Alias for ResourceNotFoundException for backward compatibility."""
+    pass
+
+
+class ValidationError(ValidationException):
+    """Alias for ValidationException for backward compatibility."""
+    pass

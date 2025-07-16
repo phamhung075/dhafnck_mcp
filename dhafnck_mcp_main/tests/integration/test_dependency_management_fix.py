@@ -14,6 +14,7 @@ import sys
 import os
 from datetime import datetime
 from uuid import uuid4
+from typing import List, Optional, Dict, Any
 
 # Add the source path to sys.path for imports
 sys.path.insert(0, '/home/daihungpham/agentic-project/dhafnck_mcp_main/src')
@@ -36,11 +37,7 @@ class MockTaskRepository(TaskRepository):
         self.completed_tasks = {}
         self.archived_tasks = {}
     
-    def get_by_id(self, task_id: TaskId) -> Task:
-        """Get task by ID - currently only checks active tasks (this is the bug!)"""
-        return self.active_tasks.get(str(task_id))
-    
-    def save(self, task: Task) -> None:
+    def save(self, task: Task) -> bool:
         """Save task to appropriate collection based on status"""
         if task.status.is_done():
             self.completed_tasks[str(task.id)] = task
@@ -48,6 +45,89 @@ class MockTaskRepository(TaskRepository):
             self.active_tasks.pop(str(task.id), None)
         else:
             self.active_tasks[str(task.id)] = task
+        return True
+    
+    def find_by_id(self, task_id: TaskId) -> Optional[Task]:
+        """Find task by ID - currently only checks active tasks (this is the bug!)"""
+        return self.active_tasks.get(str(task_id))
+    
+    def find_all(self) -> List[Task]:
+        """Find all tasks"""
+        all_tasks = list(self.active_tasks.values())
+        all_tasks.extend(self.completed_tasks.values())
+        all_tasks.extend(self.archived_tasks.values())
+        return all_tasks
+    
+    def find_by_status(self, status: TaskStatus) -> List[Task]:
+        """Find tasks by status"""
+        if status.is_done():
+            return list(self.completed_tasks.values())
+        else:
+            return [t for t in self.active_tasks.values() if t.status == status]
+    
+    def find_by_priority(self, priority: Priority) -> List[Task]:
+        """Find tasks by priority"""
+        return [t for t in self.find_all() if t.priority == priority]
+    
+    def find_by_assignee(self, assignee: str) -> List[Task]:
+        """Find tasks by assignee"""
+        return [t for t in self.find_all() if assignee in (t.assignees or [])]
+    
+    def find_by_labels(self, labels: List[str]) -> List[Task]:
+        """Find tasks containing any of the specified labels"""
+        return [t for t in self.find_all() if any(label in (t.labels or []) for label in labels)]
+    
+    def search(self, query: str, limit: int = 10) -> List[Task]:
+        """Search tasks by query string"""
+        results = []
+        for task in self.find_all():
+            if query.lower() in task.title.lower() or query.lower() in task.description.lower():
+                results.append(task)
+                if len(results) >= limit:
+                    break
+        return results
+    
+    def delete(self, task_id: TaskId) -> bool:
+        """Delete a task"""
+        task_id_str = str(task_id)
+        if task_id_str in self.active_tasks:
+            del self.active_tasks[task_id_str]
+            return True
+        if task_id_str in self.completed_tasks:
+            del self.completed_tasks[task_id_str]
+            return True
+        if task_id_str in self.archived_tasks:
+            del self.archived_tasks[task_id_str]
+            return True
+        return False
+    
+    def exists(self, task_id: TaskId) -> bool:
+        """Check if task exists"""
+        task_id_str = str(task_id)
+        return (task_id_str in self.active_tasks or 
+                task_id_str in self.completed_tasks or 
+                task_id_str in self.archived_tasks)
+    
+    def get_next_id(self) -> TaskId:
+        """Get next available task ID"""
+        return TaskId(str(uuid4()))
+    
+    def count(self) -> int:
+        """Get total number of tasks"""
+        return len(self.active_tasks) + len(self.completed_tasks) + len(self.archived_tasks)
+    
+    def get_statistics(self) -> Dict[str, Any]:
+        """Get task statistics"""
+        return {
+            "total": self.count(),
+            "active": len(self.active_tasks),
+            "completed": len(self.completed_tasks),
+            "archived": len(self.archived_tasks)
+        }
+    
+    def get_by_id(self, task_id: TaskId) -> Task:
+        """Get task by ID - currently only checks active tasks (this is the bug!)"""
+        return self.active_tasks.get(str(task_id))
     
     def get_completed_task(self, task_id: str) -> Task:
         """Get task from completed tasks (NEW METHOD TO BE IMPLEMENTED)"""
@@ -134,7 +214,7 @@ class TestDependencyManagementFix:
         # Then: Should succeed
         result = self.add_dependency_use_case.execute(request)
         assert result.success is True
-        assert result.error is None
+        assert result.errors is None or len(result.errors) == 0
 
     def test_add_dependency_on_completed_task_should_fail_currently(self):
         """Test 2: Adding dependency on completed task FAILS (reproduces the bug)"""
@@ -159,9 +239,10 @@ class TestDependencyManagementFix:
         # Then: Currently FAILS with "not found" error (this is the bug!)
         result = self.add_dependency_use_case.execute(request)
         assert result.success is False
-        assert "not found" in result.error.lower()
+        error_msg = result.errors[0] if result.errors else ""
+        assert "not found" in error_msg.lower()
         
-        print(f"✅ REPRODUCED BUG: {result.error}")
+        print(f"✅ REPRODUCED BUG: {error_msg}")
 
     def test_add_dependency_on_archived_task_should_fail_currently(self):
         """Test 3: Adding dependency on archived task FAILS (reproduces the bug)"""
@@ -186,9 +267,10 @@ class TestDependencyManagementFix:
         # Then: Currently FAILS with "not found" error (this is the bug!)
         result = self.add_dependency_use_case.execute(request)
         assert result.success is False
-        assert "not found" in result.error.lower()
+        error_msg = result.errors[0] if result.errors else ""
+        assert "not found" in error_msg.lower()
         
-        print(f"✅ REPRODUCED BUG: {result.error}")
+        print(f"✅ REPRODUCED BUG: {error_msg}")
 
     def test_dependency_validation_should_handle_completed_tasks(self):
         """Test 4: Dependency validation should handle all task states (will fail initially)"""
@@ -264,8 +346,8 @@ def test_enhanced_repository_methods():
         id=TaskId(completed_task_id),
         title="Completed Task",
         description="A completed task",
-        status=TaskStatus.DONE,
-        priority=TaskPriority.MEDIUM,
+        status=TaskStatus.done(),
+        priority=Priority.medium(),
         git_branch_id=str(uuid4())
     )
     
@@ -273,8 +355,8 @@ def test_enhanced_repository_methods():
         id=TaskId(archived_task_id),
         title="Archived Task",
         description="An archived task",
-        status=TaskStatus.DONE,
-        priority=TaskPriority.MEDIUM,
+        status=TaskStatus.done(),
+        priority=Priority.medium(),
         git_branch_id=str(uuid4())
     )
     

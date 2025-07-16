@@ -37,20 +37,28 @@ class TestORMSubtaskRepository:
     def mock_session(self):
         """Create a mock database session"""
         session = Mock(spec=Session)
-        session.query.return_value = session
-        session.filter.return_value = session
-        session.order_by.return_value = session
-        session.first.return_value = None
-        session.all.return_value = []
-        session.count.return_value = 0
-        session.delete.return_value = 0
-        session.update.return_value = 0
+        
+        # Create a mock query object with proper chaining
+        mock_query = Mock()
+        mock_query.filter.return_value = mock_query
+        mock_query.order_by.return_value = mock_query
+        mock_query.limit.return_value = mock_query
+        mock_query.first.return_value = None
+        mock_query.all.return_value = []
+        mock_query.count.return_value = 0
+        mock_query.delete.return_value = 0
+        mock_query.update.return_value = 0
+        mock_query.scalar.return_value = None
+        
+        # Setup session to return the mock query
+        session.query.return_value = mock_query
         session.add.return_value = None
         session.flush.return_value = None
         session.refresh.return_value = None
         session.commit.return_value = None
         session.rollback.return_value = None
         session.close.return_value = None
+        
         return session
     
     @pytest.fixture
@@ -62,10 +70,10 @@ class TestORMSubtaskRepository:
     def sample_subtask(self):
         """Create a sample subtask for testing"""
         return Subtask(
-            id=SubtaskId.generate(),
+            id=SubtaskId.generate_new(),
             title="Test Subtask",
             description="Test description",
-            parent_task_id=TaskId.generate(),
+            parent_task_id=TaskId.generate_new(),
             status=TaskStatus.todo(),
             priority=Priority.medium(),
             assignees=["@coding_agent", "@test_agent"],
@@ -162,7 +170,7 @@ class TestORMSubtaskRepository:
     
     def test_find_by_parent_task_id(self, repository, mock_session, sample_orm_model):
         """Test finding subtasks by parent task ID"""
-        parent_task_id = TaskId.generate()
+        parent_task_id = TaskId.generate_new()
         
         with patch.object(repository, 'get_db_session') as mock_get_session:
             mock_get_session.return_value.__enter__.return_value = mock_session
@@ -201,7 +209,7 @@ class TestORMSubtaskRepository:
     
     def test_find_completed(self, repository, mock_session, sample_orm_model):
         """Test finding completed subtasks"""
-        parent_task_id = TaskId.generate()
+        parent_task_id = TaskId.generate_new()
         sample_orm_model.status = "done"
         
         with patch.object(repository, 'get_db_session') as mock_get_session:
@@ -215,7 +223,7 @@ class TestORMSubtaskRepository:
     
     def test_find_pending(self, repository, mock_session, sample_orm_model):
         """Test finding pending subtasks"""
-        parent_task_id = TaskId.generate()
+        parent_task_id = TaskId.generate_new()
         
         with patch.object(repository, 'get_db_session') as mock_get_session:
             mock_get_session.return_value.__enter__.return_value = mock_session
@@ -252,7 +260,7 @@ class TestORMSubtaskRepository:
     
     def test_delete_by_parent_task_id(self, repository, mock_session):
         """Test deleting all subtasks for a parent task"""
-        parent_task_id = TaskId.generate()
+        parent_task_id = TaskId.generate_new()
         
         with patch.object(repository, 'get_db_session') as mock_get_session:
             mock_get_session.return_value.__enter__.return_value = mock_session
@@ -288,7 +296,7 @@ class TestORMSubtaskRepository:
     
     def test_count_by_parent_task_id(self, repository, mock_session):
         """Test counting subtasks for a parent task"""
-        parent_task_id = TaskId.generate()
+        parent_task_id = TaskId.generate_new()
         
         with patch.object(repository, 'get_db_session') as mock_get_session:
             mock_get_session.return_value.__enter__.return_value = mock_session
@@ -300,7 +308,7 @@ class TestORMSubtaskRepository:
     
     def test_count_completed_by_parent_task_id(self, repository, mock_session):
         """Test counting completed subtasks for a parent task"""
-        parent_task_id = TaskId.generate()
+        parent_task_id = TaskId.generate_new()
         
         with patch.object(repository, 'get_db_session') as mock_get_session:
             mock_get_session.return_value.__enter__.return_value = mock_session
@@ -312,7 +320,7 @@ class TestORMSubtaskRepository:
     
     def test_get_next_id(self, repository):
         """Test generating next subtask ID"""
-        parent_task_id = TaskId.generate()
+        parent_task_id = TaskId.generate_new()
         
         result = repository.get_next_id(parent_task_id)
         
@@ -321,41 +329,61 @@ class TestORMSubtaskRepository:
     
     def test_get_subtask_progress(self, repository, mock_session):
         """Test getting subtask progress statistics"""
-        parent_task_id = TaskId.generate()
+        parent_task_id = TaskId.generate_new()
         
         with patch.object(repository, 'get_db_session') as mock_get_session:
             mock_get_session.return_value.__enter__.return_value = mock_session
             
-            # Mock count queries
-            count_mock = Mock()
-            count_mock.count.side_effect = [10, 6, 2, 1]  # total, completed, in_progress, blocked
-            mock_session.query.return_value.filter.return_value = count_mock
+            # Create separate mocks for each count query
+            total_count = 10
+            completed_count = 6
+            in_progress_count = 2
+            blocked_count = 1
             
-            # Mock average query
+            # Track which query we're on
+            query_call_count = 0
+            counts = [total_count, completed_count, in_progress_count, blocked_count]
+            
+            def count_side_effect():
+                nonlocal query_call_count
+                result = counts[query_call_count] if query_call_count < len(counts) else 0
+                query_call_count += 1
+                return result
+            
+            # Mock for count queries
+            count_mock = Mock()
+            count_mock.count.side_effect = count_side_effect
+            
+            # Mock for average query
             avg_mock = Mock()
             avg_mock.scalar.return_value = 65.5
-            mock_session.query.return_value.filter.return_value = avg_mock
             
-            with patch.object(mock_session, 'query') as mock_query:
-                # Setup different return values for different queries
-                def query_side_effect(*args):
-                    if 'func.avg' in str(args):
-                        return avg_mock
-                    else:
-                        return count_mock
-                
-                mock_query.side_effect = query_side_effect
-                
-                result = repository.get_subtask_progress(parent_task_id)
-                
-                assert isinstance(result, dict)
-                assert "total_subtasks" in result
-                assert "completion_percentage" in result
-                assert "average_progress" in result
+            # Setup query to return appropriate mock based on arguments
+            def query_side_effect(*args):
+                # Check if this is an average query
+                if args and 'avg' in str(args[0]):
+                    filter_mock = Mock()
+                    filter_mock.scalar.return_value = 65.5
+                    return Mock(filter=Mock(return_value=filter_mock))
+                else:
+                    # This is a count query
+                    return Mock(filter=Mock(return_value=count_mock))
+            
+            mock_session.query.side_effect = query_side_effect
+            
+            result = repository.get_subtask_progress(parent_task_id)
+            
+            assert isinstance(result, dict)
+            assert result["total_subtasks"] == total_count
+            assert result["completed_subtasks"] == completed_count
+            assert result["in_progress_subtasks"] == in_progress_count
+            assert result["blocked_subtasks"] == blocked_count
+            assert result["completion_percentage"] == 60.0  # 6/10 * 100
+            assert result["average_progress"] == 65.5
     
     def test_bulk_update_status(self, repository, mock_session):
         """Test bulk updating status of subtasks"""
-        parent_task_id = TaskId.generate()
+        parent_task_id = TaskId.generate_new()
         new_status = "in_progress"
         
         with patch.object(repository, 'get_db_session') as mock_get_session:
@@ -368,7 +396,7 @@ class TestORMSubtaskRepository:
     
     def test_bulk_complete(self, repository, mock_session):
         """Test bulk completing subtasks"""
-        parent_task_id = TaskId.generate()
+        parent_task_id = TaskId.generate_new()
         
         with patch.object(repository, 'bulk_update_status') as mock_bulk_update:
             mock_bulk_update.return_value = True
@@ -469,9 +497,9 @@ class TestORMSubtaskRepository:
             with pytest.raises(DatabaseException) as exc_info:
                 repository.save(sample_subtask)
             
-            assert "Database operation failed" in str(exc_info.value)
-            assert exc_info.value.operation == "save_subtask"
-            assert exc_info.value.table == "task_subtasks"
+            assert "Failed to save subtask" in str(exc_info.value)
+            assert exc_info.value.context.get("operation") == "save_subtask"
+            assert exc_info.value.context.get("table") == "task_subtasks"
 
 
 class TestORMSubtaskRepositoryIntegration:
@@ -507,7 +535,7 @@ class TestORMSubtaskRepositoryIntegration:
         subtask = Subtask(
             title="Integration Test Subtask",
             description="Testing full CRUD cycle",
-            parent_task_id=TaskId.generate(),
+            parent_task_id=TaskId.generate_new(),
             status=TaskStatus.todo(),
             priority=Priority.high(),
             assignees=["@coding_agent"]

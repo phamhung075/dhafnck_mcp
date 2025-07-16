@@ -43,7 +43,7 @@ def test_reproduce_dependency_bug():
     print("   - TaskRepository: add methods for completed/archived task lookup")
     print("   - Task completion: add dependency status updates")
     
-    return True
+    assert True  # Test completed successfully
 
 def test_dependency_lookup_strategy():
     """Test the enhanced dependency lookup strategy"""
@@ -68,7 +68,7 @@ def test_dependency_lookup_strategy():
     print("   - completed dependency: can_proceed = True")
     print("   - cancelled dependency: warn user, ask for confirmation")
     
-    return True
+    assert True  # Test completed successfully
 
 def test_implementation_plan():
     """Show the implementation plan for fixing the issue"""
@@ -97,7 +97,7 @@ def test_implementation_plan():
     print("   - Status consistency checks")
     print("   - Error recovery strategies")
     
-    return True
+    assert True  # Test completed successfully
 
 if __name__ == "__main__":
     print("🚀 TDD Phase 1: Bug Analysis and Test Design")

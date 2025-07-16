@@ -410,7 +410,7 @@ class ORMSubtaskRepository(BaseORMRepository[TaskSubtask], SubtaskRepository):
         Returns:
             New SubtaskId
         """
-        return SubtaskId.generate()
+        return SubtaskId.generate_new()
     
     def get_subtask_progress(self, parent_task_id: TaskId) -> Dict[str, Any]:
         """

@@ -16,11 +16,14 @@ from pathlib import Path
 # Add the src directory to the path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
-from fastmcp.task_management.interface.controllers.context_id_detector import ContextIDDetector
+from fastmcp.task_management.interface.controllers.context_id_detector_orm import ContextIDDetector
 
 
-def test_id_detection(test_id: str):
-    """Test ID detection for a given ID"""
+def manual_test_id_detection(test_id: str):
+    """Test ID detection for a given ID
+    
+    Note: This is a manual test function, not a pytest test.
+    """
     print(f"\nTesting ID: {test_id}")
     print("-" * 50)
     
@@ -60,7 +63,7 @@ def main():
     if len(sys.argv) > 1:
         # Test specific ID provided as argument
         test_id = sys.argv[1]
-        test_id_detection(test_id)
+        manual_test_id_detection(test_id)
     else:
         # Test with some example IDs
         print("\nNo ID provided. Testing with example IDs...")
@@ -74,7 +77,7 @@ def main():
         ]
         
         for test_id in example_ids:
-            test_id_detection(test_id)
+            manual_test_id_detection(test_id)
             print()
     
     print("\nTo test a specific ID, run:")

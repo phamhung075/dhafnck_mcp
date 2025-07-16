@@ -7,8 +7,11 @@ Handles JSON operations across different database engines.
 import json
 import logging
 from typing import Any, Dict, Optional
+from contextlib import contextmanager
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session
+from .session_manager import get_session
 
 logger = logging.getLogger(__name__)
 
@@ -137,3 +140,13 @@ class DatabaseAdapter:
         """Migrate data from SQLite to PostgreSQL (for Supabase migration)."""
         # This would be implemented when you're ready to migrate
         pass
+    
+    @contextmanager
+    def get_session(self):
+        """Get a database session context manager.
+        
+        This method provides compatibility for ORM repositories that expect
+        the DatabaseAdapter to provide session management.
+        """
+        with get_session() as session:
+            yield session

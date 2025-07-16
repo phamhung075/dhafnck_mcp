@@ -33,7 +33,11 @@ class TestMCPParameterValidationIntegration:
     @pytest.fixture
     def controller(self):
         """Create a task controller for testing"""
-        return TaskMCPController()
+        from fastmcp.task_management.application.factories.task_facade_factory import TaskFacadeFactory
+        from fastmcp.task_management.infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
+        repository_factory = TaskRepositoryFactory()
+        task_facade_factory = TaskFacadeFactory(repository_factory=repository_factory)
+        return TaskMCPController(task_facade_factory=task_facade_factory)
     
     def test_limit_parameter_coercion_integration(self, controller):
         """Test that limit parameter accepts both string and integer values"""

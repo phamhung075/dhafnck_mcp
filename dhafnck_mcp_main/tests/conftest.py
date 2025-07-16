@@ -304,11 +304,11 @@ def set_mcp_db_path_for_tests(request):
         yield
         return
     
-    from fastmcp.task_management.infrastructure.database.database_initializer import clear_initialized_cache
+    from fastmcp.task_management.infrastructure.database.database_initializer import reset_initialization_cache
     from fastmcp.task_management.infrastructure.database.database_source_manager import DatabaseSourceManager
     
     # Clear the initializer's cache to ensure schemas are re-run
-    clear_initialized_cache()
+    reset_initialization_cache()
     
     # Clear the database source manager singleton to ensure fresh database path detection
     DatabaseSourceManager.clear_instance()
@@ -349,11 +349,11 @@ def shared_test_db():
     
     Use this for tests that only read from database, not modify it.
     """
-    from fastmcp.task_management.infrastructure.database.database_initializer import clear_initialized_cache
+    from fastmcp.task_management.infrastructure.database.database_initializer import reset_initialization_cache
     from fastmcp.task_management.infrastructure.database.database_source_manager import DatabaseSourceManager
     
     # Clear caches
-    clear_initialized_cache()
+    reset_initialization_cache()
     DatabaseSourceManager.clear_instance()
     
     # Create a shared test database
@@ -398,11 +398,11 @@ def module_test_db():
     Module-scoped fixture for integration tests within a module.
     Creates database once per test module.
     """
-    from fastmcp.task_management.infrastructure.database.database_initializer import clear_initialized_cache
+    from fastmcp.task_management.infrastructure.database.database_initializer import reset_initialization_cache
     from fastmcp.task_management.infrastructure.database.database_source_manager import DatabaseSourceManager
     
     # Clear caches
-    clear_initialized_cache()
+    reset_initialization_cache()
     DatabaseSourceManager.clear_instance()
     
     # Create a module-scoped test database

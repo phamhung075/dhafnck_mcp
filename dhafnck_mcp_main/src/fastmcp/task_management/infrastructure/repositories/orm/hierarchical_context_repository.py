@@ -30,6 +30,15 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
     - Cache management
     """
     
+    def __init__(self):
+        """
+        Initialize ORM hierarchical context repository.
+        
+        Uses GlobalContext as the primary model class since it's the base
+        for the hierarchical context system.
+        """
+        super().__init__(GlobalContext)
+    
     # ===============================================
     # GLOBAL CONTEXT OPERATIONS
     # ===============================================
@@ -40,7 +49,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
         try:
             logger.info(f"Creating global context with id: {global_id}")
             
-            with self.get_session() as session:
+            with self.get_db_session() as session:
                 # Check if context already exists
                 existing = session.get(GlobalContext, global_id)
                 if existing:
@@ -84,7 +93,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
     def get_global_context(self, global_id: str = "global_singleton") -> Optional[Dict[str, Any]]:
         """Get global context (singleton)"""
         try:
-            with self.get_session() as session:
+            with self.get_db_session() as session:
                 context = session.get(GlobalContext, global_id)
                 if not context:
                     return None
@@ -109,7 +118,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
     def update_global_context(self, global_id: str, updates: Dict[str, Any]) -> bool:
         """Update global context"""
         try:
-            with self.get_session() as session:
+            with self.get_db_session() as session:
                 context = session.get(GlobalContext, global_id)
                 if not context:
                     # Create context if it doesn't exist
@@ -156,7 +165,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
     def delete_global_context(self, global_id: str) -> bool:
         """Delete global context"""
         try:
-            with self.get_session() as session:
+            with self.get_db_session() as session:
                 context = session.get(GlobalContext, global_id)
                 if context:
                     session.delete(context)
@@ -170,7 +179,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
     def list_global_contexts(self) -> List[Dict[str, Any]]:
         """List all global contexts"""
         try:
-            with self.get_session() as session:
+            with self.get_db_session() as session:
                 contexts = session.execute(select(GlobalContext)).scalars().all()
                 
                 return [
@@ -200,7 +209,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
     def create_project_context(self, project_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """Create project context"""
         try:
-            with self.get_session() as session:
+            with self.get_db_session() as session:
                 # Check if context already exists
                 existing = session.get(ProjectContext, project_id)
                 if existing:
@@ -243,7 +252,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
     def get_project_context(self, project_id: str) -> Optional[Dict[str, Any]]:
         """Get project context"""
         try:
-            with self.get_session() as session:
+            with self.get_db_session() as session:
                 context = session.get(ProjectContext, project_id)
                 if not context:
                     return None
@@ -270,7 +279,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
     def update_project_context(self, project_id: str, updates: Dict[str, Any]) -> bool:
         """Update project context"""
         try:
-            with self.get_session() as session:
+            with self.get_db_session() as session:
                 context = session.get(ProjectContext, project_id)
                 if not context:
                     return False
@@ -300,7 +309,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
     def delete_project_context(self, project_id: str) -> bool:
         """Delete project context"""
         try:
-            with self.get_session() as session:
+            with self.get_db_session() as session:
                 context = session.get(ProjectContext, project_id)
                 if context:
                     session.delete(context)
@@ -314,7 +323,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
     def list_project_contexts(self) -> List[Dict[str, Any]]:
         """List all project contexts"""
         try:
-            with self.get_session() as session:
+            with self.get_db_session() as session:
                 contexts = session.execute(select(ProjectContext)).scalars().all()
                 
                 return [
@@ -346,7 +355,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
     def create_task_context(self, task_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """Create task context"""
         try:
-            with self.get_session() as session:
+            with self.get_db_session() as session:
                 # Extract project ID from data or use default
                 project_id = data.get("parent_project_id", "default_project")
                 project_context_id = data.get("parent_project_context_id", project_id)
@@ -393,7 +402,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
     def get_task_context(self, task_id: str) -> Optional[Dict[str, Any]]:
         """Get task context"""
         try:
-            with self.get_session() as session:
+            with self.get_db_session() as session:
                 context = session.get(TaskContext, task_id)
                 if not context:
                     return None
@@ -420,7 +429,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
     def update_task_context(self, task_id: str, updates: Dict[str, Any]) -> bool:
         """Update task context"""
         try:
-            with self.get_session() as session:
+            with self.get_db_session() as session:
                 context = session.get(TaskContext, task_id)
                 if not context:
                     return False
@@ -448,7 +457,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
     def delete_task_context(self, task_id: str) -> bool:
         """Delete task context"""
         try:
-            with self.get_session() as session:
+            with self.get_db_session() as session:
                 context = session.get(TaskContext, task_id)
                 if context:
                     session.delete(context)
@@ -462,7 +471,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
     def list_task_contexts(self) -> List[Dict[str, Any]]:
         """List all task contexts"""
         try:
-            with self.get_session() as session:
+            with self.get_db_session() as session:
                 contexts = session.execute(select(TaskContext)).scalars().all()
                 
                 return [
@@ -496,7 +505,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
         try:
             delegation_id = str(uuid.uuid4())
             
-            with self.get_session() as session:
+            with self.get_db_session() as session:
                 delegation = ContextDelegation(
                     id=delegation_id,
                     source_level=delegation_data["source_level"],
@@ -523,7 +532,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
     async def get_delegation(self, delegation_id: str) -> Optional[Dict[str, Any]]:
         """Get delegation by ID"""
         try:
-            with self.get_session() as session:
+            with self.get_db_session() as session:
                 delegation = session.get(ContextDelegation, delegation_id)
                 if not delegation:
                     return None
@@ -554,7 +563,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
     async def get_delegations(self, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Get delegations with filters"""
         try:
-            with self.get_session() as session:
+            with self.get_db_session() as session:
                 query = select(ContextDelegation)
                 
                 # Apply filters
@@ -597,7 +606,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
     async def update_delegation(self, delegation_id: str, updates: Dict[str, Any]) -> bool:
         """Update delegation"""
         try:
-            with self.get_session() as session:
+            with self.get_db_session() as session:
                 delegation = session.get(ContextDelegation, delegation_id)
                 if not delegation:
                     return False
@@ -626,7 +635,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
     async def get_cache_entry(self, level: str, context_id: str) -> Optional[Dict[str, Any]]:
         """Get cache entry"""
         try:
-            with self.get_session() as session:
+            with self.get_db_session() as session:
                 cache_entry = session.get(ContextInheritanceCache, (context_id, level))
                 if not cache_entry:
                     return None
@@ -653,7 +662,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
     async def store_cache_entry(self, cache_data: Dict[str, Any]) -> bool:
         """Store cache entry"""
         try:
-            with self.get_session() as session:
+            with self.get_db_session() as session:
                 cache_entry = ContextInheritanceCache(
                     context_id=cache_data["context_id"],
                     context_level=cache_data["context_level"],
@@ -679,7 +688,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
     async def invalidate_cache_entry(self, level: str, context_id: str, reason: str) -> bool:
         """Invalidate cache entry"""
         try:
-            with self.get_session() as session:
+            with self.get_db_session() as session:
                 cache_entry = session.get(ContextInheritanceCache, (context_id, level))
                 if cache_entry:
                     cache_entry.invalidated = True
@@ -695,7 +704,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
     async def remove_cache_entry(self, level: str, context_id: str) -> bool:
         """Remove cache entry"""
         try:
-            with self.get_session() as session:
+            with self.get_db_session() as session:
                 cache_entry = session.get(ContextInheritanceCache, (context_id, level))
                 if cache_entry:
                     session.delete(cache_entry)
@@ -709,7 +718,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
     async def get_cache_statistics(self) -> Dict[str, Any]:
         """Get cache statistics"""
         try:
-            with self.get_session() as session:
+            with self.get_db_session() as session:
                 result = session.execute(
                     select(
                         func.count(ContextInheritanceCache.context_id).label("total_entries"),
@@ -744,7 +753,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
             Dict containing health status information
         """
         try:
-            with self.get_session() as session:
+            with self.get_db_session() as session:
                 # Test basic query
                 session.execute(select(1)).scalar()
                 

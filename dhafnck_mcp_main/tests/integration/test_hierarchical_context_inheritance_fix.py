@@ -16,10 +16,26 @@ from fastmcp.task_management.domain.entities.project import Project
 from fastmcp.task_management.domain.entities.context import TaskContext
 from fastmcp.task_management.application.facades.hierarchical_context_facade import HierarchicalContextFacade
 from fastmcp.task_management.application.facades.project_application_facade import ProjectApplicationFacade
+from unittest.mock import MagicMock
 
 
 class TestHierarchicalContextInheritanceFix:
     """Test suite for hierarchical context inheritance fix."""
+    
+    @pytest.fixture
+    def mock_context_facade(self):
+        """Create a mocked HierarchicalContextFacade with all required services."""
+        mock_hierarchy_service = MagicMock()
+        mock_inheritance_service = MagicMock()
+        mock_delegation_service = MagicMock()
+        mock_cache_service = MagicMock()
+        
+        return HierarchicalContextFacade(
+            hierarchy_service=mock_hierarchy_service,
+            inheritance_service=mock_inheritance_service,
+            delegation_service=mock_delegation_service,
+            cache_service=mock_cache_service
+        )
     
     @pytest.fixture
     def mock_project(self):
@@ -70,7 +86,7 @@ class TestHierarchicalContextInheritanceFix:
         }
 
     @pytest.mark.asyncio
-    async def test_project_creation_auto_creates_context(self, mock_project, expected_project_context):
+    async def test_project_creation_auto_creates_context(self, mock_project, expected_project_context, mock_context_facade):
         """
         Test: When a project is created, its project context should be automatically created.
         
@@ -78,7 +94,7 @@ class TestHierarchicalContextInheritanceFix:
         """
         # Arrange
         project_facade = ProjectApplicationFacade()
-        context_facade = HierarchicalContextFacade()
+        context_facade = mock_context_facade
         
         # Act - Create project (should auto-create project context)
         with patch.object(project_facade, 'create_project') as mock_create, \
@@ -102,14 +118,14 @@ class TestHierarchicalContextInheritanceFix:
             assert create_context_call[1]['data']['project_name'] == "test-project"
 
     @pytest.mark.asyncio 
-    async def test_validate_inheritance_finds_existing_context(self, mock_project, expected_project_context, mock_global_context):
+    async def test_validate_inheritance_finds_existing_context(self, mock_project, expected_project_context, mock_global_context, mock_context_facade):
         """
         Test: validate_context_inheritance should find existing project context.
         
         This tests the happy path where context exists and validation succeeds.
         """
         # Arrange
-        context_facade = HierarchicalContextFacade()
+        context_facade = mock_context_facade
         
         # Act - Validate inheritance for existing context
         with patch.object(context_facade, 'get_context') as mock_get, \
@@ -140,14 +156,14 @@ class TestHierarchicalContextInheritanceFix:
             assert "project" in result["validation"]["inheritance_chain"]
 
     @pytest.mark.asyncio
-    async def test_validate_inheritance_auto_creates_missing_context(self, mock_project, expected_project_context, mock_global_context):
+    async def test_validate_inheritance_auto_creates_missing_context(self, mock_project, expected_project_context, mock_global_context, mock_context_facade):
         """
         Test: validate_context_inheritance should auto-create missing project context.
         
         This is the main fix - when context is missing, create it automatically.
         """
         # Arrange  
-        context_facade = HierarchicalContextFacade()
+        context_facade = mock_context_facade
         project_facade = ProjectApplicationFacade()
         
         # Act - Validate inheritance for missing context (should auto-create)
@@ -184,14 +200,14 @@ class TestHierarchicalContextInheritanceFix:
             assert result["validation"]["valid"] is True
 
     @pytest.mark.asyncio
-    async def test_validate_inheritance_fails_for_nonexistent_project(self):
+    async def test_validate_inheritance_fails_for_nonexistent_project(self, mock_context_facade):
         """
         Test: validate_context_inheritance should fail gracefully for non-existent project.
         
         This tests error handling when project doesn't exist.
         """
         # Arrange
-        context_facade = HierarchicalContextFacade()
+        context_facade = mock_context_facade
         project_facade = ProjectApplicationFacade()
         nonexistent_project_id = "non-existent-project-id"
         
@@ -213,14 +229,14 @@ class TestHierarchicalContextInheritanceFix:
             assert nonexistent_project_id in result["error"]["message"]
 
     @pytest.mark.asyncio
-    async def test_create_default_project_context_structure(self, mock_project):
+    async def test_create_default_project_context_structure(self, mock_project, mock_context_facade):
         """
         Test: create_default_project_context should return properly structured context.
         
         This tests the structure of auto-created contexts.
         """
         # Arrange
-        context_facade = HierarchicalContextFacade()
+        context_facade = mock_context_facade
         
         # Act - Create default project context
         with patch.object(context_facade, 'create_default_project_context') as mock_create:
@@ -259,14 +275,14 @@ class TestHierarchicalContextInheritanceFix:
             assert "technology_stack" in result["data"]
 
     @pytest.mark.asyncio
-    async def test_inheritance_chain_resolution(self, mock_project, expected_project_context, mock_global_context):
+    async def test_inheritance_chain_resolution(self, mock_project, expected_project_context, mock_global_context, mock_context_facade):
         """
         Test: Inheritance chain should properly merge global → project contexts.
         
         This tests the context resolution and merging logic.
         """
         # Arrange
-        context_facade = HierarchicalContextFacade()
+        context_facade = mock_context_facade
         
         # Act - Resolve inheritance chain
         with patch.object(context_facade, 'resolve_inheritance_chain') as mock_resolve:
@@ -300,14 +316,14 @@ class TestHierarchicalContextInheritanceFix:
             assert result["inheritance_chain"] == ["global", "project"]
 
     @pytest.mark.asyncio 
-    async def test_end_to_end_fix_integration(self, mock_project):
+    async def test_end_to_end_fix_integration(self, mock_project, mock_context_facade):
         """
         Test: End-to-end integration test simulating the original problem and fix.
         
         This simulates the exact scenario from the bug report.
         """
         # Arrange - Simulate the exact failing scenario
-        context_facade = HierarchicalContextFacade()
+        context_facade = mock_context_facade
         project_id = "8c2f01e8-72e0-419f-8557-e4b4a24d5077"
         
         # Act - This was the failing call that should now work
@@ -361,7 +377,7 @@ class TestProjectContextAutoCreation:
         
         # Act & Assert - Project creation should trigger context creation
         with patch.object(project_facade, 'create_project') as mock_create, \
-             patch('fastmcp.task_management.application.facades.hierarchical_context_facade.HierarchicalContextApplicationFacade.create_context') as mock_create_context:
+             patch('fastmcp.task_management.application.facades.hierarchical_context_facade.HierarchicalContextFacade.create_context') as mock_create_context:
             
             mock_project = Project(
                 id="test-id",
@@ -381,11 +397,26 @@ class TestProjectContextAutoCreation:
 class TestContextStorageAndRetrieval:
     """Tests for context storage and retrieval mechanisms."""
     
+    @pytest.fixture
+    def mock_context_facade(self):
+        """Create a mocked HierarchicalContextFacade with all required services."""
+        mock_hierarchy_service = MagicMock()
+        mock_inheritance_service = MagicMock()
+        mock_delegation_service = MagicMock()
+        mock_cache_service = MagicMock()
+        
+        return HierarchicalContextFacade(
+            hierarchy_service=mock_hierarchy_service,
+            inheritance_service=mock_inheritance_service,
+            delegation_service=mock_delegation_service,
+            cache_service=mock_cache_service
+        )
+    
     @pytest.mark.asyncio
-    async def test_context_storage_persistence(self):
+    async def test_context_storage_persistence(self, mock_context_facade):
         """Test that contexts are properly stored and can be retrieved."""
         # Arrange
-        context_facade = HierarchicalContextFacade()
+        context_facade = mock_context_facade
         test_context = {
             "context_id": "test-context-id",
             "level": "project",

@@ -12,6 +12,7 @@ import sys
 import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
+from uuid import uuid4
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -24,10 +25,10 @@ from fastmcp.task_management.infrastructure.database.models import (
     GlobalContext, ProjectContext, TaskContext, Template, Base
 )
 from fastmcp.task_management.infrastructure.repositories.project_repository_factory import (
-    ProjectRepositoryFactory, RepositoryType
+    ProjectRepositoryFactory
 )
 from fastmcp.task_management.infrastructure.repositories.agent_repository_factory import (
-    AgentRepositoryFactory, AgentRepositoryType
+    AgentRepositoryFactory
 )
 from fastmcp.task_management.domain.exceptions.task_exceptions import (
     TaskNotFoundError, TaskCreationError, DuplicateTaskError
@@ -39,12 +40,26 @@ class TestErrorHandling:
     
     def setup_method(self):
         """Set up test environment"""
-        # Use in-memory SQLite for testing
-        self.engine = create_engine("sqlite:///:memory:", echo=False)
+        # Use in-memory SQLite for testing with foreign keys enabled
+        self.engine = create_engine(
+            "sqlite:///:memory:", 
+            echo=False,
+            connect_args={"check_same_thread": False}
+        )
+        
+        # Enable foreign key constraints in SQLite
+        with self.engine.connect() as conn:
+            conn.execute(text("PRAGMA foreign_keys=ON"))
+            conn.commit()
+        
         Base.metadata.create_all(self.engine)
         
         self.SessionLocal = sessionmaker(bind=self.engine)
         self.session = self.SessionLocal()
+        
+        # Enable foreign keys for this session
+        self.session.execute(text("PRAGMA foreign_keys=ON"))
+        self.session.commit()
     
     def teardown_method(self):
         """Clean up test environment"""
@@ -58,10 +73,11 @@ class TestErrorHandling:
         # Test invalid project_id in ProjectTaskTree
         with pytest.raises((IntegrityError, SQLAlchemyError)):
             invalid_branch = ProjectTaskTree(
+                id=str(uuid4()),
                 project_id="non_existent_project",
-                git_branch_name="main",
-                git_branch_description="Invalid branch",
-                git_branch_status="active"
+                name="main",
+                description="Invalid branch",
+                status="active"
             )
             self.session.add(invalid_branch)
             self.session.commit()
@@ -71,6 +87,7 @@ class TestErrorHandling:
         # Test invalid task_id in TaskSubtask
         with pytest.raises((IntegrityError, SQLAlchemyError)):
             invalid_subtask = TaskSubtask(
+                id=str(uuid4()),
                 task_id="non_existent_task",
                 title="Invalid Subtask",
                 description="This should fail",
@@ -89,22 +106,25 @@ class TestErrorHandling:
     def test_unique_constraint_violations(self):
         """Test unique constraint violations are handled properly"""
         # Create first project
+        project_id = str(uuid4())
         project1 = Project(
+            id=project_id,
             name="Unique Test Project",
             description="First project",
             user_id="test_user",
-            metadata={}
+            model_metadata={}
         )
         self.session.add(project1)
         self.session.commit()
         
-        # Try to create duplicate project name - should fail
+        # Try to create duplicate project with same ID - should fail
         with pytest.raises((IntegrityError, SQLAlchemyError)):
             project2 = Project(
-                name="Unique Test Project",  # Same name
+                id=project_id,  # Same ID
+                name="Different Project",
                 description="Second project",
                 user_id="test_user",
-                metadata={}
+                model_metadata={}
             )
             self.session.add(project2)
             self.session.commit()
@@ -146,17 +166,18 @@ class TestErrorHandling:
         for i, metadata in enumerate(problematic_metadata_cases):
             try:
                 project = Project(
+                    id=str(uuid4()),
                     name=f"JSON Test Project {i}",
                     description=f"Testing JSON case {i}",
                     user_id="test_user",
-                    metadata=metadata
+                    model_metadata=metadata
                 )
                 self.session.add(project)
                 self.session.commit()
                 
                 # Verify data was stored correctly
                 retrieved = self.session.query(Project).filter_by(name=f"JSON Test Project {i}").first()
-                assert retrieved.metadata == metadata
+                assert retrieved.model_metadata == metadata
                 
             except Exception as e:
                 # Log the specific case that failed
@@ -199,20 +220,22 @@ class TestErrorHandling:
         # Test invalid enum values
         with pytest.raises((ValueError, IntegrityError, SQLAlchemyError)):
             project = Project(
+                id=str(uuid4()),
                 name="Invalid Status Project",
                 description="Testing invalid status",
                 user_id="test_user",
-                metadata={}
+                model_metadata={}
             )
             self.session.add(project)
             self.session.commit()
             
             # Create task tree with invalid status
             invalid_tree = ProjectTaskTree(
-                project_id=project.project_id,
-                git_branch_name="main",
-                git_branch_description="Main branch",
-                git_branch_status="invalid_status"  # Invalid enum value
+                id=str(uuid4()),
+                project_id=project.id,
+                name="main",
+                description="Main branch",
+                status="invalid_status"  # Invalid enum value
             )
             self.session.add(invalid_tree)
             self.session.commit()
@@ -222,30 +245,33 @@ class TestErrorHandling:
         # Test invalid priority values
         with pytest.raises((ValueError, IntegrityError, SQLAlchemyError)):
             project = Project(
+                id=str(uuid4()),
                 name="Valid Project",
                 description="Valid project",
                 user_id="test_user",
-                metadata={}
+                model_metadata={}
             )
             self.session.add(project)
             self.session.commit()
             
             tree = ProjectTaskTree(
-                project_id=project.project_id,
-                git_branch_name="main",
-                git_branch_description="Main branch",
-                git_branch_status="active"
+                id=str(uuid4()),
+                project_id=project.id,
+                name="main",
+                description="Main branch",
+                status="active"
             )
             self.session.add(tree)
             self.session.commit()
             
             invalid_task = Task(
-                git_branch_id=tree.git_branch_id,
+                id=str(uuid4()),
+                git_branch_id=tree.id,
                 title="Invalid Priority Task",
                 description="Testing invalid priority",
                 priority="invalid_priority",  # Invalid enum value
                 status="pending",
-                metadata={}
+                model_metadata={}
             )
             self.session.add(invalid_task)
             self.session.commit()
@@ -305,29 +331,32 @@ class TestErrorHandling:
         """Test transaction rollback behavior on errors"""
         # Start a transaction with multiple operations
         project = Project(
+            id=str(uuid4()),
             name="Transaction Test Project",
             description="Testing transaction rollback",
             user_id="test_user",
-            metadata={}
+            model_metadata={}
         )
         self.session.add(project)
         
         # Add valid data
         tree = ProjectTaskTree(
-            project_id=project.project_id,
-            git_branch_name="main",
-            git_branch_description="Main branch",
-            git_branch_status="active"
+            id=str(uuid4()),
+            project_id=project.id,
+            name="main",
+            description="Main branch",
+            status="active"
         )
         self.session.add(tree)
         
         try:
             # Add invalid data that should cause rollback
             invalid_tree = ProjectTaskTree(
+                id=str(uuid4()),
                 project_id="non_existent_project",  # Invalid FK
-                git_branch_name="invalid",
-                git_branch_description="Invalid branch",
-                git_branch_status="active"
+                name="invalid",
+                description="Invalid branch",
+                status="active"
             )
             self.session.add(invalid_tree)
             self.session.commit()
@@ -349,10 +378,11 @@ class TestErrorHandling:
         """Test handling of concurrent access scenarios"""
         # Create initial data
         project = Project(
+            id=str(uuid4()),
             name="Concurrent Test Project",
             description="Testing concurrent access",
             user_id="test_user",
-            metadata={"version": 1}
+            model_metadata={"version": 1}
         )
         self.session.add(project)
         self.session.commit()
@@ -366,11 +396,11 @@ class TestErrorHandling:
             project2 = session2.query(Project).filter_by(name="Concurrent Test Project").first()
             
             # Modify in first session
-            project1.metadata = {"version": 2, "modified_by": "session1"}
+            project1.model_metadata = {"version": 2, "modified_by": "session1"}
             self.session.commit()
             
             # Try to modify in second session
-            project2.metadata = {"version": 3, "modified_by": "session2"}
+            project2.model_metadata = {"version": 3, "modified_by": "session2"}
             
             try:
                 session2.commit()

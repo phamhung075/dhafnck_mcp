@@ -66,7 +66,7 @@ class ORMLabelRepository:
         except ValidationError:
             raise
         except Exception as e:
-            raise RepositoryError(f"Failed to create label: {str(e)}")
+            raise RepositoryError(message=f"Failed to create label: {str(e)}")
     
     def get_label(self, label_id: int) -> Optional[LabelEntity]:
         """
@@ -87,7 +87,7 @@ class ORMLabelRepository:
                 return self._model_to_entity(label) if label else None
                 
         except Exception as e:
-            raise RepositoryError(f"Failed to get label: {str(e)}")
+            raise RepositoryError(message=f"Failed to get label: {str(e)}")
     
     def get_label_by_name(self, name: str) -> Optional[LabelEntity]:
         """
@@ -108,7 +108,7 @@ class ORMLabelRepository:
                 return self._model_to_entity(label) if label else None
                 
         except Exception as e:
-            raise RepositoryError(f"Failed to get label by name: {str(e)}")
+            raise RepositoryError(message=f"Failed to get label by name: {str(e)}")
     
     def update_label(self, label_id: int, name: Optional[str] = None, 
                     color: Optional[str] = None, description: Optional[str] = None) -> LabelEntity:
@@ -133,7 +133,7 @@ class ORMLabelRepository:
             with self._db_adapter.get_session() as session:
                 label = session.query(Label).filter(Label.id == label_id).first()
                 if not label:
-                    raise NotFoundError(f"Label with ID {label_id} not found")
+                    raise NotFoundError(resource_type="Label", resource_id=str(label_id))
                 
                 # Check if new name already exists (if name is being updated)
                 if name and name != label.name:
@@ -157,7 +157,7 @@ class ORMLabelRepository:
         except (NotFoundError, ValidationError):
             raise
         except Exception as e:
-            raise RepositoryError(f"Failed to update label: {str(e)}")
+            raise RepositoryError(message=f"Failed to update label: {str(e)}")
     
     def delete_label(self, label_id: int) -> bool:
         """
@@ -183,7 +183,7 @@ class ORMLabelRepository:
                 return True
                 
         except Exception as e:
-            raise RepositoryError(f"Failed to delete label: {str(e)}")
+            raise RepositoryError(message=f"Failed to delete label: {str(e)}")
     
     def list_labels(self, limit: Optional[int] = None, 
                    offset: Optional[int] = None) -> List[LabelEntity]:
@@ -213,7 +213,7 @@ class ORMLabelRepository:
                 return [self._model_to_entity(label) for label in labels]
                 
         except Exception as e:
-            raise RepositoryError(f"Failed to list labels: {str(e)}")
+            raise RepositoryError(message=f"Failed to list labels: {str(e)}")
     
     def assign_label_to_task(self, task_id: str, label_id: int) -> bool:
         """
@@ -235,12 +235,12 @@ class ORMLabelRepository:
                 # Check if task exists
                 task = session.query(Task).filter(Task.id == task_id).first()
                 if not task:
-                    raise NotFoundError(f"Task with ID {task_id} not found")
+                    raise NotFoundError(resource_type="Task", resource_id=task_id)
                 
                 # Check if label exists
                 label = session.query(Label).filter(Label.id == label_id).first()
                 if not label:
-                    raise NotFoundError(f"Label with ID {label_id} not found")
+                    raise NotFoundError(resource_type="Label", resource_id=str(label_id))
                 
                 # Check if already assigned
                 existing = session.query(TaskLabel).filter(
@@ -264,7 +264,7 @@ class ORMLabelRepository:
         except NotFoundError:
             raise
         except Exception as e:
-            raise RepositoryError(f"Failed to assign label to task: {str(e)}")
+            raise RepositoryError(message=f"Failed to assign label to task: {str(e)}")
     
     def remove_label_from_task(self, task_id: str, label_id: int) -> bool:
         """
@@ -295,7 +295,7 @@ class ORMLabelRepository:
                 return True
                 
         except Exception as e:
-            raise RepositoryError(f"Failed to remove label from task: {str(e)}")
+            raise RepositoryError(message=f"Failed to remove label from task: {str(e)}")
     
     def get_tasks_by_label(self, label_id: int) -> List[TaskEntity]:
         """
@@ -316,7 +316,7 @@ class ORMLabelRepository:
                 # Check if label exists
                 label = session.query(Label).filter(Label.id == label_id).first()
                 if not label:
-                    raise NotFoundError(f"Label with ID {label_id} not found")
+                    raise NotFoundError(resource_type="Label", resource_id=str(label_id))
                 
                 # Get tasks with this label
                 tasks = session.query(Task).join(TaskLabel).filter(
@@ -328,7 +328,7 @@ class ORMLabelRepository:
         except NotFoundError:
             raise
         except Exception as e:
-            raise RepositoryError(f"Failed to get tasks by label: {str(e)}")
+            raise RepositoryError(message=f"Failed to get tasks by label: {str(e)}")
     
     def get_labels_by_task(self, task_id: str) -> List[LabelEntity]:
         """
@@ -349,7 +349,7 @@ class ORMLabelRepository:
                 # Check if task exists
                 task = session.query(Task).filter(Task.id == task_id).first()
                 if not task:
-                    raise NotFoundError(f"Task with ID {task_id} not found")
+                    raise NotFoundError(resource_type="Task", resource_id=task_id)
                 
                 # Get labels for this task
                 labels = session.query(Label).join(TaskLabel).filter(
@@ -361,7 +361,7 @@ class ORMLabelRepository:
         except NotFoundError:
             raise
         except Exception as e:
-            raise RepositoryError(f"Failed to get labels by task: {str(e)}")
+            raise RepositoryError(message=f"Failed to get labels by task: {str(e)}")
     
     def _model_to_entity(self, model: Label) -> LabelEntity:
         """Convert Label model to LabelEntity"""

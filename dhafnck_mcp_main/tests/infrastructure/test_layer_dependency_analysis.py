@@ -243,8 +243,8 @@ class TestLayerDependencyAnalysis:
             for violation in violations:
                 print(f"  - {violation}")
         
-        # Updated after hierarchical context system migration - 5 expected violations
-        assert len(violations) == 5, f"Application layer has {len(violations)} direct infrastructure dependencies (expected 5 after hierarchical context system)"
+        # Updated after SQLite removal - 2 expected violations (sqlite3 imports)
+        assert len(violations) == 2, f"Application layer has {len(violations)} direct infrastructure dependencies (expected 2 after SQLite removal)"
     
     def test_infrastructure_implements_domain_interfaces(self, analyzer):
         """Test that infrastructure repositories implement domain interfaces"""

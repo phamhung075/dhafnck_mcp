@@ -10,6 +10,7 @@ import os
 import sys
 import json
 import pytest
+from uuid import uuid4
 from pathlib import Path
 from unittest.mock import patch
 from sqlalchemy import create_engine, text
@@ -62,11 +63,13 @@ class TestJSONFieldCompatibility:
         }
         
         # Create project with complex metadata
+        from uuid import uuid4
         project = Project(
+            id=str(uuid4()),
             name="JSON Test Project",
             description="Testing JSON metadata",
             user_id="test_user",
-            metadata=test_metadata
+            model_metadata=test_metadata
         )
         
         self.session.add(project)
@@ -75,14 +78,14 @@ class TestJSONFieldCompatibility:
         # Retrieve and verify JSON data
         retrieved_project = self.session.query(Project).filter_by(name="JSON Test Project").first()
         
-        assert retrieved_project.metadata == test_metadata
-        assert retrieved_project.metadata["string_field"] == "test_value"
-        assert retrieved_project.metadata["number_field"] == 42
-        assert retrieved_project.metadata["boolean_field"] is True
-        assert retrieved_project.metadata["null_field"] is None
-        assert retrieved_project.metadata["array_field"] == [1, 2, 3, "four"]
-        assert retrieved_project.metadata["nested_object"]["nested_string"] == "nested_value"
-        assert retrieved_project.metadata["nested_object"]["deeply_nested"]["deep_value"] == "very_deep"
+        assert retrieved_project.model_metadata == test_metadata
+        assert retrieved_project.model_metadata["string_field"] == "test_value"
+        assert retrieved_project.model_metadata["number_field"] == 42
+        assert retrieved_project.model_metadata["boolean_field"] is True
+        assert retrieved_project.model_metadata["null_field"] is None
+        assert retrieved_project.model_metadata["array_field"] == [1, 2, 3, "four"]
+        assert retrieved_project.model_metadata["nested_object"]["nested_string"] == "nested_value"
+        assert retrieved_project.model_metadata["nested_object"]["deeply_nested"]["deep_value"] == "very_deep"
         
         print("✅ Project metadata JSON field test passed")
     
@@ -108,11 +111,11 @@ class TestJSONFieldCompatibility:
         
         # Create agent
         agent = Agent(
+            id=str(uuid4()),
             name="json_test_agent",
-            agent_type="coding",
             status="available",
             capabilities=capabilities,
-            metadata=metadata
+            model_metadata=metadata
         )
         
         self.session.add(agent)
@@ -122,10 +125,10 @@ class TestJSONFieldCompatibility:
         retrieved_agent = self.session.query(Agent).filter_by(name="json_test_agent").first()
         
         assert retrieved_agent.capabilities == capabilities
-        assert retrieved_agent.metadata == metadata
-        assert retrieved_agent.metadata["version"] == "2.0"
-        assert retrieved_agent.metadata["configuration"]["timeout"] == 30
-        assert retrieved_agent.metadata["statistics"]["success_rate"] == 0.95
+        assert retrieved_agent.model_metadata == metadata
+        assert retrieved_agent.model_metadata["version"] == "2.0"
+        assert retrieved_agent.model_metadata["configuration"]["timeout"] == 30
+        assert retrieved_agent.model_metadata["statistics"]["success_rate"] == 0.95
         
         print("✅ Agent capabilities and metadata JSON fields test passed")
     
@@ -133,20 +136,22 @@ class TestJSONFieldCompatibility:
         """Test Task metadata JSON field"""
         # Create project and branch first
         project = Project(
+            id=str(uuid4()),
             name="Test Project",
             description="Test project",
             user_id="test_user",
-            metadata={}
+            model_metadata={}
         )
         self.session.add(project)
         self.session.commit()
         
         from fastmcp.task_management.infrastructure.database.models import ProjectTaskTree
         branch = ProjectTaskTree(
-            project_id=project.project_id,
-            git_branch_name="main",
-            git_branch_description="Main branch",
-            git_branch_status="active"
+            id=str(uuid4()),
+            project_id=project.id,
+            name="main",
+            description="Main branch",
+            status="active"
         )
         self.session.add(branch)
         self.session.commit()
@@ -177,12 +182,13 @@ class TestJSONFieldCompatibility:
         
         # Create task
         task = Task(
-            git_branch_id=branch.git_branch_id,
+            id=str(uuid4()),
+            git_branch_id=branch.id,
             title="JSON Metadata Test Task",
             description="Testing JSON metadata storage",
             priority="high",
             status="pending",
-            metadata=task_metadata
+            model_metadata=task_metadata
         )
         
         self.session.add(task)
@@ -191,10 +197,10 @@ class TestJSONFieldCompatibility:
         # Retrieve and verify
         retrieved_task = self.session.query(Task).filter_by(title="JSON Metadata Test Task").first()
         
-        assert retrieved_task.metadata == task_metadata
-        assert retrieved_task.metadata["dependencies"] == ["task_1", "task_2"]
-        assert retrieved_task.metadata["time_estimates"]["development"] == 4.5
-        assert retrieved_task.metadata["requirements"]["accessibility"]["level"] == "AA"
+        assert retrieved_task.model_metadata == task_metadata
+        assert retrieved_task.model_metadata["dependencies"] == ["task_1", "task_2"]
+        assert retrieved_task.model_metadata["time_estimates"]["development"] == 4.5
+        assert retrieved_task.model_metadata["requirements"]["accessibility"]["level"] == "AA"
         
         print("✅ Task metadata JSON field test passed")
     
@@ -202,31 +208,34 @@ class TestJSONFieldCompatibility:
         """Test TaskSubtask assignees JSON field"""
         # Create project, branch, and task
         project = Project(
+            id=str(uuid4()),
             name="Test Project",
             description="Test project",
             user_id="test_user",
-            metadata={}
+            model_metadata={}
         )
         self.session.add(project)
         self.session.commit()
         
         from fastmcp.task_management.infrastructure.database.models import ProjectTaskTree
         branch = ProjectTaskTree(
-            project_id=project.project_id,
-            git_branch_name="main",
-            git_branch_description="Main branch",
-            git_branch_status="active"
+            id=str(uuid4()),
+            project_id=project.id,
+            name="main",
+            description="Main branch",
+            status="active"
         )
         self.session.add(branch)
         self.session.commit()
         
         task = Task(
-            git_branch_id=branch.git_branch_id,
+            id=str(uuid4()),
+            git_branch_id=branch.id,
             title="Parent Task",
             description="Parent task for subtask testing",
             priority="medium",
             status="pending",
-            metadata={}
+            model_metadata={}
         )
         self.session.add(task)
         self.session.commit()
@@ -242,7 +251,8 @@ class TestJSONFieldCompatibility:
         subtasks = []
         for i, assignees in enumerate(assignees_configs):
             subtask = TaskSubtask(
-                task_id=task.task_id,
+                id=str(uuid4()),
+                task_id=task.id,
                 title=f"Subtask {i+1}",
                 description=f"Subtask with {len(assignees)} assignees",
                 status="pending",
@@ -256,7 +266,7 @@ class TestJSONFieldCompatibility:
         self.session.commit()
         
         # Retrieve and verify
-        retrieved_subtasks = self.session.query(TaskSubtask).filter_by(task_id=task.task_id).all()
+        retrieved_subtasks = self.session.query(TaskSubtask).filter_by(task_id=task.id).all()
         
         for i, subtask in enumerate(retrieved_subtasks):
             expected_assignees = assignees_configs[i]
@@ -285,9 +295,13 @@ class TestJSONFieldCompatibility:
         }
         
         global_context = GlobalContext(
-            data_title="Global Configuration",
-            data_description="Global application settings",
-            data_content=global_data
+            id="global_singleton",
+            organization_id="test_org",
+            autonomous_rules={"rules": global_data},
+            security_policies={},
+            coding_standards={},
+            workflow_templates={},
+            delegation_rules={}
         )
         
         self.session.add(global_context)
@@ -295,10 +309,11 @@ class TestJSONFieldCompatibility:
         
         # Test ProjectContext
         project = Project(
+            id=str(uuid4()),
             name="Context Test Project",
             description="Project for context testing",
             user_id="test_user",
-            metadata={}
+            model_metadata={}
         )
         self.session.add(project)
         self.session.commit()
@@ -317,10 +332,14 @@ class TestJSONFieldCompatibility:
         }
         
         project_context = ProjectContext(
-            project_id=project.project_id,
-            data_title="Project Configuration",
-            data_description="Project-specific settings",
-            data_content=project_data
+            project_id=project.id,
+            parent_global_id="global_singleton",
+            team_preferences={"team": project_data},
+            technology_stack={},
+            project_workflow={},
+            local_standards={},
+            global_overrides={},
+            delegation_rules={}
         )
         
         self.session.add(project_context)
@@ -328,14 +347,14 @@ class TestJSONFieldCompatibility:
         
         # Retrieve and verify
         retrieved_global = self.session.query(GlobalContext).first()
-        assert retrieved_global.data_content == global_data
-        assert retrieved_global.data_content["global_settings"]["theme"] == "dark"
-        assert retrieved_global.data_content["feature_flags"]["new_ui"] is True
+        assert retrieved_global.autonomous_rules["rules"] == global_data
+        assert retrieved_global.autonomous_rules["rules"]["global_settings"]["theme"] == "dark"
+        assert retrieved_global.autonomous_rules["rules"]["feature_flags"]["new_ui"] is True
         
         retrieved_project = self.session.query(ProjectContext).first()
-        assert retrieved_project.data_content == project_data
-        assert retrieved_project.data_content["project_config"]["framework"] == "React"
-        assert retrieved_project.data_content["deployment"]["ssl"] is True
+        assert retrieved_project.team_preferences["team"] == project_data
+        assert retrieved_project.team_preferences["team"]["project_config"]["framework"] == "React"
+        assert retrieved_project.team_preferences["team"]["deployment"]["ssl"] is True
         
         print("✅ Context data_content JSON field test passed")
     
@@ -376,13 +395,12 @@ class TestJSONFieldCompatibility:
         }
         
         template = Template(
+            id=str(uuid4()),
             name="Task Template",
-            template_type="task",
+            type="task",
             category="development",
             content=template_content,
-            tags=["task", "development", "checklist"],
-            compatible_agents=["coding_agent", "review_agent"],
-            file_patterns=["*.md", "*.txt"]
+            tags=["task", "development", "checklist"]
         )
         
         self.session.add(template)
@@ -403,17 +421,18 @@ class TestJSONFieldCompatibility:
         """Test updating JSON fields"""
         # Create project with initial metadata
         project = Project(
+            id=str(uuid4()),
             name="Update Test Project",
             description="Testing JSON updates",
             user_id="test_user",
-            metadata={"version": 1, "status": "initial"}
+            model_metadata={"version": 1, "status": "initial"}
         )
         
         self.session.add(project)
         self.session.commit()
         
         # Update metadata
-        project.metadata = {
+        project.model_metadata = {
             "version": 2,
             "status": "updated",
             "new_field": "new_value",
@@ -427,10 +446,10 @@ class TestJSONFieldCompatibility:
         # Retrieve and verify update
         retrieved_project = self.session.query(Project).filter_by(name="Update Test Project").first()
         
-        assert retrieved_project.metadata["version"] == 2
-        assert retrieved_project.metadata["status"] == "updated"
-        assert retrieved_project.metadata["new_field"] == "new_value"
-        assert retrieved_project.metadata["nested"]["key"] == "value"
+        assert retrieved_project.model_metadata["version"] == 2
+        assert retrieved_project.model_metadata["status"] == "updated"
+        assert retrieved_project.model_metadata["new_field"] == "new_value"
+        assert retrieved_project.model_metadata["nested"]["key"] == "value"
         
         print("✅ JSON field updates test passed")
     
@@ -438,18 +457,20 @@ class TestJSONFieldCompatibility:
         """Test JSON fields with null and empty values"""
         # Test null metadata
         project1 = Project(
+            id=str(uuid4()),
             name="Null Metadata Project",
             description="Testing null metadata",
             user_id="test_user",
-            metadata=None
+            model_metadata=None
         )
         
         # Test empty metadata
         project2 = Project(
+            id=str(uuid4()),
             name="Empty Metadata Project",
             description="Testing empty metadata",
             user_id="test_user",
-            metadata={}
+            model_metadata={}
         )
         
         self.session.add_all([project1, project2])
@@ -460,8 +481,8 @@ class TestJSONFieldCompatibility:
         retrieved_project2 = self.session.query(Project).filter_by(name="Empty Metadata Project").first()
         
         # Note: SQLite JSON field may convert None to {} 
-        assert retrieved_project1.metadata in [None, {}]
-        assert retrieved_project2.metadata == {}
+        assert retrieved_project1.model_metadata in [None, {}]
+        assert retrieved_project2.model_metadata == {}
         
         print("✅ JSON field null and empty values test passed")
     
@@ -478,10 +499,11 @@ class TestJSONFieldCompatibility:
         }
         
         project = Project(
+            id=str(uuid4()),
             name="Special Characters Project",
             description="Testing special characters in JSON",
             user_id="test_user",
-            metadata=special_metadata
+            model_metadata=special_metadata
         )
         
         self.session.add(project)
@@ -490,11 +512,11 @@ class TestJSONFieldCompatibility:
         # Retrieve and verify
         retrieved_project = self.session.query(Project).filter_by(name="Special Characters Project").first()
         
-        assert retrieved_project.metadata == special_metadata
-        assert retrieved_project.metadata["unicode"] == "Hello 世界 🌍"
-        assert retrieved_project.metadata["quotes"] == 'He said "Hello" and she said \'Hi\''
-        assert retrieved_project.metadata["backslashes"] == "C:\\path\\to\\file"
-        assert retrieved_project.metadata["newlines"] == "Line 1\nLine 2\nLine 3"
+        assert retrieved_project.model_metadata == special_metadata
+        assert retrieved_project.model_metadata["unicode"] == "Hello 世界 🌍"
+        assert retrieved_project.model_metadata["quotes"] == 'He said "Hello" and she said \'Hi\''
+        assert retrieved_project.model_metadata["backslashes"] == "C:\\path\\to\\file"
+        assert retrieved_project.model_metadata["newlines"] == "Line 1\nLine 2\nLine 3"
         
         print("✅ JSON field special characters test passed")
 

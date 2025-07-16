@@ -190,8 +190,37 @@ class TaskMCPController:
                             actual=str(limit),
                             hint="Use a valid integer like 5 or '5'"
                         )
+                elif isinstance(limit, (int, float)):
+                    # Reject floats
+                    if isinstance(limit, float) and not limit.is_integer():
+                        return StandardResponseFormatter.create_validation_error_response(
+                            operation="manage_task",
+                            field="limit",
+                            expected="An integer value, not a float",
+                            actual=str(limit),
+                            hint="Use a whole number like 5, not 5.5"
+                        )
+                    coerced_limit = int(limit)
                 else:
-                    coerced_limit = limit
+                    # Invalid type (list, dict, etc.)
+                    return StandardResponseFormatter.create_validation_error_response(
+                        operation="manage_task",
+                        field="limit",
+                        expected="An integer or string representation of an integer",
+                        actual=f"{type(limit).__name__}: {limit}",
+                        hint="Use a valid integer like 5 or '5'"
+                    )
+                
+                # Validate limit range (1-100)
+                if coerced_limit is not None:
+                    if coerced_limit < 1 or coerced_limit > 100:
+                        return StandardResponseFormatter.create_validation_error_response(
+                            operation="manage_task",
+                            field="limit",
+                            expected="An integer between 1 and 100",
+                            actual=str(coerced_limit),
+                            hint="Use a value between 1 and 100 for the limit parameter"
+                        )
             
             # Coerce boolean parameters
             coerced_force_full_generation = self._coerce_to_bool(force_full_generation, "force_full_generation")

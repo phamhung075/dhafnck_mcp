@@ -380,6 +380,62 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
         """Get total number of tasks"""
         return self.get_task_count()
     
+    def find_by_criteria(self, filters: Dict[str, Any], limit: Optional[int] = None) -> List[TaskEntity]:
+        """Find tasks by multiple criteria"""
+        with self.get_db_session() as session:
+            query = session.query(Task).options(
+                joinedload(Task.assignees),
+                joinedload(Task.labels).joinedload(TaskLabel.label),
+                joinedload(Task.subtasks)
+            )
+            
+            # Apply git branch filter if set
+            if self.git_branch_id:
+                query = query.filter(Task.git_branch_id == self.git_branch_id)
+            
+            # Apply filters
+            if 'status' in filters:
+                # Convert TaskStatus enum to string if needed
+                status_value = filters['status']
+                if hasattr(status_value, 'value'):
+                    status_value = status_value.value
+                query = query.filter(Task.status == status_value)
+            
+            if 'priority' in filters:
+                # Convert Priority enum to string if needed
+                priority_value = filters['priority']
+                if hasattr(priority_value, 'value'):
+                    priority_value = priority_value.value
+                query = query.filter(Task.priority == priority_value)
+            
+            if 'assignees' in filters and filters['assignees']:
+                # Filter tasks that have at least one of the specified assignees
+                query = query.join(TaskAssignee).filter(
+                    TaskAssignee.assignee_id.in_(filters['assignees'])
+                )
+            elif 'assignee' in filters and filters['assignee']:
+                # Legacy single assignee filter
+                query = query.join(TaskAssignee).filter(
+                    TaskAssignee.assignee_id == filters['assignee']
+                )
+            
+            if 'labels' in filters and filters['labels']:
+                # Filter tasks that have at least one of the specified labels
+                from ...database.models import Label
+                query = query.join(TaskLabel).join(Label).filter(
+                    Label.name.in_(filters['labels'])
+                )
+            
+            # Order by updated_at desc
+            query = query.order_by(desc(Task.updated_at))
+            
+            # Apply limit
+            if limit:
+                query = query.limit(limit)
+            
+            tasks = query.all()
+            return [self._model_to_entity(task) for task in tasks]
+    
     def get_statistics(self) -> Dict[str, Any]:
         """Get task statistics"""
         return {

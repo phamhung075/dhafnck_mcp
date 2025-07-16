@@ -73,4 +73,9 @@ class TaskRepository(ABC):
     @abstractmethod
     def get_statistics(self) -> Dict[str, Any]:
         """Get task statistics"""
+        pass
+    
+    @abstractmethod
+    def find_by_criteria(self, filters: Dict[str, Any], limit: Optional[int] = None) -> List[Task]:
+        """Find tasks by multiple criteria"""
         pass 

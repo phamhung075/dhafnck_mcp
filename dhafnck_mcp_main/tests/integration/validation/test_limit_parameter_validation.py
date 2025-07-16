@@ -255,8 +255,11 @@ class TestLimitParameterValidation:
         """Helper to check if result contains validation error."""
         if isinstance(result, dict):
             # Check for error indicators in the result
+            # The new standardized response format has status field
             return (
                 result.get("success") is False or
+                result.get("status") == "error" or
+                result.get("error_code") is not None or
                 "error" in result or
                 "validation" in str(result).lower() or
                 "invalid" in str(result).lower()

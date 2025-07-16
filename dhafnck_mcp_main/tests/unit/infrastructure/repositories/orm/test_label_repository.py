@@ -31,8 +31,15 @@ class TestORMLabelRepository:
         """Create mock database adapter"""
         mock_adapter = Mock(spec=DatabaseAdapter)
         mock_session = Mock(spec=Session)
-        mock_adapter.get_session.return_value.__enter__.return_value = mock_session
-        mock_adapter.get_session.return_value.__exit__.return_value = None
+        
+        # Create a proper context manager mock
+        mock_context_manager = MagicMock()
+        mock_context_manager.__enter__.return_value = mock_session
+        mock_context_manager.__exit__.return_value = None
+        
+        # Make get_session return the context manager
+        mock_adapter.get_session.return_value = mock_context_manager
+        
         return mock_adapter, mock_session
     
     @pytest.fixture
@@ -203,7 +210,7 @@ class TestORMLabelRepository:
         
         mock_session.query.return_value.filter.return_value.first.return_value = None
         
-        with pytest.raises(NotFoundError, match="Label with ID 999 not found"):
+        with pytest.raises(NotFoundError, match="Label with id '999' not found"):
             label_repository.update_label(999, name="new-name")
     
     def test_update_label_duplicate_name(self, label_repository, mock_db_adapter, sample_label_model):
@@ -314,7 +321,7 @@ class TestORMLabelRepository:
         
         mock_session.query.return_value.filter.return_value.first.return_value = None
         
-        with pytest.raises(NotFoundError, match="Task with ID task-123 not found"):
+        with pytest.raises(NotFoundError, match="Task with id 'task-123' not found"):
             label_repository.assign_label_to_task("task-123", 1)
     
     def test_assign_label_to_task_label_not_found(self, label_repository, mock_db_adapter, sample_task_model):
@@ -326,7 +333,7 @@ class TestORMLabelRepository:
             None  # Label doesn't exist
         ]
         
-        with pytest.raises(NotFoundError, match="Label with ID 999 not found"):
+        with pytest.raises(NotFoundError, match="Label with id '999' not found"):
             label_repository.assign_label_to_task("task-123", 999)
     
     def test_remove_label_from_task_success(self, label_repository, mock_db_adapter):
@@ -374,7 +381,7 @@ class TestORMLabelRepository:
         
         mock_session.query.return_value.filter.return_value.first.return_value = None
         
-        with pytest.raises(NotFoundError, match="Label with ID 999 not found"):
+        with pytest.raises(NotFoundError, match="Label with id '999' not found"):
             label_repository.get_tasks_by_label(999)
     
     def test_get_labels_by_task_success(self, label_repository, mock_db_adapter, sample_task_model, sample_label_model):
@@ -398,7 +405,7 @@ class TestORMLabelRepository:
         
         mock_session.query.return_value.filter.return_value.first.return_value = None
         
-        with pytest.raises(NotFoundError, match="Task with ID task-123 not found"):
+        with pytest.raises(NotFoundError, match="Task with id 'task-123' not found"):
             label_repository.get_labels_by_task("task-123")
     
     def test_database_error_handling(self, label_repository, mock_db_adapter):

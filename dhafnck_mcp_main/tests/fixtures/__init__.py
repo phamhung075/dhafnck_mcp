@@ -7,8 +7,8 @@ context management system and SQLite-based repository migration.
 from .hierarchical_context_fixtures import (
     hierarchical_context_service_mock,
     hierarchical_context_facade_mock,
-    sqlite_task_repository_mock,
-    sqlite_hierarchical_context_repository_mock,
+    orm_task_repository_mock,
+    orm_hierarchical_context_repository_mock,
     task_application_facade_mock,
     hierarchical_context_facade_factory_mock,
     test_database_path,
@@ -24,8 +24,8 @@ from .hierarchical_context_fixtures import (
 __all__ = [
     "hierarchical_context_service_mock",
     "hierarchical_context_facade_mock", 
-    "sqlite_task_repository_mock",
-    "sqlite_hierarchical_context_repository_mock",
+    "orm_task_repository_mock",
+    "orm_hierarchical_context_repository_mock",
     "task_application_facade_mock",
     "hierarchical_context_facade_factory_mock",
     "test_database_path",

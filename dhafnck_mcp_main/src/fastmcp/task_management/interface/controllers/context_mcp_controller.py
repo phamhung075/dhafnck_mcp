@@ -456,7 +456,7 @@ class ContextMCPController:
 
         try:
             # Import the ID detector
-            from .context_id_detector import ContextIDDetector
+            from .context_id_detector_orm import ContextIDDetector
             
             # Map old context actions to hierarchical context operations
             if action == "create":
