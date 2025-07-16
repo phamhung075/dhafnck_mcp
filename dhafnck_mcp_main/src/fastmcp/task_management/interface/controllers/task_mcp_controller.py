@@ -94,6 +94,52 @@ class TaskMCPController:
         # Store last known git_branch_id for context operations
         self._last_git_branch_id = None
     
+    def _standardize_facade_response(self, facade_response: Dict[str, Any], operation: str) -> Dict[str, Any]:
+        """
+        Convert facade response to standardized format using StandardResponseFormatter.
+        
+        Args:
+            facade_response: Response from facade method
+            operation: Operation name for tracking
+            
+        Returns:
+            Standardized response using StandardResponseFormatter
+        """
+        if facade_response.get("success", False):
+            # Extract data from facade response
+            data = {}
+            for key, value in facade_response.items():
+                if key not in ["success", "action", "error", "error_code"]:
+                    data[key] = value
+            
+            # Add workflow guidance if present
+            workflow_guidance = None
+            if "workflow_guidance" in data:
+                workflow_guidance = data.pop("workflow_guidance")
+            
+            return StandardResponseFormatter.create_success_response(
+                operation=operation,
+                data=data,
+                workflow_guidance=workflow_guidance
+            )
+        else:
+            # Handle error response
+            error_message = facade_response.get("error", "Unknown error occurred")
+            error_code = facade_response.get("error_code", ErrorCodes.OPERATION_FAILED)
+            
+            # Extract metadata
+            metadata = {}
+            for key, value in facade_response.items():
+                if key not in ["success", "action", "error", "error_code"]:
+                    metadata[key] = value
+            
+            return StandardResponseFormatter.create_error_response(
+                operation=operation,
+                error=error_message,
+                error_code=error_code,
+                metadata=metadata if metadata else None
+            )
+    
     def register_tools(self, mcp: "FastMCP"):
         """Register task management tools with FastMCP."""
         
@@ -137,14 +183,13 @@ class TaskMCPController:
                     try:
                         coerced_limit = int(limit)
                     except ValueError:
-                        return {
-                            "success": False,
-                            "error": f"Invalid limit value: '{limit}' cannot be converted to integer",
-                            "error_code": "PARAMETER_COERCION_ERROR",
-                            "field": "limit",
-                            "expected": "An integer or string representation of an integer",
-                            "hint": "Use a valid integer like 5 or '5'"
-                        }
+                        return StandardResponseFormatter.create_validation_error_response(
+                            operation="manage_task",
+                            field="limit",
+                            expected="An integer or string representation of an integer",
+                            actual=str(limit),
+                            hint="Use a valid integer like 5 or '5'"
+                        )
                 else:
                     coerced_limit = limit
             
@@ -227,14 +272,12 @@ class TaskMCPController:
         try:
             if action == "create":
                 if not title:
-                    return {
-                        "success": False,
-                        "error": "Missing required field: title",
-                        "error_code": "MISSING_FIELD",
-                        "field": "title",
-                        "expected": "A non-empty string for the task title",
-                        "hint": "Include 'title' in your request body"
-                    }
+                    return StandardResponseFormatter.create_validation_error_response(
+                        operation="create_task",
+                        field="title",
+                        expected="A non-empty string for the task title",
+                        hint="Include 'title' in your request body"
+                    )
                 
                 return self._handle_create_task(
                     facade, git_branch_id, title, description, status, priority, 
@@ -242,14 +285,12 @@ class TaskMCPController:
                 )
             elif action == "update":
                 if not task_id:
-                    return {
-                        "success": False,
-                        "error": "Missing required field: task_id",
-                        "error_code": "MISSING_FIELD",
-                        "field": "task_id",
-                        "expected": "A valid task_id string",
-                        "hint": "Include 'task_id' in your request body"
-                    }
+                    return StandardResponseFormatter.create_validation_error_response(
+                        operation="update_task",
+                        field="task_id",
+                        expected="A valid task_id string",
+                        hint="Include 'task_id' in your request body"
+                    )
                 
                 # Check if this is a progress report (when details contains progress info)
                 if details and ("progress:" in details.lower() or "completed:" in details.lower() or "implemented:" in details.lower()):
@@ -296,25 +337,21 @@ class TaskMCPController:
                 return result
             elif action == "delete":
                 if not task_id:
-                    return {
-                        "success": False,
-                        "error": "Missing required field: task_id",
-                        "error_code": "MISSING_FIELD",
-                        "field": "task_id",
-                        "expected": "A valid task_id string",
-                        "hint": "Include 'task_id' in your request body"
-                    }
+                    return StandardResponseFormatter.create_validation_error_response(
+                        operation="delete_task",
+                        field="task_id",
+                        expected="A valid task_id string",
+                        hint="Include 'task_id' in your request body"
+                    )
                 return self._handle_delete_task(facade, task_id)
             elif action == "complete":
                 if not task_id:
-                    return {
-                        "success": False,
-                        "error": "Missing required field: task_id",
-                        "error_code": "MISSING_FIELD",
-                        "field": "task_id",
-                        "expected": "A valid task_id string",
-                        "hint": "Include 'task_id' in your request body"
-                    }
+                    return StandardResponseFormatter.create_validation_error_response(
+                        operation="complete_task",
+                        field="task_id",
+                        expected="A valid task_id string",
+                        hint="Include 'task_id' in your request body"
+                    )
                 
                 # Enhanced completion with context enforcement
                 # Use completion_summary if provided, otherwise fall back to description

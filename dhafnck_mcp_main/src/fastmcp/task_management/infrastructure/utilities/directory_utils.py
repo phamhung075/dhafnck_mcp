@@ -4,6 +4,7 @@ Infrastructure utilities for directory management following DDD principles.
 """
 
 from pathlib import Path
+import os
 from typing import Optional
 
 # Removed problematic tool_path import
@@ -32,7 +33,23 @@ def _find_project_root() -> Path:
         current_path = current_path.parent
     
     # Absolute fallback
-    return Path("/home/daihungpham/agentic-project")
+    # Use environment variable or default data path
+    data_path = os.environ.get('DHAFNCK_DATA_PATH', '/data')
+    # If running in development, try to find project root
+    if not os.path.exists(data_path):
+        # Try current working directory
+        cwd = Path.cwd()
+        if (cwd / "dhafnck_mcp_main").exists():
+            return cwd
+        # Try parent directories
+        current = Path(__file__).resolve()
+        while current.parent != current:
+            if (current / "dhafnck_mcp_main").exists():
+                return current
+            current = current.parent
+        # Fall back to temp directory for safety
+        return Path("/tmp/dhafnck_project")
+    return Path(data_path)
 
 
 def ensure_brain_dir(brain_dir: Optional[str] = None) -> Path:

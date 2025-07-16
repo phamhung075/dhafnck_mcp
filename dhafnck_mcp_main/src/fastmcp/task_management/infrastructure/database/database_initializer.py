@@ -46,7 +46,17 @@ def _find_project_root() -> str:
         return cwd
     
     # Absolute fallback
-    return "/home/daihungpham/agentic-project"
+    # Use environment variable or default data path
+    data_path = os.environ.get('DHAFNCK_DATA_PATH', '/data')
+    # If running in development, try to find project root
+    if not os.path.exists(data_path):
+        # Try current working directory
+        cwd = os.getcwd()
+        if os.path.exists(os.path.join(cwd, "dhafnck_mcp_main")):
+            return cwd
+        # Fall back to temp directory for safety
+        return "/tmp/dhafnck_project"
+    return data_path
 
 
 def initialize_database(db_path: Optional[str] = None):

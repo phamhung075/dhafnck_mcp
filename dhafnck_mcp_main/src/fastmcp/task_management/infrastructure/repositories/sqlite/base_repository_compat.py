@@ -338,6 +338,10 @@ class SQLAlchemyConnectionWrapper:
                 sql_query = query
             
             result = self.session.execute(text(sql_query), param_dict)
+            # Store the result for cursor methods
+            self._last_result = result
+            # When called as cursor, return self
+            # When called as connection, return cursor wrapper
             return SQLAlchemyCursorWrapper(result, self.row_factory)
             
         except SQLAlchemyError as e:
@@ -355,6 +359,50 @@ class SQLAlchemyConnectionWrapper:
     def close(self):
         """Close session"""
         self.session.close()
+    
+    def cursor(self):
+        """Return self as cursor for compatibility with code expecting conn.cursor()"""
+        return self
+    
+    # Cursor-like methods for when acting as cursor
+    def fetchone(self):
+        """Fetch one row from last executed query"""
+        if hasattr(self, '_last_result'):
+            row = self._last_result.fetchone()
+            return self.row_factory(row) if row and self.row_factory else row
+        return None
+    
+    def fetchall(self):
+        """Fetch all rows from last executed query"""
+        if hasattr(self, '_last_result'):
+            rows = self._last_result.fetchall()
+            if self.row_factory:
+                return [self.row_factory(row) for row in rows]
+            return rows
+        return []
+    
+    def fetchmany(self, size=None):
+        """Fetch many rows from last executed query"""
+        if hasattr(self, '_last_result'):
+            rows = self._last_result.fetchmany(size) if size else self._last_result.fetchmany()
+            if self.row_factory:
+                return [self.row_factory(row) for row in rows]
+            return rows
+        return []
+    
+    @property
+    def lastrowid(self):
+        """Get last row ID from insert"""
+        if hasattr(self, '_last_result'):
+            return getattr(self._last_result, 'lastrowid', None)
+        return None
+    
+    @property
+    def rowcount(self):
+        """Get row count from last query"""
+        if hasattr(self, '_last_result'):
+            return getattr(self._last_result, 'rowcount', -1)
+        return -1
     
     def __enter__(self):
         """Context manager entry"""

@@ -166,36 +166,41 @@ class TaskApplicationFacade:
                             "message": msg,
                         }
                     else:
-                        # Context creation failed, but task was created - log warning and continue
-                        logger.warning("Context creation failed for task %s, task created without context", task_response.task.id)
-                        # Make sure to set context_id on the task even if context creation failed
-                        task_dict = asdict(task_response.task)
-                        if not task_dict.get("context_id"):
-                            task_dict["context_id"] = task_response.task.id
-                        task_dict["context_available"] = False
-                        task_dict["context_data"] = None
+                        # Context creation failed - rollback task creation
+                        logger.warning("Context creation failed for task %s, rolling back", task_response.task.id)
+                        try:
+                            from ...domain.value_objects.task_id import TaskId
+                            self._task_repository.delete(TaskId(str(task_response.task.id)))
+                            logger.info("Rolled back task %s after context sync failure", task_response.task.id)
+                        except Exception as rollback_error:
+                            logger.error("Failed to rollback task %s: %s", task_response.task.id, rollback_error)
                         
                         return {
-                            "success": True,
+                            "success": False,
                             "action": "create",
-                            "task": task_dict,
-                            "message": msg + " (Context creation failed)",
+                            "error": "Task creation failed: Unable to initialize task context",
+                            "error_code": "CONTEXT_SYNC_FAILED",
+                            "hint": "Task creation requires successful context initialization"
                         }
                         
                 except Exception as e:
                     logger.error("Failed to create context for task %s: %s", task_response.task.id, e)
-                    # Task was created successfully but context failed - return task without context
-                    task_dict = asdict(task_response.task)
-                    if not task_dict.get("context_id"):
-                        task_dict["context_id"] = task_response.task.id
-                    task_dict["context_available"] = False
-                    task_dict["context_data"] = None
+                    # Rollback: Delete the task since context creation is required
+                    try:
+                        from ...domain.value_objects.task_id import TaskId
+                        self._task_repository.delete(TaskId(str(task_response.task.id)))
+                        logger.info("Rolled back task %s after context creation failure", task_response.task.id)
+                    except Exception as rollback_error:
+                        logger.error("Failed to rollback task %s: %s", task_response.task.id, rollback_error)
+                        # If rollback fails, still return error to prevent inconsistent state
                     
+                    # Return error response since task creation should be atomic with context
                     return {
-                        "success": True,
+                        "success": False,
                         "action": "create",
-                        "task": task_dict,
-                        "message": msg + " (Context creation failed)",
+                        "error": f"Task creation failed: Context creation error - {str(e)}",
+                        "error_code": "CONTEXT_CREATION_FAILED",
+                        "hint": "Task creation requires successful context initialization"
                     }
             else:
                 return {

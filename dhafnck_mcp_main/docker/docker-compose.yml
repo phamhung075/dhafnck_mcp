@@ -18,6 +18,7 @@ services:
     # Environment variables
     environment:
       PYTHONPATH: /app/src
+      DHAFNCK_DATA_PATH: /data
       FASTMCP_LOG_LEVEL: INFO
       FASTMCP_ENABLE_RICH_TRACEBACKS: 0
       DATA_STORAGE_MODE: internal
