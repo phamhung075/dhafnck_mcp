@@ -140,8 +140,8 @@ class TestTaskUpdateSubtaskMethod:
         }
         task.subtasks.append(subtask)
         
-        # Act
-        result = task.update_subtask("sub-789", {"assignees": ["user1", "user2"]})
+        # Act - use the full hierarchical ID
+        result = task.update_subtask("proj-123.task-456.sub-789", {"assignees": ["user1", "user2"]})
         
         # Assert
         assert result is True
