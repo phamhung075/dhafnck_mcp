@@ -159,14 +159,16 @@ class TestORMSubtaskRepository:
                 self.updated_at = datetime.now(timezone.utc)
         
         mock_model = MockTaskSubtask()
+        task_id = mock_model.task_id
         
         # When - Convert to domain entity
-        # This will fail because _to_domain_entity is incorrectly passing task_id
-        # instead of parent_task_id to Subtask constructor
-        with pytest.raises(TypeError) as exc_info:
-            subtask = repository._to_domain_entity(mock_model)
+        # The implementation is already correct - it converts task_id to parent_task_id
+        subtask = repository._to_domain_entity(mock_model)
         
-        assert "got an unexpected keyword argument" in str(exc_info.value)
+        # Then - Verify the subtask was created correctly with parent_task_id
+        assert subtask.parent_task_id.value == task_id
+        assert subtask.title == "ORM Test Subtask"
+        assert subtask.assignees == ["@tester"]
 
 
 class TestSubtaskIntegrationWithTasks:

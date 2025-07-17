@@ -64,7 +64,7 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
         for subtask in task.subtasks:
             subtasks.append(Subtask(
                 id=subtask.id,
-                task_id=subtask.task_id,
+                parent_task_id=subtask.task_id,  # Fixed: changed from task_id to parent_task_id
                 title=subtask.title,
                 description=subtask.description,
                 status=subtask.status,
