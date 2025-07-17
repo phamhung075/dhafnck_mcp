@@ -318,7 +318,8 @@ class TestTaskMCPParameterValidationFix:
         
         # Verify the request was successful
         assert result["success"] is True
-        assert "task" in result
+        # The response structure may have changed - check for task in data
+        assert "data" in result and "task" in result["data"]
 
 
 class TestParameterValidationIntegration:

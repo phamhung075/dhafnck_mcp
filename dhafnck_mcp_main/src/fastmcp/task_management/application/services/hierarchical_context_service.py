@@ -591,8 +591,8 @@ class HierarchicalContextService:
                     )
                 )
             
-            # Invalidate affected caches
-            self.cache_service.invalidate_context_cache(to_level, target_id)
+            # Invalidate affected caches (use sync version)
+            self.cache_service.invalidate_context(to_level, target_id)
             
             logger.info(f"Delegation completed: {result.get('delegation_id')}")
             return result

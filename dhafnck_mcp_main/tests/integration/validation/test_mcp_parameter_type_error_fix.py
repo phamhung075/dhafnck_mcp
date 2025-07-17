@@ -27,7 +27,7 @@ class TestMCPParameterTypeErrorFix:
         # Track what parameters were actually passed to facade methods
         facade.call_history = []
         
-        def track_list_tasks(request):
+        def track_list_tasks(request, include_dependencies=True):
             facade.call_history.append(('list_tasks', request))
             return {"success": True, "tasks": []}
         

@@ -439,12 +439,12 @@ class TestContextIdInconsistencyDetection:
                 # Create a minimal controller to test context creation
                 controller = ProjectMCPController(Mock())
                 
-                # This would be called when creating project context
+                # This would be called when including project context
                 # Verify it uses project_id not task_id
-                with patch.object(controller, '_create_project_context') as mock_create:
-                    mock_create.return_value = {"success": True}
+                with patch.object(controller, '_include_project_context') as mock_include:
+                    mock_include.return_value = {"success": True}
                     
-                    # Test that project context creation uses project_id
+                    # Test that project context inclusion uses project_id
                     # (This is what SHOULD happen, test will drive implementation)
                     
                     # For now, just verify the pattern we expect

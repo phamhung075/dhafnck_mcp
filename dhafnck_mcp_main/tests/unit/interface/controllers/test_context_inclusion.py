@@ -13,7 +13,7 @@ Following TDD approach:
 """
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch, MagicMock, AsyncMock
 from typing import Dict, Any, Optional
 import uuid
 
@@ -353,10 +353,10 @@ class TestTaskMCPControllerContextInclusion:
             # Mock the facade
             mock_facade_factory = Mock(spec=TaskFacadeFactory)
             mock_facade = Mock()
-            mock_facade.get_next_task.return_value = {
+            mock_facade.get_next_task = AsyncMock(return_value={
                 "success": True,
                 "task": test_task_data
-            }
+            })
             mock_facade_factory.create_task_facade.return_value = mock_facade
             
             # Create controller
@@ -402,13 +402,22 @@ class TestTaskMCPControllerContextInclusion:
             # Create a minimal controller
             controller = TaskMCPController(Mock())
             
-            # Mock the database lookup
-            with patch('sqlite3.connect') as mock_connect:
-                mock_conn = Mock()
-                mock_cursor = Mock()
-                mock_conn.execute.return_value = mock_cursor
-                mock_cursor.fetchone.return_value = (test_git_branch_data["project_id"], test_git_branch_data["name"])
-                mock_connect.return_value.__enter__.return_value = mock_conn
+            # Mock the database lookup using SQLAlchemy session manager
+            with patch('fastmcp.task_management.infrastructure.database.session_manager.get_session_manager') as mock_session_manager:
+                mock_session_mgr = Mock()
+                mock_session = Mock()
+                
+                # Set up context manager for get_session
+                mock_session_context = Mock()
+                mock_session_context.__enter__ = Mock(return_value=mock_session)
+                mock_session_context.__exit__ = Mock(return_value=None)
+                mock_session_mgr.get_session.return_value = mock_session_context
+                mock_session_manager.return_value = mock_session_mgr
+                
+                # Mock the query result
+                mock_result = Mock()
+                mock_result.fetchone.return_value = (test_git_branch_data["project_id"], test_git_branch_data["name"])
+                mock_session.execute.return_value = mock_result
                 
                 # Act
                 project_id, git_branch_name, user_id = controller._derive_context_from_identifiers(

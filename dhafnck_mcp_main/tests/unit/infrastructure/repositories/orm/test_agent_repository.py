@@ -236,7 +236,7 @@ class TestORMAgentRepository:
             git_branch_id=None
         )
         
-        assert result["removed_assignments"] == ["main", "feature-branch"]
+        assert set(result["removed_assignments"]) == {"main", "feature-branch"}
         assert result["remaining_assignments"] == []
         mock_get_by_id.assert_called_once_with("test_agent_1")
         mock_update.assert_called_once()

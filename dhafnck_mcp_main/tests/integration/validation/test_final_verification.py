@@ -102,7 +102,7 @@ def test_original_failing_cases():
     else:
         print("❌ FAILURE: Some cases are still failing")
         
-    return all_passed
+    assert all_passed, "Some original failing cases are still failing"
 
 
 def test_edge_cases():
@@ -149,10 +149,10 @@ def test_edge_cases():
             
         except Exception as e:
             print(f"❌ Edge case failed: {case['params']} - {e}")
-            return False
+            assert False, f"Edge case failed: {case['params']} - {e}"
     
     print("✅ All edge cases passed!")
-    return True
+    assert True
 
 
 def test_mixed_parameter_validation():
@@ -217,10 +217,10 @@ def test_mixed_parameter_validation():
             
         except Exception as e:
             print(f"❌ {scenario['name']}: Failed - {e}")
-            return False
+            assert False, f"{scenario['name']}: Failed - {e}"
     
     print("✅ All mixed parameter scenarios passed!")
-    return True
+    assert True
 
 
 def main():

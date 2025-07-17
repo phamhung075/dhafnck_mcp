@@ -42,6 +42,49 @@ class TestORMHierarchicalContextRepository:
         # Cleanup
         Base.metadata.drop_all(bind=self.db_config.engine)
         self.db_config.close()
+    
+    def _create_project_entity(self, project_id: str):
+        """Helper method to create a Project entity required for TaskContext foreign key"""
+        from fastmcp.task_management.infrastructure.database.models import Project
+        from sqlalchemy.orm import sessionmaker
+        
+        Session = sessionmaker(bind=self.db_config.engine)
+        session = Session()
+        
+        project = Project(
+            id=project_id,
+            name=f"Test Project {project_id}",
+            description="Test project for hierarchical context",
+            user_id="test_user"
+        )
+        session.add(project)
+        session.commit()
+        session.close()
+    
+    def _setup_hierarchical_contexts(self, project_id: str = "test_project"):
+        """Helper method to set up full hierarchical context chain"""
+        # Create global context first (required for foreign key constraint)
+        global_data = {
+            "organization_id": "test_org",
+            "autonomous_rules": {},
+            "security_policies": {},
+            "coding_standards": {},
+            "workflow_templates": {},
+            "delegation_rules": {}
+        }
+        self.repository.create_global_context("global_singleton", global_data)
+        
+        # Create project context first (required for foreign key constraint)
+        project_data = {
+            "parent_global_id": "global_singleton",
+            "team_preferences": {"notification_enabled": True}
+        }
+        self.repository.create_project_context(project_id, project_data)
+        
+        # Create project entity (required for TaskContext foreign key)
+        self._create_project_entity(project_id)
+        
+        return project_id
 
     def test_create_global_context(self):
         """Test creating a global context"""
@@ -142,6 +185,17 @@ class TestORMHierarchicalContextRepository:
 
     def test_create_project_context(self):
         """Test creating a project context"""
+        # Create global context first (required for foreign key constraint)
+        global_data = {
+            "organization_id": "test_org",
+            "autonomous_rules": {},
+            "security_policies": {},
+            "coding_standards": {},
+            "workflow_templates": {},
+            "delegation_rules": {}
+        }
+        self.repository.create_global_context("global_singleton", global_data)
+        
         project_id = "test_project"
         data = {
             "parent_global_id": "global_singleton",
@@ -162,8 +216,20 @@ class TestORMHierarchicalContextRepository:
 
     def test_get_project_context(self):
         """Test retrieving a project context"""
+        # Create global context first (required for foreign key constraint)
+        global_data = {
+            "organization_id": "test_org",
+            "autonomous_rules": {},
+            "security_policies": {},
+            "coding_standards": {},
+            "workflow_templates": {},
+            "delegation_rules": {}
+        }
+        self.repository.create_global_context("global_singleton", global_data)
+        
         project_id = "test_project"
         data = {
+            "parent_global_id": "global_singleton",
             "team_preferences": {"notification_enabled": True}
         }
         
@@ -179,8 +245,22 @@ class TestORMHierarchicalContextRepository:
 
     def test_update_project_context(self):
         """Test updating a project context"""
+        # Create global context first (required for foreign key constraint)
+        global_data = {
+            "organization_id": "test_org",
+            "autonomous_rules": {},
+            "security_policies": {},
+            "coding_standards": {},
+            "workflow_templates": {},
+            "delegation_rules": {}
+        }
+        self.repository.create_global_context("global_singleton", global_data)
+        
         project_id = "test_project"
-        data = {"team_preferences": {"notification_enabled": True}}
+        data = {
+            "parent_global_id": "global_singleton",
+            "team_preferences": {"notification_enabled": True}
+        }
         
         # Create context first
         self.repository.create_project_context(project_id, data)
@@ -202,10 +282,13 @@ class TestORMHierarchicalContextRepository:
 
     def test_create_task_context(self):
         """Test creating a task context"""
+        # Set up full hierarchical context chain
+        project_id = self._setup_hierarchical_contexts()
+        
         task_id = "test_task"
         data = {
-            "parent_project_id": "test_project",
-            "parent_project_context_id": "test_project",
+            "parent_project_id": project_id,
+            "parent_project_context_id": project_id,
             "task_data": {"priority": "high"},
             "local_overrides": {"timeout": 3600},
             "implementation_notes": {"approach": "iterative"},
@@ -216,14 +299,18 @@ class TestORMHierarchicalContextRepository:
         
         assert result is not None
         assert result["task_id"] == task_id
-        assert result["parent_project_id"] == "test_project"
+        assert result["parent_project_id"] == project_id
         assert result["task_data"]["priority"] == "high"
 
     def test_get_task_context(self):
         """Test retrieving a task context"""
+        # Set up full hierarchical context chain
+        project_id = self._setup_hierarchical_contexts()
+        
         task_id = "test_task"
         data = {
-            "parent_project_id": "test_project",
+            "parent_project_id": project_id,
+            "parent_project_context_id": project_id,
             "task_data": {"priority": "high"}
         }
         
@@ -239,9 +326,13 @@ class TestORMHierarchicalContextRepository:
 
     def test_update_task_context(self):
         """Test updating a task context"""
+        # Set up full hierarchical context chain
+        project_id = self._setup_hierarchical_contexts()
+        
         task_id = "test_task"
         data = {
-            "parent_project_id": "test_project",
+            "parent_project_id": project_id,
+            "parent_project_context_id": project_id,
             "task_data": {"priority": "high"}
         }
         
@@ -425,7 +516,10 @@ class TestORMHierarchicalContextRepository:
         """Test health check functionality"""
         # Create some test data
         self.repository.create_global_context("test_global", {"organization_id": "test_org"})
-        self.repository.create_project_context("test_project", {"team_preferences": {}})
+        self.repository.create_project_context("test_project", {
+            "parent_global_id": "test_global",
+            "team_preferences": {}
+        })
         
         # Run health check
         health_status = await self.repository.health_check()
@@ -438,19 +532,22 @@ class TestORMHierarchicalContextRepository:
 
     def test_resolve_context_inheritance(self):
         """Test context resolution with inheritance"""
-        # Create global context
+        # First create global context with specific data
         self.repository.create_global_context("global_singleton", {
             "autonomous_rules": {"ai_enabled": True, "auto_task_creation": True},
             "security_policies": {"encryption": "required"}
         })
         
-        # Create project context
+        # Create project context with specific data
         self.repository.create_project_context("test_project", {
             "parent_global_id": "global_singleton",
             "team_preferences": {"notification_enabled": True},
             "technology_stack": {"language": "python"},
             "inheritance_disabled": False
         })
+        
+        # Create project entity (required for TaskContext foreign key)
+        self._create_project_entity("test_project")
         
         # Create task context
         self.repository.create_task_context("test_task", {
@@ -480,15 +577,19 @@ class TestORMHierarchicalContextRepository:
 
     def test_context_delegation(self):
         """Test context delegation between levels"""
+        # Set up source project and context
+        source_project_id = self._setup_hierarchical_contexts("source_project")
+        
         # Create source task context
         self.repository.create_task_context("source_task", {
-            "parent_project_id": "test_project",
-            "parent_project_context_id": "test_project",
+            "parent_project_id": source_project_id,
+            "parent_project_context_id": source_project_id,
             "task_data": {"reusable_pattern": "singleton_implementation"}
         })
         
         # Create target project context
         self.repository.create_project_context("target_project", {
+            "parent_global_id": "global_singleton",
             "team_preferences": {"notification_enabled": True}
         })
         
@@ -515,11 +616,16 @@ class TestORMHierarchicalContextRepository:
         })
         
         self.repository.create_project_context("search_project", {
+            "parent_global_id": "search_global",
             "team_preferences": {"search_term": "findable_value"}
         })
         
+        # Set up project for task context
+        self._create_project_entity("search_project")
+        
         self.repository.create_task_context("search_task", {
-            "parent_project_id": "test_project",
+            "parent_project_id": "search_project",
+            "parent_project_context_id": "search_project",
             "task_data": {"search_term": "findable_value"}
         })
         
@@ -543,6 +649,9 @@ class TestORMHierarchicalContextRepository:
             "parent_global_id": "global_singleton",
             "team_preferences": {"notification_enabled": True}
         })
+        
+        # Set up project for task context
+        self._create_project_entity("hierarchy_project")
         
         self.repository.create_task_context("hierarchy_task", {
             "parent_project_id": "hierarchy_project",

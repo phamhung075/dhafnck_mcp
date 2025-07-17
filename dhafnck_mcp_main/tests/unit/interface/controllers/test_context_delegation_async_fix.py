@@ -69,8 +69,11 @@ class TestContextDelegationAsyncFix:
             reason="Test delegation"
         )
         
-        # The result will be a coroutine object, not the expected dict
-        assert asyncio.iscoroutine(result.get("delegation_id")) if hasattr(result, 'get') else True
+        # The result should now be a proper dict, not a coroutine
+        assert isinstance(result, dict)
+        assert result.get("success") is True
+        assert result.get("delegation_id") == "del-123"
+        assert not asyncio.iscoroutine(result.get("delegation_id"))
     
     @pytest.mark.asyncio
     async def test_async_delegate_context_fix(self):

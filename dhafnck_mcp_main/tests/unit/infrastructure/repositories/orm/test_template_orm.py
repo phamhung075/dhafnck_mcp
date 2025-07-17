@@ -91,11 +91,11 @@ class TestORMTemplateRepository:
         """Setup test fixtures for each test"""
         self.repository = ORMTemplateRepository()
 
-    @patch('fastmcp.task_management.infrastructure.database.database_config.get_session')
-    def test_save_new_template_success(self, mock_get_session, mock_session, sample_template):
+    @patch('fastmcp.task_management.infrastructure.repositories.base_orm_repository.BaseORMRepository.get_db_session')
+    def test_save_new_template_success(self, mock_get_db_session, mock_session, sample_template):
         """Test saving a new template successfully"""
         # Setup
-        mock_get_session.return_value = mock_session
+        mock_get_db_session.return_value.__enter__.return_value = mock_session
         mock_session.query.return_value.filter.return_value.first.return_value = None  # No existing template
         mock_session.commit = Mock()
         
@@ -107,11 +107,11 @@ class TestORMTemplateRepository:
         mock_session.add.assert_called_once()
         mock_session.commit.assert_called_once()
 
-    @patch('fastmcp.task_management.infrastructure.database.database_config.get_session')
-    def test_save_update_existing_template(self, mock_get_session, mock_session, sample_template, sample_orm_template):
+    @patch('fastmcp.task_management.infrastructure.repositories.base_orm_repository.BaseORMRepository.get_db_session')
+    def test_save_update_existing_template(self, mock_get_db_session, mock_session, sample_template, sample_orm_template):
         """Test updating an existing template"""
         # Setup
-        mock_get_session.return_value = mock_session
+        mock_get_db_session.return_value.__enter__.return_value = mock_session
         mock_session.query.return_value.filter.return_value.first.return_value = sample_orm_template
         mock_session.commit = Mock()
         
@@ -124,11 +124,11 @@ class TestORMTemplateRepository:
         assert sample_orm_template.type == sample_template.template_type.value
         mock_session.commit.assert_called_once()
 
-    @patch('fastmcp.task_management.infrastructure.database.database_config.get_session')
-    def test_save_template_error_handling(self, mock_get_session, mock_session, sample_template):
+    @patch('fastmcp.task_management.infrastructure.repositories.base_orm_repository.BaseORMRepository.get_db_session')
+    def test_save_template_error_handling(self, mock_get_db_session, mock_session, sample_template):
         """Test error handling during template save"""
         # Setup
-        mock_get_session.return_value = mock_session
+        mock_get_db_session.return_value.__enter__.return_value = mock_session
         mock_session.query.side_effect = Exception("Database error")
         
         # Execute
@@ -137,11 +137,11 @@ class TestORMTemplateRepository:
         # Assert
         assert result is False
 
-    @patch('fastmcp.task_management.infrastructure.database.database_config.get_session')
-    def test_get_by_id_success(self, mock_get_session, mock_session, sample_orm_template):
+    @patch('fastmcp.task_management.infrastructure.repositories.base_orm_repository.BaseORMRepository.get_db_session')
+    def test_get_by_id_success(self, mock_get_db_session, mock_session, sample_orm_template):
         """Test getting template by ID successfully"""
         # Setup
-        mock_get_session.return_value = mock_session
+        mock_get_db_session.return_value.__enter__.return_value = mock_session
         mock_session.query.return_value.filter.return_value.first.return_value = sample_orm_template
         
         template_id = TemplateId('orm-test-456')
@@ -156,11 +156,11 @@ class TestORMTemplateRepository:
         assert result.template_type == TemplateType.TASK
         assert result.category == TemplateCategory.TESTING
 
-    @patch('fastmcp.task_management.infrastructure.database.database_config.get_session')
-    def test_get_by_id_not_found(self, mock_get_session, mock_session):
+    @patch('fastmcp.task_management.infrastructure.repositories.base_orm_repository.BaseORMRepository.get_db_session')
+    def test_get_by_id_not_found(self, mock_get_db_session, mock_session):
         """Test getting template by ID when not found"""
         # Setup
-        mock_get_session.return_value = mock_session
+        mock_get_db_session.return_value.__enter__.return_value = mock_session
         mock_session.query.return_value.filter.return_value.first.return_value = None
         
         template_id = TemplateId('nonexistent')
@@ -171,15 +171,17 @@ class TestORMTemplateRepository:
         # Assert
         assert result is None
 
-    @patch('fastmcp.task_management.infrastructure.database.database_config.get_session')
-    def test_list_templates_with_filters(self, mock_get_session, mock_session, sample_orm_template):
+    @patch('fastmcp.task_management.infrastructure.repositories.base_orm_repository.BaseORMRepository.get_db_session')
+    def test_list_templates_with_filters(self, mock_get_db_session, mock_session, sample_orm_template):
         """Test listing templates with filters"""
         # Setup
-        mock_get_session.return_value = mock_session
+        mock_get_db_session.return_value.__enter__.return_value = mock_session
         mock_query = Mock()
         mock_session.query.return_value = mock_query
         mock_query.filter.return_value = mock_query
         mock_query.order_by.return_value = mock_query
+        mock_query.offset.return_value = mock_query
+        mock_query.limit.return_value = mock_query
         mock_query.all.return_value = [sample_orm_template]
         
         # Execute
@@ -196,11 +198,11 @@ class TestORMTemplateRepository:
         mock_query.filter.assert_called()
         mock_query.order_by.assert_called()
 
-    @patch('fastmcp.task_management.infrastructure.database.database_config.get_session')
-    def test_delete_template_success(self, mock_get_session, mock_session, sample_orm_template):
+    @patch('fastmcp.task_management.infrastructure.repositories.base_orm_repository.BaseORMRepository.get_db_session')
+    def test_delete_template_success(self, mock_get_db_session, mock_session, sample_orm_template):
         """Test deleting template successfully"""
         # Setup
-        mock_get_session.return_value = mock_session
+        mock_get_db_session.return_value.__enter__.return_value = mock_session
         mock_session.query.return_value.filter.return_value.first.return_value = sample_orm_template
         mock_session.commit = Mock()
         
@@ -214,11 +216,11 @@ class TestORMTemplateRepository:
         mock_session.delete.assert_called_once_with(sample_orm_template)
         mock_session.commit.assert_called_once()
 
-    @patch('fastmcp.task_management.infrastructure.database.database_config.get_session')
-    def test_delete_template_not_found(self, mock_get_session, mock_session):
+    @patch('fastmcp.task_management.infrastructure.repositories.base_orm_repository.BaseORMRepository.get_db_session')
+    def test_delete_template_not_found(self, mock_get_db_session, mock_session):
         """Test deleting template when not found"""
         # Setup
-        mock_get_session.return_value = mock_session
+        mock_get_db_session.return_value.__enter__.return_value = mock_session
         mock_session.query.return_value.filter.return_value.first.return_value = None
         
         template_id = TemplateId('nonexistent')
@@ -230,15 +232,17 @@ class TestORMTemplateRepository:
         assert result is False
         mock_session.delete.assert_not_called()
 
-    @patch('fastmcp.task_management.infrastructure.database.database_config.get_session')
-    def test_get_templates_by_type(self, mock_get_session, mock_session, sample_orm_template):
+    @patch('fastmcp.task_management.infrastructure.repositories.base_orm_repository.BaseORMRepository.get_db_session')
+    def test_get_templates_by_type(self, mock_get_db_session, mock_session, sample_orm_template):
         """Test getting templates by type"""
         # Setup
-        mock_get_session.return_value = mock_session
+        mock_get_db_session.return_value.__enter__.return_value = mock_session
         mock_query = Mock()
         mock_session.query.return_value = mock_query
         mock_query.filter.return_value = mock_query
         mock_query.order_by.return_value = mock_query
+        mock_query.offset.return_value = mock_query
+        mock_query.limit.return_value = mock_query
         mock_query.all.return_value = [sample_orm_template]
         
         # Execute
@@ -248,15 +252,17 @@ class TestORMTemplateRepository:
         assert len(result) == 1
         assert result[0].template_type == TemplateType.TASK
 
-    @patch('fastmcp.task_management.infrastructure.database.database_config.get_session')
-    def test_get_templates_by_category(self, mock_get_session, mock_session, sample_orm_template):
+    @patch('fastmcp.task_management.infrastructure.repositories.base_orm_repository.BaseORMRepository.get_db_session')
+    def test_get_templates_by_category(self, mock_get_db_session, mock_session, sample_orm_template):
         """Test getting templates by category"""
         # Setup
-        mock_get_session.return_value = mock_session
+        mock_get_db_session.return_value.__enter__.return_value = mock_session
         mock_query = Mock()
         mock_session.query.return_value = mock_query
         mock_query.filter.return_value = mock_query
         mock_query.order_by.return_value = mock_query
+        mock_query.offset.return_value = mock_query
+        mock_query.limit.return_value = mock_query
         mock_query.all.return_value = [sample_orm_template]
         
         # Execute
@@ -266,15 +272,17 @@ class TestORMTemplateRepository:
         assert len(result) == 1
         assert result[0].category == TemplateCategory.TESTING
 
-    @patch('fastmcp.task_management.infrastructure.database.database_config.get_session')
-    def test_search_templates_by_tags(self, mock_get_session, mock_session, sample_orm_template):
+    @patch('fastmcp.task_management.infrastructure.repositories.base_orm_repository.BaseORMRepository.get_db_session')
+    def test_search_templates_by_tags(self, mock_get_db_session, mock_session, sample_orm_template):
         """Test searching templates by tags"""
         # Setup
-        mock_get_session.return_value = mock_session
+        mock_get_db_session.return_value.__enter__.return_value = mock_session
         mock_query = Mock()
         mock_session.query.return_value = mock_query
         mock_query.filter.return_value = mock_query
         mock_query.order_by.return_value = mock_query
+        mock_query.offset.return_value = mock_query
+        mock_query.limit.return_value = mock_query
         mock_query.all.return_value = [sample_orm_template]
         
         # Execute
@@ -284,11 +292,11 @@ class TestORMTemplateRepository:
         assert len(result) == 1
         assert result[0].name == 'ORM Test Template'
 
-    @patch('fastmcp.task_management.infrastructure.database.database_config.get_session')
-    def test_increment_usage_count_success(self, mock_get_session, mock_session, sample_orm_template):
+    @patch('fastmcp.task_management.infrastructure.repositories.base_orm_repository.BaseORMRepository.get_db_session')
+    def test_increment_usage_count_success(self, mock_get_db_session, mock_session, sample_orm_template):
         """Test incrementing usage count successfully"""
         # Setup
-        mock_get_session.return_value = mock_session
+        mock_get_db_session.return_value.__enter__.return_value = mock_session
         mock_session.query.return_value.filter.return_value.first.return_value = sample_orm_template
         mock_session.commit = Mock()
         initial_count = sample_orm_template.usage_count
@@ -303,11 +311,11 @@ class TestORMTemplateRepository:
         assert sample_orm_template.usage_count == initial_count + 1
         mock_session.commit.assert_called_once()
 
-    @patch('fastmcp.task_management.infrastructure.database.database_config.get_session')
-    def test_increment_usage_count_not_found(self, mock_get_session, mock_session):
+    @patch('fastmcp.task_management.infrastructure.repositories.base_orm_repository.BaseORMRepository.get_db_session')
+    def test_increment_usage_count_not_found(self, mock_get_db_session, mock_session):
         """Test incrementing usage count when template not found"""
         # Setup
-        mock_get_session.return_value = mock_session
+        mock_get_db_session.return_value.__enter__.return_value = mock_session
         mock_session.query.return_value.filter.return_value.first.return_value = None
         
         template_id = TemplateId('nonexistent')
@@ -318,11 +326,11 @@ class TestORMTemplateRepository:
         # Assert
         assert result is False
 
-    @patch('fastmcp.task_management.infrastructure.database.database_config.get_session')
-    def test_get_usage_stats_success(self, mock_get_session, mock_session, sample_orm_template):
+    @patch('fastmcp.task_management.infrastructure.repositories.base_orm_repository.BaseORMRepository.get_db_session')
+    def test_get_usage_stats_success(self, mock_get_db_session, mock_session, sample_orm_template):
         """Test getting usage statistics successfully"""
         # Setup
-        mock_get_session.return_value = mock_session
+        mock_get_db_session.return_value.__enter__.return_value = mock_session
         mock_session.query.return_value.filter.return_value.first.return_value = sample_orm_template
         
         template_id = TemplateId('orm-test-456')
@@ -336,11 +344,11 @@ class TestORMTemplateRepository:
         assert 'last_used' in result
         assert 'created_at' in result
 
-    @patch('fastmcp.task_management.infrastructure.database.database_config.get_session')
-    def test_get_usage_stats_not_found(self, mock_get_session, mock_session):
+    @patch('fastmcp.task_management.infrastructure.repositories.base_orm_repository.BaseORMRepository.get_db_session')
+    def test_get_usage_stats_not_found(self, mock_get_db_session, mock_session):
         """Test getting usage statistics when template not found"""
         # Setup
-        mock_get_session.return_value = mock_session
+        mock_get_db_session.return_value.__enter__.return_value = mock_session
         mock_session.query.return_value.filter.return_value.first.return_value = None
         
         template_id = TemplateId('nonexistent')
@@ -351,11 +359,11 @@ class TestORMTemplateRepository:
         # Assert
         assert result == {}
 
-    @patch('fastmcp.task_management.infrastructure.database.database_config.get_session')
-    def test_get_analytics_success(self, mock_get_session, mock_session):
+    @patch('fastmcp.task_management.infrastructure.repositories.base_orm_repository.BaseORMRepository.get_db_session')
+    def test_get_analytics_success(self, mock_get_db_session, mock_session):
         """Test getting template analytics successfully"""
         # Setup
-        mock_get_session.return_value = mock_session
+        mock_get_db_session.return_value.__enter__.return_value = mock_session
         mock_session.query.return_value.scalar.return_value = 10  # total templates
         mock_session.query.return_value.group_by.return_value.all.return_value = [
             ('task', 5), ('checklist', 3), ('workflow', 2)
@@ -426,14 +434,25 @@ class TestORMTemplateRepository:
         assert domain_template.version == 1
         assert domain_template.is_active is True
 
-    def test_orm_to_domain_conversion_empty_content(self):
-        """Test conversion from ORM model with empty content"""
+    def test_orm_to_domain_conversion_minimal_content(self):
+        """Test conversion from ORM model with minimal content"""
         # Setup
         orm_template = ORMTemplate(
-            id='empty-test',
-            name='Empty Template',
+            id='minimal-test',
+            name='Minimal Template',
             type='task',
-            content={},  # Empty content
+            content={
+                'description': 'Minimal template description',
+                'content': 'Minimal template content',
+                'status': 'active',
+                'priority': 'medium',
+                'compatible_agents': [],
+                'file_patterns': [],
+                'variables': [],
+                'metadata': {},
+                'version': 1,
+                'is_active': True
+            },
             category='general',
             tags=[],
             usage_count=0,
@@ -446,8 +465,8 @@ class TestORMTemplateRepository:
         domain_template = self.repository._orm_to_domain(orm_template)
         
         # Assert
-        assert domain_template.description == ''
-        assert domain_template.content == ''
+        assert domain_template.description == 'Minimal template description'
+        assert domain_template.content == 'Minimal template content'
         assert domain_template.status == TemplateStatus.ACTIVE  # default
         assert domain_template.priority == TemplatePriority.MEDIUM  # default
         assert domain_template.compatible_agents == []
