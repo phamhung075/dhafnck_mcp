@@ -102,7 +102,27 @@ class ProjectRepositoryFactory:
         
         try:
             if repository_type == RepositoryType.ORM:
-                return repository_class(**kwargs)
+                # For ORM repositories, we need to handle db_path differently
+                # since it affects the global database configuration
+                if db_path:
+                    # TODO: Implement per-repository database configuration
+                    # For now, set environment variable to ensure correct database is used
+                    import os
+                    old_db_path = os.environ.get('MCP_DB_PATH')
+                    os.environ['MCP_DB_PATH'] = db_path
+                    try:
+                        # Clear the global database config to use new path
+                        from ..database.database_config import close_db
+                        close_db()
+                        return repository_class(**kwargs)
+                    finally:
+                        # Restore original environment
+                        if old_db_path:
+                            os.environ['MCP_DB_PATH'] = old_db_path
+                        else:
+                            os.environ.pop('MCP_DB_PATH', None)
+                else:
+                    return repository_class(**kwargs)
             else:
                 return repository_class(user_id=user_id, **kwargs)
                 
@@ -251,7 +271,8 @@ def get_sqlite_repository(
     """Get ORM project repository (SQLite method deprecated)"""
     return ProjectRepositoryFactory.create(
         repository_type=RepositoryType.ORM,
-        user_id=user_id
+        user_id=user_id,
+        db_path=db_path
     )
 
 

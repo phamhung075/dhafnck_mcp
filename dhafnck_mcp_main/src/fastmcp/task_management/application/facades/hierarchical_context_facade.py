@@ -602,7 +602,7 @@ class HierarchicalContextFacade:
             context_response = self.get_context(level, context_id, include_inherited=False)
             
             # If context doesn't exist, try to auto-create it
-            if not context_response["success"]:
+            if not context_response or not context_response.get("success"):
                 if level == "project":
                     # Try to auto-create missing project context
                     project_context = await self._auto_create_project_context(context_id)
@@ -629,7 +629,7 @@ class HierarchicalContextFacade:
             # Check each level in the inheritance chain
             for parent_level, parent_id in self._get_inheritance_levels(level, context_id):
                 parent_response = self.get_context(parent_level, parent_id, include_inherited=False)
-                if parent_response["success"]:
+                if parent_response and parent_response.get("success"):
                     resolution_path.append(parent_response["context"])
                 else:
                     if parent_level == "global" and parent_id == "global_singleton":
@@ -640,7 +640,7 @@ class HierarchicalContextFacade:
             
             # Add the main context to resolution path
             final_context_response = self.get_context(level, context_id, include_inherited=False)
-            if final_context_response["success"]:
+            if final_context_response and final_context_response.get("success"):
                 resolution_path.append(final_context_response["context"])
             
             validation_result = {
@@ -667,7 +667,7 @@ class HierarchicalContextFacade:
                 "resolution_metadata": {
                     "resolved_at": datetime.utcnow().isoformat(),
                     "dependency_hash": "abc123",  # Mock for now
-                    "cache_status": "miss" if context_response.get("from_cache") else "hit"
+                    "cache_status": "miss" if context_response and context_response.get("from_cache") else "hit"
                 }
             }
             

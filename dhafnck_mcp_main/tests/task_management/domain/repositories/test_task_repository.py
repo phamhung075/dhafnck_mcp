@@ -109,6 +109,34 @@ class MockTaskRepository(TaskRepository):
             "with_assignees": sum(1 for task in self.tasks.values() if task.assignees),
             "with_labels": sum(1 for task in self.tasks.values() if task.labels)
         }
+    
+    def find_by_criteria(self, filters: Dict[str, Any], limit: Optional[int] = None) -> List[Task]:
+        """Find tasks by multiple criteria."""
+        results = list(self.tasks.values())
+        
+        # Apply filters
+        if 'status' in filters:
+            status_value = filters['status'].value if hasattr(filters['status'], 'value') else filters['status']
+            results = [t for t in results if t.status.value == status_value]
+        
+        if 'priority' in filters:
+            priority_value = filters['priority'].value if hasattr(filters['priority'], 'value') else filters['priority']
+            results = [t for t in results if t.priority.value == priority_value]
+        
+        if 'assignee' in filters:
+            results = [t for t in results if filters['assignee'] in t.assignees]
+        
+        if 'label' in filters:
+            results = [t for t in results if filters['label'] in t.labels]
+        
+        if 'git_branch_id' in filters:
+            results = [t for t in results if t.git_branch_id == filters['git_branch_id']]
+        
+        # Apply limit if specified
+        if limit is not None:
+            results = results[:limit]
+        
+        return results
 
 
 class TestTaskRepositoryInterface:
@@ -132,6 +160,7 @@ class TestTaskRepositoryInterface:
         assert hasattr(repo, 'get_next_id')
         assert hasattr(repo, 'count')
         assert hasattr(repo, 'get_statistics')
+        assert hasattr(repo, 'find_by_criteria')
     
     def test_repository_is_abstract(self):
         """Test that TaskRepository cannot be instantiated directly."""

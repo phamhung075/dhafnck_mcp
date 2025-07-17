@@ -133,7 +133,7 @@ class TestJSONFieldCompatibility:
         print("✅ Agent capabilities and metadata JSON fields test passed")
     
     def test_task_metadata_json_field(self):
-        """Test Task metadata JSON field"""
+        """Test Task metadata JSON field via TaskContext"""
         # Create project and branch first
         project = Project(
             id=str(uuid4()),
@@ -145,7 +145,7 @@ class TestJSONFieldCompatibility:
         self.session.add(project)
         self.session.commit()
         
-        from fastmcp.task_management.infrastructure.database.models import ProjectTaskTree
+        from fastmcp.task_management.infrastructure.database.models import ProjectTaskTree, TaskContext, ProjectContext
         branch = ProjectTaskTree(
             id=str(uuid4()),
             project_id=project.id,
@@ -156,7 +156,36 @@ class TestJSONFieldCompatibility:
         self.session.add(branch)
         self.session.commit()
         
-        # Test complex task metadata
+        # Create project context first (required for TaskContext)
+        project_context = ProjectContext(
+            project_id=project.id,
+            parent_global_id="global_singleton",
+            team_preferences={},
+            technology_stack={},
+            project_workflow={},
+            local_standards={},
+            global_overrides={},
+            delegation_rules={}
+        )
+        self.session.add(project_context)
+        self.session.commit()
+        
+        # Create task
+        task_id = str(uuid4())
+        task = Task(
+            id=task_id,
+            git_branch_id=branch.id,
+            title="JSON Metadata Test Task",
+            description="Testing JSON metadata storage",
+            priority="high",
+            status="pending",
+            context_id=task_id  # Link to context
+        )
+        
+        self.session.add(task)
+        self.session.commit()
+        
+        # Test complex task metadata stored in TaskContext
         task_metadata = {
             "dependencies": ["task_1", "task_2"],
             "tags": ["urgent", "bug", "frontend"],
@@ -180,27 +209,28 @@ class TestJSONFieldCompatibility:
             ]
         }
         
-        # Create task
-        task = Task(
-            id=str(uuid4()),
-            git_branch_id=branch.id,
-            title="JSON Metadata Test Task",
-            description="Testing JSON metadata storage",
-            priority="high",
-            status="pending",
-            model_metadata=task_metadata
+        # Create task context with metadata
+        task_context = TaskContext(
+            task_id=task_id,
+            parent_project_id=project.id,
+            parent_project_context_id=project.id,
+            task_data=task_metadata,
+            local_overrides={},
+            implementation_notes={},
+            delegation_triggers={}
         )
         
-        self.session.add(task)
+        self.session.add(task_context)
         self.session.commit()
         
         # Retrieve and verify
         retrieved_task = self.session.query(Task).filter_by(title="JSON Metadata Test Task").first()
+        retrieved_context = self.session.query(TaskContext).filter_by(task_id=retrieved_task.id).first()
         
-        assert retrieved_task.model_metadata == task_metadata
-        assert retrieved_task.model_metadata["dependencies"] == ["task_1", "task_2"]
-        assert retrieved_task.model_metadata["time_estimates"]["development"] == 4.5
-        assert retrieved_task.model_metadata["requirements"]["accessibility"]["level"] == "AA"
+        assert retrieved_context.task_data == task_metadata
+        assert retrieved_context.task_data["dependencies"] == ["task_1", "task_2"]
+        assert retrieved_context.task_data["time_estimates"]["development"] == 4.5
+        assert retrieved_context.task_data["requirements"]["accessibility"]["level"] == "AA"
         
         print("✅ Task metadata JSON field test passed")
     
@@ -234,8 +264,7 @@ class TestJSONFieldCompatibility:
             title="Parent Task",
             description="Parent task for subtask testing",
             priority="medium",
-            status="pending",
-            model_metadata={}
+            status="pending"
         )
         self.session.add(task)
         self.session.commit()

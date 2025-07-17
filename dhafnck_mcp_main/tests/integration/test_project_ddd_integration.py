@@ -40,6 +40,45 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+def _initialize_global_context(db_path: str):
+    """Initialize the global context in a database to fix foreign key constraints"""
+    import sqlite3
+    import os
+    
+    # Set the environment variable so SQLAlchemy uses the correct database
+    old_mcp_db_path = os.environ.get('MCP_DB_PATH')
+    os.environ['MCP_DB_PATH'] = db_path
+    
+    try:
+        # Re-initialize the database config to use the new path
+        from fastmcp.task_management.infrastructure.database.database_config import close_db
+        close_db()  # Clear existing connection
+        
+        # Now initialize the database (creates tables)
+        initialize_database(db_path)
+        
+        # Create the global context that project contexts reference
+        with sqlite3.connect(db_path) as conn:
+            conn.execute('''
+                INSERT OR REPLACE INTO global_contexts (
+                    id, organization_id, autonomous_rules, security_policies, 
+                    coding_standards, workflow_templates, delegation_rules, 
+                    created_at, updated_at, version
+                ) VALUES (
+                    'global_singleton', 'test_org', '{}', '{}', '{}', '{}', '{}',
+                    datetime('now'), datetime('now'), 1
+                )
+            ''')
+            conn.commit()
+            
+    finally:
+        # Restore original environment
+        if old_mcp_db_path:
+            os.environ['MCP_DB_PATH'] = old_mcp_db_path
+        else:
+            os.environ.pop('MCP_DB_PATH', None)
+
+
 def test_repository_factory():
     """Test the project repository factory"""
     print("🏗️  Testing Project Repository Factory...")
@@ -50,21 +89,21 @@ def test_repository_factory():
     assert isinstance(repo1, ProjectRepository)
     print("✅ Default repository creation works")
     
-    # Test SQLite repository creation
+    # Test ORM repository creation
     with tempfile.TemporaryDirectory() as temp_dir:
         db_path = Path(temp_dir) / "test.db"
         repo2 = ProjectRepositoryFactory.create(
-            repository_type=RepositoryType.SQLITE,
+            repository_type=RepositoryType.ORM,
             user_id="test_user",
             db_path=str(db_path)
         )
         assert repo2 is not None
         assert isinstance(repo2, ProjectRepository)
-        print("✅ SQLite repository creation works")
+        print("✅ ORM repository creation works")
     
     # Test configuration-based creation
     config = RepositoryConfig(
-        repository_type="sqlite",
+        repository_type="orm",
         user_id="config_user",
         db_path=":memory:"
     )
@@ -79,7 +118,7 @@ def test_repository_factory():
     
     repo5 = get_sqlite_repository(user_id="convenience_user", db_path=":memory:")
     assert repo5 is not None
-    print("✅ SQLite repository getter works")
+    print("✅ ORM repository getter works")
     
     print("🎉 Repository Factory tests passed!")
 
@@ -205,15 +244,23 @@ async def test_multi_user_support():
         user1_db = Path(temp_dir) / "user1.db"
         user2_db = Path(temp_dir) / "user2.db"
         
-        # Initialize both databases
-        initialize_database(str(user1_db))
-        initialize_database(str(user2_db))
+        # Initialize both databases with global context
+        _initialize_global_context(str(user1_db))
+        _initialize_global_context(str(user2_db))
+        
+        # Clear repository cache to avoid cross-contamination
+        from fastmcp.task_management.infrastructure.repositories.project_repository_factory import ProjectRepositoryFactory
+        ProjectRepositoryFactory.clear_cache()
         
         factory = create_project_service_factory()
         user1_service = factory.create_sqlite_service(
             user_id="user1",
             db_path=str(user1_db)
         )
+        
+        # Clear cache again to ensure user2 gets a separate repository
+        ProjectRepositoryFactory.clear_cache()
+        
         user2_service = factory.create_sqlite_service(
             user_id="user2", 
             db_path=str(user2_db)

@@ -12,7 +12,8 @@ from pathlib import Path
 from .database_config import get_db_config, Base
 from .models import (
     Project, ProjectTaskTree, Task, TaskSubtask, TaskAssignee,
-    TaskDependency, Agent, HierarchicalContext, Label, TaskLabel, Template
+    TaskDependency, Agent, HierarchicalContext, Label, TaskLabel, Template,
+    GlobalContext, ProjectContext, TaskContext, ContextDelegation, ContextInheritanceCache
 )
 
 logger = logging.getLogger(__name__)

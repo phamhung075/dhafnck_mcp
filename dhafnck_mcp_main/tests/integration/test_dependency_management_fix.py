@@ -125,6 +125,26 @@ class MockTaskRepository(TaskRepository):
             "archived": len(self.archived_tasks)
         }
     
+    def find_by_criteria(self, filters: Dict[str, Any], limit: Optional[int] = None) -> List[Task]:
+        """Find tasks by multiple criteria"""
+        results = self.find_all()
+        
+        # Apply filters
+        if 'status' in filters:
+            results = [t for t in results if t.status == filters['status']]
+        if 'priority' in filters:
+            results = [t for t in results if t.priority == filters['priority']]
+        if 'assignee' in filters:
+            results = [t for t in results if filters['assignee'] in (t.assignees or [])]
+        if 'label' in filters:
+            results = [t for t in results if filters['label'] in (t.labels or [])]
+        
+        # Apply limit if specified
+        if limit:
+            results = results[:limit]
+        
+        return results
+    
     def get_by_id(self, task_id: TaskId) -> Task:
         """Get task by ID - currently only checks active tasks (this is the bug!)"""
         return self.active_tasks.get(str(task_id))
@@ -237,9 +257,10 @@ class TestDependencyManagementFix:
         )
         
         # Then: Currently FAILS with "not found" error (this is the bug!)
-        result = self.add_dependency_use_case.execute(request)
-        assert result.success is False
-        error_msg = result.errors[0] if result.errors else ""
+        with pytest.raises(Exception) as exc_info:
+            result = self.add_dependency_use_case.execute(request)
+        
+        error_msg = str(exc_info.value)
         assert "not found" in error_msg.lower()
         
         print(f"✅ REPRODUCED BUG: {error_msg}")
@@ -265,9 +286,10 @@ class TestDependencyManagementFix:
         )
         
         # Then: Currently FAILS with "not found" error (this is the bug!)
-        result = self.add_dependency_use_case.execute(request)
-        assert result.success is False
-        error_msg = result.errors[0] if result.errors else ""
+        with pytest.raises(Exception) as exc_info:
+            result = self.add_dependency_use_case.execute(request)
+        
+        error_msg = str(exc_info.value)
         assert "not found" in error_msg.lower()
         
         print(f"✅ REPRODUCED BUG: {error_msg}")

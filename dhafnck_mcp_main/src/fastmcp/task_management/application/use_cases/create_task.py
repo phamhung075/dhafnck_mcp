@@ -69,7 +69,7 @@ class CreateTaskUseCase:
                             logging.warning(f"Skipping invalid dependency {dep_id}: {e}")
             
             # Create the task (with duplicate detection)
-            self._task_repository.create_new(task)
+            self._task_repository.save(task)
             
             # Handle domain events
             events = task.get_events()

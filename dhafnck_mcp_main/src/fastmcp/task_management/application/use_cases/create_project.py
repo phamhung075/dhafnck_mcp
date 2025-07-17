@@ -68,7 +68,7 @@ class CreateProjectUseCase:
             )
 
             # Persist via repository (allows duplicate detection etc.)
-            await self._project_repository.create_new(project)
+            await self._project_repository.save(project)
             
             # Auto-create project context for hierarchical context inheritance
             try:

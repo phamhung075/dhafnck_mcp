@@ -31,7 +31,7 @@ class AddSubtaskUseCase:
                 parent_task_id=task_id,
                 assignees=request.assignees
             )
-            self._subtask_repository.create_new(subtask)
+            self._subtask_repository.save(subtask)
             added_subtask = subtask.to_dict()
         else:
             # Fallback to existing task entity method for backward compatibility

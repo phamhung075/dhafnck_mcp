@@ -84,6 +84,7 @@ class DatabaseConfig:
             @event.listens_for(engine, "connect")
             def set_sqlite_pragma(dbapi_connection, connection_record):
                 cursor = dbapi_connection.cursor()
+                cursor.execute("PRAGMA foreign_keys=ON")  # Enable foreign key constraints
                 cursor.execute("PRAGMA journal_mode=WAL")  # Write-Ahead Logging
                 cursor.execute("PRAGMA synchronous=NORMAL")  # Faster writes
                 cursor.execute("PRAGMA cache_size=-64000")  # 64MB cache
