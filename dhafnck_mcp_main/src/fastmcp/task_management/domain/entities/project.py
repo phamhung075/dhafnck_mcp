@@ -66,7 +66,7 @@ class Project:
     active_work_sessions: Dict[str, 'WorkSession'] = field(default_factory=dict)
     resource_locks: Dict[str, str] = field(default_factory=dict)  # resource -> agent_id
     
-    async def create_git_branch(
+    async def create_git_branch_async(
         self, 
         git_branch_repository: 'GitBranchRepository',
         branch_name: str, 

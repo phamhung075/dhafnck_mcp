@@ -28,7 +28,7 @@ class GitBranchRepository(ABC):
         pass
     
     @abstractmethod
-    async def list_git_branches(self, project_id: str) -> Dict[str, Any]:
+    async def list_git_branchs(self, project_id: str) -> Dict[str, Any]:
         """List all git branches for a project"""
         pass
     

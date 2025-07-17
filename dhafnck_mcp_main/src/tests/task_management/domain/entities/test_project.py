@@ -139,10 +139,10 @@ class TestGitBranchManagement:
         mock_repo.create_branch = AsyncMock(return_value=mock_tree)
         
         # Create branch
-        git_branch = await project.create_git_branch(
-            git_branch_repository=mock_repo,
-            branch_name="feature-branch",
-            description="Test branch"
+        git_branch = await project.create_git_branch_async(
+            mock_repo,
+            "feature-branch",
+            "Test branch"
         )
         
         assert git_branch == mock_tree
@@ -167,9 +167,9 @@ class TestGitBranchManagement:
         mock_repo.find_by_name = AsyncMock(return_value=Mock())
         
         with pytest.raises(ValueError, match="already exists"):
-            await project.create_git_branch(
-                git_branch_repository=mock_repo,
-                branch_name="existing-branch"
+            await project.create_git_branch_async(
+                mock_repo,
+                "existing-branch"
             )
     
     def test_add_git_branch(self):
@@ -559,13 +559,13 @@ class TestOrchestrationStatus:
         
         assert status["project_id"] == project.id
         assert status["project_name"] == "Empty Project"
-        assert status["total_trees"] == 0
+        assert status["total_branches"] == 0
         assert status["registered_agents"] == 0
         assert status["active_assignments"] == 0
         assert status["active_sessions"] == 0
         assert status["cross_tree_dependencies"] == 0
         assert status["resource_locks"] == 0
-        assert status["trees"] == {}
+        assert status["branches"] == {}
         assert status["agents"] == {}
     
     def test_get_orchestration_status_with_data(self):
@@ -624,7 +624,7 @@ class TestOrchestrationStatus:
         
         assert status["project_id"] == project.id
         assert status["project_name"] == "Test Project"
-        assert status["total_trees"] == 2
+        assert status["total_branches"] == 2
         assert status["registered_agents"] == 2
         assert status["active_assignments"] == 2
         assert status["active_sessions"] == 1
@@ -632,16 +632,16 @@ class TestOrchestrationStatus:
         assert status["resource_locks"] == 1
         
         # Check trees info
-        assert len(status["trees"]) == 2
-        assert tree1.id in status["trees"]
-        assert status["trees"][tree1.id]["name"] == "Backend Work"
-        assert status["trees"][tree1.id]["assigned_agent"] == agent1.id
-        assert status["trees"][tree1.id]["total_tasks"] == 1
-        assert status["trees"][tree1.id]["completed_tasks"] == 0
-        assert status["trees"][tree1.id]["progress"] == 0.0
+        assert len(status["branches"]) == 2
+        assert tree1.id in status["branches"]
+        assert status["branches"][tree1.id]["name"] == "Backend Work"
+        assert status["branches"][tree1.id]["assigned_agent"] == agent1.id
+        assert status["branches"][tree1.id]["total_tasks"] == 1
+        assert status["branches"][tree1.id]["completed_tasks"] == 0
+        assert status["branches"][tree1.id]["progress"] == 0.0
         
-        assert status["trees"][tree2.id]["completed_tasks"] == 1
-        assert status["trees"][tree2.id]["progress"] == 100.0
+        assert status["branches"][tree2.id]["completed_tasks"] == 1
+        assert status["branches"][tree2.id]["progress"] == 100.0
         
         # Check agents info
         assert len(status["agents"]) == 2
@@ -926,7 +926,7 @@ class TestProjectIntegration:
         
         # Get final orchestration status
         final_status = project.get_orchestration_status()
-        assert final_status["total_trees"] == 3
+        assert final_status["total_branches"] == 3
         assert final_status["registered_agents"] == 3
         assert final_status["active_assignments"] == 3
         assert final_status["cross_tree_dependencies"] == 3

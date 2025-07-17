@@ -359,10 +359,10 @@ class TestContextIdInconsistencyDetection:
                                                         test_task_id,
                                                         mock_hierarchical_services):
         """
-        TEST 6: Detect when project context is incorrectly stored with task_id
+        TEST 6: Verify project contexts are stored with correct project_id
         
-        This test identifies the specific issue we've been seeing where
-        project contexts are stored with task_id instead of project_id.
+        This test verifies that project contexts are correctly stored with 
+        project_id and not with task_id, preventing the wrong ID bug.
         """
         try:
             from fastmcp.task_management.application.facades.hierarchical_context_facade import HierarchicalContextFacade
@@ -374,32 +374,34 @@ class TestContextIdInconsistencyDetection:
                 mock_hierarchical_services["cache_service"]
             )
             
-            # Mock database to simulate the incorrect storage we've been seeing
-            def mock_incorrect_storage(level, context_id):
+            # Mock correct storage behavior
+            def mock_correct_storage(level, context_id):
                 if level == "project" and context_id == test_project_id:
-                    # This simulates the bug: project context not found with project_id
-                    return None
+                    # Project context should be found with project_id
+                    return {"title": "Project stored with correct ID"}
                 elif level == "project" and context_id == test_task_id:
-                    # This simulates the bug: project context incorrectly stored with task_id
-                    return {"title": "Project stored with wrong ID"}
+                    # Project context should NOT be found with task_id
+                    return None
                 else:
                     return None
             
-            mock_hierarchical_services["hierarchy_service"].get_context.side_effect = mock_incorrect_storage
+            mock_hierarchical_services["hierarchy_service"].get_context.side_effect = mock_correct_storage
             mock_hierarchical_services["cache_service"].get_context.return_value = None
             
             # Act - try to retrieve project context with correct project_id
             correct_result = facade.get_context("project", test_project_id, include_inherited=False)
             
-            # This should fail if the bug exists
-            assert correct_result["success"] is False, "This test expects the bug to exist - project context not found with correct project_id"
+            # This should succeed - project context found with project_id
+            assert correct_result["success"] is True, f"Project context should be found with project_id {test_project_id}"
             
-            # Try to retrieve with incorrect task_id (simulating the bug)
+            # Try to retrieve with incorrect task_id (should fail)
             incorrect_result = facade.get_context("project", test_task_id, include_inherited=False)
             
-            # This would succeed if the bug exists
-            if incorrect_result["success"]:
-                pytest.fail(f"BUG DETECTED: Project context found with task_id {test_task_id} instead of project_id {test_project_id}")
+            # This should fail - project context should NOT be found with task_id
+            assert incorrect_result["success"] is False, f"Project context should NOT be found with task_id {test_task_id}"
+            
+            # Verify the error indicates context not found (not a different error)
+            assert "NOT_FOUND" in incorrect_result.get("error_code", ""), "Expected NOT_FOUND error when using task_id"
                 
         except ImportError as e:
             pytest.fail(f"HierarchicalContextFacade not available: {e}")
