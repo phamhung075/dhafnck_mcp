@@ -10,18 +10,25 @@ from ...infrastructure.repositories.project_repository_factory import GlobalRepo
 class GitBranchService:
     def __init__(self, project_repo: Optional[ProjectRepository] = None):
         self._project_repo = project_repo or GlobalRepositoryManager.get_default()
+        # Initialize git branch repository
+        from ...infrastructure.repositories.orm.git_branch_repository import ORMGitBranchRepository
+        self._git_branch_repo = ORMGitBranchRepository()
 
     async def create_git_branch(self, project_id: str, branch_name: str, description: str = "") -> Dict[str, Any]:
         project = await self._project_repo.find_by_id(project_id)
         if not project:
             return {"success": False, "error": f"Project {project_id} not found"}
             
-        if branch_name in project.git_branchs:
+        # Check if branch already exists using the repository
+        existing_branch = await self._git_branch_repo.find_by_name(project_id, branch_name)
+        if existing_branch:
             return {"success": False, "error": f"Git branch '{branch_name}' already exists in project {project_id}"}
 
-        git_branch = GitBranch.create(name=branch_name, description=description, project_id=project_id)
-        project.add_git_branch(git_branch)
+        # Create branch using the repository which properly persists it
+        git_branch = await self._git_branch_repo.create_branch(project_id, branch_name, description)
         
+        # Also add to project entity for consistency
+        project.add_git_branch(git_branch)
         await self._project_repo.update(project)
         
         # Return format expected by integration test

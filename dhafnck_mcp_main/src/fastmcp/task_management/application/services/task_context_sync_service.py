@@ -57,6 +57,19 @@ class TaskContextSyncService:
             # Create or update task context in hierarchical system
             task_id_str = str(domain_task.id.value if hasattr(domain_task.id, 'value') else domain_task.id)
             
+            # If project_id not provided, try to get it from the task's git_branch
+            if not project_id and hasattr(domain_task, 'git_branch_id'):
+                # Try to get project_id from git branch repository
+                from ...infrastructure.repositories.orm.git_branch_repository import ORMGitBranchRepository
+                git_branch_repo = ORMGitBranchRepository()
+                git_branch = git_branch_repo.find_by_id(domain_task.git_branch_id)
+                if git_branch and hasattr(git_branch, 'project_id'):
+                    project_id = git_branch.project_id
+            
+            # Ensure we have a project_id
+            if not project_id:
+                project_id = "default_project"
+            
             # Try to get existing context first
             context_result = self._hierarchical_context_service.get_context(
                 level="task",
@@ -74,11 +87,16 @@ class TaskContextSyncService:
                     "labels": domain_task.labels,
                     "estimated_effort": domain_task.estimated_effort,
                     "due_date": domain_task.due_date.isoformat() if domain_task.due_date else None
-                }
+                },
+                # Add parent references for proper hierarchy
+                "parent_project_id": project_id if project_id else "default_project",
+                "parent_project_context_id": project_id if project_id else "default_project"
             }
             
             if not context_result:
                 # Create new context
+                logger.info("[TaskContextSyncService] Creating new context for task %s with project_id=%s", task_id_str, project_id)
+                logger.debug("[TaskContextSyncService] Context data: %s", task_data)
                 self._hierarchical_context_service.create_context(
                     level="task",
                     context_id=task_id_str,
@@ -103,5 +121,5 @@ class TaskContextSyncService:
             )
             return task_response
         except Exception as exc:
-            logger.error("[TaskContextSyncService] Failed to sync context for task %s: %s", task_id, exc)
+            logger.error("[TaskContextSyncService] Failed to sync context for task %s: %s", task_id, exc, exc_info=True)
             return None 

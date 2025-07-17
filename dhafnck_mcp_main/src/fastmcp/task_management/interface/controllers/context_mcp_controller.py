@@ -806,7 +806,7 @@ class ContextMCPController:
     async def _handle_get_health(self) -> Dict[str, Any]:
         """Handle system health check"""
         try:
-            health = self.hierarchy_service.get_system_health()
+            health = await self.hierarchy_service.get_system_health()
             
             return StandardResponseFormatter.create_success_response(
                 operation="get_system_health",

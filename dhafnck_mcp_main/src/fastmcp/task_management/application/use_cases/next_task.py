@@ -199,8 +199,8 @@ class NextTaskUseCase:
                                             "task_data": {
                                                 "title": task.title,
                                                 "description": task.description,
-                                                "status": task.status.value if task.status else "todo",
-                                                "priority": task.priority.value if task.priority else "medium",
+                                                "status": task.status.value if task.status and hasattr(task.status, 'value') else str(task.status) if task.status else "todo",
+                                                "priority": task.priority.value if task.priority and hasattr(task.priority, 'value') else str(task.priority) if task.priority else "medium",
                                                 "assignees": task.assignees or [],
                                                 "labels": task.labels or []
                                             }
@@ -291,7 +291,7 @@ class NextTaskUseCase:
         if labels:
             # Null safety: check if labels exists and is a proper list/iterable
             filtered_tasks = [task for task in filtered_tasks 
-                            if task.labels and isinstance(task.labels, (list, tuple)) and any(label in task.labels for label in labels)]
+                            if task.labels is not None and isinstance(task.labels, (list, tuple)) and any(label in task.labels for label in labels)]
         
         return filtered_tasks
     
@@ -317,11 +317,11 @@ class NextTaskUseCase:
             """Safe sort key with null checks"""
             try:
                 # Safe priority access
-                priority_val = task.priority.value if task.priority else 'medium'
+                priority_val = task.priority.value if task.priority and hasattr(task.priority, 'value') else str(task.priority) if task.priority else 'medium'
                 priority_score = priority_order.get(priority_val, 5)
                 
                 # Safe status access
-                status_val = task.status.value if task.status else 'todo'
+                status_val = task.status.value if task.status and hasattr(task.status, 'value') else str(task.status) if task.status else 'todo'
                 status_score = status_order.get(status_val, 2)
                 
                 return (priority_score, status_score)
@@ -558,7 +558,7 @@ class NextTaskUseCase:
                         else:
                             context_data = context
                         context_status = context_data.get('metadata', {}).get('status')
-                        task_status = task.status.value
+                        task_status = task.status.value if task.status and hasattr(task.status, 'value') else str(task.status) if task.status else 'todo'
                         
                         # Check for status mismatch
                         if context_status and context_status != task_status:

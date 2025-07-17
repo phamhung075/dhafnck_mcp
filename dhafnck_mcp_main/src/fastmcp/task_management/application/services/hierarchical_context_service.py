@@ -675,7 +675,7 @@ class HierarchicalContextService:
     # HEALTH AND MAINTENANCE
     # ===============================================
     
-    def get_system_health(self) -> Dict[str, Any]:
+    async def get_system_health(self) -> Dict[str, Any]:
         """Get health status of the hierarchical context system"""
         try:
             health = {
@@ -685,13 +685,33 @@ class HierarchicalContextService:
             }
             
             # Check repository health
-            health["components"]["repository"] = self.repository.health_check() if hasattr(self.repository, 'health_check') else {"status": "ok"}
+            health["components"]["repository"] = await self.repository.health_check() if hasattr(self.repository, 'health_check') else {"status": "ok"}
             
             # Check cache health
-            health["components"]["cache"] = self.cache_service.get_cache_stats() if hasattr(self.cache_service, 'get_cache_stats') else {"status": "ok"}
+            if hasattr(self.cache_service, 'get_cache_stats'):
+                try:
+                    cache_stats = self.cache_service.get_cache_stats()
+                    if asyncio.iscoroutine(cache_stats):
+                        health["components"]["cache"] = await cache_stats
+                    else:
+                        health["components"]["cache"] = cache_stats
+                except Exception as e:
+                    health["components"]["cache"] = {"status": "error", "error": str(e)}
+            else:
+                health["components"]["cache"] = {"status": "ok"}
             
             # Check delegation queue
-            health["components"]["delegation"] = self.delegation_service.get_queue_status() if hasattr(self.delegation_service, 'get_queue_status') else {"status": "ok"}
+            if hasattr(self.delegation_service, 'get_queue_status'):
+                try:
+                    queue_status = self.delegation_service.get_queue_status()
+                    if asyncio.iscoroutine(queue_status):
+                        health["components"]["delegation"] = await queue_status
+                    else:
+                        health["components"]["delegation"] = queue_status
+                except Exception as e:
+                    health["components"]["delegation"] = {"status": "error", "error": str(e)}
+            else:
+                health["components"]["delegation"] = {"status": "ok"}
             
             # Overall status based on components
             if any(comp.get("status") == "error" for comp in health["components"].values()):

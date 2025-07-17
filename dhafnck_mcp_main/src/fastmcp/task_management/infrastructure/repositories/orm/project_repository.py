@@ -38,33 +38,46 @@ class ORMProjectRepository(BaseORMRepository[Project], ProjectRepository):
     
     def _model_to_entity(self, project: Project) -> ProjectEntity:
         """Convert SQLAlchemy model to domain entity"""
-        return ProjectEntity(
+        entity = ProjectEntity(
             id=project.id,
             name=project.name,
             description=project.description,
             created_at=project.created_at,
             updated_at=project.updated_at
         )
+        
+        # Load git branches from the database model
+        if hasattr(project, 'git_branchs') and project.git_branchs:
+            from ....domain.entities.git_branch import GitBranch
+            for db_branch in project.git_branchs:
+                git_branch = GitBranch(
+                    id=db_branch.id,
+                    name=db_branch.name,
+                    description=db_branch.description,
+                    project_id=db_branch.project_id,
+                    created_at=db_branch.created_at,
+                    updated_at=db_branch.updated_at
+                )
+                entity.git_branchs[db_branch.id] = git_branch
+        
+        return entity
     
     async def save(self, project: ProjectEntity) -> None:
         """Save a project to the repository"""
         try:
-            with self.transaction():
-                existing = self.get_by_id(project.id)
+            with self.get_db_session() as session:
+                existing = session.query(Project).filter(Project.id == project.id).first()
                 
                 if existing:
                     # Update existing project
-                    self.update(
-                        project.id,
-                        name=project.name,
-                        description=project.description,
-                        updated_at=datetime.now(),
-                        status=getattr(project, 'status', 'active'),
-                        metadata=getattr(project, 'metadata', {})
-                    )
+                    existing.name = project.name
+                    existing.description = project.description
+                    existing.updated_at = datetime.now()
+                    existing.status = getattr(project, 'status', 'active')
+                    existing.metadata = getattr(project, 'metadata', {})
                 else:
                     # Create new project
-                    self.create(
+                    new_project = Project(
                         id=project.id,
                         name=project.name,
                         description=project.description,
@@ -74,6 +87,37 @@ class ORMProjectRepository(BaseORMRepository[Project], ProjectRepository):
                         status="active",
                         metadata={}
                     )
+                    session.add(new_project)
+                    session.flush()  # Flush to get the project ID available for branches
+                
+                # Save git branches from the domain entity
+                if hasattr(project, 'git_branchs') and project.git_branchs:
+                    for branch_id, branch in project.git_branchs.items():
+                        # Check if branch already exists
+                        existing_branch = session.query(ProjectGitBranch).filter(
+                            ProjectGitBranch.id == branch_id,
+                            ProjectGitBranch.project_id == project.id
+                        ).first()
+                        
+                        if not existing_branch:
+                            # Create new branch
+                            new_branch = ProjectGitBranch(
+                                id=branch_id,
+                                project_id=project.id,
+                                name=branch.name,
+                                description=branch.description,
+                                created_at=branch.created_at,
+                                updated_at=branch.updated_at,
+                                assigned_agent_id=getattr(branch, 'assigned_agent_id', None),
+                                priority=str(getattr(branch, 'priority', 'medium')),
+                                status=str(getattr(branch, 'status', 'todo')),
+                                task_count=getattr(branch, '_task_count', 0),
+                                completed_task_count=getattr(branch, '_completed_task_count', 0)
+                            )
+                            session.add(new_branch)
+                
+                session.commit()
+                
         except Exception as e:
             logger.error(f"Failed to save project: {e}")
             raise DatabaseException(

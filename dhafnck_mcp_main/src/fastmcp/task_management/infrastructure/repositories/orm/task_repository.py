@@ -82,15 +82,24 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
                 completed_at=subtask.completed_at
             ))
         
+        # Convert status and priority to proper value objects
+        from ....domain.value_objects.task_status import TaskStatus
+        from ....domain.value_objects.priority import Priority
+        from ....domain.value_objects.task_id import TaskId
+        
+        status_obj = TaskStatus(task.status) if task.status else None
+        priority_obj = Priority(task.priority) if task.priority else None
+        task_id_obj = TaskId(task.id) if task.id else None
+        
         return TaskEntity(
-            id=task.id,
+            id=task_id_obj,
             title=task.title,
             description=task.description,
             git_branch_id=task.git_branch_id,
-            status=task.status,
-            priority=task.priority,
-            assignee_ids=assignee_ids,
-            label_names=label_names,
+            status=status_obj,
+            priority=priority_obj,
+            assignees=assignee_ids,
+            labels=label_names,
             details=task.details,
             estimated_effort=task.estimated_effort,
             due_date=task.due_date,
@@ -214,7 +223,7 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
     
     def delete_task(self, task_id: str) -> bool:
         """Delete a task"""
-        return self.delete(task_id)
+        return super().delete(task_id)
     
     def list_tasks(self, status: Optional[str] = None, priority: Optional[str] = None,
                   assignee_id: Optional[str] = None, limit: int = 100,
@@ -326,9 +335,42 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
     def save(self, task: TaskEntity) -> bool:
         """Save a task entity"""
         try:
-            # Convert entity to model and save
-            # This is a simplified implementation
-            return True
+            with self.get_db_session() as session:
+                # Check if task already exists
+                existing = session.query(Task).filter(Task.id == str(task.id)).first()
+                
+                if existing:
+                    # Update existing task
+                    existing.title = task.title
+                    existing.description = task.description
+                    existing.git_branch_id = task.git_branch_id
+                    existing.status = str(task.status)
+                    existing.priority = str(task.priority)
+                    existing.details = task.details
+                    existing.estimated_effort = task.estimated_effort
+                    existing.due_date = task.due_date
+                    existing.updated_at = task.updated_at
+                    existing.context_id = task.context_id
+                else:
+                    # Create new task
+                    new_task = Task(
+                        id=str(task.id),
+                        title=task.title,
+                        description=task.description,
+                        git_branch_id=task.git_branch_id,
+                        status=str(task.status),
+                        priority=str(task.priority),
+                        details=task.details,
+                        estimated_effort=task.estimated_effort,
+                        due_date=task.due_date,
+                        created_at=task.created_at,
+                        updated_at=task.updated_at,
+                        context_id=task.context_id
+                    )
+                    session.add(new_task)
+                
+                session.commit()
+                return True
         except Exception as e:
             logger.error(f"Failed to save task: {e}")
             return False

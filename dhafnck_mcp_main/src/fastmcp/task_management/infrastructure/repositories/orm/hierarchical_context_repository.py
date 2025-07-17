@@ -210,6 +210,25 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
         """Create project context"""
         try:
             with self.get_db_session() as session:
+                # Ensure global context exists
+                global_id = data.get("parent_global_id", "global_singleton")
+                global_context = session.get(GlobalContext, global_id)
+                if not global_context:
+                    logger.info(f"Global context {global_id} not found, creating it")
+                    # Create default global context
+                    global_context = GlobalContext(
+                        id=global_id,
+                        organization_id="default_org",
+                        autonomous_rules={},
+                        security_policies={},
+                        coding_standards={},
+                        workflow_templates={},
+                        delegation_rules={},
+                        version=1
+                    )
+                    session.add(global_context)
+                    session.commit()
+                
                 # Check if context already exists
                 existing = session.get(ProjectContext, project_id)
                 if existing:
@@ -228,7 +247,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
                     # Create new context
                     context = ProjectContext(
                         project_id=project_id,
-                        parent_global_id=data.get("parent_global_id", "global_singleton"),
+                        parent_global_id=global_id,
                         team_preferences=data.get("team_preferences", {}),
                         technology_stack=data.get("technology_stack", {}),
                         project_workflow=data.get("project_workflow", {}),
@@ -359,6 +378,32 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
                 # Extract project ID from data or use default
                 project_id = data.get("parent_project_id", "default_project")
                 project_context_id = data.get("parent_project_context_id", project_id)
+                
+                # Ensure project exists in projects table (required for foreign key)
+                from ...database.models import Project
+                project = session.get(Project, project_id)
+                if not project:
+                    logger.info(f"Project {project_id} not found, creating it")
+                    # Create a minimal project record
+                    project = Project(
+                        id=project_id,
+                        name=project_id,  # Use ID as name for default projects
+                        description="Auto-created project for task context"
+                    )
+                    session.add(project)
+                    session.commit()
+                
+                # Ensure project context exists before creating task context
+                project_context = session.get(ProjectContext, project_context_id)
+                if not project_context:
+                    logger.info(f"Project context {project_context_id} not found, creating it")
+                    # Create a default project context if it doesn't exist
+                    self.create_project_context(project_context_id, {
+                        "team_preferences": {},
+                        "technology_stack": {},
+                        "project_workflow": {},
+                        "local_standards": {}
+                    })
                 
                 # Check if context already exists
                 existing = session.get(TaskContext, task_id)
