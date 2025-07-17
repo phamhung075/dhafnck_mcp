@@ -224,6 +224,17 @@ def create_dhafnck_mcp_server() -> FastMCP:
     logger.info("Initializing DhafnckMCP server with consolidated tools and authentication...")
     logger.info(f"Log level: {log_level}")
     
+    # Initialize database before server startup
+    try:
+        from fastmcp.task_management.infrastructure.database.init_database import init_database
+        logger.info("Initializing database...")
+        init_database()
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize database: {e}")
+        # Don't exit - let the server start and handle the error gracefully
+        logger.warning("Server will continue with potential database issues")
+    
     # Check if authentication is enabled
     auth_enabled = os.environ.get("DHAFNCK_AUTH_ENABLED", "true").lower() == "true"
     

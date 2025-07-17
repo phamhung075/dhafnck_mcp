@@ -110,23 +110,7 @@ def reset_initialization_cache():
     _initialized_dbs = set()
 
 
-# Backward compatibility function
-def get_schema_path() -> str:
-    """
-    Get the path to the schema file.
-    
-    This function is kept for backward compatibility but is no longer used
-    when using SQLAlchemy ORM.
-    """
-    project_root = _find_project_root()
-    schema_path = os.path.join(project_root, "dhafnck_mcp_main", "database", "schema", "00_base_schema.sql")
-    
-    if not os.path.exists(schema_path):
-        # Try alternative path
-        alt_path = os.path.join(project_root, "database", "schema", "00_base_schema.sql")
-        if os.path.exists(alt_path):
-            schema_path = alt_path
-        else:
-            raise FileNotFoundError(f"Schema file not found at {schema_path} or {alt_path}")
-    
-    return schema_path
+# DEPRECATED: Removed schema path function as SQL schemas are no longer used with ORM
+# The get_schema_path() function has been removed as it's no longer needed
+# after migration to SQLAlchemy ORM. All database initialization now uses
+# ORM models defined in models.py

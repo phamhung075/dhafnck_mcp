@@ -130,8 +130,8 @@ env = [
     'D:FASTMCP_LOG_LEVEL=DEBUG',
     'D:FASTMCP_ENABLE_RICH_TRACEBACKS=0',
 ]
-testpaths = ["tests", "src/**/task_management/**/__tests__"]
-norecursedirs = ["tests/manual"]
+testpaths = ["src/tests", "src/**/task_management/**/__tests__"]
+norecursedirs = ["src/tests/manual"]
 pythonpath = ["src"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]

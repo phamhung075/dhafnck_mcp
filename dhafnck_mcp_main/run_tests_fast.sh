@@ -25,12 +25,12 @@ case "$1" in
     
     "value-objects")
         echo "Running value object tests (fastest)..."
-        time_it pytest tests/**/value_objects/ -q --tb=short --no-cov
+        time_it pytest src/tests/**/value_objects/ -q --tb=short --no-cov
         ;;
     
     "entities")
         echo "Running entity tests..."
-        time_it pytest tests/**/entities/ -q --tb=short --no-cov
+        time_it pytest src/tests/**/entities/ -q --tb=short --no-cov
         ;;
     
     "integration")

@@ -4,10 +4,10 @@
 pytest -m unit -q --tb=no
 
 # All TaskId tests (now super fast)  
-pytest tests/unit/task_management/domain/value_objects/test_task_id.py -q
+pytest src/tests/unit/task_management/domain/value_objects/test_task_id.py -q
 
 # All SubtaskId tests (now super fast)
-pytest tests/task_management/domain/value_objects/test_subtask_id.py -q
+pytest src/tests/task_management/domain/value_objects/test_subtask_id.py -q
 
 # Integration tests (still need database but can run in parallel)
 pytest -m integration -n auto --tb=short
