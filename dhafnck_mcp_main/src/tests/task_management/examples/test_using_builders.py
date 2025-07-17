@@ -89,8 +89,8 @@ class TestBuilderExamples:
         
         assert project.name == "E-commerce Platform"
         assert len(project.agents) == 2
-        assert "feature/auth" in project.git_branches
-        assert "feature/cart" in project.git_branches
+        assert "feature/auth" in project.git_branchs
+        assert "feature/cart" in project.git_branchs
     
     def test_subtask_hierarchy(self):
         """Example: Create subtasks for a parent task."""

@@ -30,7 +30,7 @@ class TestProjectApplicationServicePattern:
             '_get_project_use_case',
             '_list_projects_use_case',
             '_update_project_use_case',
-            '_create_task_tree_use_case',
+            '_create_git_branch_use_case',
             '_project_health_check_use_case'
         ]
         
@@ -41,7 +41,7 @@ class TestProjectApplicationServicePattern:
         service._get_project_use_case = Mock()
         service._list_projects_use_case = Mock()
         service._update_project_use_case = Mock()
-        service._create_task_tree_use_case = Mock()
+        service._create_git_branch_use_case = Mock()
         service._project_health_check_use_case = Mock()
         
         # Verify pattern
@@ -138,7 +138,7 @@ class TestProjectApplicationServicePattern:
         mock_repo.update.assert_called_once_with(mock_project)
     
     @pytest.mark.asyncio
-    async def test_task_tree_assignment_pattern(self):
+    async def test_git_branch_assignment_pattern(self):
         """Test the pattern for assigning agents to task trees."""
         # Assignment should:
         # 1. Find project
@@ -185,7 +185,7 @@ class TestProjectApplicationServicePattern:
         mock_repo = AsyncMock()
         mock_project = Mock()
         mock_project.id = "project-1"
-        mock_project.task_trees = {"main": Mock()}
+        mock_project.git_branchs = {"main": Mock()}
         mock_project.registered_agents = {}
         mock_project.agent_assignments = {"feature": "agent-1"}  # Obsolete
         mock_project.active_work_sessions = {}
@@ -199,7 +199,7 @@ class TestProjectApplicationServicePattern:
             # Remove assignments to non-existent trees
             assignments_to_remove = []
             for tree_name, agent_id in project.agent_assignments.items():
-                if tree_name not in project.task_trees:
+                if tree_name not in project.git_branchs:
                     assignments_to_remove.append(tree_name)
             
             for tree_name in assignments_to_remove:
@@ -264,7 +264,7 @@ class TestProjectServiceBehavior:
             async def create_project(self, project_id, name, description=""):
                 return await create_use_case.execute(project_id, name, description)
             
-            async def create_task_tree(self, project_id, git_branch_name, tree_name, tree_description=""):
+            async def create_git_branch(self, project_id, git_branch_name, tree_name, tree_description=""):
                 return await tree_use_case.execute(project_id, git_branch_name, tree_name, tree_description)
             
             async def project_health_check(self, project_id=None):
@@ -278,7 +278,7 @@ class TestProjectServiceBehavior:
         assert result["success"] is True
         
         # 2. Create task tree
-        result = await service.create_task_tree("project-1", "main", "Main Branch")
+        result = await service.create_git_branch("project-1", "main", "Main Branch")
         assert result["success"] is True
         
         # 3. Health check
@@ -399,7 +399,7 @@ class TestProjectServiceBehavior:
         for i in range(3):
             project = Mock()
             project.id = f"project-{i}"
-            project.task_trees = {}
+            project.git_branchs = {}
             project.registered_agents = {}
             project.agent_assignments = {"obsolete": "agent-x"} if i == 1 else {}
             project.active_work_sessions = {}
@@ -420,7 +420,7 @@ class TestProjectServiceBehavior:
                 # Check for obsolete assignments
                 if project.agent_assignments:
                     for tree in list(project.agent_assignments.keys()):
-                        if tree not in project.task_trees:
+                        if tree not in project.git_branchs:
                             del project.agent_assignments[tree]
                             cleaned_items.append(f"Removed assignment to '{tree}'")
                 

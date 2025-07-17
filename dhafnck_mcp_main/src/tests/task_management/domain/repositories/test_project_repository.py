@@ -74,7 +74,7 @@ class MockProjectRepository(ProjectRepository):
         # For simplicity, we'll check if any task tree has the given status
         results = []
         for project in self.projects.values():
-            for tree in project.task_trees.values():
+            for tree in project.git_branchs.values():
                 if hasattr(tree, 'status') and tree.status.value == status:
                     results.append(project)
                     break
@@ -83,13 +83,13 @@ class MockProjectRepository(ProjectRepository):
     async def get_project_health_summary(self) -> Dict[str, Any]:
         """Get health summary of all projects."""
         total_projects = len(self.projects)
-        total_trees = sum(len(p.task_trees) for p in self.projects.values())
+        total_trees = sum(len(p.git_branchs) for p in self.projects.values())
         total_agents = sum(len(p.registered_agents) for p in self.projects.values())
         total_sessions = sum(len(p.active_work_sessions) for p in self.projects.values())
         
         return {
             "total_projects": total_projects,
-            "total_task_trees": total_trees,
+            "total_git_branchs": total_trees,
             "total_registered_agents": total_agents,
             "active_work_sessions": total_sessions,
             "projects_with_cross_tree_deps": sum(
@@ -211,10 +211,10 @@ class TestProjectRepositoryFindOperations:
         project3.register_agent(agent2)
         
         # Add task trees to projects
-        tree1 = project1.create_task_tree("feature-auth", "Authentication Feature")
-        tree2 = project1.create_task_tree("feature-ui", "UI Improvements")
-        tree3 = project2.create_task_tree("mobile-login", "Mobile Login")
-        tree4 = project3.create_task_tree("api-v2", "API Version 2")
+        tree1 = project1.create_git_branch("feature-auth", "Authentication Feature")
+        tree2 = project1.create_git_branch("feature-ui", "UI Improvements")
+        tree3 = project2.create_git_branch("mobile-login", "Mobile Login")
+        tree4 = project3.create_git_branch("api-v2", "API Version 2")
         
         # Assign agents to trees
         project1.assign_agent_to_tree(agent1.id, tree1.id)
@@ -311,9 +311,9 @@ class TestProjectRepositoryFindOperations:
         repo, data = populated_repo
         
         # Update some task tree statuses for testing
-        for tree in data["project1"].task_trees.values():
+        for tree in data["project1"].git_branchs.values():
             tree.status = TaskStatus.in_progress()
-        for tree in data["project2"].task_trees.values():
+        for tree in data["project2"].git_branchs.values():
             tree.status = TaskStatus.todo()
         
         # Re-save projects with updated statuses
@@ -434,8 +434,8 @@ class TestProjectRepositoryUtilityOperations:
         
         # Create projects with various configurations
         project1 = Project.create(name="Project 1", description="Test")
-        tree1 = project1.create_task_tree("tree1", "Tree 1")
-        tree2 = project1.create_task_tree("tree2", "Tree 2")
+        tree1 = project1.create_git_branch("tree1", "Tree 1")
+        tree2 = project1.create_git_branch("tree2", "Tree 2")
         
         agent1 = Agent(id="agent-1", name="Agent 1", capabilities={AgentCapability.BACKEND_DEVELOPMENT})
         agent2 = Agent(id="agent-2", name="Agent 2", capabilities={AgentCapability.TESTING})
@@ -458,7 +458,7 @@ class TestProjectRepositoryUtilityOperations:
         project1.add_cross_tree_dependency(task2.id.value, task1.id.value)
         
         project2 = Project.create(name="Project 2", description="Test")
-        tree3 = project2.create_task_tree("tree3", "Tree 3")
+        tree3 = project2.create_git_branch("tree3", "Tree 3")
         
         await repo.save(project1)
         await repo.save(project2)
@@ -467,7 +467,7 @@ class TestProjectRepositoryUtilityOperations:
         summary = await repo.get_project_health_summary()
         
         assert summary["total_projects"] == 2
-        assert summary["total_task_trees"] == 3
+        assert summary["total_git_branchs"] == 3
         assert summary["total_registered_agents"] == 2
         assert summary["active_work_sessions"] == 0
         assert summary["projects_with_cross_tree_deps"] == 1
@@ -479,7 +479,7 @@ class TestProjectRepositoryUtilityOperations:
         
         # Create project with agent assignment
         project = Project.create(name="Test Project", description="Test")
-        tree = project.create_task_tree("feature", "Feature Branch")
+        tree = project.create_git_branch("feature", "Feature Branch")
         agent = Agent(id="test-agent", name="Test Agent", capabilities={AgentCapability.BACKEND_DEVELOPMENT})
         project.register_agent(agent)
         project.assign_agent_to_tree(agent.id, tree.id)
@@ -539,8 +539,8 @@ class TestProjectRepositoryIntegration:
         saved_project.register_agent(dev_agent)
         saved_project.register_agent(ops_agent)
         
-        feature_tree = saved_project.create_task_tree("feature-payment", "Payment Feature")
-        infra_tree = saved_project.create_task_tree("infra-setup", "Infrastructure Setup")
+        feature_tree = saved_project.create_git_branch("feature-payment", "Payment Feature")
+        infra_tree = saved_project.create_git_branch("infra-setup", "Infrastructure Setup")
         
         saved_project.assign_agent_to_tree(dev_agent.id, feature_tree.id)
         saved_project.assign_agent_to_tree(ops_agent.id, infra_tree.id)
@@ -551,7 +551,7 @@ class TestProjectRepositoryIntegration:
         # Verify updates
         updated_project = await repo.find_by_id(project_id)
         assert len(updated_project.registered_agents) == 2
-        assert len(updated_project.task_trees) == 2
+        assert len(updated_project.git_branchs) == 2
         assert len(updated_project.agent_assignments) == 2
         
         # Search for project
@@ -565,7 +565,7 @@ class TestProjectRepositoryIntegration:
         # Get health summary
         summary = await repo.get_project_health_summary()
         assert summary["total_projects"] == 1
-        assert summary["total_task_trees"] == 2
+        assert summary["total_git_branchs"] == 2
         assert summary["total_registered_agents"] == 2
         
         # Unassign an agent

@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Dict, List, Tuple
 
 def verify_and_fix_task_counts(db_path: str) -> bool:
-    """Verify and fix task counts in project_task_trees table"""
+    """Verify and fix task counts in project_git_branches table"""
     print(f"🔍 Verifying task counts in database: {db_path}")
     
     try:
@@ -26,8 +26,8 @@ def verify_and_fix_task_counts(db_path: str) -> bool:
         cursor.execute('SELECT git_branch_id, COUNT(*) as completed_count FROM tasks WHERE status = "done" GROUP BY git_branch_id')
         completed_counts = dict(cursor.fetchall())
         
-        # Get current counts in project_task_trees
-        cursor.execute('SELECT id, name, task_count, completed_task_count FROM project_task_trees')
+        # Get current counts in project_git_branches
+        cursor.execute('SELECT id, name, task_count, completed_task_count FROM project_git_branches')
         branches = cursor.fetchall()
         
         fixes_needed = []
@@ -57,7 +57,7 @@ def verify_and_fix_task_counts(db_path: str) -> bool:
             print(f"   🔧 Applying fixes...")
             for fix in fixes_needed:
                 cursor.execute(
-                    'UPDATE project_task_trees SET task_count = ?, completed_task_count = ? WHERE id = ?',
+                    'UPDATE project_git_branches SET task_count = ?, completed_task_count = ? WHERE id = ?',
                     (fix['actual_count'], fix['actual_completed'], fix['branch_id'])
                 )
             
@@ -148,7 +148,7 @@ def verify_table_relationships(db_path: str) -> bool:
         # Check orphaned tasks
         cursor.execute('''
             SELECT COUNT(*) FROM tasks 
-            WHERE git_branch_id NOT IN (SELECT id FROM project_task_trees)
+            WHERE git_branch_id NOT IN (SELECT id FROM project_git_branches)
         ''')
         orphaned_tasks = cursor.fetchone()[0]
         
@@ -191,7 +191,7 @@ def generate_database_summary(db_path: str) -> Dict:
         summary['tables'] = len(tables)
         
         # Count records in main tables
-        for table in ['tasks', 'project_task_trees', 'task_subtasks', 'projects']:
+        for table in ['tasks', 'project_git_branches', 'task_subtasks', 'projects']:
             if table in tables:
                 cursor.execute(f'SELECT COUNT(*) FROM {table}')
                 summary[table] = cursor.fetchone()[0]
@@ -203,7 +203,7 @@ def generate_database_summary(db_path: str) -> Dict:
         # Branch task distribution
         cursor.execute('''
             SELECT ptt.name, COUNT(t.id) as task_count 
-            FROM project_task_trees ptt 
+            FROM project_git_branches ptt 
             LEFT JOIN tasks t ON ptt.id = t.git_branch_id 
             GROUP BY ptt.id, ptt.name
         ''')
@@ -255,7 +255,7 @@ def main():
         print(f"\n📊 DATABASE SUMMARY:")
         print(f"  Tables: {summary.get('tables', 0)}")
         print(f"  Projects: {summary.get('projects', 0)}")
-        print(f"  Branches: {summary.get('project_task_trees', 0)}")
+        print(f"  Branches: {summary.get('project_git_branches', 0)}")
         print(f"  Tasks: {summary.get('tasks', 0)}")
         print(f"  Subtasks: {summary.get('task_subtasks', 0)}")
         

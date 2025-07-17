@@ -9,7 +9,7 @@ import logging
 from datetime import datetime
 import uuid
 
-from ...domain.entities.task_tree import TaskTree
+from ...domain.entities.git_branch import GitBranch
 from ...infrastructure.repositories.git_branch_repository_factory import GitBranchRepositoryFactory
 from ...infrastructure.repositories.project_repository_factory import get_default_repository
 
@@ -85,7 +85,7 @@ class GitBranchApplicationService:
             logger.error(f"Error getting git branch by ID: {e}")
             return {"success": False, "error": str(e)}
     
-    async def list_git_branches(self, project_id: str) -> Dict[str, Any]:
+    async def list_git_branchs(self, project_id: str) -> Dict[str, Any]:
         """List all git branches for a project"""
         try:
             # Verify project exists
@@ -110,7 +110,7 @@ class GitBranchApplicationService:
             return {
                 "success": True,
                 "project_id": project_id,
-                "git_branches": branch_list,
+                "git_branchs": branch_list,
                 "count": len(branch_list)
             }
         except Exception as e:

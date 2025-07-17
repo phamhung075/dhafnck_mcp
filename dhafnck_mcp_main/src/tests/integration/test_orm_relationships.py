@@ -19,7 +19,7 @@ from sqlalchemy.orm import sessionmaker
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from fastmcp.task_management.infrastructure.database.models import (
-    Project, Agent, ProjectTaskTree, Task, TaskSubtask, TaskLabel, Label,
+    Project, Agent, ProjectGitBranch, Task, TaskSubtask, TaskLabel, Label,
     GlobalContext, ProjectContext, TaskContext, ContextDelegation, 
     ContextInheritanceCache, Template, Base
 )
@@ -81,7 +81,7 @@ class TestORMRelationships:
         self.session.commit()
         
         # Create a project task tree (branch) - no direct link to agent
-        branch = ProjectTaskTree(
+        branch = ProjectGitBranch(
             id=str(uuid4()),
             project_id=project.id,
             name="main",
@@ -93,7 +93,7 @@ class TestORMRelationships:
         
         # Verify relationships
         assert branch.project == project
-        assert project.git_branches[0] == branch
+        assert project.git_branchs[0] == branch
         
         print("✅ Project-Agent relationship test passed")
     
@@ -112,7 +112,7 @@ class TestORMRelationships:
         self.session.add(project)
         self.session.commit()
         
-        branch = ProjectTaskTree(
+        branch = ProjectGitBranch(
             id=str(uuid4()),
             project_id=project.id,
             name="main",
@@ -183,7 +183,7 @@ class TestORMRelationships:
         self.session.add(project)
         self.session.commit()
         
-        branch = ProjectTaskTree(
+        branch = ProjectGitBranch(
             id=str(uuid4()),
             project_id=project.id,
             name="main",
@@ -289,7 +289,7 @@ class TestORMRelationships:
         self.session.commit()
         
         # Create branch
-        branch = ProjectTaskTree(
+        branch = ProjectGitBranch(
             id=str(uuid4()),
             project_id=project.id,
             name="main",
@@ -375,7 +375,7 @@ class TestORMRelationships:
         self.session.commit()
         
         # Create branch
-        branch = ProjectTaskTree(
+        branch = ProjectGitBranch(
             id=str(uuid4()),
             project_id=project.id,
             name="main",
@@ -440,7 +440,7 @@ class TestORMRelationships:
         
         # Verify data exists
         assert self.session.query(Project).count() == 1
-        assert self.session.query(ProjectTaskTree).count() == 1
+        assert self.session.query(ProjectGitBranch).count() == 1
         assert self.session.query(Task).count() == 1
         assert self.session.query(TaskSubtask).count() == 1
         assert self.session.query(GlobalContext).count() == 1
@@ -452,7 +452,7 @@ class TestORMRelationships:
         
         # Verify cascading deletes
         assert self.session.query(Project).count() == 0
-        assert self.session.query(ProjectTaskTree).count() == 0
+        assert self.session.query(ProjectGitBranch).count() == 0
         assert self.session.query(Task).count() == 0
         assert self.session.query(TaskSubtask).count() == 0
         # GlobalContext and ProjectContext don't cascade delete with Project
@@ -467,9 +467,9 @@ class TestORMRelationships:
         # Rollback any previous failed transactions
         self.session.rollback()
         
-        # Test invalid project_id in ProjectTaskTree
+        # Test invalid project_id in ProjectGitBranch
         with pytest.raises(Exception):  # Should raise foreign key constraint error
-            invalid_branch = ProjectTaskTree(
+            invalid_branch = ProjectGitBranch(
                 id=str(uuid4()),
                 project_id="invalid_project_id",
                 name="main",
@@ -568,7 +568,7 @@ class TestORMRelationships:
         self.session.commit()
         
         # Create relationship
-        branch = ProjectTaskTree(
+        branch = ProjectGitBranch(
             id=str(uuid4()),
             project_id=project.id,
             name="json_branch",

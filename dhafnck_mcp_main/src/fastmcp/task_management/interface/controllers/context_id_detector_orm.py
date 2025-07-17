@@ -7,7 +7,7 @@ git branch ID, or task ID by checking against the ORM database.
 import logging
 from typing import Tuple, Optional
 from ...infrastructure.database.database_config import get_session
-from ...infrastructure.database.models import Project, ProjectTaskTree, Task
+from ...infrastructure.database.models import Project, ProjectGitBranch, Task
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +40,8 @@ class ContextIDDetector:
                     logger.debug(f"ID {context_id} identified as project ID")
                     return ("project", context_id)
                 
-                # Check if it's a git branch ID (stored in project_task_trees)
-                branch = session.query(ProjectTaskTree).filter_by(id=context_id).first()
+                # Check if it's a git branch ID (stored in project_git_branchs)
+                branch = session.query(ProjectGitBranch).filter_by(id=context_id).first()
                 if branch:
                     logger.debug(f"ID {context_id} identified as git branch ID with project {branch.project_id}")
                     return ("git_branch", branch.project_id)
@@ -50,7 +50,7 @@ class ContextIDDetector:
                 task = session.query(Task).filter_by(id=context_id).first()
                 if task:
                     # Get the project ID via the git branch
-                    branch = session.query(ProjectTaskTree).filter_by(id=task.git_branch_id).first()
+                    branch = session.query(ProjectGitBranch).filter_by(id=task.git_branch_id).first()
                     if branch:
                         logger.debug(f"ID {context_id} identified as task ID with project {branch.project_id}")
                         return ("task", branch.project_id)

@@ -9,7 +9,7 @@ from src.fastmcp.task_management.application.services.project_application_servic
 from src.fastmcp.task_management.domain.entities.project import Project
 from src.fastmcp.task_management.domain.entities.agent import Agent, AgentCapability, AgentStatus
 from src.fastmcp.task_management.domain.entities.task import Task
-from src.fastmcp.task_management.domain.entities.task_tree import TaskTree
+from src.fastmcp.task_management.domain.entities.git_branch import GitBranch
 from src.fastmcp.task_management.domain.value_objects.task_id import TaskId
 from src.fastmcp.task_management.domain.value_objects.task_status import TaskStatus
 from src.fastmcp.task_management.domain.value_objects.priority import Priority
@@ -32,7 +32,7 @@ class TestProjectApplicationServiceInit:
         assert service._get_project_use_case is not None
         assert service._list_projects_use_case is not None
         assert service._update_project_use_case is not None
-        assert service._create_task_tree_use_case is not None
+        assert service._create_git_branch_use_case is not None
         assert service._project_health_check_use_case is not None
 
 
@@ -257,7 +257,7 @@ class TestUpdateProject:
         )
 
 
-class TestCreateTaskTree:
+class TestCreateGitBranch:
     """Test create task tree functionality."""
     
     @pytest_asyncio.fixture
@@ -268,7 +268,7 @@ class TestCreateTaskTree:
         
         # Mock the use case
         mock_use_case = AsyncMock()
-        service._create_task_tree_use_case = mock_use_case
+        service._create_git_branch_use_case = mock_use_case
         
         return {
             "service": service,
@@ -276,7 +276,7 @@ class TestCreateTaskTree:
         }
     
     @pytest.mark.asyncio
-    async def test_create_task_tree(self, setup):
+    async def test_create_git_branch(self, setup):
         """Test creating task tree in project."""
         # Arrange
         service = setup["service"]
@@ -284,7 +284,7 @@ class TestCreateTaskTree:
         
         mock_response = {
             "success": True,
-            "task_tree": {
+            "git_branch": {
                 "name": "feature-branch",
                 "description": "Feature branch tree"
             }
@@ -292,7 +292,7 @@ class TestCreateTaskTree:
         mock_use_case.execute.return_value = mock_response
         
         # Act
-        result = await service.create_task_tree(
+        result = await service.create_git_branch(
             project_id="test-project",
             git_branch_name="feature-branch",
             tree_name="Feature Branch",
@@ -627,7 +627,7 @@ class TestCleanupObsolete:
         # Mock project with obsolete data
         mock_project = Mock(spec=Project)
         mock_project.id = "test-project"
-        mock_project.task_trees = {"main": Mock()}
+        mock_project.git_branchs = {"main": Mock()}
         mock_project.registered_agents = {}
         mock_project.agent_assignments = {"feature": "agent-1"}  # Obsolete
         mock_project.active_work_sessions = {}
@@ -669,7 +669,7 @@ class TestCleanupObsolete:
         # Mock multiple projects
         mock_project1 = Mock(spec=Project)
         mock_project1.id = "project-1"
-        mock_project1.task_trees = {}
+        mock_project1.git_branchs = {}
         mock_project1.registered_agents = {}
         mock_project1.agent_assignments = {}
         mock_project1.active_work_sessions = {}
@@ -677,7 +677,7 @@ class TestCleanupObsolete:
         
         mock_project2 = Mock(spec=Project)
         mock_project2.id = "project-2"
-        mock_project2.task_trees = {}
+        mock_project2.git_branchs = {}
         mock_project2.registered_agents = {}
         mock_project2.agent_assignments = {"obsolete": "agent-x"}
         mock_project2.active_work_sessions = {}
@@ -706,7 +706,7 @@ class TestCleanupProjectData:
         
         # Mock project
         mock_project = Mock()
-        mock_project.task_trees = {"main": Mock()}
+        mock_project.git_branchs = {"main": Mock()}
         mock_project.registered_agents = {"agent-1": Mock()}
         mock_project.agent_assignments = {
             "main": "agent-1",  # Valid
@@ -735,7 +735,7 @@ class TestCleanupProjectData:
         
         # Mock project
         mock_project = Mock()
-        mock_project.task_trees = {}
+        mock_project.git_branchs = {}
         mock_project.registered_agents = {"agent-1": Mock()}
         mock_project.agent_assignments = {}
         mock_project.active_work_sessions = {
@@ -758,7 +758,7 @@ class TestCleanupProjectData:
         
         # Mock project
         mock_project = Mock()
-        mock_project.task_trees = {}
+        mock_project.git_branchs = {}
         mock_project.registered_agents = {"agent-1": Mock()}
         mock_project.agent_assignments = {}
         mock_project.active_work_sessions = {}
@@ -797,12 +797,12 @@ class TestProjectApplicationServiceIntegration:
         assert result["success"] is True
         
         # Create task tree
-        service._create_task_tree_use_case = AsyncMock()
-        service._create_task_tree_use_case.execute.return_value = {
+        service._create_git_branch_use_case = AsyncMock()
+        service._create_git_branch_use_case.execute.return_value = {
             "success": True
         }
         
-        result = await service.create_task_tree(
+        result = await service.create_git_branch(
             "test-project", "feature", "Feature", "Feature branch"
         )
         assert result["success"] is True

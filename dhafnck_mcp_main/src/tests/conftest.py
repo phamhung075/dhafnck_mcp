@@ -276,7 +276,7 @@ def _initialize_test_database(db_path: Path):
             # Use a deterministic ID so tests can find it
             main_branch_id = 'test-main-branch-' + str(uuid.uuid4())
             conn.execute("""
-                INSERT OR REPLACE INTO project_task_trees (id, project_id, name, description, created_at, updated_at) 
+                INSERT OR REPLACE INTO project_git_branchs (id, project_id, name, description, created_at, updated_at) 
                 VALUES (?, 'default_project', 'main', 'Main branch for testing', datetime('now'), datetime('now'))
             """, (main_branch_id,))
             

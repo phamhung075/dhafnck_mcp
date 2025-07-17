@@ -15,7 +15,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy import and_, func
 
 from ....domain.repositories.git_branch_repository import GitBranchRepository
-from ....domain.entities.task_tree import TaskTree
+from ....domain.entities.git_branch import GitBranch
 from ....domain.value_objects.task_status import TaskStatus
 from ....domain.value_objects.priority import Priority
 from ....domain.exceptions.base_exceptions import (
@@ -24,17 +24,17 @@ from ....domain.exceptions.base_exceptions import (
     ValidationException
 )
 from ..base_orm_repository import BaseORMRepository
-from ...database.models import ProjectTaskTree, Project
+from ...database.models import ProjectGitBranch, Project
 
 logger = logging.getLogger(__name__)
 
 
-class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchRepository):
+class ORMGitBranchRepository(BaseORMRepository[ProjectGitBranch], GitBranchRepository):
     """
     ORM-based implementation of GitBranchRepository using SQLAlchemy.
     
     This class handles git branch (project task tree) operations using
-    SQLAlchemy ORM models and the ProjectTaskTree model.
+    SQLAlchemy ORM models and the ProjectGitBranch model.
     """
     
     def __init__(self, user_id: str = "default_id"):
@@ -44,21 +44,21 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
         Args:
             user_id: User identifier for repository isolation
         """
-        super().__init__(ProjectTaskTree)
+        super().__init__(ProjectGitBranch)
         self.user_id = user_id
         logger.info(f"ORMGitBranchRepository initialized for user: {user_id}")
     
-    def _model_to_task_tree(self, model: ProjectTaskTree) -> TaskTree:
+    def _model_to_git_branch(self, model: ProjectGitBranch) -> GitBranch:
         """
-        Convert ProjectTaskTree model to TaskTree domain entity.
+        Convert ProjectGitBranch model to GitBranch domain entity.
         
         Args:
-            model: ProjectTaskTree model instance
+            model: ProjectGitBranch model instance
             
         Returns:
-            TaskTree domain entity
+            GitBranch domain entity
         """
-        task_tree = TaskTree(
+        git_branch = GitBranch(
             id=model.id,
             name=model.name,
             description=model.description,
@@ -68,58 +68,58 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
         )
         
         # Set additional fields
-        task_tree.assigned_agent_id = model.assigned_agent_id
-        task_tree.priority = Priority(model.priority)
-        task_tree.status = TaskStatus(model.status)
+        git_branch.assigned_agent_id = model.assigned_agent_id
+        git_branch.priority = Priority(model.priority)
+        git_branch.status = TaskStatus(model.status)
         
         # Set task counts from model
-        if hasattr(task_tree, '_task_count'):
-            task_tree._task_count = model.task_count
-        if hasattr(task_tree, '_completed_task_count'):
-            task_tree._completed_task_count = model.completed_task_count
+        if hasattr(git_branch, '_task_count'):
+            git_branch._task_count = model.task_count
+        if hasattr(git_branch, '_completed_task_count'):
+            git_branch._completed_task_count = model.completed_task_count
         
-        return task_tree
+        return git_branch
     
-    def _task_tree_to_model_data(self, task_tree: TaskTree) -> Dict[str, Any]:
+    def _git_branch_to_model_data(self, git_branch: GitBranch) -> Dict[str, Any]:
         """
-        Convert TaskTree domain entity to model data dictionary.
+        Convert GitBranch domain entity to model data dictionary.
         
         Args:
-            task_tree: TaskTree domain entity
+            git_branch: GitBranch domain entity
             
         Returns:
             Dictionary with model data
         """
         return {
-            'id': task_tree.id,
-            'project_id': task_tree.project_id,
-            'name': task_tree.name,
-            'description': task_tree.description,
-            'created_at': task_tree.created_at,
-            'updated_at': task_tree.updated_at,
-            'assigned_agent_id': task_tree.assigned_agent_id,
-            'priority': str(task_tree.priority),
-            'status': str(task_tree.status),
-            'task_count': task_tree.get_task_count(),
-            'completed_task_count': task_tree.get_completed_task_count(),
+            'id': git_branch.id,
+            'project_id': git_branch.project_id,
+            'name': git_branch.name,
+            'description': git_branch.description,
+            'created_at': git_branch.created_at,
+            'updated_at': git_branch.updated_at,
+            'assigned_agent_id': git_branch.assigned_agent_id,
+            'priority': str(git_branch.priority),
+            'status': str(git_branch.status),
+            'task_count': git_branch.get_task_count(),
+            'completed_task_count': git_branch.get_completed_task_count(),
             'model_metadata': {}
         }
     
     # Repository interface implementation
     
-    async def save(self, git_branch: TaskTree) -> None:
+    async def save(self, git_branch: GitBranch) -> None:
         """Save a git branch to the repository"""
         try:
             with self.get_db_session() as session:
                 # Check if branch exists
-                existing = session.query(ProjectTaskTree).filter(
+                existing = session.query(ProjectGitBranch).filter(
                     and_(
-                        ProjectTaskTree.id == git_branch.id,
-                        ProjectTaskTree.project_id == git_branch.project_id
+                        ProjectGitBranch.id == git_branch.id,
+                        ProjectGitBranch.project_id == git_branch.project_id
                     )
                 ).first()
                 
-                model_data = self._task_tree_to_model_data(git_branch)
+                model_data = self._git_branch_to_model_data(git_branch)
                 
                 if existing:
                     # Update existing branch
@@ -129,7 +129,7 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
                     existing.updated_at = datetime.now(timezone.utc)
                 else:
                     # Create new branch
-                    new_branch = ProjectTaskTree(**model_data)
+                    new_branch = ProjectGitBranch(**model_data)
                     session.add(new_branch)
                 
                 session.flush()
@@ -138,67 +138,67 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
             raise DatabaseException(
                 message=f"Failed to save git branch: {str(e)}",
                 operation="save",
-                table="project_task_trees"
+                table="project_git_branchs"
             )
     
-    async def find_by_id(self, project_id: str, branch_id: str) -> Optional[TaskTree]:
+    async def find_by_id(self, project_id: str, branch_id: str) -> Optional[GitBranch]:
         """Find a git branch by its project and branch ID"""
         try:
             with self.get_db_session() as session:
-                model = session.query(ProjectTaskTree).filter(
+                model = session.query(ProjectGitBranch).filter(
                     and_(
-                        ProjectTaskTree.id == branch_id,
-                        ProjectTaskTree.project_id == project_id
+                        ProjectGitBranch.id == branch_id,
+                        ProjectGitBranch.project_id == project_id
                     )
                 ).first()
                 
                 if not model:
                     return None
                 
-                return self._model_to_task_tree(model)
+                return self._model_to_git_branch(model)
         except SQLAlchemyError as e:
             logger.error(f"Error finding git branch by ID {branch_id}: {e}")
             raise DatabaseException(
                 message=f"Failed to find git branch: {str(e)}",
                 operation="find_by_id",
-                table="project_task_trees"
+                table="project_git_branchs"
             )
     
-    async def find_by_name(self, project_id: str, branch_name: str) -> Optional[TaskTree]:
+    async def find_by_name(self, project_id: str, branch_name: str) -> Optional[GitBranch]:
         """Find a git branch by its project and branch name"""
         try:
             with self.get_db_session() as session:
-                model = session.query(ProjectTaskTree).filter(
+                model = session.query(ProjectGitBranch).filter(
                     and_(
-                        ProjectTaskTree.name == branch_name,
-                        ProjectTaskTree.project_id == project_id
+                        ProjectGitBranch.name == branch_name,
+                        ProjectGitBranch.project_id == project_id
                     )
                 ).first()
                 
                 if not model:
                     return None
                 
-                return self._model_to_task_tree(model)
+                return self._model_to_git_branch(model)
         except SQLAlchemyError as e:
             logger.error(f"Error finding git branch by name {branch_name}: {e}")
             raise DatabaseException(
                 message=f"Failed to find git branch: {str(e)}",
                 operation="find_by_name",
-                table="project_task_trees"
+                table="project_git_branchs"
             )
     
-    async def find_all_by_project(self, project_id: str) -> List[TaskTree]:
+    async def find_all_by_project(self, project_id: str) -> List[GitBranch]:
         """Find all git branches for a project"""
         try:
             with self.get_db_session() as session:
-                models = session.query(ProjectTaskTree).filter(
-                    ProjectTaskTree.project_id == project_id
-                ).order_by(ProjectTaskTree.created_at.desc()).all()
+                models = session.query(ProjectGitBranch).filter(
+                    ProjectGitBranch.project_id == project_id
+                ).order_by(ProjectGitBranch.created_at.desc()).all()
                 
                 branches = []
                 for model in models:
                     try:
-                        branch = self._model_to_task_tree(model)
+                        branch = self._model_to_git_branch(model)
                         branches.append(branch)
                     except Exception as e:
                         logger.error(f"Error converting model {model.id}: {e}")
@@ -210,21 +210,21 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
             raise DatabaseException(
                 message=f"Failed to find branches: {str(e)}",
                 operation="find_all_by_project",
-                table="project_task_trees"
+                table="project_git_branchs"
             )
     
-    async def find_all(self) -> List[TaskTree]:
+    async def find_all(self) -> List[GitBranch]:
         """Find all git branches"""
         try:
             with self.get_db_session() as session:
-                models = session.query(ProjectTaskTree).order_by(
-                    ProjectTaskTree.created_at.desc()
+                models = session.query(ProjectGitBranch).order_by(
+                    ProjectGitBranch.created_at.desc()
                 ).all()
                 
                 branches = []
                 for model in models:
                     try:
-                        branch = self._model_to_task_tree(model)
+                        branch = self._model_to_git_branch(model)
                         branches.append(branch)
                     except Exception as e:
                         logger.error(f"Error converting model {model.id}: {e}")
@@ -236,17 +236,17 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
             raise DatabaseException(
                 message=f"Failed to find branches: {str(e)}",
                 operation="find_all",
-                table="project_task_trees"
+                table="project_git_branchs"
             )
     
     async def delete(self, project_id: str, branch_id: str) -> bool:
         """Delete a git branch by its project and branch ID"""
         try:
             with self.get_db_session() as session:
-                deleted_count = session.query(ProjectTaskTree).filter(
+                deleted_count = session.query(ProjectGitBranch).filter(
                     and_(
-                        ProjectTaskTree.id == branch_id,
-                        ProjectTaskTree.project_id == project_id
+                        ProjectGitBranch.id == branch_id,
+                        ProjectGitBranch.project_id == project_id
                     )
                 ).delete()
                 
@@ -256,17 +256,17 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
             raise DatabaseException(
                 message=f"Failed to delete git branch: {str(e)}",
                 operation="delete",
-                table="project_task_trees"
+                table="project_git_branchs"
             )
     
     async def exists(self, project_id: str, branch_id: str) -> bool:
         """Check if a git branch exists"""
         try:
             with self.get_db_session() as session:
-                result = session.query(ProjectTaskTree).filter(
+                result = session.query(ProjectGitBranch).filter(
                     and_(
-                        ProjectTaskTree.id == branch_id,
-                        ProjectTaskTree.project_id == project_id
+                        ProjectGitBranch.id == branch_id,
+                        ProjectGitBranch.project_id == project_id
                     )
                 ).first()
                 return result is not None
@@ -275,10 +275,10 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
             raise DatabaseException(
                 message=f"Failed to check branch existence: {str(e)}",
                 operation="exists",
-                table="project_task_trees"
+                table="project_git_branchs"
             )
     
-    async def update(self, git_branch: TaskTree) -> None:
+    async def update(self, git_branch: GitBranch) -> None:
         """Update an existing git branch"""
         git_branch.updated_at = datetime.now(timezone.utc)
         await self.save(git_branch)
@@ -287,42 +287,42 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
         """Count total number of git branches for a project"""
         try:
             with self.get_db_session() as session:
-                return session.query(ProjectTaskTree).filter(
-                    ProjectTaskTree.project_id == project_id
+                return session.query(ProjectGitBranch).filter(
+                    ProjectGitBranch.project_id == project_id
                 ).count()
         except SQLAlchemyError as e:
             logger.error(f"Error counting branches for project {project_id}: {e}")
             raise DatabaseException(
                 message=f"Failed to count branches: {str(e)}",
                 operation="count_by_project",
-                table="project_task_trees"
+                table="project_git_branchs"
             )
     
     async def count_all(self) -> int:
         """Count total number of git branches"""
         try:
             with self.get_db_session() as session:
-                return session.query(ProjectTaskTree).count()
+                return session.query(ProjectGitBranch).count()
         except SQLAlchemyError as e:
             logger.error(f"Error counting all branches: {e}")
             raise DatabaseException(
                 message=f"Failed to count branches: {str(e)}",
                 operation="count_all",
-                table="project_task_trees"
+                table="project_git_branchs"
             )
     
-    async def find_by_assigned_agent(self, agent_id: str) -> List[TaskTree]:
+    async def find_by_assigned_agent(self, agent_id: str) -> List[GitBranch]:
         """Find git branches assigned to a specific agent"""
         try:
             with self.get_db_session() as session:
-                models = session.query(ProjectTaskTree).filter(
-                    ProjectTaskTree.assigned_agent_id == agent_id
-                ).order_by(ProjectTaskTree.created_at.desc()).all()
+                models = session.query(ProjectGitBranch).filter(
+                    ProjectGitBranch.assigned_agent_id == agent_id
+                ).order_by(ProjectGitBranch.created_at.desc()).all()
                 
                 branches = []
                 for model in models:
                     try:
-                        branch = self._model_to_task_tree(model)
+                        branch = self._model_to_git_branch(model)
                         branches.append(branch)
                     except Exception as e:
                         logger.error(f"Error converting model {model.id}: {e}")
@@ -334,24 +334,24 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
             raise DatabaseException(
                 message=f"Failed to find branches: {str(e)}",
                 operation="find_by_assigned_agent",
-                table="project_task_trees"
+                table="project_git_branchs"
             )
     
-    async def find_by_status(self, project_id: str, status: str) -> List[TaskTree]:
+    async def find_by_status(self, project_id: str, status: str) -> List[GitBranch]:
         """Find git branches by status within a project"""
         try:
             with self.get_db_session() as session:
-                models = session.query(ProjectTaskTree).filter(
+                models = session.query(ProjectGitBranch).filter(
                     and_(
-                        ProjectTaskTree.project_id == project_id,
-                        ProjectTaskTree.status == status
+                        ProjectGitBranch.project_id == project_id,
+                        ProjectGitBranch.status == status
                     )
-                ).order_by(ProjectTaskTree.created_at.desc()).all()
+                ).order_by(ProjectGitBranch.created_at.desc()).all()
                 
                 branches = []
                 for model in models:
                     try:
-                        branch = self._model_to_task_tree(model)
+                        branch = self._model_to_git_branch(model)
                         branches.append(branch)
                     except Exception as e:
                         logger.error(f"Error converting model {model.id}: {e}")
@@ -363,28 +363,28 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
             raise DatabaseException(
                 message=f"Failed to find branches: {str(e)}",
                 operation="find_by_status",
-                table="project_task_trees"
+                table="project_git_branchs"
             )
     
-    async def find_available_for_assignment(self, project_id: str) -> List[TaskTree]:
+    async def find_available_for_assignment(self, project_id: str) -> List[GitBranch]:
         """Find git branches that can be assigned to agents"""
         try:
             with self.get_db_session() as session:
-                models = session.query(ProjectTaskTree).filter(
+                models = session.query(ProjectGitBranch).filter(
                     and_(
-                        ProjectTaskTree.project_id == project_id,
-                        ProjectTaskTree.assigned_agent_id.is_(None),
-                        ProjectTaskTree.status.in_(['todo', 'in_progress', 'review'])
+                        ProjectGitBranch.project_id == project_id,
+                        ProjectGitBranch.assigned_agent_id.is_(None),
+                        ProjectGitBranch.status.in_(['todo', 'in_progress', 'review'])
                     )
                 ).order_by(
-                    ProjectTaskTree.priority.desc(),
-                    ProjectTaskTree.created_at.asc()
+                    ProjectGitBranch.priority.desc(),
+                    ProjectGitBranch.created_at.asc()
                 ).all()
                 
                 branches = []
                 for model in models:
                     try:
-                        branch = self._model_to_task_tree(model)
+                        branch = self._model_to_git_branch(model)
                         branches.append(branch)
                     except Exception as e:
                         logger.error(f"Error converting model {model.id}: {e}")
@@ -396,17 +396,17 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
             raise DatabaseException(
                 message=f"Failed to find available branches: {str(e)}",
                 operation="find_available_for_assignment",
-                table="project_task_trees"
+                table="project_git_branchs"
             )
     
     async def assign_agent(self, project_id: str, branch_id: str, agent_id: str) -> bool:
         """Assign an agent to a git branch"""
         try:
             with self.get_db_session() as session:
-                updated_count = session.query(ProjectTaskTree).filter(
+                updated_count = session.query(ProjectGitBranch).filter(
                     and_(
-                        ProjectTaskTree.id == branch_id,
-                        ProjectTaskTree.project_id == project_id
+                        ProjectGitBranch.id == branch_id,
+                        ProjectGitBranch.project_id == project_id
                     )
                 ).update({
                     'assigned_agent_id': agent_id,
@@ -419,17 +419,17 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
             raise DatabaseException(
                 message=f"Failed to assign agent: {str(e)}",
                 operation="assign_agent",
-                table="project_task_trees"
+                table="project_git_branchs"
             )
     
     async def unassign_agent(self, project_id: str, branch_id: str) -> bool:
         """Unassign the current agent from a git branch"""
         try:
             with self.get_db_session() as session:
-                updated_count = session.query(ProjectTaskTree).filter(
+                updated_count = session.query(ProjectGitBranch).filter(
                     and_(
-                        ProjectTaskTree.id == branch_id,
-                        ProjectTaskTree.project_id == project_id
+                        ProjectGitBranch.id == branch_id,
+                        ProjectGitBranch.project_id == project_id
                     )
                 ).update({
                     'assigned_agent_id': None,
@@ -442,7 +442,7 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
             raise DatabaseException(
                 message=f"Failed to unassign agent: {str(e)}",
                 operation="unassign_agent",
-                table="project_task_trees"
+                table="project_git_branchs"
             )
     
     async def get_project_branch_summary(self, project_id: str) -> Dict[str, Any]:
@@ -451,20 +451,20 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
             with self.get_db_session() as session:
                 # Get basic stats using aggregate functions
                 stats = session.query(
-                    func.count(ProjectTaskTree.id).label('total_branches'),
-                    func.sum(func.case((ProjectTaskTree.status == 'done', 1), else_=0)).label('completed_branches'),
-                    func.sum(func.case((ProjectTaskTree.status == 'in_progress', 1), else_=0)).label('active_branches'),
-                    func.sum(func.case((ProjectTaskTree.assigned_agent_id.isnot(None), 1), else_=0)).label('assigned_branches'),
-                    func.sum(ProjectTaskTree.task_count).label('total_tasks'),
-                    func.sum(ProjectTaskTree.completed_task_count).label('total_completed_tasks')
-                ).filter(ProjectTaskTree.project_id == project_id).first()
+                    func.count(ProjectGitBranch.id).label('total_branches'),
+                    func.sum(func.case((ProjectGitBranch.status == 'done', 1), else_=0)).label('completed_branches'),
+                    func.sum(func.case((ProjectGitBranch.status == 'in_progress', 1), else_=0)).label('active_branches'),
+                    func.sum(func.case((ProjectGitBranch.assigned_agent_id.isnot(None), 1), else_=0)).label('assigned_branches'),
+                    func.sum(ProjectGitBranch.task_count).label('total_tasks'),
+                    func.sum(ProjectGitBranch.completed_task_count).label('total_completed_tasks')
+                ).filter(ProjectGitBranch.project_id == project_id).first()
                 
                 # Get status breakdown
                 status_rows = session.query(
-                    ProjectTaskTree.status,
-                    func.count(ProjectTaskTree.id).label('count')
-                ).filter(ProjectTaskTree.project_id == project_id).group_by(
-                    ProjectTaskTree.status
+                    ProjectGitBranch.status,
+                    func.count(ProjectGitBranch.id).label('count')
+                ).filter(ProjectGitBranch.project_id == project_id).group_by(
+                    ProjectGitBranch.status
                 ).all()
                 
                 status_breakdown = {row.status: row.count for row in status_rows}
@@ -496,10 +496,10 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
             raise DatabaseException(
                 message=f"Failed to get project branch summary: {str(e)}",
                 operation="get_project_branch_summary",
-                table="project_task_trees"
+                table="project_git_branchs"
             )
     
-    async def create_branch(self, project_id: str, branch_name: str, description: str = "") -> TaskTree:
+    async def create_branch(self, project_id: str, branch_name: str, description: str = "") -> GitBranch:
         """Create a new git branch for a project"""
         try:
             # Generate unique branch ID
@@ -507,8 +507,8 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
             
             now = datetime.now(timezone.utc)
             
-            # Create TaskTree entity
-            task_tree = TaskTree(
+            # Create GitBranch entity
+            git_branch = GitBranch(
                 id=branch_id,
                 name=branch_name,
                 description=description,
@@ -518,15 +518,15 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
             )
             
             # Save to repository
-            await self.save(task_tree)
+            await self.save(git_branch)
             
-            return task_tree
+            return git_branch
         except Exception as e:
             logger.error(f"Error creating branch {branch_name}: {e}")
             raise DatabaseException(
                 message=f"Failed to create branch: {str(e)}",
                 operation="create_branch",
-                table="project_task_trees"
+                table="project_git_branchs"
             )
     
     # Implementation of abstract methods from GitBranchRepository interface
@@ -534,16 +534,16 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
     async def create_git_branch(self, project_id: str, git_branch_name: str, git_branch_description: str = "") -> Dict[str, Any]:
         """Create a new git branch - implements abstract method"""
         try:
-            task_tree = await self.create_branch(project_id, git_branch_name, git_branch_description)
+            git_branch = await self.create_branch(project_id, git_branch_name, git_branch_description)
             return {
                 "success": True,
                 "git_branch": {
-                    "id": task_tree.id,
-                    "name": task_tree.name,
-                    "description": task_tree.description,
-                    "project_id": task_tree.project_id,
-                    "created_at": task_tree.created_at.isoformat(),
-                    "updated_at": task_tree.updated_at.isoformat()
+                    "id": git_branch.id,
+                    "name": git_branch.name,
+                    "description": git_branch.description,
+                    "project_id": git_branch.project_id,
+                    "created_at": git_branch.created_at.isoformat(),
+                    "updated_at": git_branch.updated_at.isoformat()
                 }
             }
         except Exception as e:
@@ -559,8 +559,8 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
         try:
             # First find the branch to get project_id
             with self.get_db_session() as session:
-                model = session.query(ProjectTaskTree).filter(
-                    ProjectTaskTree.id == git_branch_id
+                model = session.query(ProjectGitBranch).filter(
+                    ProjectGitBranch.id == git_branch_id
                 ).first()
                 
                 if not model:
@@ -570,20 +570,20 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
                         "error_code": "NOT_FOUND"
                     }
                 
-                task_tree = self._model_to_task_tree(model)
+                git_branch = self._model_to_git_branch(model)
                 
                 return {
                     "success": True,
                     "git_branch": {
-                        "id": task_tree.id,
-                        "name": task_tree.name,
-                        "description": task_tree.description,
-                        "project_id": task_tree.project_id,
-                        "created_at": task_tree.created_at.isoformat(),
-                        "updated_at": task_tree.updated_at.isoformat(),
-                        "assigned_agent_id": task_tree.assigned_agent_id,
-                        "status": str(task_tree.status),
-                        "priority": str(task_tree.priority)
+                        "id": git_branch.id,
+                        "name": git_branch.name,
+                        "description": git_branch.description,
+                        "project_id": git_branch.project_id,
+                        "created_at": git_branch.created_at.isoformat(),
+                        "updated_at": git_branch.updated_at.isoformat(),
+                        "assigned_agent_id": git_branch.assigned_agent_id,
+                        "status": str(git_branch.status),
+                        "priority": str(git_branch.priority)
                     }
                 }
         except Exception as e:
@@ -597,8 +597,8 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
     async def get_git_branch_by_name(self, project_id: str, git_branch_name: str) -> Dict[str, Any]:
         """Get git branch by name within a project - implements abstract method"""
         try:
-            task_tree = await self.find_by_name(project_id, git_branch_name)
-            if not task_tree:
+            git_branch = await self.find_by_name(project_id, git_branch_name)
+            if not git_branch:
                 return {
                     "success": False,
                     "error": f"Git branch not found: {git_branch_name}",
@@ -608,15 +608,15 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
             return {
                 "success": True,
                 "git_branch": {
-                    "id": task_tree.id,
-                    "name": task_tree.name,
-                    "description": task_tree.description,
-                    "project_id": task_tree.project_id,
-                    "created_at": task_tree.created_at.isoformat(),
-                    "updated_at": task_tree.updated_at.isoformat(),
-                    "assigned_agent_id": task_tree.assigned_agent_id,
-                    "status": str(task_tree.status),
-                    "priority": str(task_tree.priority)
+                    "id": git_branch.id,
+                    "name": git_branch.name,
+                    "description": git_branch.description,
+                    "project_id": git_branch.project_id,
+                    "created_at": git_branch.created_at.isoformat(),
+                    "updated_at": git_branch.updated_at.isoformat(),
+                    "assigned_agent_id": git_branch.assigned_agent_id,
+                    "status": str(git_branch.status),
+                    "priority": str(git_branch.priority)
                 }
             }
         except Exception as e:
@@ -627,32 +627,32 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
                 "error_code": "GET_FAILED"
             }
     
-    async def list_git_branches(self, project_id: str) -> Dict[str, Any]:
+    async def list_git_branchs(self, project_id: str) -> Dict[str, Any]:
         """List all git branches for a project - implements abstract method"""
         try:
-            task_trees = await self.find_all_by_project(project_id)
+            git_branchs = await self.find_all_by_project(project_id)
             
             branches = []
-            for task_tree in task_trees:
+            for git_branch in git_branchs:
                 branches.append({
-                    "id": task_tree.id,
-                    "name": task_tree.name,
-                    "description": task_tree.description,
-                    "project_id": task_tree.project_id,
-                    "created_at": task_tree.created_at.isoformat(),
-                    "updated_at": task_tree.updated_at.isoformat(),
-                    "assigned_agent_id": task_tree.assigned_agent_id,
-                    "status": str(task_tree.status),
-                    "priority": str(task_tree.priority)
+                    "id": git_branch.id,
+                    "name": git_branch.name,
+                    "description": git_branch.description,
+                    "project_id": git_branch.project_id,
+                    "created_at": git_branch.created_at.isoformat(),
+                    "updated_at": git_branch.updated_at.isoformat(),
+                    "assigned_agent_id": git_branch.assigned_agent_id,
+                    "status": str(git_branch.status),
+                    "priority": str(git_branch.priority)
                 })
             
             return {
                 "success": True,
-                "git_branches": branches,
+                "git_branchs": branches,
                 "count": len(branches)
             }
         except Exception as e:
-            logger.error(f"Error in list_git_branches: {e}")
+            logger.error(f"Error in list_git_branchs: {e}")
             return {
                 "success": False,
                 "error": str(e),
@@ -664,8 +664,8 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
         try:
             # Get the branch first
             with self.get_db_session() as session:
-                model = session.query(ProjectTaskTree).filter(
-                    ProjectTaskTree.id == git_branch_id
+                model = session.query(ProjectGitBranch).filter(
+                    ProjectGitBranch.id == git_branch_id
                 ).first()
                 
                 if not model:
@@ -684,17 +684,17 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
                 model.updated_at = datetime.now(timezone.utc)
                 session.flush()
                 
-                task_tree = self._model_to_task_tree(model)
+                git_branch = self._model_to_git_branch(model)
                 
                 return {
                     "success": True,
                     "message": "Git branch updated successfully",
                     "git_branch": {
-                        "id": task_tree.id,
-                        "name": task_tree.name,
-                        "description": task_tree.description,
-                        "project_id": task_tree.project_id,
-                        "updated_at": task_tree.updated_at.isoformat()
+                        "id": git_branch.id,
+                        "name": git_branch.name,
+                        "description": git_branch.description,
+                        "project_id": git_branch.project_id,
+                        "updated_at": git_branch.updated_at.isoformat()
                     }
                 }
         except Exception as e:
@@ -733,8 +733,8 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
         """Assign an agent to a git branch - implements abstract method"""
         try:
             # Find branch by name first
-            task_tree = await self.find_by_name(project_id, git_branch_name)
-            if not task_tree:
+            git_branch = await self.find_by_name(project_id, git_branch_name)
+            if not git_branch:
                 return {
                     "success": False,
                     "error": f"Git branch not found: {git_branch_name}",
@@ -742,7 +742,7 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
                 }
             
             # Assign agent
-            assigned = await self.assign_agent(project_id, task_tree.id, agent_id)
+            assigned = await self.assign_agent(project_id, git_branch.id, agent_id)
             
             if assigned:
                 return {
@@ -767,8 +767,8 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
         """Unassign an agent from a git branch - implements abstract method"""
         try:
             # Find branch by name first
-            task_tree = await self.find_by_name(project_id, git_branch_name)
-            if not task_tree:
+            git_branch = await self.find_by_name(project_id, git_branch_name)
+            if not git_branch:
                 return {
                     "success": False,
                     "error": f"Git branch not found: {git_branch_name}",
@@ -776,7 +776,7 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
                 }
             
             # Unassign agent
-            unassigned = await self.unassign_agent(project_id, task_tree.id)
+            unassigned = await self.unassign_agent(project_id, git_branch.id)
             
             if unassigned:
                 return {
@@ -801,10 +801,10 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
         """Get statistics for a git branch - implements abstract method"""
         try:
             with self.get_db_session() as session:
-                model = session.query(ProjectTaskTree).filter(
+                model = session.query(ProjectGitBranch).filter(
                     and_(
-                        ProjectTaskTree.id == git_branch_id,
-                        ProjectTaskTree.project_id == project_id
+                        ProjectGitBranch.id == git_branch_id,
+                        ProjectGitBranch.project_id == project_id
                     )
                 ).first()
                 
@@ -836,10 +836,10 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
         """Archive a git branch - implements abstract method"""
         try:
             with self.get_db_session() as session:
-                updated_count = session.query(ProjectTaskTree).filter(
+                updated_count = session.query(ProjectGitBranch).filter(
                     and_(
-                        ProjectTaskTree.id == git_branch_id,
-                        ProjectTaskTree.project_id == project_id
+                        ProjectGitBranch.id == git_branch_id,
+                        ProjectGitBranch.project_id == project_id
                     )
                 ).update({
                     'status': 'cancelled',
@@ -869,10 +869,10 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectTaskTree], GitBranchReposi
         """Restore an archived git branch - implements abstract method"""
         try:
             with self.get_db_session() as session:
-                updated_count = session.query(ProjectTaskTree).filter(
+                updated_count = session.query(ProjectGitBranch).filter(
                     and_(
-                        ProjectTaskTree.id == git_branch_id,
-                        ProjectTaskTree.project_id == project_id
+                        ProjectGitBranch.id == git_branch_id,
+                        ProjectGitBranch.project_id == project_id
                     )
                 ).update({
                     'status': 'todo',

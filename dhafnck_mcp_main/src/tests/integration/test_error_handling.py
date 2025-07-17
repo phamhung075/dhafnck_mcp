@@ -21,7 +21,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from fastmcp.task_management.infrastructure.database.models import (
-    Project, Agent, ProjectTaskTree, Task, TaskSubtask, Label, TaskLabel,
+    Project, Agent, ProjectGitBranch, Task, TaskSubtask, Label, TaskLabel,
     GlobalContext, ProjectContext, TaskContext, Template, Base
 )
 from fastmcp.task_management.infrastructure.repositories.project_repository_factory import (
@@ -70,9 +70,9 @@ class TestErrorHandling:
     
     def test_foreign_key_constraint_violations(self):
         """Test foreign key constraint violations are handled properly"""
-        # Test invalid project_id in ProjectTaskTree
+        # Test invalid project_id in ProjectGitBranch
         with pytest.raises((IntegrityError, SQLAlchemyError)):
-            invalid_branch = ProjectTaskTree(
+            invalid_branch = ProjectGitBranch(
                 id=str(uuid4()),
                 project_id="non_existent_project",
                 name="main",
@@ -232,7 +232,7 @@ class TestErrorHandling:
         self.session.commit()
         
         # Create task tree with non-standard status
-        invalid_tree = ProjectTaskTree(
+        invalid_tree = ProjectGitBranch(
             id=str(uuid4()),
             project_id=project.id,
             name="main",
@@ -243,11 +243,11 @@ class TestErrorHandling:
         self.session.commit()
         
         # Verify it was saved
-        saved_tree = self.session.query(ProjectTaskTree).filter_by(id=invalid_tree.id).first()
+        saved_tree = self.session.query(ProjectGitBranch).filter_by(id=invalid_tree.id).first()
         assert saved_tree.status == "invalid_status"
         
         # Test non-standard priority values
-        tree2 = ProjectTaskTree(
+        tree2 = ProjectGitBranch(
             id=str(uuid4()),
             project_id=project.id,
             name="branch2",
@@ -349,7 +349,7 @@ class TestErrorHandling:
         self.session.add(project)
         
         # Add valid data
-        tree = ProjectTaskTree(
+        tree = ProjectGitBranch(
             id=str(uuid4()),
             project_id=project.id,
             name="main",
@@ -360,7 +360,7 @@ class TestErrorHandling:
         
         try:
             # Add invalid data that should cause rollback
-            invalid_tree = ProjectTaskTree(
+            invalid_tree = ProjectGitBranch(
                 id=str(uuid4()),
                 project_id="non_existent_project",  # Invalid FK
                 name="invalid",
@@ -381,7 +381,7 @@ class TestErrorHandling:
             project_count = self.session.query(Project).filter_by(name="Transaction Test Project").count()
             assert project_count == 0
             
-            tree_count = self.session.query(ProjectTaskTree).filter_by(name="main").count()
+            tree_count = self.session.query(ProjectGitBranch).filter_by(name="main").count()
             assert tree_count == 0
             
             print(f"✅ Transaction rolled back successfully due to: {type(e).__name__}")

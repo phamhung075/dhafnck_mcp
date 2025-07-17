@@ -30,16 +30,16 @@ class Project(Base):
     model_metadata: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
     
     # Relationships
-    git_branches: Mapped[List["ProjectTaskTree"]] = relationship("ProjectTaskTree", back_populates="project", cascade="all, delete-orphan")
+    git_branchs: Mapped[List["ProjectGitBranch"]] = relationship("ProjectGitBranch", back_populates="project", cascade="all, delete-orphan")
     
     __table_args__ = (
         UniqueConstraint('id', 'user_id', name='uq_project_user'),
     )
 
 
-class ProjectTaskTree(Base):
+class ProjectGitBranch(Base):
     """Git branches (task trees) - Project workspaces"""
-    __tablename__ = "project_task_trees"
+    __tablename__ = "project_git_branchs"
     
     id: Mapped[str] = mapped_column(String, primary_key=True)
     project_id: Mapped[str] = mapped_column(String, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
@@ -55,7 +55,7 @@ class ProjectTaskTree(Base):
     completed_task_count: Mapped[int] = mapped_column(Integer, default=0)
     
     # Relationships
-    project: Mapped[Project] = relationship("Project", back_populates="git_branches")
+    project: Mapped[Project] = relationship("Project", back_populates="git_branchs")
     tasks: Mapped[List["Task"]] = relationship("Task", back_populates="git_branch", cascade="all, delete-orphan")
     
     __table_args__ = (
@@ -70,7 +70,7 @@ class Task(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True)
     title: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
-    git_branch_id: Mapped[str] = mapped_column(String, ForeignKey("project_task_trees.id", ondelete="CASCADE"), nullable=False)
+    git_branch_id: Mapped[str] = mapped_column(String, ForeignKey("project_git_branchs.id", ondelete="CASCADE"), nullable=False)
     status: Mapped[str] = mapped_column(String, nullable=False, default="todo")
     priority: Mapped[str] = mapped_column(String, nullable=False, default="medium")
     details: Mapped[str] = mapped_column(Text, default="")
@@ -81,7 +81,7 @@ class Task(Base):
     context_id: Mapped[Optional[str]] = mapped_column(String)
     
     # Relationships
-    git_branch: Mapped[ProjectTaskTree] = relationship("ProjectTaskTree", back_populates="tasks")
+    git_branch: Mapped[ProjectGitBranch] = relationship("ProjectGitBranch", back_populates="tasks")
     subtasks: Mapped[List["TaskSubtask"]] = relationship("TaskSubtask", back_populates="task", cascade="all, delete-orphan")
     assignees: Mapped[List["TaskAssignee"]] = relationship("TaskAssignee", back_populates="task", cascade="all, delete-orphan")
     dependencies: Mapped[List["TaskDependency"]] = relationship("TaskDependency", foreign_keys="TaskDependency.task_id", back_populates="task", cascade="all, delete-orphan")

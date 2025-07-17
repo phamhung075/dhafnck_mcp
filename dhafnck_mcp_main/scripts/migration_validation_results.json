@@ -4,7 +4,7 @@
       "expected_tables": [
         "projects",
         "agents",
-        "project_task_trees",
+        "project_git_branches",
         "tasks",
         "task_subtasks",
         "labels",
@@ -24,7 +24,7 @@
         "hierarchical_context",
         "labels",
         "project_contexts",
-        "project_task_trees",
+        "project_git_branches",
         "projects",
         "task_assignees",
         "task_contexts",
@@ -76,7 +76,7 @@
             "model_metadata"
           ]
         },
-        "project_task_trees": {
+        "project_git_branches": {
           "columns": 12,
           "indexes": 0,
           "foreign_keys": 1,
@@ -297,7 +297,7 @@
       "expected_tables": [
         "projects",
         "agents",
-        "project_task_trees",
+        "project_git_branches",
         "tasks",
         "task_subtasks",
         "labels",
@@ -317,7 +317,7 @@
         "hierarchical_context",
         "labels",
         "project_contexts",
-        "project_task_trees",
+        "project_git_branches",
         "projects",
         "task_assignees",
         "task_contexts",
@@ -369,7 +369,7 @@
             "model_metadata"
           ]
         },
-        "project_task_trees": {
+        "project_git_branches": {
           "columns": 12,
           "indexes": 0,
           "foreign_keys": 1,

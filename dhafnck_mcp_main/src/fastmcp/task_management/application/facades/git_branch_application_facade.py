@@ -3,22 +3,22 @@ Git Branch Application Facade (for Task Trees)
 """
 from typing import Dict, Any, Optional
 
-from ..services.task_tree_service import TaskTreeService
+from ..services.git_branch_service import GitBranchService
 from ...domain.repositories.project_repository import ProjectRepository
 
 class GitBranchApplicationFacade:
-    def __init__(self, task_tree_service: Optional[TaskTreeService] = None, project_repo: Optional[ProjectRepository] = None, project_id: Optional[str] = None):
-        self._task_tree_service = task_tree_service or TaskTreeService(project_repo)
+    def __init__(self, git_branch_service: Optional[GitBranchService] = None, project_repo: Optional[ProjectRepository] = None, project_id: Optional[str] = None):
+        self._git_branch_service = git_branch_service or GitBranchService(project_repo)
         self._project_id = project_id
 
     async def create_tree(self, project_id: str, tree_name: str, description: str = "") -> Dict[str, Any]:
         """Facade method to create a new task tree (branch)."""
-        return await self._task_tree_service.create_task_tree(project_id, tree_name, description)
+        return await self._git_branch_service.create_git_branch(project_id, tree_name, description)
 
     def create_git_branch(self, project_id: str, git_branch_name: str, git_branch_description: str = "") -> Dict[str, Any]:
         """Create a new git branch (task tree) - synchronous version for MCP controller."""
         try:
-            # Use actual TaskTreeService to create the git branch
+            # Use actual GitBranchService to create the git branch
             import asyncio
             import logging
             logger = logging.getLogger(__name__)
@@ -151,8 +151,8 @@ class GitBranchApplicationFacade:
         projects = await project_repo.find_all()
         
         for project in projects:
-            if git_branch_id in project.task_trees:
-                tree = project.task_trees[git_branch_id]
+            if git_branch_id in project.git_branchs:
+                tree = project.git_branchs[git_branch_id]
                 return {
                     "success": True,
                     "git_branch": {
@@ -171,7 +171,7 @@ class GitBranchApplicationFacade:
             db_path = get_database_path()
             with sqlite3.connect(db_path) as conn:
                 result = conn.execute(
-                    'SELECT project_id, name, description FROM project_task_trees WHERE id = ?',
+                    'SELECT project_id, name, description FROM project_git_branchs WHERE id = ?',
                     (git_branch_id,)
                 ).fetchone()
                 
@@ -216,7 +216,7 @@ class GitBranchApplicationFacade:
                 "error_code": "DELETE_FAILED"
             }
 
-    def list_git_branches(self, project_id: str) -> Dict[str, Any]:
+    def list_git_branchs(self, project_id: str) -> Dict[str, Any]:
         """List git branches for a project - synchronous version for MCP controller."""
         try:
             import asyncio
@@ -252,9 +252,9 @@ class GitBranchApplicationFacade:
                 
                 # Transform the result to match expected format
                 if result.get("success"):
-                    git_branches = []
-                    for tree in result.get("task_trees", []):
-                        git_branches.append({
+                    git_branchs = []
+                    for tree in result.get("git_branchs", []):
+                        git_branchs.append({
                             "id": tree.get("id"),
                             "name": tree.get("name"),
                             "description": tree.get("description", ""),
@@ -266,8 +266,8 @@ class GitBranchApplicationFacade:
                     
                     return {
                         "success": True,
-                        "git_branches": git_branches,
-                        "total_count": len(git_branches),
+                        "git_branchs": git_branchs,
+                        "total_count": len(git_branchs),
                         "message": f"Listed git branches for project {project_id}"
                     }
                 else:
@@ -280,9 +280,9 @@ class GitBranchApplicationFacade:
                 
                 # Transform the result to match expected format
                 if result.get("success"):
-                    git_branches = []
-                    for tree in result.get("task_trees", []):
-                        git_branches.append({
+                    git_branchs = []
+                    for tree in result.get("git_branchs", []):
+                        git_branchs.append({
                             "id": tree.get("id"),
                             "name": tree.get("name"),
                             "description": tree.get("description", ""),
@@ -294,8 +294,8 @@ class GitBranchApplicationFacade:
                     
                     return {
                         "success": True,
-                        "git_branches": git_branches,
-                        "total_count": len(git_branches),
+                        "git_branchs": git_branchs,
+                        "total_count": len(git_branchs),
                         "message": f"Listed git branches for project {project_id}"
                     }
                 else:
@@ -315,8 +315,8 @@ class GitBranchApplicationFacade:
 
     async def get_tree(self, project_id: str, tree_name: str) -> Dict[str, Any]:
         """Facade method to get a task tree."""
-        return await self._task_tree_service.get_task_tree(project_id, tree_name)
+        return await self._git_branch_service.get_git_branch(project_id, tree_name)
 
     async def list_trees(self, project_id: str) -> Dict[str, Any]:
         """Facade method to list all task trees in a project."""
-        return await self._task_tree_service.list_task_trees(project_id) 
+        return await self._git_branch_service.list_git_branchs(project_id) 

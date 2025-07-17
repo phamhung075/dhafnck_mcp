@@ -1171,7 +1171,7 @@ class TaskMCPController:
                 with session_manager.get_session() as session:
                     # Look up project_id and branch name from git_branch_id
                     result = session.execute(
-                        text('SELECT project_id, name FROM project_task_trees WHERE id = :git_branch_id'),
+                        text('SELECT project_id, name FROM project_git_branchs WHERE id = :git_branch_id'),
                         {'git_branch_id': git_branch_id}
                     ).fetchone()
                     
@@ -1180,7 +1180,7 @@ class TaskMCPController:
                         logger.debug(f"Found project_id {actual_project_id} and branch name '{git_branch_name}' for git_branch_id {git_branch_id}")
                         return (actual_project_id, git_branch_name, "default_id")
                     else:
-                        logger.warning(f"Git branch {git_branch_id} not found in project_task_trees table")
+                        logger.warning(f"Git branch {git_branch_id} not found in project_git_branchs table")
             except Exception as e:
                 logger.warning(f"Failed to look up project_id for git_branch_id {git_branch_id}: {e}")
             
@@ -1210,7 +1210,7 @@ class TaskMCPController:
                         
                         # Now look up the actual project_id for this git_branch_id
                         branch_result = session.execute(
-                            text('SELECT project_id, name FROM project_task_trees WHERE id = :git_branch_id'),
+                            text('SELECT project_id, name FROM project_git_branchs WHERE id = :git_branch_id'),
                             {'git_branch_id': found_git_branch_id}
                         ).fetchone()
                         
@@ -1219,7 +1219,7 @@ class TaskMCPController:
                             logger.debug(f"Found project_id {actual_project_id} and branch name '{git_branch_name}' for git_branch_id {found_git_branch_id}")
                             return (actual_project_id, git_branch_name, "default_id")
                         else:
-                            logger.warning(f"Git branch {found_git_branch_id} not found in project_task_trees table")
+                            logger.warning(f"Git branch {found_git_branch_id} not found in project_git_branchs table")
                             return ("default_project", "main", "default_id")
                     else:
                         logger.warning(f"Task {task_id} not found or has no git_branch_id")

@@ -59,7 +59,7 @@ class ValidateIntegrityUseCase:
             errors.append("Project missing name")
         
         # Validate task trees
-        for tree_id, tree in project.task_trees.items():
+        for tree_id, tree in project.git_branchs.items():
             if not tree.name:
                 errors.append(f"Task tree {tree_id} missing name")
             if tree.project_id != project.id:
@@ -69,7 +69,7 @@ class ValidateIntegrityUseCase:
         for agent_id, tree_id in project.agent_assignments.items():
             if agent_id not in project.registered_agents:
                 errors.append(f"Agent {agent_id} assigned but not registered")
-            if tree_id not in project.task_trees:
+            if tree_id not in project.git_branchs:
                 errors.append(f"Agent {agent_id} assigned to non-existent tree {tree_id}")
         
         # Validate registered agents

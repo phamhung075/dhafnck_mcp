@@ -6,7 +6,7 @@ Defines the contract for git branch persistence operations.
 
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional
-from ..entities.task_tree import TaskTree
+from ..entities.git_branch import GitBranch
 
 
 class GitBranchRepository(ABC):

@@ -378,7 +378,7 @@ def verify_database_integrity(db_path: str) -> bool:
         cursor.execute('SELECT git_branch_id, COUNT(*) FROM tasks WHERE status = "done" GROUP BY git_branch_id')
         completed_counts = dict(cursor.fetchall())
         
-        cursor.execute('SELECT id, name FROM project_task_trees')
+        cursor.execute('SELECT id, name FROM project_git_branches')
         branches = cursor.fetchall()
         
         fixes = 0
@@ -387,7 +387,7 @@ def verify_database_integrity(db_path: str) -> bool:
             completed_count = completed_counts.get(branch_id, 0)
             
             cursor.execute(
-                'UPDATE project_task_trees SET task_count = ?, completed_task_count = ? WHERE id = ?',
+                'UPDATE project_git_branches SET task_count = ?, completed_task_count = ? WHERE id = ?',
                 (actual_count, completed_count, branch_id)
             )
             
@@ -503,7 +503,7 @@ cursor.execute("PRAGMA integrity_check;")
 integrity = cursor.fetchone()[0]
 print("Integrity: " + integrity)
 
-cursor.execute("SELECT name, task_count FROM project_task_trees WHERE task_count > 0")
+cursor.execute("SELECT name, task_count FROM project_git_branches WHERE task_count > 0")
 branches = cursor.fetchall()
 print("Branches with tasks: " + str(len(branches)))
 for name, count in branches:
@@ -589,7 +589,7 @@ try:
     cursor.execute("SELECT git_branch_id, COUNT(*) FROM tasks WHERE status = 'done' GROUP BY git_branch_id")
     completed_counts = dict(cursor.fetchall())
     
-    cursor.execute("SELECT id, name, task_count, completed_task_count FROM project_task_trees")
+    cursor.execute("SELECT id, name, task_count, completed_task_count FROM project_git_branches")
     branches = cursor.fetchall()
     
     inconsistent_branches = 0

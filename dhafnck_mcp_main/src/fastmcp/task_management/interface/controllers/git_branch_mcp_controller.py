@@ -164,7 +164,7 @@ class GitBranchMCPController:
                 return self._handle_delete_git_branch(facade, git_branch_id)
                 
             elif action == "list":
-                return self._handle_list_git_branches(facade, project_id)
+                return self._handle_list_git_branchs(facade, project_id)
                 
             else:
                 return self._create_invalid_action_error(action)
@@ -294,10 +294,10 @@ class GitBranchMCPController:
         response = facade.delete_git_branch(git_branch_id)
         return self._enhance_response_with_workflow_guidance(response, "delete", git_branch_id=git_branch_id)
     
-    def _handle_list_git_branches(self, facade: GitBranchApplicationFacade, 
+    def _handle_list_git_branchs(self, facade: GitBranchApplicationFacade, 
                                  project_id: str) -> Dict[str, Any]:
         """Convert MCP list parameters and delegate to facade."""
-        response = facade.list_git_branches(project_id)
+        response = facade.list_git_branchs(project_id)
         return self._enhance_response_with_workflow_guidance(response, "list", project_id)
     
     def _handle_assign_agent(self, facade: GitBranchApplicationFacade, project_id: str, git_branch_id: Optional[str], 
@@ -534,9 +534,9 @@ class GitBranchMCPController:
                 try:
                     new_loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(new_loop)
-                    task_tree = new_loop.run_until_complete(repo.find_by_name(project_id, git_branch_name))
-                    if task_tree:
-                        result = task_tree.id
+                    git_branch = new_loop.run_until_complete(repo.find_by_name(project_id, git_branch_name))
+                    if git_branch:
+                        result = git_branch.id
                     new_loop.close()
                 except Exception as e:
                     exception = e

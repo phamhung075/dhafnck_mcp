@@ -61,7 +61,7 @@ class CreateProjectUseCase:
             )
 
             # Create default main task tree so the project has at least one branch
-            project.create_task_tree(
+            project.create_git_branch(
                 git_branch_name="main",
                 name="Main Tasks",
                 description="Main task tree for the project",
@@ -128,6 +128,6 @@ class CreateProjectUseCase:
                 "description": project.description,
                 "created_at": project.created_at.isoformat(),
                 "updated_at": project.updated_at.isoformat(),
-                "task_trees": list(project.task_trees.keys()),
+                "git_branchs": list(project.git_branchs.keys()),
             },
         }

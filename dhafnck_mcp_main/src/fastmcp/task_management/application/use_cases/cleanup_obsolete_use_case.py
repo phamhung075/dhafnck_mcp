@@ -57,7 +57,7 @@ class CleanupObsoleteUseCase:
         # Remove assignments to non-existent trees
         assignments_to_remove = []
         for agent_id, tree_id in project.agent_assignments.items():
-            if tree_id not in project.task_trees:
+            if tree_id not in project.git_branchs:
                 assignments_to_remove.append(agent_id)
                 cleaned_items.append(f"Removed assignment of agent {agent_id} to non-existent tree {tree_id}")
         

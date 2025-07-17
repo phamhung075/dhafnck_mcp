@@ -19,7 +19,7 @@ from sqlalchemy.orm import sessionmaker
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from fastmcp.task_management.infrastructure.database.models import (
-    Project, Agent, ProjectTaskTree, Task, TaskSubtask, Base
+    Project, Agent, ProjectGitBranch, Task, TaskSubtask, Base
 )
 
 
@@ -173,7 +173,7 @@ class PerformanceComparison:
                 session.commit()
                 
                 # Create task tree
-                tree = ProjectTaskTree(
+                tree = ProjectGitBranch(
                     project_id=project.project_id,
                     git_branch_name=f"branch_{i}",
                     git_branch_description=f"Branch {i}",
@@ -197,7 +197,7 @@ class PerformanceComparison:
             
             # Time relationship queries
             duration, results = self.time_operation(
-                lambda: session.query(Project).join(ProjectTaskTree).join(Task).all()
+                lambda: session.query(Project).join(ProjectGitBranch).join(Task).all()
             )
             
             return duration, len(results)

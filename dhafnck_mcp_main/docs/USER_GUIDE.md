@@ -413,7 +413,7 @@ create_project(
 )
 
 # Create task trees for different phases
-create_task_tree(
+create_git_branche(
     project_id="ecommerce_site",
     git_branch_name="mvp_phase",
     name="MVP Development Phase"

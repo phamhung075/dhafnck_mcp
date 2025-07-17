@@ -48,10 +48,10 @@ class GitBranchServiceWrapper:
             self._git_branch_service.get_git_branch_by_id(git_branch_id)
         )
     
-    def list_git_branches(self, project_id: str) -> Dict[str, Any]:
+    def list_git_branchs(self, project_id: str) -> Dict[str, Any]:
         """List all git branches for a project"""
         return self._run_async(
-            self._git_branch_service.list_git_branches(project_id)
+            self._git_branch_service.list_git_branchs(project_id)
         )
     
     def update_git_branch(self, git_branch_id: str, git_branch_name: Optional[str] = None, git_branch_description: Optional[str] = None) -> Dict[str, Any]:

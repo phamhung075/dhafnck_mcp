@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 
 from ..entities.project import Project
 from ..entities.agent import Agent, AgentCapability, AgentStatus
-from ..entities.task_tree import TaskTree
+from ..entities.git_branch import GitBranch
 from ..entities.work_session import WorkSession
 from ..entities.task import Task
 from ..value_objects.priority import PriorityLevel
@@ -28,7 +28,7 @@ class CapabilityBasedStrategy(OrchestrationStrategy):
     def assign_work(self, project: Project, available_agents: List[Agent]) -> Dict[str, str]:
         assignments = {}
         
-        for git_branch_name, tree in project.task_trees.items():
+        for git_branch_name, tree in project.git_branchs.items():
             if git_branch_name in project.agent_assignments:
                 continue  # Already assigned
             
@@ -39,7 +39,7 @@ class CapabilityBasedStrategy(OrchestrationStrategy):
         
         return assignments
     
-    def _find_best_agent_for_tree(self, tree: TaskTree, agents: List[Agent]) -> Optional[Agent]:
+    def _find_best_agent_for_tree(self, tree: GitBranch, agents: List[Agent]) -> Optional[Agent]:
         """Find the best agent for a specific task tree"""
         available_agents = [agent for agent in agents if agent.is_available()]
         
@@ -56,7 +56,7 @@ class CapabilityBasedStrategy(OrchestrationStrategy):
         agent_scores.sort(key=lambda x: x[1], reverse=True)
         return agent_scores[0][0] if agent_scores[0][1] > 0 else None
     
-    def _calculate_agent_tree_score(self, agent: Agent, tree: TaskTree) -> float:
+    def _calculate_agent_tree_score(self, agent: Agent, tree: GitBranch) -> float:
         """Calculate how suitable an agent is for a task tree"""
         base_score = 50.0
         
@@ -78,7 +78,7 @@ class CapabilityBasedStrategy(OrchestrationStrategy):
         
         return base_score + capability_score + language_score + workload_score
     
-    def _analyze_tree_requirements(self, tree: TaskTree) -> Dict:
+    def _analyze_tree_requirements(self, tree: GitBranch) -> Dict:
         """Analyze task tree to determine capability requirements"""
         capabilities = set()
         languages = set()
@@ -169,12 +169,12 @@ class Orchestrator:
         dependency_issues = []
         
         for dependent_task_id, prerequisite_ids in project.cross_tree_dependencies.items():
-            dependent_tree = project._find_task_tree(dependent_task_id)
+            dependent_tree = project._find_git_branch(dependent_task_id)
             if not dependent_tree:
                 continue
             
             for prerequisite_id in prerequisite_ids:
-                prerequisite_tree = project._find_task_tree(prerequisite_id)
+                prerequisite_tree = project._find_git_branch(prerequisite_id)
                 if not prerequisite_tree:
                     dependency_issues.append({
                         "type": "missing_prerequisite",
@@ -220,21 +220,21 @@ class Orchestrator:
             
             # Find tasks that could be reassigned
             for task_id in agent.active_tasks:
-                task_tree = project._find_task_tree(task_id)
-                if task_tree:
+                git_branch = project._find_git_branch(task_id)
+                if git_branch:
                     # Find suitable underloaded agents
                     for underloaded_agent_id in underloaded_agents:
                         underloaded_agent = project.registered_agents[underloaded_agent_id]
                         
                         # Check if underloaded agent can handle the task
-                        task = task_tree.get_task(task_id)
+                        task = git_branch.get_task(task_id)
                         if task and self._can_agent_handle_task(underloaded_agent, task):
                             rebalancing_recommendations.append({
                                 "type": "reassign_task",
                                 "from_agent": overloaded_agent_id,
                                 "to_agent": underloaded_agent_id,
                                 "task_id": task_id,
-                                "git_branch_name": task_tree.id
+                                "git_branch_name": git_branch.id
                             })
                             break
         

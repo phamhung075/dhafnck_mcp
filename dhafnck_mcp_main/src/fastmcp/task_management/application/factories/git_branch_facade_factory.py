@@ -51,12 +51,12 @@ class GitBranchFacadeFactory:
             logger.debug(f"Returning cached git branch facade for {cache_key}")
             return self._facades_cache[cache_key]
         
-        # Create TaskTreeService - it will get its own project repository
-        from ..services.task_tree_service import TaskTreeService
-        task_tree_service = TaskTreeService()
+        # Create GitBranchService - it will get its own project repository
+        from ..services.git_branch_service import GitBranchService
+        git_branch_service = GitBranchService()
         
         # Create facade with service and project_id
-        facade = GitBranchApplicationFacade(task_tree_service=task_tree_service, project_id=project_id)
+        facade = GitBranchApplicationFacade(git_branch_service=git_branch_service, project_id=project_id)
         
         # Cache the facade
         self._facades_cache[cache_key] = facade

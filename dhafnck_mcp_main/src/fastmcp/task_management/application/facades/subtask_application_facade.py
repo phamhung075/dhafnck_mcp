@@ -87,7 +87,7 @@ class SubtaskApplicationFacade:
         }
     
     def _derive_context_from_git_branch_id(self, git_branch_id: str) -> Dict[str, str]:
-        """Derive context parameters from git_branch_id by looking up the project_task_trees table"""
+        """Derive context parameters from git_branch_id by looking up the project_git_branchs table"""
         try:
             # Use system-level database access to look up git branch and project
             from ...infrastructure.database.database_source_manager import get_database_path
@@ -97,9 +97,9 @@ class SubtaskApplicationFacade:
             with sqlite3.connect(db_path) as conn:
                 conn.row_factory = sqlite3.Row
                 
-                # Look up the git branch in project_task_trees to get project_id and git_branch_name
+                # Look up the git branch in project_git_branchs to get project_id and git_branch_name
                 branch_row = conn.execute(
-                    'SELECT project_id, name FROM project_task_trees WHERE id = ?',
+                    'SELECT project_id, name FROM project_git_branchs WHERE id = ?',
                     (git_branch_id,)
                 ).fetchone()
                 

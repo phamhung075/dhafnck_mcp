@@ -23,7 +23,7 @@ class ListProjectsUseCase:
                 "description": project.description,
                 "created_at": project.created_at.isoformat(),
                 "updated_at": project.updated_at.isoformat(),
-                "task_trees_count": len(project.task_trees),
+                "git_branchs_count": len(project.git_branchs),
                 "registered_agents_count": len(project.registered_agents),
                 "active_assignments": len(project.agent_assignments),
                 "active_sessions": len(project.active_work_sessions)

@@ -9,7 +9,7 @@ from src.fastmcp.task_management.domain.entities.agent import Agent, AgentStatus
 from src.fastmcp.task_management.domain.entities.project import Project
 from src.fastmcp.task_management.domain.entities.subtask import Subtask
 from src.fastmcp.task_management.domain.entities.work_session import WorkSession
-from src.fastmcp.task_management.domain.entities.task_tree import TaskTree
+from src.fastmcp.task_management.domain.entities.git_branch import GitBranch
 from src.fastmcp.task_management.domain.value_objects.task_id import TaskId
 from src.fastmcp.task_management.domain.value_objects.subtask_id import SubtaskId
 from src.fastmcp.task_management.domain.value_objects.task_status import TaskStatus
@@ -229,7 +229,7 @@ class ProjectBuilder:
         self._description = "Test project description"
         self._created_at = datetime.now(timezone.utc)
         self._updated_at = datetime.now(timezone.utc)
-        self._git_branches = {}
+        self._git_branchs = {}
         self._agents = {}
         self._work_sessions = []
         self._cross_tree_dependencies = []
@@ -245,18 +245,18 @@ class ProjectBuilder:
         self._agents[agent.id] = agent
         return self
     
-    def with_git_branch(self, branch_name: str, tree: Optional[TaskTree] = None) -> 'ProjectBuilder':
+    def with_git_branch(self, branch_name: str, tree: Optional[GitBranch] = None) -> 'ProjectBuilder':
         """Add git branch with optional task tree."""
         if tree is None:
-            tree = TaskTree.create(
+            tree = GitBranch.create(
                 name=f"{branch_name} Tasks",
                 description=f"Tasks for {branch_name}",
                 project_id=self._id
             )
-        self._git_branches[branch_name] = {
+        self._git_branchs[branch_name] = {
             "id": f"branch-{uuid.uuid4()}",
             "name": branch_name,
-            "task_tree": tree,
+            "git_branch": tree,
             "assigned_agent_id": None
         }
         return self
@@ -272,7 +272,7 @@ class ProjectBuilder:
         )
         
         # Set internal state
-        project.git_branches = self._git_branches
+        project.git_branchs = self._git_branchs
         project.agents = self._agents
         project.work_sessions = self._work_sessions
         project.cross_tree_dependencies = self._cross_tree_dependencies

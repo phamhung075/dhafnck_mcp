@@ -1,22 +1,22 @@
-"""Unit tests for TaskTree entity."""
+"""Unit tests for GitBranch entity."""
 
 import pytest
 from datetime import datetime, timezone
 from unittest.mock import Mock
 
-from src.fastmcp.task_management.domain.entities.task_tree import TaskTree
+from src.fastmcp.task_management.domain.entities.git_branch import GitBranch
 from src.fastmcp.task_management.domain.entities.task import Task
 from src.fastmcp.task_management.domain.value_objects.task_id import TaskId
 from src.fastmcp.task_management.domain.value_objects.task_status import TaskStatus
 from src.fastmcp.task_management.domain.value_objects.priority import Priority
 
 
-class TestTaskTreeCreation:
-    """Test TaskTree entity creation."""
+class TestGitBranchCreation:
+    """Test GitBranch entity creation."""
     
-    def test_create_task_tree_with_factory(self):
+    def test_create_git_branch_with_factory(self):
         """Test creating task tree with factory method."""
-        tree = TaskTree.create(
+        tree = GitBranch.create(
             name="Feature Development",
             description="Implement new feature",
             project_id="project-1"
@@ -34,10 +34,10 @@ class TestTaskTreeCreation:
         assert tree.priority.value == Priority.medium().value
         assert tree.status.value == TaskStatus.todo().value
     
-    def test_create_task_tree_direct(self):
+    def test_create_git_branch_direct(self):
         """Test creating task tree directly."""
         now = datetime.now()
-        tree = TaskTree(
+        tree = GitBranch(
             id="tree-1",
             name="Bug Fixes",
             description="Fix critical bugs",
@@ -50,9 +50,9 @@ class TestTaskTreeCreation:
         assert tree.name == "Bug Fixes"
         assert tree.priority.value == Priority.medium().value
     
-    def test_create_task_tree_with_custom_attributes(self):
+    def test_create_git_branch_with_custom_attributes(self):
         """Test creating task tree with custom attributes."""
-        tree = TaskTree(
+        tree = GitBranch(
             id="tree-2",
             name="Refactoring",
             description="Code refactoring",
@@ -68,12 +68,12 @@ class TestTaskTreeCreation:
         assert tree.status.value == TaskStatus.in_progress().value
 
 
-class TestTaskTreeTaskManagement:
-    """Test TaskTree task management operations."""
+class TestGitBranchTaskManagement:
+    """Test GitBranch task management operations."""
     
     def test_add_root_task(self):
         """Test adding root task to tree."""
-        tree = TaskTree.create("Test Tree", "Test", "project-1")
+        tree = GitBranch.create("Test Tree", "Test", "project-1")
         task = Task(
             id=TaskId.from_string("550e8400-e29b-41d4-a716-446655440001"),
             title="Root Task",
@@ -89,7 +89,7 @@ class TestTaskTreeTaskManagement:
     
     def test_add_multiple_root_tasks(self):
         """Test adding multiple root tasks."""
-        tree = TaskTree.create("Test Tree", "Test", "project-1")
+        tree = GitBranch.create("Test Tree", "Test", "project-1")
         
         task1 = Task(
             id=TaskId.from_string("550e8400-e29b-41d4-a716-446655440001"),
@@ -110,7 +110,7 @@ class TestTaskTreeTaskManagement:
     
     def test_add_subtask(self):
         """Test adding subtask to existing task."""
-        tree = TaskTree.create("Test Tree", "Test", "project-1")
+        tree = GitBranch.create("Test Tree", "Test", "project-1")
         
         # Add parent task
         parent = Task(
@@ -127,7 +127,7 @@ class TestTaskTreeTaskManagement:
             description="Child task"
         )
         
-        tree.add_task(subtask, parent_task_id=parent.id.value)
+        tree.add_child_task(parent.id.value, subtask)
         
         assert subtask.id.value in tree.all_tasks
         assert subtask.id.value not in tree.root_tasks  # Not a root task
@@ -136,7 +136,7 @@ class TestTaskTreeTaskManagement:
     
     def test_add_task_with_invalid_parent(self):
         """Test adding task with non-existent parent."""
-        tree = TaskTree.create("Test Tree", "Test", "project-1")
+        tree = GitBranch.create("Test Tree", "Test", "project-1")
         
         task = Task(
             id=TaskId.from_string("550e8400-e29b-41d4-a716-446655440001"),
@@ -145,11 +145,11 @@ class TestTaskTreeTaskManagement:
         )
         
         with pytest.raises(ValueError, match="Parent task non-existent not found"):
-            tree.add_task(task, parent_task_id="non-existent")
+            tree.add_child_task("non-existent", task)
     
     def test_get_task(self):
         """Test getting task from tree."""
-        tree = TaskTree.create("Test Tree", "Test", "project-1")
+        tree = GitBranch.create("Test Tree", "Test", "project-1")
         
         task = Task(
             id=TaskId.from_string("550e8400-e29b-41d4-a716-446655440001"),
@@ -166,7 +166,7 @@ class TestTaskTreeTaskManagement:
     
     def test_has_task(self):
         """Test checking if task exists in tree."""
-        tree = TaskTree.create("Test Tree", "Test", "project-1")
+        tree = GitBranch.create("Test Tree", "Test", "project-1")
         
         task = Task(
             id=TaskId.from_string("550e8400-e29b-41d4-a716-446655440001"),
@@ -179,12 +179,12 @@ class TestTaskTreeTaskManagement:
         assert tree.has_task("non-existent") is False
 
 
-class TestTaskTreeStatusAndProgress:
-    """Test TaskTree status and progress tracking."""
+class TestGitBranchStatusAndProgress:
+    """Test GitBranch status and progress tracking."""
     
     def test_get_task_count(self):
         """Test getting total task count."""
-        tree = TaskTree.create("Test Tree", "Test", "project-1")
+        tree = GitBranch.create("Test Tree", "Test", "project-1")
         
         # Empty tree
         assert tree.get_task_count() == 0
@@ -202,7 +202,7 @@ class TestTaskTreeStatusAndProgress:
     
     def test_get_completed_task_count(self):
         """Test getting completed task count."""
-        tree = TaskTree.create("Test Tree", "Test", "project-1")
+        tree = GitBranch.create("Test Tree", "Test", "project-1")
         
         # Add tasks with different statuses
         statuses = [
@@ -227,7 +227,7 @@ class TestTaskTreeStatusAndProgress:
     
     def test_get_progress_percentage(self):
         """Test calculating progress percentage."""
-        tree = TaskTree.create("Test Tree", "Test", "project-1")
+        tree = GitBranch.create("Test Tree", "Test", "project-1")
         
         # Empty tree
         assert tree.get_progress_percentage() == 0.0
@@ -246,7 +246,7 @@ class TestTaskTreeStatusAndProgress:
     
     def test_get_tree_status(self):
         """Test getting comprehensive tree status."""
-        tree = TaskTree.create("Test Tree", "Test", "project-1")
+        tree = GitBranch.create("Test Tree", "Test", "project-1")
         
         # Add tasks with various statuses and priorities
         tasks_config = [
@@ -280,12 +280,12 @@ class TestTaskTreeStatusAndProgress:
         assert status["priority_breakdown"]["low"] == 1
 
 
-class TestTaskTreeAvailability:
-    """Test TaskTree task availability operations."""
+class TestGitBranchAvailability:
+    """Test GitBranch task availability operations."""
     
     def test_get_available_tasks_simple(self):
         """Test getting available tasks without dependencies."""
-        tree = TaskTree.create("Test Tree", "Test", "project-1")
+        tree = GitBranch.create("Test Tree", "Test", "project-1")
         
         # Add tasks with different statuses
         task_configs = [
@@ -314,7 +314,7 @@ class TestTaskTreeAvailability:
     
     def test_get_available_tasks_with_dependencies(self):
         """Test getting available tasks considering dependencies."""
-        tree = TaskTree.create("Test Tree", "Test", "project-1")
+        tree = GitBranch.create("Test Tree", "Test", "project-1")
         
         # Create tasks
         task1 = Task(
@@ -345,7 +345,7 @@ class TestTaskTreeAvailability:
     
     def test_get_next_task(self):
         """Test getting next highest priority task."""
-        tree = TaskTree.create("Test Tree", "Test", "project-1")
+        tree = GitBranch.create("Test Tree", "Test", "project-1")
         
         # Add tasks with different priorities
         priority_configs = [
@@ -373,14 +373,14 @@ class TestTaskTreeAvailability:
     
     def test_get_next_task_empty_tree(self):
         """Test getting next task from empty tree."""
-        tree = TaskTree.create("Test Tree", "Test", "project-1")
+        tree = GitBranch.create("Test Tree", "Test", "project-1")
         
         next_task = tree.get_next_task()
         assert next_task is None
     
     def test_get_next_task_all_completed(self):
         """Test getting next task when all are completed."""
-        tree = TaskTree.create("Test Tree", "Test", "project-1")
+        tree = GitBranch.create("Test Tree", "Test", "project-1")
         
         # Add only completed tasks
         for i in range(3):
@@ -396,12 +396,12 @@ class TestTaskTreeAvailability:
         assert next_task is None
 
 
-class TestTaskTreeIntegration:
-    """Test TaskTree integration scenarios."""
+class TestGitBranchIntegration:
+    """Test GitBranch integration scenarios."""
     
-    def test_task_tree_with_hierarchy(self):
+    def test_git_branch_with_hierarchy(self):
         """Test task tree with multi-level hierarchy."""
-        tree = TaskTree.create("Feature Tree", "Complex feature", "project-1")
+        tree = GitBranch.create("Feature Tree", "Complex feature", "project-1")
         
         # Create parent task
         parent = Task(
@@ -420,7 +420,7 @@ class TestTaskTreeIntegration:
                 title=f"Subtask {i+1}",
                 description=f"Part {i+1} of auth implementation"
             )
-            tree.add_task(subtask, parent_task_id=parent.id.value)
+            tree.add_child_task(parent.id.value, subtask)
             subtask_ids.append(subtask.id.value)
         
         # Verify structure
@@ -431,7 +431,7 @@ class TestTaskTreeIntegration:
     
     def test_update_timestamps(self):
         """Test that operations update the tree's updated_at timestamp."""
-        tree = TaskTree.create("Test Tree", "Test", "project-1")
+        tree = GitBranch.create("Test Tree", "Test", "project-1")
         initial_updated = tree.updated_at
         
         # Wait a tiny bit
@@ -450,7 +450,7 @@ class TestTaskTreeIntegration:
     
     def test_tree_priority_sorting(self):
         """Test that get_next_task properly sorts by priority."""
-        tree = TaskTree.create("Test Tree", "Test", "project-1")
+        tree = GitBranch.create("Test Tree", "Test", "project-1")
         
         # Add tasks with same priority but different creation times
         base_time = datetime.now(timezone.utc)

@@ -11,7 +11,7 @@ from pathlib import Path
 
 from .database_config import get_db_config, Base
 from .models import (
-    Project, ProjectTaskTree, Task, TaskSubtask, TaskAssignee,
+    Project, ProjectGitBranch, Task, TaskSubtask, TaskAssignee,
     TaskDependency, Agent, HierarchicalContext, Label, TaskLabel, Template,
     GlobalContext, ProjectContext, TaskContext, ContextDelegation, ContextInheritanceCache
 )
@@ -85,11 +85,11 @@ def migrate_from_sqlite_to_postgresql(sqlite_path: str):
             )
             session.merge(project)
         
-        # Migrate project_task_trees
+        # Migrate project_git_branchs
         logger.info("Migrating git branches...")
-        cursor = sqlite_conn.execute("SELECT * FROM project_task_trees")
+        cursor = sqlite_conn.execute("SELECT * FROM project_git_branchs")
         for row in cursor:
-            branch = ProjectTaskTree(
+            branch = ProjectGitBranch(
                 id=row['id'],
                 project_id=row['project_id'],
                 name=row['name'],

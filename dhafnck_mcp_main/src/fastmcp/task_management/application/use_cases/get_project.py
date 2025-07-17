@@ -29,7 +29,7 @@ class GetProjectUseCase:
                 "description": project.description,
                 "created_at": project.created_at.isoformat(),
                 "updated_at": project.updated_at.isoformat(),
-                "task_trees": {
+                "git_branchs": {
                     tree_id: {
                         "id": tree.id,
                         "name": tree.name,
@@ -39,7 +39,7 @@ class GetProjectUseCase:
                         "completed_tasks": tree.get_completed_task_count(),
                         "progress": tree.get_progress_percentage()
                     }
-                    for tree_id, tree in project.task_trees.items()
+                    for tree_id, tree in project.git_branchs.items()
                 },
                 "registered_agents": {
                     agent_id: {

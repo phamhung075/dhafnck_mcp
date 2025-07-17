@@ -38,7 +38,7 @@ class TestEndToEndWorkflowsIsolated:
                     "name": name,
                     "description": description,
                     "status": "active",
-                    "task_trees": {"main": {"name": "Main", "description": "Main tasks"}},
+                    "git_branchs": {"main": {"name": "Main", "description": "Main tasks"}},
                     "registered_agents": {},
                     "agent_assignments": {}
                 }

@@ -11,7 +11,7 @@ from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime, timezone
 
 from fastmcp.task_management.interface.controllers.context_id_detector_orm import ContextIDDetector
-from fastmcp.task_management.infrastructure.database.models import Project, ProjectTaskTree, Task
+from fastmcp.task_management.infrastructure.database.models import Project, ProjectGitBranch, Task
 
 
 class TestContextIDDetectorORM:
@@ -59,14 +59,14 @@ class TestContextIDDetectorORM:
         project_id = "ae88dd28-1905-444d-81d0-e338297239a4"
         
         # Create mock branch
-        mock_branch = Mock(spec=ProjectTaskTree)
+        mock_branch = Mock(spec=ProjectGitBranch)
         mock_branch.id = branch_id
         mock_branch.project_id = project_id
         
         # Setup mock to return branch for branch query, None for others
         def query_side_effect(model):
             query_mock = Mock()
-            if model == ProjectTaskTree:
+            if model == ProjectGitBranch:
                 query_mock.filter_by.return_value.first.return_value = mock_branch
             else:
                 query_mock.filter_by.return_value.first.return_value = None
@@ -95,7 +95,7 @@ class TestContextIDDetectorORM:
         mock_task.id = task_id
         mock_task.git_branch_id = branch_id
         
-        mock_branch = Mock(spec=ProjectTaskTree)
+        mock_branch = Mock(spec=ProjectGitBranch)
         mock_branch.id = branch_id
         mock_branch.project_id = project_id
         
@@ -105,13 +105,13 @@ class TestContextIDDetectorORM:
             nonlocal call_count
             query_mock = Mock()
             
-            if call_count < 3 and model in [Project, ProjectTaskTree]:
+            if call_count < 3 and model in [Project, ProjectGitBranch]:
                 # First queries for project and branch return None
                 query_mock.filter_by.return_value.first.return_value = None
             elif model == Task:
                 # Task query returns the task
                 query_mock.filter_by.return_value.first.return_value = mock_task
-            elif model == ProjectTaskTree and call_count >= 3:
+            elif model == ProjectGitBranch and call_count >= 3:
                 # Second branch query (to get project from task's branch) returns branch
                 query_mock.filter_by.return_value.first.return_value = mock_branch
             else:

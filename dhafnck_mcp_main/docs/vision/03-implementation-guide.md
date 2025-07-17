@@ -123,7 +123,7 @@ class Project:
 ```
 
 ```python
-# Update: domain/entities/task_tree.py
+# Update: domain/entities/git_branche.py
 
 @dataclass
 class BranchVision:
@@ -197,7 +197,7 @@ class Task:
 from abc import ABC, abstractmethod
 from typing import List, Optional
 from ..entities.project import ProjectVision
-from ..entities.task_tree import BranchVision
+from ..entities.git_branche import BranchVision
 from ..entities.task import TaskVisionAlignment
 
 class VisionRepository(ABC):
@@ -249,7 +249,7 @@ class VisionRepository(ABC):
 from typing import List, Optional
 from ..value_objects.vision_objects import VisionAlignment, VisionObjective
 from ..entities.project import Project, ProjectVision
-from ..entities.task_tree import TaskTree, BranchVision
+from ..entities.git_branche import TaskTree, BranchVision
 from ..entities.task import Task, TaskVisionAlignment
 
 class VisionAlignmentService:
@@ -312,7 +312,7 @@ class VisionAlignmentService:
             return issues
         
         # Check each branch
-        for branch_id, branch in project.task_trees.items():
+        for branch_id, branch in project.git_branches.items():
             if not branch.vision:
                 issues.append(f"Branch {branch.name} lacks vision definition")
                 continue
@@ -377,7 +377,7 @@ class VisionAlignmentService:
 
 from typing import List, Dict, Optional
 from ..entities.project import Project, ProjectVision
-from ..entities.task_tree import TaskTree, BranchVision
+from ..entities.git_branche import TaskTree, BranchVision
 from ..entities.task import Task, TaskVisionAlignment
 from ..value_objects.priority import Priority
 
@@ -430,7 +430,7 @@ class VisionCascadeService:
         }
         
         # Check each branch for needed updates
-        for branch_id, branch in project.task_trees.items():
+        for branch_id, branch in project.git_branches.items():
             if branch.vision:
                 # Check if branch vision needs updating
                 current_alignment = self._calculate_alignment(branch.vision, project.vision)
@@ -588,11 +588,11 @@ class VisionMetricsService:
     
     def _calculate_alignment_score(self, project: Project) -> float:
         """Calculate average alignment score across all branches"""
-        if not project.task_trees:
+        if not project.git_branches:
             return 0.0
         
         alignment_scores = []
-        for branch in project.task_trees.values():
+        for branch in project.git_branches.values():
             if branch.vision:
                 alignment_scores.append(branch.vision.alignment_with_project)
         
@@ -614,7 +614,7 @@ class VisionMetricsService:
         total_objectives = len(project.vision.objectives)
         covered_objectives = set()
         
-        for branch in project.task_trees.values():
+        for branch in project.git_branches.values():
             for task in branch.all_tasks.values():
                 if task.vision_alignment:
                     covered_objectives.update(task.vision_alignment.contributes_to_objectives)
@@ -626,7 +626,7 @@ class VisionMetricsService:
         total_tasks = 0
         vision_aligned_completed = 0
         
-        for branch in project.task_trees.values():
+        for branch in project.git_branches.values():
             for task in branch.all_tasks.values():
                 if task.vision_alignment:
                     total_tasks += 1
@@ -737,7 +737,7 @@ class VisionPrioritizationService:
     
     def _find_task_branch(self, task: Task, project: Project) -> Optional[TaskTree]:
         """Find which branch contains the task"""
-        for branch in project.task_trees.values():
+        for branch in project.git_branches.values():
             if branch.has_task(task.id.value):
                 return branch
         return None
@@ -747,7 +747,7 @@ class VisionPrioritizationService:
         blocked_count = 0
         blocked_value = 0
         
-        for branch in project.task_trees.values():
+        for branch in project.git_branches.values():
             for other_task in branch.all_tasks.values():
                 if task.id in other_task.dependencies:
                     blocked_count += 1
@@ -818,7 +818,7 @@ class VisionDashboardService:
         matrix["objectives"] = [obj.title for obj in project.vision.objectives]
         
         # Add branch alignment data
-        for branch in project.task_trees.values():
+        for branch in project.git_branches.values():
             branch_data = {
                 "name": branch.name,
                 "alignment_scores": []
@@ -853,7 +853,7 @@ class VisionDashboardService:
             return insights
         
         # Check branch coverage
-        branches_without_vision = [b.name for b in project.task_trees.values() if not b.vision]
+        branches_without_vision = [b.name for b in project.git_branches.values() if not b.vision]
         if branches_without_vision:
             insights.append({
                 "type": "warning",
@@ -876,7 +876,7 @@ class VisionDashboardService:
         
         # Check alignment scores
         low_alignment_branches = []
-        for branch in project.task_trees.values():
+        for branch in project.git_branches.values():
             if branch.vision and branch.vision.alignment_with_project < 0.7:
                 low_alignment_branches.append((branch.name, branch.vision.alignment_with_project))
         
@@ -891,10 +891,10 @@ class VisionDashboardService:
     
     def _calculate_vision_coverage(self, project: Project) -> float:
         """Calculate percentage of work covered by vision"""
-        total_tasks = sum(len(branch.all_tasks) for branch in project.task_trees.values())
+        total_tasks = sum(len(branch.all_tasks) for branch in project.git_branches.values())
         vision_aligned_tasks = sum(
             sum(1 for task in branch.all_tasks.values() if task.vision_alignment)
-            for branch in project.task_trees.values()
+            for branch in project.git_branches.values()
         )
         
         return (vision_aligned_tasks / total_tasks * 100) if total_tasks > 0 else 0.0
@@ -906,7 +906,7 @@ class VisionDashboardService:
         low_alignment = 0
         no_vision = 0
         
-        for branch in project.task_trees.values():
+        for branch in project.git_branches.values():
             if not branch.vision:
                 no_vision += 1
             elif branch.vision.alignment_with_project >= 0.8:
@@ -952,7 +952,7 @@ class VisionDashboardService:
 import pytest
 from datetime import datetime, timedelta
 from domain.entities.project import Project, ProjectVision
-from domain.entities.task_tree import TaskTree, BranchVision
+from domain.entities.git_branche import TaskTree, BranchVision
 from domain.entities.task import Task, TaskVisionAlignment
 from domain.value_objects.vision_objects import VisionObjective, VisionMetric
 from domain.services.vision_alignment_service import VisionAlignmentService
@@ -1059,7 +1059,7 @@ class TestVisionIntegration:
         project.set_vision(sample_project_vision)
         
         # Create branch with vision
-        branch = project.create_task_tree("feature_branch", "Feature Branch", "Description")
+        branch = project.create_git_branche("feature_branch", "Feature Branch", "Description")
         branch_vision = BranchVision(
             branch_objectives=["Increase user engagement"],
             branch_deliverables=["Dashboard"],
@@ -1209,7 +1209,7 @@ async def cascade_vision(
     project = await get_project(project_id)
     results = []
     
-    for branch_id, branch in project.task_trees.items():
+    for branch_id, branch in project.git_branches.items():
         if not branch.vision:
             branch_vision = cascade_service.cascade_project_vision_to_branch(
                 project.vision, branch.name
@@ -1310,7 +1310,7 @@ async def migrate_existing_data():
         await vision_repository.save_project_vision(project.id, default_vision)
         
         # Create default branch visions
-        for branch_id, branch in project.task_trees.items():
+        for branch_id, branch in project.git_branches.items():
             branch_vision = BranchVision(
                 branch_objectives=[f"Complete {branch.name}"],
                 branch_deliverables=[],

@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from fastmcp.task_management.interface.controllers.context_id_detector_orm import ContextIDDetector
 from fastmcp.task_management.infrastructure.database.database_config import get_session
-from fastmcp.task_management.infrastructure.database.models import Project, ProjectTaskTree, Task
+from fastmcp.task_management.infrastructure.database.models import Project, ProjectGitBranch, Task
 
 
 class TestContextIDDetectorORM:
@@ -45,7 +45,7 @@ class TestContextIDDetectorORM:
             session.add(project)
             
             # Create git branch (project task tree)
-            branch = ProjectTaskTree(
+            branch = ProjectGitBranch(
                 id=test_branch_id,
                 project_id=test_project_id,
                 name="test-branch",
@@ -79,7 +79,7 @@ class TestContextIDDetectorORM:
         # Cleanup after test
         with get_session() as session:
             session.query(Task).filter_by(id=test_task_id).delete()
-            session.query(ProjectTaskTree).filter_by(id=test_branch_id).delete()
+            session.query(ProjectGitBranch).filter_by(id=test_branch_id).delete()
             session.query(Project).filter_by(id=test_project_id).delete()
             session.commit()
     

@@ -46,7 +46,7 @@ def sample_project_data():
         "status": "active",
         "created_at": FixtureGenerator.generate_timestamp(),
         "updated_at": FixtureGenerator.generate_timestamp(),
-        "task_trees": ["feature_development", "bug_fixes"]
+        "git_branchs": ["feature_development", "bug_fixes"]
     }
 
 
@@ -290,8 +290,8 @@ def mock_project_facade():
     facade.get_project.return_value = None
     facade.delete_project.return_value = False
     facade.list_projects.return_value = []
-    facade.add_task_tree.return_value = False
-    facade.remove_task_tree.return_value = False
+    facade.add_git_branch.return_value = False
+    facade.remove_git_branch.return_value = False
     return facade
 
 

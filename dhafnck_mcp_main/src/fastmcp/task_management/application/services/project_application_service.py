@@ -5,7 +5,7 @@ from ..use_cases.create_project import CreateProjectUseCase
 from ..use_cases.get_project import GetProjectUseCase
 from ..use_cases.list_projects import ListProjectsUseCase
 from ..use_cases.update_project import UpdateProjectUseCase
-from ..use_cases.create_task_tree import CreateTaskTreeUseCase
+from ..use_cases.create_git_branch import CreateGitBranchUseCase
 from ..use_cases.project_health_check import ProjectHealthCheckUseCase
 from ...domain.repositories.project_repository import ProjectRepository
 
@@ -21,7 +21,7 @@ class ProjectApplicationService:
         self._get_project_use_case = GetProjectUseCase(project_repository)
         self._list_projects_use_case = ListProjectsUseCase(project_repository)
         self._update_project_use_case = UpdateProjectUseCase(project_repository)
-        self._create_task_tree_use_case = CreateTaskTreeUseCase(project_repository)
+        self._create_git_branch_use_case = CreateGitBranchUseCase(project_repository)
         self._project_health_check_use_case = ProjectHealthCheckUseCase(project_repository)
     
     async def create_project(self, project_id: str, name: str, description: str = "") -> Dict[str, Any]:
@@ -40,9 +40,9 @@ class ProjectApplicationService:
         """Update an existing project"""
         return await self._update_project_use_case.execute(project_id, name, description)
     
-    async def create_task_tree(self, project_id: str, git_branch_name: str, tree_name: str, tree_description: str = "") -> Dict[str, Any]:
+    async def create_git_branch(self, project_id: str, git_branch_name: str, tree_name: str, tree_description: str = "") -> Dict[str, Any]:
         """Create a new task tree within a project"""
-        return await self._create_task_tree_use_case.execute(project_id, git_branch_name, tree_name, tree_description)
+        return await self._create_git_branch_use_case.execute(project_id, git_branch_name, tree_name, tree_description)
     
     async def project_health_check(self, project_id: Optional[str] = None) -> Dict[str, Any]:
         """Perform health check on project(s)"""
@@ -240,7 +240,7 @@ class ProjectApplicationService:
         # Remove assignments to non-existent trees
         assignments_to_remove = []
         for git_branch_name, agent_id in project.agent_assignments.items():
-            if git_branch_name not in project.task_trees:
+            if git_branch_name not in project.git_branchs:
                 assignments_to_remove.append(git_branch_name)
             elif agent_id not in project.registered_agents:
                 assignments_to_remove.append(git_branch_name)

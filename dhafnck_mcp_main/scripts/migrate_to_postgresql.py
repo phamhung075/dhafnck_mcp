@@ -41,7 +41,7 @@ class DatabaseMigrator:
         try:
             # Migrate tables in dependency order
             self._migrate_projects(sqlite_conn, pg_conn)
-            self._migrate_project_task_trees(sqlite_conn, pg_conn)
+            self._migrate_project_git_branches(sqlite_conn, pg_conn)
             self._migrate_tasks(sqlite_conn, pg_conn)
             self._migrate_global_contexts(sqlite_conn, pg_conn)
             self._migrate_project_contexts(sqlite_conn, pg_conn)
@@ -94,12 +94,12 @@ class DatabaseMigrator:
         
         print(f"Migrated {len(rows)} projects.")
     
-    def _migrate_project_task_trees(self, sqlite_conn, pg_conn):
-        """Migrate project_task_trees table."""
+    def _migrate_project_git_branches(self, sqlite_conn, pg_conn):
+        """Migrate project_git_branches table."""
         print("Migrating project task trees...")
         
         cursor = sqlite_conn.cursor()
-        cursor.execute("SELECT * FROM project_task_trees")
+        cursor.execute("SELECT * FROM project_git_branches")
         rows = cursor.fetchall()
         
         if not rows:
@@ -113,7 +113,7 @@ class DatabaseMigrator:
             metadata = json.loads(tree.get('metadata', '{}'))
             
             pg_cursor.execute("""
-                INSERT INTO project_task_trees (
+                INSERT INTO project_git_branches (
                     id, project_id, name, description, created_at, updated_at,
                     assigned_agent_id, priority, status, metadata, task_count, completed_task_count
                 )

@@ -107,7 +107,7 @@ def repair_json_corruption(db_path: str) -> bool:
         return False
 
 def fix_task_counts(db_path: str) -> bool:
-    """Fix task counts in project_task_trees table"""
+    """Fix task counts in project_git_branches table"""
     print(f"🔧 Fixing task counts in project branches...")
     
     try:
@@ -123,7 +123,7 @@ def fix_task_counts(db_path: str) -> bool:
         completed_counts = dict(cursor.fetchall())
         
         # Update task counts
-        cursor.execute('SELECT id, name FROM project_task_trees')
+        cursor.execute('SELECT id, name FROM project_git_branches')
         branches = cursor.fetchall()
         
         fixes = 0
@@ -132,7 +132,7 @@ def fix_task_counts(db_path: str) -> bool:
             completed_count = completed_counts.get(branch_id, 0)
             
             cursor.execute(
-                'UPDATE project_task_trees SET task_count = ?, completed_task_count = ? WHERE id = ?',
+                'UPDATE project_git_branches SET task_count = ?, completed_task_count = ? WHERE id = ?',
                 (actual_count, completed_count, branch_id)
             )
             
@@ -199,7 +199,7 @@ integrity = cursor.fetchone()[0]
 print("Integrity: " + integrity)
 
 # Check task counts
-cursor.execute("SELECT name, task_count FROM project_task_trees WHERE task_count > 0")
+cursor.execute("SELECT name, task_count FROM project_git_branches WHERE task_count > 0")
 branches = cursor.fetchall()
 print("Branches with tasks: " + str(len(branches)))
 for name, count in branches:

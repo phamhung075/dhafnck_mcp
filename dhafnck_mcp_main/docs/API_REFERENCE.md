@@ -42,7 +42,7 @@ Create a new project with basic structure.
         "name": "My Project Name",
         "description": "Project description",
         "created_at": "2025-01-27T12:00:00Z",
-        "task_trees": {
+        "git_branches": {
             "main": {
                 "id": "main",
                 "name": "Main Tasks",
@@ -70,7 +70,7 @@ Retrieve project details and current status.
         "id": "my_project",
         "name": "My Project Name",
         "description": "Project description",
-        "task_trees": {...},
+        "git_branches": {...},
         "registered_agents": {...},
         "agent_assignments": {...},
         "created_at": "2025-01-27T12:00:00Z",
@@ -96,7 +96,7 @@ Show all available projects.
             "id": "project1",
             "name": "Project 1",
             "description": "Description",
-            "task_trees": {...}
+            "git_branches": {...}
         }
     ],
     "count": 1
@@ -407,7 +407,7 @@ Optimize workload distribution.
     "success": true,
     "rebalancing_summary": {
         "agents_rebalanced": 3,
-        "task_trees_affected": 2,
+        "git_branches_affected": 2,
         "optimization_score": 85.5
     }
 }

@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 import uuid
 
 from ..value_objects.task_id import TaskId
-from .task_tree import TaskTree
+from .git_branch import GitBranch
 from .agent import Agent
 
 if TYPE_CHECKING:
@@ -53,7 +53,7 @@ class Project:
             self.updated_at = self.updated_at.replace(tzinfo=timezone.utc)
     
     # Multi-tree structure
-    task_trees: Dict[str, TaskTree] = field(default_factory=dict)
+    git_branchs: Dict[str, GitBranch] = field(default_factory=dict)
     
     # Agent management
     registered_agents: Dict[str, Agent] = field(default_factory=dict)
@@ -71,7 +71,7 @@ class Project:
         git_branch_repository: 'GitBranchRepository',
         branch_name: str, 
         description: str = ""
-    ) -> TaskTree:
+    ) -> GitBranch:
         """Create a new git branch/task tree within the project using repository"""
         # Check if branch already exists
         existing_branch = await git_branch_repository.find_by_name(self.id, branch_name)
@@ -79,50 +79,50 @@ class Project:
             raise ValueError(f"Git branch {branch_name} already exists in project {self.id}")
         
         # Create new branch using repository
-        task_tree = await git_branch_repository.create_branch(
+        git_branch = await git_branch_repository.create_branch(
             project_id=self.id,
             branch_name=branch_name,
             description=description
         )
         
         # Update local cache
-        self.task_trees[task_tree.id] = task_tree
+        self.git_branchs[git_branch.id] = git_branch
         self.updated_at = datetime.now(timezone.utc)
-        return task_tree
+        return git_branch
     
-    def create_task_tree(self, git_branch_name: str, name: str, description: str = "") -> TaskTree:
+    def create_git_branch(self, git_branch_name: str, name: str, description: str = "") -> GitBranch:
         """Create a new task tree/branch within the project (legacy method)"""
-        # Check if branch name already exists in any task tree
-        for task_tree in self.task_trees.values():
-            if task_tree.name == git_branch_name:
-                raise ValueError(f"Task tree {git_branch_name} already exists")
+        # Check if branch name already exists in any git branch
+        for git_branch in self.git_branchs.values():
+            if git_branch.name == git_branch_name:
+                raise ValueError(f"Git branch {git_branch_name} already exists")
         
-        # Generate unique ID for the task tree following clean relationship chain
+        # Generate unique ID for the git branch following clean relationship chain
         import uuid
-        task_tree_id = str(uuid.uuid4())
+        git_branch_id = str(uuid.uuid4())
         
-        task_tree = TaskTree(
-            id=task_tree_id,
+        git_branch = GitBranch(
+            id=git_branch_id,
             name=name,
             description=description,
             project_id=self.id,
             created_at=datetime.now(timezone.utc)
         )
         
-        self.task_trees[task_tree_id] = task_tree
+        self.git_branchs[git_branch_id] = git_branch
         self.updated_at = datetime.now(timezone.utc)
-        return task_tree
+        return git_branch
     
-    def add_task_tree(self, task_tree: TaskTree) -> None:
-        """Add a task tree to the project"""
-        self.task_trees[task_tree.id] = task_tree
+    def add_git_branch(self, git_branch: GitBranch) -> None:
+        """Add a git branch to the project"""
+        self.git_branchs[git_branch.id] = git_branch
         self.updated_at = datetime.now(timezone.utc)
     
-    def get_task_tree(self, tree_name: str) -> Optional[TaskTree]:
-        """Get a task tree by name"""
-        for task_tree in self.task_trees.values():
-            if task_tree.name == tree_name:
-                return task_tree
+    def get_git_branch(self, branch_name: str) -> Optional[GitBranch]:
+        """Get a git branch by name"""
+        for git_branch in self.git_branchs.values():
+            if git_branch.name == branch_name:
+                return git_branch
         return None
     
     def register_agent(self, agent: Agent) -> None:
@@ -134,7 +134,7 @@ class Project:
         """Assign an agent to work on a specific task tree"""
         if agent_id not in self.registered_agents:
             raise ValueError(f"Agent {agent_id} not registered")
-        if git_branch_name not in self.task_trees:
+        if git_branch_name not in self.git_branchs:
             raise ValueError(f"Task tree {git_branch_name} not found")
         
         # Check if tree is already assigned
@@ -153,8 +153,8 @@ class Project:
         prerequisite_task_id = self._normalize_task_id(prerequisite_task_id)
         
         # Validate that tasks exist and are in different trees
-        dependent_tree = self._find_task_tree(dependent_task_id)
-        prerequisite_tree = self._find_task_tree(prerequisite_task_id)
+        dependent_tree = self._find_git_branch(dependent_task_id)
+        prerequisite_tree = self._find_git_branch(prerequisite_task_id)
         
         if not dependent_tree or not prerequisite_tree:
             raise ValueError("One or both tasks not found in project")
@@ -181,11 +181,11 @@ class Project:
                          if assigned_agent == agent_id]
         
         for git_branch_name in assigned_trees:
-            tree = self.task_trees[git_branch_name]
-            tree_tasks = tree.get_available_tasks()
+            branch = self.git_branchs[git_branch_name]
+            branch_tasks = branch.get_available_tasks()
             
             # Filter out tasks blocked by cross-tree dependencies
-            for task in tree_tasks:
+            for task in branch_tasks:
                 if self._is_task_ready_for_work(task.id.value):
                     available_tasks.append(task)
         
@@ -199,18 +199,18 @@ class Project:
             raise ValueError(f"Agent {agent_id} not registered")
         
         # Check if agent is assigned to the tree containing this task
-        task_tree = self._find_task_tree(task_id)
-        if not task_tree:
+        git_branch = self._find_git_branch(task_id)
+        if not git_branch:
             raise ValueError(f"Task {task_id} not found")
         
-        if self.agent_assignments.get(task_tree.id) != agent_id:
-            raise ValueError(f"Agent {agent_id} not assigned to tree {task_tree.id}")
+        if self.agent_assignments.get(git_branch.id) != agent_id:
+            raise ValueError(f"Agent {agent_id} not assigned to tree {git_branch.id}")
         
         # Create work session using factory method
         session = WorkSession.create_session(
             agent_id=agent_id,
             task_id=task_id,
-            git_branch_name=task_tree.id,
+            git_branch_name=git_branch.id,
             max_duration_hours=max_duration_hours
         )
         
@@ -218,13 +218,13 @@ class Project:
         self.updated_at = datetime.now(timezone.utc)
         return session
     
-    def _find_task_tree(self, task_id: str) -> Optional[TaskTree]:
-        """Find which task tree contains a specific task"""
+    def _find_git_branch(self, task_id: str) -> Optional[GitBranch]:
+        """Find which git branch contains a specific task"""
         # Normalize task_id to canonical format for consistent comparison
         normalized_task_id = self._normalize_task_id(task_id)
-        for tree in self.task_trees.values():
-            if tree.has_task(normalized_task_id):
-                return tree
+        for branch in self.git_branchs.values():
+            if branch.has_task(normalized_task_id):
+                return branch
         return None
     
     def _normalize_task_id(self, task_id: str) -> str:
@@ -242,7 +242,7 @@ class Project:
         
         # Check if all prerequisite tasks are completed
         for prerequisite_id in self.cross_tree_dependencies[normalized_task_id]:
-            prerequisite_tree = self._find_task_tree(prerequisite_id)
+            prerequisite_tree = self._find_git_branch(prerequisite_id)
             if not prerequisite_tree:
                 return False  # Prerequisite task not found
             
@@ -257,21 +257,21 @@ class Project:
         return {
             "project_id": self.id,
             "project_name": self.name,
-            "total_trees": len(self.task_trees),
+            "total_branches": len(self.git_branchs),
             "registered_agents": len(self.registered_agents),
             "active_assignments": len(self.agent_assignments),
             "active_sessions": len(self.active_work_sessions),
             "cross_tree_dependencies": sum(len(deps) for deps in self.cross_tree_dependencies.values()),
             "resource_locks": len(self.resource_locks),
-            "trees": {
+            "branches": {
                 git_branch_name: {
-                    "name": tree.name,
+                    "name": branch.name,
                     "assigned_agent": self.agent_assignments.get(git_branch_name),
-                    "total_tasks": tree.get_task_count(),
-                    "completed_tasks": tree.get_completed_task_count(),
-                    "progress": tree.get_progress_percentage()
+                    "total_tasks": branch.get_task_count(),
+                    "completed_tasks": branch.get_completed_task_count(),
+                    "progress": branch.get_progress_percentage()
                 }
-                for git_branch_name, tree in self.task_trees.items()
+                for git_branch_name, branch in self.git_branchs.items()
             },
             "agents": {
                 agent_id: {
@@ -298,7 +298,7 @@ class Project:
         
         for dependent_task_id, prerequisite_ids in self.cross_tree_dependencies.items():
             # Check if dependent task exists
-            dependent_tree = self._find_task_tree(dependent_task_id)
+            dependent_tree = self._find_git_branch(dependent_task_id)
             if not dependent_tree:
                 coordination_result["missing_prerequisites"].append({
                     "task_id": dependent_task_id,
@@ -309,7 +309,7 @@ class Project:
             # Check each prerequisite
             all_prerequisites_met = True
             for prerequisite_id in prerequisite_ids:
-                prerequisite_tree = self._find_task_tree(prerequisite_id)
+                prerequisite_tree = self._find_git_branch(prerequisite_id)
                 if not prerequisite_tree:
                     coordination_result["missing_prerequisites"].append({
                         "task_id": prerequisite_id,

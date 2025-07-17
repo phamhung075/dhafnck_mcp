@@ -12,7 +12,7 @@ CREATE TABLE projects (
     UNIQUE(id, user_id)
 );
 INSERT INTO projects VALUES('default_project','DhafnckMCP System','Main system project for DhafnckMCP task management and AI agent coordination','2025-07-16 07:44:51','2025-07-16 07:44:51','system','active','{"project_type":"system","priority":"critical","environment":"production","auto_created":true}');
-CREATE TABLE project_task_trees (
+CREATE TABLE project_git_branches (
     id TEXT PRIMARY KEY,  -- UUID
     project_id TEXT NOT NULL,
     name TEXT NOT NULL,
@@ -28,7 +28,7 @@ CREATE TABLE project_task_trees (
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
     UNIQUE(id, project_id)
 );
-INSERT INTO project_task_trees VALUES('main_branch','default_project','main','Main development branch for system tasks','2025-07-16 07:44:51','2025-07-16 07:44:51','@uber_orchestrator_agent','high','active','{"branch_type":"main","auto_created":true,"protected":true}',0,0);
+INSERT INTO project_git_branches VALUES('main_branch','default_project','main','Main development branch for system tasks','2025-07-16 07:44:51','2025-07-16 07:44:51','@uber_orchestrator_agent','high','active','{"branch_type":"main","auto_created":true,"protected":true}',0,0);
 CREATE TABLE tasks (
     id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
     title TEXT NOT NULL,
@@ -42,7 +42,7 @@ CREATE TABLE tasks (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     context_id TEXT,
-    FOREIGN KEY (git_branch_id) REFERENCES project_task_trees(id) ON DELETE CASCADE
+    FOREIGN KEY (git_branch_id) REFERENCES project_git_branches(id) ON DELETE CASCADE
 );
 CREATE TABLE task_subtasks (
     id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
@@ -107,7 +107,7 @@ CREATE TABLE project_work_sessions (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
     FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE SET NULL,
-    FOREIGN KEY (git_branch_id) REFERENCES project_task_trees(id) ON DELETE SET NULL
+    FOREIGN KEY (git_branch_id) REFERENCES project_git_branches(id) ON DELETE SET NULL
 );
 CREATE TABLE project_resource_locks (
     id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
@@ -157,7 +157,7 @@ CREATE TABLE project_agent_assignments (
     PRIMARY KEY (project_id, agent_id, git_branch_id),
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
     FOREIGN KEY (agent_id, project_id) REFERENCES project_agents(id, project_id) ON DELETE CASCADE,
-    FOREIGN KEY (git_branch_id) REFERENCES project_task_trees(id) ON DELETE CASCADE
+    FOREIGN KEY (git_branch_id) REFERENCES project_git_branches(id) ON DELETE CASCADE
 );
 CREATE TABLE global_contexts (
     id TEXT PRIMARY KEY DEFAULT 'global_singleton',
@@ -1311,12 +1311,12 @@ DELETE FROM sqlite_sequence;
 INSERT INTO sqlite_sequence VALUES('labels',651);
 CREATE INDEX idx_projects_user_id ON projects(user_id);
 CREATE INDEX idx_projects_status ON projects(status);
-CREATE INDEX idx_project_task_trees_project ON project_task_trees(project_id);
-CREATE INDEX idx_project_task_trees_name ON project_task_trees(name, project_id);
-CREATE INDEX idx_project_task_trees_status ON project_task_trees(status);
-CREATE INDEX idx_project_task_trees_assigned_agent ON project_task_trees(assigned_agent_id);
-CREATE INDEX idx_project_task_trees_priority ON project_task_trees(priority);
-CREATE INDEX idx_project_task_trees_created_at ON project_task_trees(created_at);
+CREATE INDEX idx_project_git_branches_project ON project_git_branches(project_id);
+CREATE INDEX idx_project_git_branches_name ON project_git_branches(name, project_id);
+CREATE INDEX idx_project_git_branches_status ON project_git_branches(status);
+CREATE INDEX idx_project_git_branches_assigned_agent ON project_git_branches(assigned_agent_id);
+CREATE INDEX idx_project_git_branches_priority ON project_git_branches(priority);
+CREATE INDEX idx_project_git_branches_created_at ON project_git_branches(created_at);
 CREATE INDEX idx_tasks_status ON tasks(status);
 CREATE INDEX idx_tasks_priority ON tasks(priority);
 CREATE INDEX idx_tasks_git_branch_id ON tasks(git_branch_id);
@@ -1412,12 +1412,12 @@ CREATE TRIGGER update_project_timestamp
 BEGIN
     UPDATE projects SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
 END;
-CREATE TRIGGER update_task_tree_timestamp 
-    AFTER UPDATE ON project_task_trees
+CREATE TRIGGER update_git_branche_timestamp 
+    AFTER UPDATE ON project_git_branches
     FOR EACH ROW 
     WHEN NEW.updated_at = OLD.updated_at
 BEGIN
-    UPDATE project_task_trees SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+    UPDATE project_git_branches SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
 END;
 CREATE TRIGGER update_task_timestamp 
     AFTER UPDATE ON tasks
@@ -1450,7 +1450,7 @@ CREATE TRIGGER update_task_count_on_insert
     AFTER INSERT ON tasks
     FOR EACH ROW
 BEGIN
-    UPDATE project_task_trees 
+    UPDATE project_git_branches 
     SET task_count = task_count + 1 
     WHERE id = NEW.git_branch_id;
 END;
@@ -1458,7 +1458,7 @@ CREATE TRIGGER update_task_count_on_delete
     AFTER DELETE ON tasks
     FOR EACH ROW
 BEGIN
-    UPDATE project_task_trees 
+    UPDATE project_git_branches 
     SET task_count = task_count - 1 
     WHERE id = OLD.git_branch_id;
 END;
@@ -1467,7 +1467,7 @@ CREATE TRIGGER update_completed_count_on_status_change
     FOR EACH ROW
     WHEN OLD.status != NEW.status
 BEGIN
-    UPDATE project_task_trees 
+    UPDATE project_git_branches 
     SET completed_task_count = completed_task_count + 
         CASE WHEN NEW.status = 'done' THEN 1 ELSE 0 END -
         CASE WHEN OLD.status = 'done' THEN 1 ELSE 0 END
@@ -1627,7 +1627,7 @@ SELECT
     MAX(t.created_at) as newest_task_date,
     COUNT(CASE WHEN t.due_date IS NOT NULL AND t.due_date < datetime('now') AND t.status != 'done' THEN 1 END) as overdue_tasks
 FROM projects p
-LEFT JOIN project_task_trees ptt ON p.id = ptt.project_id
+LEFT JOIN project_git_branches ptt ON p.id = ptt.project_id
 LEFT JOIN tasks t ON ptt.id = t.git_branch_id
 GROUP BY p.id, p.name, ptt.id, ptt.name;
 CREATE VIEW subtask_progress AS
@@ -1846,7 +1846,7 @@ SELECT
     p.name as project_name,
     ptt.name as branch_name
 FROM tasks t
-JOIN project_task_trees ptt ON t.git_branch_id = ptt.id
+JOIN project_git_branches ptt ON t.git_branch_id = ptt.id
 JOIN projects p ON ptt.project_id = p.id
 WHERE t.created_at > datetime('now', '-7 days')
 UNION ALL
@@ -1858,7 +1858,7 @@ SELECT
     p.name as project_name,
     ptt.name as branch_name
 FROM tasks t
-JOIN project_task_trees ptt ON t.git_branch_id = ptt.id
+JOIN project_git_branches ptt ON t.git_branch_id = ptt.id
 JOIN projects p ON ptt.project_id = p.id
 WHERE t.status = 'done' AND t.updated_at > datetime('now', '-7 days')
 UNION ALL
@@ -1871,7 +1871,7 @@ SELECT
     ptt.name as branch_name
 FROM task_subtasks ts
 JOIN tasks t ON ts.task_id = t.id
-JOIN project_task_trees ptt ON t.git_branch_id = ptt.id
+JOIN project_git_branches ptt ON t.git_branch_id = ptt.id
 JOIN projects p ON ptt.project_id = p.id
 WHERE ts.status = 'done' AND ts.completed_at > datetime('now', '-7 days')
 UNION ALL
@@ -1884,7 +1884,7 @@ SELECT
     ptt.name as branch_name
 FROM work_assignments wa
 JOIN tasks t ON wa.task_id = t.id
-JOIN project_task_trees ptt ON t.git_branch_id = ptt.id
+JOIN project_git_branches ptt ON t.git_branch_id = ptt.id
 JOIN projects p ON ptt.project_id = p.id
 WHERE wa.created_at > datetime('now', '-7 days')
 ORDER BY activity_time DESC;
@@ -1933,7 +1933,7 @@ WHERE invalidated = 1;
 CREATE VIEW executive_summary AS
 SELECT 
     (SELECT COUNT(*) FROM projects WHERE status = 'active') as active_projects,
-    (SELECT COUNT(*) FROM project_task_trees) as total_branches,
+    (SELECT COUNT(*) FROM project_git_branches) as total_branches,
     (SELECT COUNT(*) FROM tasks) as total_tasks,
     (SELECT COUNT(*) FROM tasks WHERE status = 'done') as completed_tasks,
     (SELECT COUNT(*) FROM tasks WHERE status = 'in_progress') as active_tasks,

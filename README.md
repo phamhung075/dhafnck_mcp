@@ -95,7 +95,7 @@ The platform provides 50+ MCP tools organized into functional categories:
 - `mcp__dhafnck_mcp_http__manage_task`: Complete task lifecycle management
 - `mcp__dhafnck_mcp_http__manage_subtask`: Subtask creation and tracking
 - `mcp__dhafnck_mcp_http__manage_dependencies`: Task dependency management
-- `mcp__dhafnck_mcp_http__manage_task_tree`: Hierarchical task organization
+- `mcp__dhafnck_mcp_http__manage_git_branche`: Hierarchical task organization
 
 #### 🤖 **Agent Orchestration**
 - `mcp__dhafnck_mcp_http__call_agent`: Dynamic agent role switching

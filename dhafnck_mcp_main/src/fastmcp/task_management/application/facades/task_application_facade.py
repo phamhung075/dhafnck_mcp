@@ -101,7 +101,7 @@ class TaskApplicationFacade:
                     }
             
             # If not found in git branch repository, try project manager
-            # This provides fallback for new git_branches structure
+            # This provides fallback for new git_branchs structure
             from ..services.project_management_service import ProjectManagementService
             project_manager = ProjectManagementService()
             result = project_manager.get_git_branch_by_id(git_branch_id)

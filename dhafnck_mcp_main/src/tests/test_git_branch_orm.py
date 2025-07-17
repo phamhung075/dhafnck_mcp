@@ -12,8 +12,8 @@ from unittest.mock import Mock, patch
 from typing import Dict, Any, List
 
 from src.fastmcp.task_management.infrastructure.repositories.orm.git_branch_repository import ORMGitBranchRepository
-from src.fastmcp.task_management.infrastructure.database.models import ProjectTaskTree, Project
-from src.fastmcp.task_management.domain.entities.task_tree import TaskTree
+from src.fastmcp.task_management.infrastructure.database.models import ProjectGitBranch, Project
+from src.fastmcp.task_management.domain.entities.git_branch import GitBranch
 from src.fastmcp.task_management.domain.value_objects.task_status import TaskStatus
 from src.fastmcp.task_management.domain.value_objects.priority import Priority
 from src.fastmcp.task_management.domain.exceptions.base_exceptions import (
@@ -36,10 +36,10 @@ def repository():
 
 
 @pytest.fixture
-def sample_task_tree():
-    """Create a sample TaskTree for testing"""
+def sample_git_branch():
+    """Create a sample GitBranch for testing"""
     now = datetime.now(timezone.utc)
-    task_tree = TaskTree(
+    git_branch = GitBranch(
         id="branch-123",
         name="feature/auth-system",
         description="Implement user authentication system",
@@ -47,17 +47,17 @@ def sample_task_tree():
         created_at=now,
         updated_at=now
     )
-    task_tree.assigned_agent_id = "@coding_agent"
-    task_tree.priority = Priority.high()
-    task_tree.status = TaskStatus.in_progress()
-    return task_tree
+    git_branch.assigned_agent_id = "@coding_agent"
+    git_branch.priority = Priority.high()
+    git_branch.status = TaskStatus.in_progress()
+    return git_branch
 
 
 @pytest.fixture
 def sample_model():
-    """Create a sample ProjectTaskTree model for testing"""
+    """Create a sample ProjectGitBranch model for testing"""
     now = datetime.now(timezone.utc)
-    return ProjectTaskTree(
+    return ProjectGitBranch(
         id="branch-123",
         name="feature/auth-system",
         description="Implement user authentication system",
@@ -80,46 +80,46 @@ class TestORMGitBranchRepository:
         """Test repository initialization"""
         repo = ORMGitBranchRepository(user_id="test_user")
         assert repo.user_id == "test_user"
-        assert repo.model_class == ProjectTaskTree
+        assert repo.model_class == ProjectGitBranch
     
-    def test_model_to_task_tree_conversion(self, repository, sample_model):
-        """Test converting ProjectTaskTree model to TaskTree entity"""
-        task_tree = repository._model_to_task_tree(sample_model)
+    def test_model_to_git_branch_conversion(self, repository, sample_model):
+        """Test converting ProjectGitBranch model to GitBranch entity"""
+        git_branch = repository._model_to_git_branch(sample_model)
         
-        assert task_tree.id == sample_model.id
-        assert task_tree.name == sample_model.name
-        assert task_tree.description == sample_model.description
-        assert task_tree.project_id == sample_model.project_id
-        assert task_tree.assigned_agent_id == sample_model.assigned_agent_id
-        assert str(task_tree.priority) == sample_model.priority
-        assert str(task_tree.status) == sample_model.status
-        assert task_tree.created_at == sample_model.created_at
-        assert task_tree.updated_at == sample_model.updated_at
+        assert git_branch.id == sample_model.id
+        assert git_branch.name == sample_model.name
+        assert git_branch.description == sample_model.description
+        assert git_branch.project_id == sample_model.project_id
+        assert git_branch.assigned_agent_id == sample_model.assigned_agent_id
+        assert str(git_branch.priority) == sample_model.priority
+        assert str(git_branch.status) == sample_model.status
+        assert git_branch.created_at == sample_model.created_at
+        assert git_branch.updated_at == sample_model.updated_at
     
-    def test_task_tree_to_model_data_conversion(self, repository, sample_task_tree):
-        """Test converting TaskTree entity to model data"""
-        model_data = repository._task_tree_to_model_data(sample_task_tree)
+    def test_git_branch_to_model_data_conversion(self, repository, sample_git_branch):
+        """Test converting GitBranch entity to model data"""
+        model_data = repository._git_branch_to_model_data(sample_git_branch)
         
-        assert model_data['id'] == sample_task_tree.id
-        assert model_data['name'] == sample_task_tree.name
-        assert model_data['description'] == sample_task_tree.description
-        assert model_data['project_id'] == sample_task_tree.project_id
-        assert model_data['assigned_agent_id'] == sample_task_tree.assigned_agent_id
-        assert model_data['priority'] == str(sample_task_tree.priority)
-        assert model_data['status'] == str(sample_task_tree.status)
-        assert model_data['created_at'] == sample_task_tree.created_at
-        assert model_data['updated_at'] == sample_task_tree.updated_at
+        assert model_data['id'] == sample_git_branch.id
+        assert model_data['name'] == sample_git_branch.name
+        assert model_data['description'] == sample_git_branch.description
+        assert model_data['project_id'] == sample_git_branch.project_id
+        assert model_data['assigned_agent_id'] == sample_git_branch.assigned_agent_id
+        assert model_data['priority'] == str(sample_git_branch.priority)
+        assert model_data['status'] == str(sample_git_branch.status)
+        assert model_data['created_at'] == sample_git_branch.created_at
+        assert model_data['updated_at'] == sample_git_branch.updated_at
         assert isinstance(model_data['model_metadata'], dict)
     
     @pytest.mark.asyncio
     @patch.object(ORMGitBranchRepository, 'get_db_session')
-    async def test_save_new_branch(self, mock_get_session, repository, sample_task_tree):
+    async def test_save_new_branch(self, mock_get_session, repository, sample_git_branch):
         """Test saving a new git branch"""
         mock_session = Mock()
         mock_get_session.return_value.__enter__.return_value = mock_session
         mock_session.query.return_value.filter.return_value.first.return_value = None
         
-        await repository.save(sample_task_tree)
+        await repository.save(sample_git_branch)
         
         # Verify session interactions
         mock_session.add.assert_called_once()
@@ -127,13 +127,13 @@ class TestORMGitBranchRepository:
     
     @pytest.mark.asyncio
     @patch.object(ORMGitBranchRepository, 'get_db_session')
-    async def test_save_existing_branch(self, mock_get_session, repository, sample_task_tree, sample_model):
+    async def test_save_existing_branch(self, mock_get_session, repository, sample_git_branch, sample_model):
         """Test updating an existing git branch"""
         mock_session = Mock()
         mock_get_session.return_value.__enter__.return_value = mock_session
         mock_session.query.return_value.filter.return_value.first.return_value = sample_model
         
-        await repository.save(sample_task_tree)
+        await repository.save(sample_git_branch)
         
         # Verify session interactions
         mock_session.add.assert_not_called()  # Should not add new, but update existing
@@ -328,14 +328,14 @@ class TestORMGitBranchRepository:
     async def test_create_git_branch_success(self, repository):
         """Test the create_git_branch interface method"""
         with patch.object(repository, 'create_branch') as mock_create:
-            mock_task_tree = Mock()
-            mock_task_tree.id = "branch-123"
-            mock_task_tree.name = "feature/test"
-            mock_task_tree.description = "Test branch"
-            mock_task_tree.project_id = "project-456"
-            mock_task_tree.created_at = datetime.now(timezone.utc)
-            mock_task_tree.updated_at = datetime.now(timezone.utc)
-            mock_create.return_value = mock_task_tree
+            mock_git_branch = Mock()
+            mock_git_branch.id = "branch-123"
+            mock_git_branch.name = "feature/test"
+            mock_git_branch.description = "Test branch"
+            mock_git_branch.project_id = "project-456"
+            mock_git_branch.created_at = datetime.now(timezone.utc)
+            mock_git_branch.updated_at = datetime.now(timezone.utc)
+            mock_create.return_value = mock_git_branch
             
             result = await repository.create_git_branch(
                 "project-456",
@@ -389,27 +389,27 @@ class TestORMGitBranchRepository:
             assert result["error_code"] == "NOT_FOUND"
     
     @pytest.mark.asyncio
-    async def test_list_git_branches_success(self, repository):
+    async def test_list_git_branchs_success(self, repository):
         """Test listing git branches"""
         with patch.object(repository, 'find_all_by_project') as mock_find:
-            mock_task_tree = Mock()
-            mock_task_tree.id = "branch-123"
-            mock_task_tree.name = "feature/test"
-            mock_task_tree.description = "Test branch"
-            mock_task_tree.project_id = "project-456"
-            mock_task_tree.created_at = datetime.now(timezone.utc)
-            mock_task_tree.updated_at = datetime.now(timezone.utc)
-            mock_task_tree.assigned_agent_id = "@coding_agent"
-            mock_task_tree.status = TaskStatus.in_progress()
-            mock_task_tree.priority = Priority.high()
-            mock_find.return_value = [mock_task_tree]
+            mock_git_branch = Mock()
+            mock_git_branch.id = "branch-123"
+            mock_git_branch.name = "feature/test"
+            mock_git_branch.description = "Test branch"
+            mock_git_branch.project_id = "project-456"
+            mock_git_branch.created_at = datetime.now(timezone.utc)
+            mock_git_branch.updated_at = datetime.now(timezone.utc)
+            mock_git_branch.assigned_agent_id = "@coding_agent"
+            mock_git_branch.status = TaskStatus.in_progress()
+            mock_git_branch.priority = Priority.high()
+            mock_find.return_value = [mock_git_branch]
             
-            result = await repository.list_git_branches("project-456")
+            result = await repository.list_git_branchs("project-456")
             
             assert result["success"] is True
-            assert "git_branches" in result
+            assert "git_branchs" in result
             assert result["count"] == 1
-            assert len(result["git_branches"]) == 1
+            assert len(result["git_branchs"]) == 1
     
     @pytest.mark.asyncio
     async def test_assign_agent_to_branch_success(self, repository):
@@ -417,9 +417,9 @@ class TestORMGitBranchRepository:
         with patch.object(repository, 'find_by_name') as mock_find, \
              patch.object(repository, 'assign_agent') as mock_assign:
             
-            mock_task_tree = Mock()
-            mock_task_tree.id = "branch-123"
-            mock_find.return_value = mock_task_tree
+            mock_git_branch = Mock()
+            mock_git_branch.id = "branch-123"
+            mock_find.return_value = mock_git_branch
             mock_assign.return_value = True
             
             result = await repository.assign_agent_to_branch(
@@ -563,9 +563,9 @@ class TestIntegrationScenarios:
             
             # 2. Assign agent
             with patch.object(repository, 'find_by_name') as mock_find:
-                mock_task_tree = Mock()
-                mock_task_tree.id = "branch-123"
-                mock_find.return_value = mock_task_tree
+                mock_git_branch = Mock()
+                mock_git_branch.id = "branch-123"
+                mock_find.return_value = mock_git_branch
                 
                 assign_result = await repository.assign_agent_to_branch(
                     project_id,

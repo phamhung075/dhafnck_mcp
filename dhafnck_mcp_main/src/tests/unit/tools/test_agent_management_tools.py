@@ -48,9 +48,9 @@ class AgentApplicationFacade:
         elif action == 'unregister':
             return {'success': True, 'agent_id': kwargs.get('agent_id'), 'message': 'Agent unregistered'}
         elif action == 'assign':
-            return {'success': True, 'agent_id': kwargs.get('agent_id'), 'task_tree_id': kwargs.get('git_branch_id'), 'message': 'Agent assigned'}
+            return {'success': True, 'agent_id': kwargs.get('agent_id'), 'git_branch_id': kwargs.get('git_branch_id'), 'message': 'Agent assigned'}
         elif action == 'unassign':
-            return {'success': True, 'agent_id': kwargs.get('agent_id'), 'task_tree_id': kwargs.get('git_branch_id'), 'message': 'Agent unassigned'}
+            return {'success': True, 'agent_id': kwargs.get('agent_id'), 'git_branch_id': kwargs.get('git_branch_id'), 'message': 'Agent unassigned'}
         elif action == 'get':
             agent_id = kwargs.get('agent_id')
             if agent_id:

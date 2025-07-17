@@ -113,7 +113,7 @@ class TestToolIssuesVerification:
                 
                 # Create git branch (task tree) record
                 conn.execute(
-                    'INSERT OR REPLACE INTO project_task_trees (id, project_id, name, description) VALUES (?, ?, ?, ?)',
+                    'INSERT OR REPLACE INTO project_git_branchs (id, project_id, name, description) VALUES (?, ?, ?, ?)',
                     (git_branch_id, project_id, git_branch_name, "Main branch for testing")
                 )
                 

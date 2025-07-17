@@ -239,7 +239,7 @@ This workflow describes how to manage tasks, projects, and agents using the MCP 
 ### Context File Generation
 - **Auto-generated on task retrieval**: `.cursor/rules/auto_rule.mdc`
 - **JSON contexts auto-created**: When task conditions are met (status="todo" AND subtasks are "todo"/none)
-- **Project-specific contexts**: Hierarchical storage by user/project/task_tree
+- **Project-specific contexts**: Hierarchical storage by user/project/git_branche
 - **Task tree awareness**: Context includes project and tree information
 
 ### Role Switching Workflow

@@ -145,8 +145,8 @@ class TestJSONFieldCompatibility:
         self.session.add(project)
         self.session.commit()
         
-        from fastmcp.task_management.infrastructure.database.models import ProjectTaskTree, TaskContext, ProjectContext
-        branch = ProjectTaskTree(
+        from fastmcp.task_management.infrastructure.database.models import ProjectGitBranch, TaskContext, ProjectContext
+        branch = ProjectGitBranch(
             id=str(uuid4()),
             project_id=project.id,
             name="main",
@@ -247,8 +247,8 @@ class TestJSONFieldCompatibility:
         self.session.add(project)
         self.session.commit()
         
-        from fastmcp.task_management.infrastructure.database.models import ProjectTaskTree
-        branch = ProjectTaskTree(
+        from fastmcp.task_management.infrastructure.database.models import ProjectGitBranch
+        branch = ProjectGitBranch(
             id=str(uuid4()),
             project_id=project.id,
             name="main",

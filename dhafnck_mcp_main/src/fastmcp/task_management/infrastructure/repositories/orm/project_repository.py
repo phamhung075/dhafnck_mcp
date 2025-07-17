@@ -12,7 +12,7 @@ from sqlalchemy import and_, or_, desc
 from sqlalchemy.orm import joinedload
 
 from ..base_orm_repository import BaseORMRepository
-from ...database.models import Project, ProjectTaskTree
+from ...database.models import Project, ProjectGitBranch
 from ....domain.repositories.project_repository import ProjectRepository
 from ....domain.entities.project import Project as ProjectEntity
 from ....domain.exceptions.base_exceptions import (
@@ -86,7 +86,7 @@ class ORMProjectRepository(BaseORMRepository[Project], ProjectRepository):
         """Find a project by its ID"""
         with self.get_db_session() as session:
             project = session.query(Project).options(
-                joinedload(Project.git_branches)
+                joinedload(Project.git_branchs)
             ).filter(Project.id == project_id).first()
             
             return self._model_to_entity(project) if project else None
@@ -95,7 +95,7 @@ class ORMProjectRepository(BaseORMRepository[Project], ProjectRepository):
         """Find all projects"""
         with self.get_db_session() as session:
             projects = session.query(Project).options(
-                joinedload(Project.git_branches)
+                joinedload(Project.git_branchs)
             ).order_by(desc(Project.created_at)).all()
             
             return [self._model_to_entity(project) for project in projects]
@@ -153,8 +153,8 @@ class ORMProjectRepository(BaseORMRepository[Project], ProjectRepository):
         """Find projects that have a specific agent registered"""
         with self.get_db_session() as session:
             # Find projects with git branches assigned to the agent
-            projects = session.query(Project).join(ProjectTaskTree).filter(
-                ProjectTaskTree.assigned_agent_id == agent_id
+            projects = session.query(Project).join(ProjectGitBranch).filter(
+                ProjectGitBranch.assigned_agent_id == agent_id
             ).distinct().all()
             
             return [self._model_to_entity(project) for project in projects]
@@ -185,15 +185,15 @@ class ORMProjectRepository(BaseORMRepository[Project], ProjectRepository):
             
             # Get projects with branches
             projects_with_branches = session.query(Project).join(
-                ProjectTaskTree
+                ProjectGitBranch
             ).distinct().count()
             
             # Get total branches
-            total_branches = session.query(ProjectTaskTree).count()
+            total_branches = session.query(ProjectGitBranch).count()
             
             # Get branches with assigned agents
-            assigned_branches = session.query(ProjectTaskTree).filter(
-                ProjectTaskTree.assigned_agent_id.isnot(None)
+            assigned_branches = session.query(ProjectGitBranch).filter(
+                ProjectGitBranch.assigned_agent_id.isnot(None)
             ).count()
             
             return {
@@ -214,11 +214,11 @@ class ORMProjectRepository(BaseORMRepository[Project], ProjectRepository):
             with self.transaction():
                 with self.get_db_session() as session:
                     # Find the git branch
-                    branch = session.query(ProjectTaskTree).filter(
+                    branch = session.query(ProjectGitBranch).filter(
                         and_(
-                            ProjectTaskTree.id == git_branch_id,
-                            ProjectTaskTree.project_id == project_id,
-                            ProjectTaskTree.assigned_agent_id == agent_id
+                            ProjectGitBranch.id == git_branch_id,
+                            ProjectGitBranch.project_id == project_id,
+                            ProjectGitBranch.assigned_agent_id == agent_id
                         )
                     ).first()
                     
@@ -243,7 +243,7 @@ class ORMProjectRepository(BaseORMRepository[Project], ProjectRepository):
             raise DatabaseException(
                 message=f"Failed to unassign agent: {str(e)}",
                 operation="unassign_agent_from_tree",
-                table="project_task_trees"
+                table="project_git_branchs"
             )
     
     # Additional ORM-specific methods
@@ -276,7 +276,7 @@ class ORMProjectRepository(BaseORMRepository[Project], ProjectRepository):
         """Synchronous version of find_by_id for compatibility"""
         with self.get_db_session() as session:
             project = session.query(Project).options(
-                joinedload(Project.git_branches)
+                joinedload(Project.git_branchs)
             ).filter(Project.id == project_id).first()
             
             return self._model_to_entity(project) if project else None
@@ -312,7 +312,7 @@ class ORMProjectRepository(BaseORMRepository[Project], ProjectRepository):
         """List projects with filters"""
         with self.get_db_session() as session:
             query = session.query(Project).options(
-                joinedload(Project.git_branches)
+                joinedload(Project.git_branchs)
             )
             
             if status:
@@ -351,7 +351,7 @@ class ORMProjectRepository(BaseORMRepository[Project], ProjectRepository):
         """Get statistics for a specific project"""
         with self.get_db_session() as session:
             project = session.query(Project).options(
-                joinedload(Project.git_branches)
+                joinedload(Project.git_branchs)
             ).filter(Project.id == project_id).first()
             
             if not project:
@@ -361,14 +361,14 @@ class ORMProjectRepository(BaseORMRepository[Project], ProjectRepository):
                 )
             
             # Calculate statistics
-            total_branches = len(project.git_branches)
+            total_branches = len(project.git_branchs)
             assigned_branches = sum(
-                1 for branch in project.git_branches 
+                1 for branch in project.git_branchs 
                 if branch.assigned_agent_id is not None
             )
             
-            total_tasks = sum(branch.task_count for branch in project.git_branches)
-            completed_tasks = sum(branch.completed_task_count for branch in project.git_branches)
+            total_tasks = sum(branch.task_count for branch in project.git_branchs)
+            completed_tasks = sum(branch.completed_task_count for branch in project.git_branchs)
             
             return {
                 "project_id": project_id,

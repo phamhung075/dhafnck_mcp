@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronRight, Eye, FileText, Folder, GitBranchPlus, Globe, Pencil, Plus, Trash2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { createBranch, createProject, deleteProject, listProjects, Project, updateProject, getProjectContext, getTaskContext, getTaskCount, getGlobalContext } from "../api";
+import { createBranch, createProject, deleteProject, getGlobalContext, getProjectContext, getTaskContext, getTaskCount, listProjects, Project, updateProject } from "../api";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
@@ -39,8 +39,8 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect }) => {
     const countPromises: Promise<{ id: string; count: number }>[] = [];
     
     for (const project of projects) {
-      if (project.task_trees) {
-        for (const tree of Object.values(project.task_trees)) {
+      if (project.git_branches) {
+        for (const tree of Object.values(project.git_branches)) {
           countPromises.push(
             getTaskCount(tree.id)
               .then(count => ({ id: tree.id, count }))
@@ -71,8 +71,8 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect }) => {
       const countPromises: Promise<{ id: string; count: number }>[] = [];
       
       for (const project of projectsData) {
-        if (project.task_trees) {
-          for (const tree of Object.values(project.task_trees)) {
+        if (project.git_branches) {
+          for (const tree of Object.values(project.git_branches)) {
             countPromises.push(
               getTaskCount(tree.id)
                 .then(count => ({ id: tree.id, count }))
@@ -211,9 +211,9 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect }) => {
                   {openProjects[project.id] ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                   <Folder className="w-4 h-4" />
                   <span className="font-semibold text-sm truncate text-left" title={project.name}>{project.name}</span>
-                  {!openProjects[project.id] && project.task_trees && Object.keys(project.task_trees).length > 0 && (
+                  {!openProjects[project.id] && project.git_branches && Object.keys(project.git_branches).length > 0 && (
                     <Badge variant="outline" className="text-xs ml-2">
-                      {Object.keys(project.task_trees).length}
+                      {Object.keys(project.git_branches).length}
                     </Badge>
                   )}
                 </div>
@@ -245,9 +245,9 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect }) => {
                   </Button>
                 </div>
               </div>
-              {openProjects[project.id] && project.task_trees && (
+              {openProjects[project.id] && project.git_branches && (
                 <ul className="flex flex-col gap-1 ml-8 mt-1">
-                  {Object.values(project.task_trees).map((tree) => (
+                  {Object.values(project.git_branches).map((tree) => (
                     <li key={tree.id}>
                       <div className="group relative flex items-center gap-1">
                         <span className="text-muted-foreground">—</span>
@@ -487,13 +487,13 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect }) => {
             )}
 
             {/* Task Trees / Branches */}
-            {showProjectDetails?.task_trees && Object.keys(showProjectDetails.task_trees).length > 0 && (
+            {showProjectDetails?.git_branches && Object.keys(showProjectDetails.git_branches).length > 0 && (
               <>
                 <div className="bg-indigo-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-semibold mb-3 text-indigo-700">Task Trees / Branches ({Object.keys(showProjectDetails.task_trees).length})</h3>
+                  <h3 className="text-lg font-semibold mb-3 text-indigo-700">Task Trees / Branches ({Object.keys(showProjectDetails.git_branches).length})</h3>
                   <div className="bg-white p-3 rounded border border-indigo-200">
                     <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                      {JSON.stringify(showProjectDetails.task_trees, null, 2)}
+                      {JSON.stringify(showProjectDetails.git_branches, null, 2)}
                     </pre>
                   </div>
                 </div>
@@ -505,7 +505,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect }) => {
             {showProjectDetails && (
               <>
                 {Object.entries(showProjectDetails).filter(([key]) => 
-                  !['id', 'name', 'description', 'task_trees', 'orchestration_status', 'registered_agents', 'agent_assignments'].includes(key)
+                  !['id', 'name', 'description', 'git_branches', 'orchestration_status', 'registered_agents', 'agent_assignments'].includes(key)
                 ).map(([key, value]) => {
                   if (value === null || value === undefined) return null;
                   

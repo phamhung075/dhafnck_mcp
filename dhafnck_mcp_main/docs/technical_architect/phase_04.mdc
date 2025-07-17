@@ -42,7 +42,7 @@ The transition from file-based JSON storage to a scalable distributed database a
     "dhafnck_mcp_main": {
       "id": "dhafnck_mcp_main",
       "name": "DhafnckMCP - Advanced MCP Server Framework",
-      "task_trees": {...},
+      "git_branches": {...},
       "registered_agents": {...},
       "agent_assignments": {...}
     }
@@ -102,7 +102,7 @@ CREATE TABLE projects (
 );
 
 -- Task Trees
-CREATE TABLE task_trees (
+CREATE TABLE git_branches (
     id VARCHAR(255) NOT NULL,
     project_id VARCHAR(255) NOT NULL REFERENCES projects(id),
     name VARCHAR(500) NOT NULL,
@@ -129,7 +129,7 @@ CREATE TABLE tasks (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     completed_at TIMESTAMP WITH TIME ZONE,
     parent_task_id VARCHAR(255) REFERENCES tasks(id),
-    FOREIGN KEY (git_branch_name, project_id) REFERENCES task_trees(id, project_id)
+    FOREIGN KEY (git_branch_name, project_id) REFERENCES git_branches(id, project_id)
 );
 
 -- Agents

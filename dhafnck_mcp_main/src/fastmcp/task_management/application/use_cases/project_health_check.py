@@ -61,7 +61,7 @@ class ProjectHealthCheckUseCase:
         warnings = []
         
         # Check for task trees
-        if not project.task_trees:
+        if not project.git_branchs:
             warnings.append("No task trees defined")
         
         # Check for circular dependencies in cross-tree dependencies
@@ -74,7 +74,7 @@ class ProjectHealthCheckUseCase:
             if agent_id not in project.registered_agents:
                 issues.append(f"Agent '{agent_id}' assigned to tree '{git_branch_name}' but not registered")
             
-            if git_branch_name not in project.task_trees:
+            if git_branch_name not in project.git_branchs:
                 issues.append(f"Agent '{agent_id}' assigned to non-existent tree '{git_branch_name}'")
         
         # Check for orphaned work sessions
@@ -100,7 +100,7 @@ class ProjectHealthCheckUseCase:
             "issues": issues,
             "warnings": warnings,
             "checked_at": datetime.now(timezone.utc).isoformat(),
-            "task_trees_count": len(project.task_trees),
+            "git_branchs_count": len(project.git_branchs),
             "registered_agents_count": len(project.registered_agents),
             "active_assignments": len(project.agent_assignments),
             "active_sessions": len(project.active_work_sessions),

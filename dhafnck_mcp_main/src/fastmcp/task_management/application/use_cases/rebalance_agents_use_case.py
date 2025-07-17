@@ -56,7 +56,7 @@ class RebalanceAgentsUseCase:
         available_agents = list(project.registered_agents.keys())
         unassigned_trees = []
         
-        for tree_id in project.task_trees.keys():
+        for tree_id in project.git_branchs.keys():
             has_agent = any(assigned_tree == tree_id for assigned_tree in project.agent_assignments.values())
             if not has_agent:
                 unassigned_trees.append(tree_id)
