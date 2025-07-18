@@ -85,7 +85,7 @@ class ContextMCPController:
             task_id: Annotated[Optional[str], Field(description=manage_context_desc["parameters"].get("task_id", "Task identifier"))] = None,
             user_id: Annotated[str, Field(description="User identifier")] = "default_id",
             project_id: Annotated[str, Field(description="Project identifier")] = "",
-            git_branch_name: Annotated[str, Field(description="Git branch name")] = "main",
+            git_branch_id: Annotated[Optional[str], Field(description="Git branch identifier (UUID) - auto-detected from task if not provided")] = None,
             property_path: Annotated[Optional[str], Field(description="Property path for property operations")] = None,
             value: Annotated[Optional[Any], Field(description="Value for property updates")] = None,
             # Flattened data parameters (replacing complex data dictionary)
@@ -108,7 +108,7 @@ class ContextMCPController:
                 task_id=task_id,
                 user_id=user_id,
                 project_id=project_id,
-                git_branch_name=git_branch_name,
+                git_branch_id=git_branch_id,
                 property_path=property_path,
                 value=value,
                 data_title=data_title,
@@ -382,14 +382,14 @@ class ContextMCPController:
     # LEGACY CONTEXT MANAGEMENT
     # ===============================================
     
-    def _get_facade_for_request(self, user_id: str, project_id: str, git_branch_name: str) -> HierarchicalContextFacade:
+    def _get_facade_for_request(self, user_id: str, project_id: str, git_branch_id: str) -> HierarchicalContextFacade:
         """
         Get a HierarchicalContextFacade with the appropriate context.
         
         Args:
             user_id: User identifier
             project_id: Project identifier
-            git_branch_name: Git branch name
+            git_branch_id: Git branch identifier
             
         Returns:
             HierarchicalContextFacade instance
@@ -397,7 +397,7 @@ class ContextMCPController:
         return self._hierarchical_facade_factory.create_facade(
             user_id=user_id,
             project_id=project_id,
-            git_branch_name=git_branch_name
+            git_branch_id=git_branch_id
         )
     
     def _manage_context_implementation(self, 
@@ -405,7 +405,7 @@ class ContextMCPController:
                       task_id: Optional[str] = None,
                       user_id: str = "default_id",
                       project_id: str = "",
-                      git_branch_name: str = "main",
+                      git_branch_id: Optional[str] = None,
                       property_path: Optional[str] = None,
                       value: Optional[Any] = None,
                       # Flattened data parameters
@@ -426,6 +426,34 @@ class ContextMCPController:
         Manage context operations by routing to hierarchical context system.
         """
         logger.info(f"Managing context with action: {action} for task: {task_id}")
+
+        # Auto-detect git_branch_id from task_id if not provided
+        if not git_branch_id and task_id:
+            try:
+                # Import the Task model to get branch ID
+                from ...infrastructure.database.models import Task
+                from ...infrastructure.database.database_config import get_session
+                
+                with get_session() as session:
+                    task = session.query(Task).filter_by(id=task_id).first()
+                    if task and task.git_branch_id:
+                        git_branch_id = task.git_branch_id
+                        logger.info(f"Auto-detected git_branch_id '{git_branch_id}' from task '{task_id}'")
+                    else:
+                        logger.warning(f"Could not auto-detect git_branch_id from task '{task_id}'")
+            except Exception as e:
+                logger.error(f"Error auto-detecting git_branch_id: {e}")
+        
+        # Check if git_branch_id is required for this action
+        actions_requiring_branch = ["create", "update", "get", "delete", "merge", "add_insight", "add_progress", "update_next_steps"]
+        if action in actions_requiring_branch and not git_branch_id:
+            return {
+                "success": False,
+                "error": f"git_branch_id is required for action '{action}' and could not be auto-detected from task_id",
+                "error_code": "MISSING_FIELD",
+                "field": "git_branch_id",
+                "hint": "Provide git_branch_id parameter or ensure task_id is valid and has an associated branch"
+            }
 
         # Parse array parameters using the same logic as task controller
         parsed_assignees = self._parse_string_list(data_assignees, "assignees") if data_assignees is not None else None
@@ -451,8 +479,18 @@ class ContextMCPController:
         if data_due_date is not None:
             data["due_date"] = data_due_date
 
-        # Get hierarchical facade
-        facade = self._get_facade_for_request(user_id, project_id, git_branch_name)
+        # Git branch ID is required at this point
+        if not git_branch_id:
+            return {
+                "success": False,
+                "error": "git_branch_id is required but was not provided or auto-detected",
+                "error_code": "MISSING_FIELD",
+                "field": "git_branch_id",
+                "hint": "Provide git_branch_id parameter or ensure task_id is valid and has an associated branch"
+            }
+        
+        # Get hierarchical facade with required git_branch_id
+        facade = self._get_facade_for_request(user_id, project_id, git_branch_id)
 
         try:
             # Import the ID detector

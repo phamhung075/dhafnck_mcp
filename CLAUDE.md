@@ -70,9 +70,25 @@ GLOBAL CONTEXT (Organization)
     ↓ inherits to
 PROJECT CONTEXT (Business Domain)  
     ↓ inherits to
+BRANCH CONTEXT (Feature/Work Branch)
+    ↓ inherits to
 TASK CONTEXT (Work Unit)
     ↓ contains
 SUBTASKS (Granular Steps)
+```
+
+### CONTEXT TOOL SELECTION
+```
+USE manage_context:
+- For backward compatibility
+- For simple task context operations
+- When working with existing code
+
+USE manage_hierarchical_context:
+- For advanced 4-tier operations
+- For context delegation to higher levels
+- For inheritance debugging
+- For branch-level contexts
 ```
 
 ### AGENT STATE MACHINE
@@ -721,6 +737,8 @@ def initialize_new_project(project_name, description):
     )
     
     # 4. CREATE INITIAL CONTEXT
+    # Note: manage_context internally uses hierarchical system
+    # Creates project-level context automatically
     mcp__dhafnck_mcp_http__manage_context(
         action="create",
         task_id=project.project_id,
@@ -824,6 +842,12 @@ def handle_operation_error(error, operation_context):
 
 ## 🧠 MENTAL MODEL REINFORCEMENT
 
-Remember the hierarchy: **GLOBAL → PROJECT → TASK → SUBTASKS**  
+Remember the 4-tier hierarchy: **GLOBAL → PROJECT → BRANCH → TASK**  
 Follow the pattern: **CONTEXT → AGENT → STATUS → WORK → UPDATE → VALIDATE → DELEGATE**  
 Think systematically: **Autonomous AI agent in enterprise orchestration platform**
+
+### 🔑 KEY UPDATES v9.1
+- **4-Tier Context Hierarchy**: Now includes BRANCH level between PROJECT and TASK
+- **Backward Compatibility**: `manage_context` internally uses hierarchical system
+- **Enhanced Delegation**: Share patterns from task → branch → project → global
+- **UUID-Based Branches**: Use `git_branch_id` (UUID) instead of branch names

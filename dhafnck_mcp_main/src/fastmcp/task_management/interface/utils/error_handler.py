@@ -65,6 +65,16 @@ class UserFriendlyErrorHandler:
             return UserFriendlyErrorHandler._handle_database_error(exception, operation, context)
         
         if isinstance(exception, ValueError):
+            # Check if this is a context-related error that should be routed specially
+            error_msg = str(exception).lower()
+            if "context must be updated" in error_msg:
+                # Context-aware routing for ValueError
+                action = context.get("action", "").lower()
+                operation_lower = operation.lower()
+                
+                if action == "complete" or "complet" in operation_lower:
+                    return UserFriendlyErrorHandler._handle_context_required_error(exception, context)
+            
             return UserFriendlyErrorHandler._handle_validation_error(exception, operation, context)
         
         if isinstance(exception, KeyError):
@@ -72,9 +82,6 @@ class UserFriendlyErrorHandler:
         
         # Handle business logic exceptions by message content
         error_message = str(exception).lower()
-        
-        if "context must be updated" in error_message:
-            return UserFriendlyErrorHandler._handle_context_required_error(exception, context)
         
         if "task not found" in error_message:
             return UserFriendlyErrorHandler._handle_task_not_found_error(exception, context)
@@ -178,11 +185,11 @@ class UserFriendlyErrorHandler:
         
         return {
             "success": False,
-            "error": "Task completion requires context to be created first.",
+            "error": "Task completion requires hierarchical context to be created first.",
             "error_code": ErrorCode.CONTEXT_REQUIRED.value,
-            "explanation": "Context stores task progress and is required before completing tasks. This ensures work history is preserved.",
+            "explanation": "Hierarchical context stores task progress with inheritance from project and global contexts. This ensures work history is preserved with proper organizational structure.",
             "recovery_instructions": [
-                "Create context for this task first",
+                "Create hierarchical context for this task first",
                 "Update the context with your progress",
                 "Then try completing the task again"
             ],
@@ -190,12 +197,12 @@ class UserFriendlyErrorHandler:
                 {
                     "step": 1,
                     "action": "Create context",
-                    "command": f"manage_context(action='create', task_id='{task_id}', project_id='{project_id}')"
+                    "command": f"manage_hierarchical_context(action='create', level='task', context_id='{task_id}', data={{'title': 'Task Title', 'description': 'Task context'}})"
                 },
                 {
                     "step": 2,
                     "action": "Update context status",
-                    "command": f"manage_context(action='update', task_id='{task_id}', data_status='done')"
+                    "command": f"manage_hierarchical_context(action='update', level='task', context_id='{task_id}', data={{'status': 'done'}})"
                 },
                 {
                     "step": 3,
@@ -204,7 +211,7 @@ class UserFriendlyErrorHandler:
                 }
             ],
             "examples": {
-                "minimal_fix": f"manage_context(action='create', task_id='{task_id}', project_id='{project_id}'); manage_task(action='complete', task_id='{task_id}', completion_summary='Work completed')"
+                "minimal_fix": f"manage_hierarchical_context(action='create', level='task', context_id='{task_id}', data={{'title': 'Task Title'}}); manage_task(action='complete', task_id='{task_id}', completion_summary='Work completed')"
             }
         }
     

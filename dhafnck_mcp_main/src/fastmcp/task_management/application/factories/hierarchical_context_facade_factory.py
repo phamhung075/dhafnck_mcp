@@ -45,20 +45,23 @@ class HierarchicalContextFacadeFactory:
     def create_facade(self, 
                      user_id: str = "default_id",
                      project_id: str = "default_project",
-                     git_branch_name: str = "main") -> HierarchicalContextFacade:
+                     git_branch_id: str = None) -> HierarchicalContextFacade:
         """
         Create a hierarchical context facade with proper dependency injection.
         
         Args:
             user_id: User identifier
             project_id: Project identifier
-            git_branch_name: Git branch name
+            git_branch_id: Git branch identifier (UUID) - required
             
         Returns:
             HierarchicalContextFacade instance with injected dependencies
         """
+        if not git_branch_id:
+            raise ValueError("git_branch_id is required for creating facade")
+            
         # Create cache key
-        cache_key = f"{user_id}:{project_id}:{git_branch_name}"
+        cache_key = f"{user_id}:{project_id}:{git_branch_id}"
         
         # Check cache first
         if cache_key in self._facades_cache:
@@ -90,25 +93,25 @@ class HierarchicalContextFacadeFactory:
         self._facades_cache.clear()
         logger.info("Hierarchical context facades cache cleared")
     
-    def get_cached_facade(self, user_id: str, project_id: str, git_branch_name: str) -> Optional[HierarchicalContextFacade]:
+    def get_cached_facade(self, user_id: str, project_id: str, git_branch_id: str) -> Optional[HierarchicalContextFacade]:
         """
         Get a cached facade if available.
         
         Args:
             user_id: User identifier
             project_id: Project identifier
-            git_branch_name: Git branch name
+            git_branch_id: Git branch identifier (UUID)
             
         Returns:
             Cached facade or None
         """
-        cache_key = f"{user_id}:{project_id}:{git_branch_name}"
+        cache_key = f"{user_id}:{project_id}:{git_branch_id}"
         return self._facades_cache.get(cache_key)
 
     def create_service(self, 
                       user_id: str = "default_id",
                       project_id: str = "default_project", 
-                      git_branch_name: str = "main") -> HierarchicalContextService:
+                      git_branch_id: str = None) -> HierarchicalContextService:
         """
         Create a hierarchical context service.
         
@@ -117,7 +120,7 @@ class HierarchicalContextFacadeFactory:
         Args:
             user_id: User identifier
             project_id: Project identifier
-            git_branch_name: Git branch name
+            git_branch_id: Git branch identifier (UUID)
             
         Returns:
             HierarchicalContextService instance
@@ -127,7 +130,7 @@ class HierarchicalContextFacadeFactory:
     def create_context_facade(self, 
                              user_id: str = "default_id",
                              project_id: str = "default_project",
-                             git_branch_name: str = "main") -> HierarchicalContextFacade:
+                             git_branch_id: str = None) -> HierarchicalContextFacade:
         """
         Create a hierarchical context facade.
         
@@ -136,9 +139,9 @@ class HierarchicalContextFacadeFactory:
         Args:
             user_id: User identifier
             project_id: Project identifier
-            git_branch_name: Git branch name
+            git_branch_id: Git branch identifier (UUID) - required
             
         Returns:
             HierarchicalContextFacade instance
         """
-        return self.create_facade(user_id=user_id, project_id=project_id, git_branch_name=git_branch_name)
+        return self.create_facade(user_id=user_id, project_id=project_id, git_branch_id=git_branch_id)

@@ -87,11 +87,34 @@ class HierarchicalContextFacade:
             
             # Prepare data for hierarchical context creation
             if level == "task":
+                # Extract parent branch ID from task if available
+                parent_branch_id = None
+                if context_id:
+                    try:
+                        from ...infrastructure.database.models import Task
+                        from ...infrastructure.database.database_config import get_session
+                        
+                        with get_session() as session:
+                            task = session.query(Task).filter_by(id=context_id).first()
+                            if task and task.git_branch_id:
+                                parent_branch_id = task.git_branch_id
+                    except Exception as e:
+                        logger.warning(f"Could not extract branch ID from task: {e}")
+                
+                # Parent branch ID is required for task contexts
+                if not parent_branch_id:
+                    return {
+                        "success": False,
+                        "error": "Cannot create task context without parent branch ID",
+                        "error_code": "MISSING_BRANCH_ID",
+                        "hint": "Ensure the task has a valid git_branch_id"
+                    }
+                
                 # Wrap user data in task_data field for task contexts
                 hierarchical_data = {
                     "task_data": data,
-                    "parent_branch_id": "default_branch",  # Could be extracted from context_id
-                    "parent_branch_context_id": "default_branch"
+                    "parent_branch_id": parent_branch_id,
+                    "parent_branch_context_id": parent_branch_id
                 }
             elif level == "branch":
                 # Wrap user data for branch contexts

@@ -12,23 +12,26 @@ MANAGE_CONTEXT_DESCRIPTION = """
 📋 WHEN TO USE: Context operations, property management, insight tracking, and progress updates.
 🎯 CRITICAL FOR: AI context management and task workflow orchestration.
 
+> **Note**: `manage_context` internally uses the hierarchical context system for backward compatibility. For advanced features like context delegation and inheritance debugging, use `manage_hierarchical_context`.
+
 | Action             | Required Parameters         | Optional Parameters                | Description                                      |
 |--------------------|----------------------------|------------------------------------|--------------------------------------------------|
-| create             | task_id                    | user_id (default: 'default_id'), project_id, git_branch_name (default: 'main'), data_title, data_description, data_status, data_priority, data_assignees, data_labels, data_estimated_effort, data_due_date | Create a new context for a task                  |
-| update             | task_id                    | user_id, project_id, git_branch_name, data_title, data_description, data_status, data_priority, data_assignees, data_labels, data_estimated_effort, data_due_date | Update an existing context                       |
-| get                | task_id                    | user_id, project_id, git_branch_name            | Get a context by task ID                         |
-| delete             | task_id                    | user_id, project_id, git_branch_name            | Delete a context by task ID                      |
+| create             | task_id                    | user_id (default: 'default_id'), project_id, git_branch_id (auto-detected from task if not provided), data_title, data_description, data_status, data_priority, data_assignees, data_labels, data_estimated_effort, data_due_date | Create a new context for a task                  |
+| update             | task_id                    | user_id, project_id, git_branch_id (auto-detected), data_title, data_description, data_status, data_priority, data_assignees, data_labels, data_estimated_effort, data_due_date | Update an existing context                       |
+| get                | task_id                    | user_id, project_id, git_branch_id (auto-detected)            | Get a context by task ID                         |
+| delete             | task_id                    | user_id, project_id, git_branch_id (auto-detected)            | Delete a context by task ID                      |
 | list               | user_id, project_id        |                                          | List contexts for a user/project                 |
-| get_property       | task_id, property_path     | user_id, project_id, git_branch_name            | Get a property from a context                    |
-| update_property    | task_id, property_path, value | user_id, project_id, git_branch_name         | Update a property in a context                   |
-| merge              | task_id                    | user_id, project_id, git_branch_name, data_title, data_description, data_status, data_priority, data_assignees, data_labels, data_estimated_effort, data_due_date | Merge data into an existing context              |
-| add_insight        | task_id, content           | user_id, project_id, git_branch_name, agent, category, importance | Add an insight to a context                      |
-| add_progress       | task_id, content           | user_id, project_id, git_branch_name, agent     | Add progress to a context                        |
-| update_next_steps  | task_id, next_steps        | user_id, project_id, git_branch_name            | Update next steps for a context                  |
+| get_property       | task_id, property_path     | user_id, project_id, git_branch_id (auto-detected)            | Get a property from a context                    |
+| update_property    | task_id, property_path, value | user_id, project_id, git_branch_id (auto-detected)         | Update a property in a context                   |
+| merge              | task_id                    | user_id, project_id, git_branch_id (auto-detected), data_title, data_description, data_status, data_priority, data_assignees, data_labels, data_estimated_effort, data_due_date | Merge data into an existing context              |
+| add_insight        | task_id, content           | user_id, project_id, git_branch_id (auto-detected), agent, category, importance | Add an insight to a context                      |
+| add_progress       | task_id, content           | user_id, project_id, git_branch_id (auto-detected), agent     | Add progress to a context                        |
+| update_next_steps  | task_id, next_steps        | user_id, project_id, git_branch_id (auto-detected)            | Update next steps for a context                  |
 
 💡 USAGE GUIDELINES:
 • Provide all required identifiers for each action (see table above).
 • Optional parameters can be omitted unless overriding defaults.
+• git_branch_id is required for most operations but will be auto-detected from task_id when possible.
 • The tool returns detailed error messages for missing or invalid parameters, unknown actions, and internal errors.
 • All business logic is delegated to the context manager.
 • Data parameters are flattened for MCP compatibility (data_title, data_description, etc. instead of complex data dictionary).
@@ -144,7 +147,7 @@ MANAGE_CONTEXT_PARAMETERS = {
     "task_id": "Task identifier (UUID). Required for most actions",
     "user_id": "User identifier. Default: 'default_id'",
     "project_id": "Project identifier. Default: ''",
-    "git_branch_name": "Git branch name. Default: 'main'",
+    "git_branch_id": "Git branch identifier (UUID). Auto-detected from task_id if not provided. Required for most operations",
     "property_path": "Property path for property operations (dot notation, e.g., 'metadata.created_at')",
     "value": "Value for property updates (any JSON-serializable type)",
     # Flattened data parameters with comprehensive descriptions

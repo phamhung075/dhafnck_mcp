@@ -569,7 +569,7 @@ class NextTaskUseCase:
                                 "context_status": context_status,
 
                                 "fix_action": f"Update context status from '{context_status}' to '{task_status}' or vice versa",
-                                "suggested_command": f"manage_context('update_property', task_id='{task.id.value}', property_path='metadata.status', value='{task_status}')"
+                                "suggested_command": f"manage_hierarchical_context(action='update_property', level='task', context_id='{task.id.value}', property_path='metadata.status', value='{task_status}')"
                             }
                             mismatches.append(mismatch_info)
                             

@@ -167,7 +167,7 @@ Create new task with full metadata.
 {
     "action": "create",
     "project_id": "my_project",
-    "git_branch_name": "main",
+    "git_branch_id": "branch-uuid-456",
     "title": "Implement user authentication",
     "description": "Add OAuth2 authentication system",
     "priority": "high",
@@ -263,7 +263,7 @@ Modify existing task properties.
     "action": "update",
     "task_id": "20250127001",
     "project_id": "my_project",
-    "git_branch_name": "main",
+    "git_branch_id": "branch-uuid-456",
     "status": "in_progress",
     "details": "Updated implementation details..."
 }
@@ -288,7 +288,7 @@ Show tasks with filtering options.
 {
     "action": "list",
     "project_id": "my_project",
-    "git_branch_name": "main",
+    "git_branch_id": "branch-uuid-456",
     "status": "todo",
     "limit": 10
 }
@@ -361,7 +361,7 @@ Assign agent to specific task tree.
     "message": "Agent 'coding_agent' assigned to task tree 'main'",
     "assignment": {
         "agent_id": "coding_agent",
-        "git_branch_name": "main",
+        "git_branch_id": "branch-uuid-456",
         "assigned_at": "2025-01-27T12:00:00Z"
     }
 }
@@ -420,6 +420,8 @@ Optimize workload distribution.
 
 Complete JSON-based context management with CRUD operations.
 
+> **Note**: `manage_context` internally uses the hierarchical context system for backward compatibility. For advanced features, use `manage_hierarchical_context`.
+
 #### **Actions**
 
 ##### **create**
@@ -431,7 +433,7 @@ Create new context for a task.
     "action": "create",
     "task_id": "20250127001",
     "project_id": "my_project",
-    "git_branch_name": "main",
+    "git_branch_id": "branch-uuid-456",  // Use branch UUID instead of name
     "data": {
         "objective": {
             "title": "User Authentication",
@@ -451,7 +453,7 @@ Create new context for a task.
         "metadata": {
             "task_id": "20250127001",
             "project_id": "my_project",
-            "git_branch_name": "main",
+            "git_branch_id": "branch-uuid-456",
             "created_at": "2025-01-27T12:00:00Z"
         },
         "objective": {...},
@@ -494,7 +496,7 @@ Update specific property using dot notation.
     "action": "update_property",
     "task_id": "20250127001",
     "project_id": "my_project",
-    "git_branch_name": "main",
+    "git_branch_id": "branch-uuid-456",
     "property_path": "metadata.status",
     "value": "in_progress"
 }
@@ -516,7 +518,7 @@ Add agent insight/note to context.
     "action": "add_insight",
     "task_id": "20250127001",
     "project_id": "my_project",
-    "git_branch_name": "main",
+    "git_branch_id": "branch-uuid-456",
     "agent": "coding_agent",
     "category": "solution",
     "content": "Implemented JWT token validation with 24h expiry",
@@ -532,6 +534,236 @@ Add agent insight/note to context.
         "category": "solution",
         "content": "Implemented JWT token validation with 24h expiry",
         "importance": "high"
+    }
+}
+```
+
+---
+
+### **manage_hierarchical_context**
+**Performance**: High | **Response Time**: <1ms
+
+Advanced 4-tier hierarchical context management with inheritance and delegation.
+
+#### **4-Tier Hierarchy**
+```
+GLOBAL (singleton) → PROJECT → BRANCH → TASK
+```
+
+#### **Actions**
+
+##### **resolve**
+Get fully resolved context with inheritance chain.
+
+```python
+# Request
+{
+    "action": "resolve",
+    "level": "task",
+    "context_id": "20250127001",
+    "force_refresh": false
+}
+
+# Response
+{
+    "success": true,
+    "resolved_context": {
+        "level": "task",
+        "context_id": "20250127001",
+        "data": {
+            // Merged data from all hierarchy levels
+            "global_settings": {...},
+            "project_config": {...},
+            "branch_features": {...},
+            "task_specifics": {...}
+        }
+    },
+    "metadata": {
+        "resolution_path": ["global", "project:proj123", "branch:branch456", "task:20250127001"],
+        "cache_hit": true,
+        "resolution_time_ms": 0.23
+    }
+}
+```
+
+##### **update**
+Update context at specified level with optional propagation.
+
+```python
+# Request
+{
+    "action": "update",
+    "level": "project",
+    "context_id": "proj123",
+    "data": {
+        "api_standards": {
+            "authentication": "JWT",
+            "rate_limiting": "100/hour"
+        }
+    },
+    "propagate_changes": true
+}
+
+# Response
+{
+    "success": true,
+    "updated_context": {...},
+    "propagation_result": {
+        "affected_contexts": 12,
+        "levels_updated": ["branch", "task"]
+    }
+}
+```
+
+##### **delegate**
+Delegate context data to higher level for reusability.
+
+```python
+# Request
+{
+    "action": "delegate",
+    "level": "task",
+    "context_id": "20250127001",
+    "delegate_to": "project",
+    "delegate_data": {
+        "pattern_name": "jwt_auth_implementation",
+        "implementation": {
+            "token_expiry": "24h",
+            "refresh_strategy": "sliding_window"
+        }
+    },
+    "delegation_reason": "Reusable authentication pattern"
+}
+
+# Response
+{
+    "success": true,
+    "delegation_id": "del_789xyz",
+    "status": "queued_for_approval",
+    "target_level": "project",
+    "message": "Delegation queued for manual review"
+}
+```
+
+##### **get_health**
+Get hierarchical context system health status.
+
+```python
+# Request
+{
+    "action": "get_health"
+}
+
+# Response
+{
+    "success": true,
+    "system_health": {
+        "cache_performance": {
+            "hit_ratio": 0.85,
+            "entries": 1523,
+            "memory_mb": 45.2
+        },
+        "hierarchy_stats": {
+            "global_contexts": 1,
+            "project_contexts": 15,
+            "branch_contexts": 67,
+            "task_contexts": 892
+        },
+        "resolution_performance": {
+            "avg_time_ms": 0.34,
+            "p99_time_ms": 1.2
+        }
+    }
+}
+```
+
+---
+
+### **manage_delegation_queue**
+**Performance**: High | **Response Time**: <1ms
+
+Manage delegation queue for manual review and approval of context delegations.
+
+#### **Actions**
+
+##### **list**
+Get pending delegations for review.
+
+```python
+# Request
+{
+    "action": "list",
+    "target_level": "project"  // Optional filter
+}
+
+# Response
+{
+    "success": true,
+    "pending_delegations": [
+        {
+            "delegation_id": "del_789xyz",
+            "source_context": "task:20250127001",
+            "target_level": "project",
+            "data": {...},
+            "created_at": "2025-01-27T12:30:00Z",
+            "reason": "Reusable authentication pattern"
+        }
+    ],
+    "count": 1
+}
+```
+
+##### **approve**
+Approve a pending delegation.
+
+```python
+# Request
+{
+    "action": "approve",
+    "delegation_id": "del_789xyz"
+}
+
+# Response
+{
+    "success": true,
+    "delegation_id": "del_789xyz",
+    "status": "approved",
+    "applied_to": "project:proj123",
+    "timestamp": "2025-01-27T12:45:00Z"
+}
+```
+
+---
+
+### **validate_context_inheritance**
+**Performance**: High | **Response Time**: <1ms
+
+Validate and debug context inheritance chains.
+
+```python
+# Request
+{
+    "level": "task",
+    "context_id": "20250127001"
+}
+
+# Response
+{
+    "success": true,
+    "validation": {
+        "valid": true,
+        "inheritance_chain": ["global", "project:proj123", "branch:branch456", "task:20250127001"],
+        "errors": [],
+        "warnings": ["Branch context missing optional 'features' field"],
+        "cache_metrics": {
+            "hit_ratio": 0.92,
+            "miss_ratio": 0.08
+        },
+        "resolution_timing": {
+            "total_ms": 0.45,
+            "cache_lookup_ms": 0.12,
+            "inheritance_resolution_ms": 0.33
+        }
     }
 }
 ```

@@ -33,7 +33,7 @@ class TaskFacadeFactory:
     if TYPE_CHECKING:
         from ..facades.task_application_facade import TaskApplicationFacade as _TaskApplicationFacade
 
-    def create_task_facade(self, project_id: str, git_branch_name: str = "main", user_id: str = "default_id") -> object:
+    def create_task_facade(self, project_id: str, git_branch_id: str = None, user_id: str = "default_id") -> object:
         """
         Create a task application facade with proper dependency injection.
         
@@ -42,14 +42,15 @@ class TaskFacadeFactory:
         
         Args:
             project_id: Project identifier for repository creation
-            git_branch_name: Task tree identifier
+            git_branch_id: Git branch UUID (if None, will use default branch)
             user_id: User identifier
             
         Returns:
             Configured task application facade
         """
         # Create task repository for facade construction
-        task_repository = self._repository_factory.create_repository(project_id, git_branch_name, user_id)
+        # For now, use "main" as branch name since we're transitioning to UUIDs
+        task_repository = self._repository_factory.create_repository(project_id, "main", user_id)
         
         # Create subtask repository if factory is available
         subtask_repository = None
@@ -60,7 +61,7 @@ class TaskFacadeFactory:
         context_service = self._context_service_factory.create_service(
             user_id=user_id,
             project_id=project_id,
-            git_branch_name=git_branch_name
+            git_branch_id=git_branch_id
         )
         
         # Create and return facade with all repositories and services
@@ -96,7 +97,7 @@ class TaskFacadeFactory:
         context_service = self._context_service_factory.create_service(
             user_id=user_id,
             project_id=project_id,
-            git_branch_name=git_branch_name
+            git_branch_id=git_branch_id
         )
         
         # Create and return facade with all repositories and services

@@ -12,6 +12,7 @@ Welcome to the DhafnckMCP Multi-Project AI Orchestration Platform documentation.
 - [Architecture](architecture.md) - System architecture overview
 - [Domain-Driven Design](domain-driven-design.md) - DDD implementation details
 - [Hierarchical Context System](hierarchical-context.md) - Context inheritance and delegation
+- [Hierarchical Context Migration](HIERARCHICAL_CONTEXT_MIGRATION.md) - Migration guide from basic to hierarchical context
 
 ### Development Guides
 - [Error Handling and Logging](error-handling-and-logging.md) - Comprehensive error handling patterns
@@ -42,6 +43,8 @@ Welcome to the DhafnckMCP Multi-Project AI Orchestration Platform documentation.
 - Enhanced hierarchical context system with custom data fields
 - Improved caching with proper async/sync handling
 - **NEW**: ORM-based agent repository implementation with comprehensive test suite
+- **NEW**: Completed migration to 4-tier hierarchical context system (Global → Project → Branch → Task)
+- **NEW**: Updated all tools to use UUID-based git_branch_id instead of branch names
 
 ## Contributing
 

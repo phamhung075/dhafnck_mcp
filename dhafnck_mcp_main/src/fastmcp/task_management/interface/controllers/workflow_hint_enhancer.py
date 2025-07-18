@@ -260,10 +260,11 @@ class WorkflowHintEnhancer:
                 "action_id": "AUTO_PROGRESS",
                 "priority": "high",
                 "action": "Report autonomous progress",
-                "tool": "manage_context",
+                "tool": "manage_hierarchical_context",
                 "params": {
                     "action": "add_progress",
-                    "task_id": task_id,
+                    "level": "task",
+                    "context_id": task_id,
                     "content": f"Autonomous progress update - {state['progress']}% complete",
                     "agent": "autonomous_ai"
                 },
@@ -985,7 +986,7 @@ class WorkflowHintEnhancer:
             },
             "autonomous_progress": {
                 "description": "Report autonomous progress",
-                "command": f"manage_context(action='add_progress', task_id='{task_id}', content='Autonomous progress update', agent='ai_agent')"
+                "command": f"manage_hierarchical_context(action='add_progress', level='task', context_id='{task_id}', content='Autonomous progress update', agent='ai_agent')"
             },
             "autonomous_complete": {
                 "description": "Complete autonomously",

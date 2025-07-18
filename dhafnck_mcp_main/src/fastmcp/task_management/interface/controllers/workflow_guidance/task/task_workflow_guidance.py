@@ -163,11 +163,12 @@ class TaskWorkflowGuidance(WorkflowGuidanceInterface):
                     "action": "Create context",
                     "description": "REQUIRED: Create context before working - task completion will fail without this",
                     "example": {
-                        "tool": "manage_context",
+                        "tool": "manage_hierarchical_context",
                         "params": {
                             "action": "create",
-                            "task_id": task_id,
-                            "project_id": "your_project_id"
+                            "level": "task",
+                            "context_id": task_id,
+                            "data": {"title": "Task Title", "description": "Task context"}
                         }
                     }
                 })
@@ -206,11 +207,12 @@ class TaskWorkflowGuidance(WorkflowGuidanceInterface):
                     "action": "Create context first",
                     "description": "Context is required for task completion - create it now",
                     "example": {
-                        "tool": "manage_context",
+                        "tool": "manage_hierarchical_context",
                         "params": {
                             "action": "create",
-                            "task_id": task_id,
-                            "project_id": "your_project_id"
+                            "level": "task",
+                            "context_id": task_id,
+                            "data": {"title": "Task Title", "description": "Task context"}
                         }
                     }
                 })
@@ -235,11 +237,12 @@ class TaskWorkflowGuidance(WorkflowGuidanceInterface):
                     "action": "Create context NOW",
                     "description": "URGENT: Context required for completion - create immediately",
                     "example": {
-                        "tool": "manage_context",
+                        "tool": "manage_hierarchical_context",
                         "params": {
                             "action": "create",
-                            "task_id": task_id,
-                            "project_id": "your_project_id"
+                            "level": "task",
+                            "context_id": task_id,
+                            "data": {"title": "Task Title", "description": "Task context"}
                         }
                     }
                 })
@@ -250,13 +253,11 @@ class TaskWorkflowGuidance(WorkflowGuidanceInterface):
                 "action": "Track progress",
                 "description": "Add progress notes to maintain context",
                 "example": {
-                    "tool": "manage_context",
+                    "tool": "manage_hierarchical_context",
                     "params": {
                         "action": "add_progress",
-                        "task_id": task_id,
-                        "user_id": "default_user",
-                        "project_id": "your_project_id", 
-                        "git_branch_name": "main",
+                        "level": "task",
+                        "context_id": task_id,
                         "content": "Completed X, working on Y",
                         "agent": "ai_assistant"
                     }
@@ -297,11 +298,12 @@ class TaskWorkflowGuidance(WorkflowGuidanceInterface):
                     "action": "Create context for completion",
                     "description": "REQUIRED: Context must exist before completing",
                     "example": {
-                        "tool": "manage_context",
+                        "tool": "manage_hierarchical_context",
                         "params": {
                             "action": "create",
-                            "task_id": task_id,
-                            "project_id": "your_project_id"
+                            "level": "task",
+                            "context_id": task_id,
+                            "data": {"title": "Task Title", "description": "Task context"}
                         }
                     }
                 })
@@ -359,8 +361,8 @@ class TaskWorkflowGuidance(WorkflowGuidanceInterface):
                 hints.append("🔧 VALIDATION ERROR RECOVERY: Use arrays like labels=['tag1','tag2'], not strings")
                 hints.append("📝 For progress_percentage, use integers 0-100: progress_percentage=50")
             elif "context must be updated" in error_msg:
-                hints.append("🔧 CONTEXT ERROR RECOVERY: Run manage_context(action='create', task_id='your_task_id')")
-                hints.append("📋 Then update context with manage_context(action='update', ...)")
+                hints.append("🔧 CONTEXT ERROR RECOVERY: Run manage_hierarchical_context(action='create', level='task', context_id='your_task_id', data={'title': 'Task Title'})")
+                hints.append("📋 Then update context with manage_hierarchical_context(action='update', level='task', context_id='task_id', data={'status': 'done'})")
             elif "missing required" in error_msg:
                 hints.append("🔧 MISSING FIELD RECOVERY: Check the error for required fields and add them")
                 hints.append("📚 Use workflow guidance examples for correct parameter format")
@@ -390,12 +392,12 @@ class TaskWorkflowGuidance(WorkflowGuidanceInterface):
             elif task_status == "in_progress" and not has_context:
                 hints.append("🚨 URGENT: Create context now - completion will fail without it")
             elif task_status == "in_progress":
-                hints.append("📈 Track progress with manage_context(action='add_progress', ...)")
+                hints.append("📈 Track progress with manage_hierarchical_context(action='add_progress', level='task', context_id='task_id', content='Progress update')")
                 hints.append("🔄 Update parent task progress syncs automatically from subtasks")
                 
         elif action == "complete":
             if not has_context:
-                hints.append("🚨 COMPLETION WILL FAIL: Create context first with manage_context")
+                hints.append("🚨 COMPLETION WILL FAIL: Create context first with manage_hierarchical_context")
             hints.append("📝 Detailed completion summaries help with knowledge retention")
             hints.append("🧪 Document testing approach for future reference")
             hints.append("🎯 Include specific achievements and next recommendations")
@@ -420,7 +422,7 @@ class TaskWorkflowGuidance(WorkflowGuidanceInterface):
         # CRITICAL: Context requirement warning for task completion
         if task.get("status") in ["in_progress", "review", "testing"] and not task.get("context_id"):
             warnings.append("🚨 CRITICAL: Create context before completing this task!")
-            warnings.append("💡 Use: manage_context(action='create', task_id='{task_id}')".format(task_id=task.get("id", "task-id")))
+            warnings.append("💡 Use: manage_hierarchical_context(action='create', level='task', context_id='{task_id}', data={{'title': 'Task Title'}})".format(task_id=task.get("id", "task-id")))
         
         # Context completion readiness check
         if action in ["update", "complete"] and task.get("status") in ["in_progress", "review"]:

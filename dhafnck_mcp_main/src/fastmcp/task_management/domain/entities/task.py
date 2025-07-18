@@ -680,8 +680,8 @@ class Task:
                 f"Context must be updated AFTER the task was last modified. "
                 f"Task was updated {time_diff.total_seconds():.0f} seconds after context. "
                 f"Please update the context with your progress before completing the task. "
-                f"Use: manage_context(action='add_progress', task_id='{self.id.value}', "
-                f"content='Your progress summary') before trying to complete."
+                f"Use: manage_hierarchical_context(action='add_progress', level='task', "
+                f"context_id='{self.id.value}', content='Your progress summary') before trying to complete."
             )
         else:
             logger.info(f"Timestamp validation passed or skipped: context_updated_at={context_updated_at}, context_id={self.context_id}")

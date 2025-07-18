@@ -30,6 +30,50 @@ ignore
 00_RULES/*
 
 
+## HIERARCHICAL CONTEXT SYSTEM
+
+### 4-Tier Architecture
+The system now uses a 4-tier hierarchical context system:
+```
+GLOBAL (singleton) → PROJECT → BRANCH → TASK
+```
+
+### Key Points:
+1. **Backward Compatibility**: The `manage_context` tool still works but internally uses the hierarchical system
+2. **Context Inheritance**: Lower levels automatically inherit from higher levels
+3. **UUID-Based Branches**: Use `git_branch_id` (UUID) instead of branch names
+4. **Auto-Detection**: Branch ID is auto-detected from task when not provided
+
+### When to Use Each Tool:
+- **manage_context**: For simple task operations (backward compatible)
+- **manage_hierarchical_context**: For advanced operations like delegation, inheritance debugging, branch contexts
+
+### Common Operations:
+```python
+# Resolve context with inheritance
+mcp__dhafnck_mcp_http__manage_hierarchical_context(
+    action="resolve",
+    level="task",
+    context_id=task_id
+)
+
+# Delegate pattern to project level
+mcp__dhafnck_mcp_http__manage_hierarchical_context(
+    action="delegate",
+    level="task",
+    context_id=task_id,
+    delegate_to="project",
+    delegate_data={...}
+)
+```
+
+## ISSUE KNOW:
+1. Task Completion Validation Issue ⚠️
+  - Problem: Task completion fails with "Task completion requires context to be created first" even
+  when context exists
+  - Explanation: This is not actually a problem — it's a strict requirement. The context must be updated before completing the task. To avoid forgetting this step: always make sure to update the context before attempting to complete the task.
+
+
 ## CHANGELOG: AI must update this when make change on project
   Strict Requirements:
   1. Docker Container Mode: MUST use Docker database (/data/dhafnck_mcp.db) -
@@ -41,52 +85,14 @@ ignore
   4. Test Mode: Always uses isolated test database (dhafnck_mcp_test.db)
 
 ### 2025-01-18
-- Fixed AttributeError when completing tasks with subtasks
-- Task entity now only stores subtask IDs, not full objects
-- Subtask validation moved to TaskCompletionService
-- Fixed failing tests to align with new architecture:
-  - test_task_completion_requires_all_subtasks_completed
-  - test_all_subtasks_completed_check
-  - test_task_entity_subtasks_as_dict_vs_objects
-- Updated frontend to handle new architecture:
-  - Task interface now uses subtask IDs (string[]) instead of Subtask objects
-  - TaskList shows subtask count with "subtasks" label
-  - TaskDetailsDialog displays subtask IDs with note to view details in Subtasks tab
-- **Database Mode Configuration**: Updated database source manager for strict consistency enforcement
-  - Local development MUST use Docker database (/data/dhafnck_mcp.db) - server fails if not accessible
-  - Docker container mode MUST use Docker database (/data/dhafnck_mcp.db) - server fails if not accessible
-  - MCP STDIN mode uses local database (cannot access Docker database due to stdin communication)
-  - Test isolation maintained: tests always use local test database (dhafnck_mcp_test.db)
-  - Removed fallback mechanisms: fail-fast behavior prevents data inconsistency
-  - Created documentation: docs/DATABASE_MODE_CONFIGURATION.md
-  - **Impact**: Enforces strict consistency between local development and frontend, prevents silent data isolation issues
-- **Context Management System Update**: Enhanced hierarchical context management with delegation and inheritance
-  - Implemented four-tier context hierarchy: Global → Project → Branch → Task
-  - Added context resolution with full inheritance chain support
-  - Context updates now propagate changes to dependent contexts
-  - Implemented delegation system for sharing patterns from task to branch/project/global levels
-  - Added delegation queue with manual approval workflow
-  - Context operations: resolve, update, create, delegate, propagate
-  - Delegation queue operations: list, approve, reject, get_status
-  - Added context inheritance validation for debugging and troubleshooting
-  - Performance optimizations: caching with dependency tracking, automatic cache invalidation
-  - Branch-level context enables: branch-specific configurations, isolated experiments, feature-specific standards
-  - **Impact**: Enables knowledge sharing across tasks/branches/projects, maintains organizational standards, supports autonomous AI decision-making with proper context
-- **4-Tier Context Hierarchy SQLAlchemy Fixes**: Fixed ORM relationship issues for complete 4-tier implementation
-  - Fixed SQLAlchemy relationship errors in models.py:
-    - Added ForeignKey to BranchContext.branch_id → project_git_branchs.id
-    - Added ForeignKey to TaskContext.task_id → tasks.id  
-    - Added back_populates="branch_context" to ProjectGitBranch model
-    - Added back_populates="task_context" to Task model
-  - Updated test_hierarchical_context_orm.py for 4-tier support:
-    - Added helper methods: _create_project_entity, _create_git_branch_entity, _create_task_entity
-    - Fixed all 28 tests to create required entities before contexts (foreign key constraints)
-    - Updated inheritance tests to verify 4-level resolution (global → project → branch → task)
-  - Updated ORMHierarchicalContextRepository:
-    - Added branch level handling in resolve_context method
-    - Updated get_context_hierarchy to return 4-level hierarchy
-    - Added branch to search_contexts supported levels
-  - Created new test files for 4-layer validation:
-    - test_context_inheritance_service_4_layer.py (13 tests passing)
-    - test_hierarchical_context_4_layer_integration.py
-  - **Impact**: Complete 4-tier hierarchy now works with proper SQLAlchemy relationships and foreign key integrity
+- **Subtask Architecture Fix**: Task entity stores subtask IDs only, validation in TaskCompletionService. Frontend updated for new structure. Fixed 3 tests.
+- **Database Mode Config**: Strict Docker DB enforcement (/data/dhafnck_mcp.db) for local/container modes. MCP STDIN uses local DB. Tests use isolated DB. Docs: DATABASE_MODE_CONFIGURATION.md
+- **4-Tier Context System**: Global→Project→Branch→Task hierarchy with inheritance, delegation, caching. Added delegation queue with approval workflow. Fixed SQLAlchemy relationships (ForeignKeys, back_populates). 28 tests fixed, 2 new test files added.
+- **Context Branch Mapping**: Replaced git_branch_name with git_branch_id. Auto-detection from task_id. Updated: context_mcp_controller.py, hierarchical_context_facade*.py, descriptions. Created test_context_git_branch_id_fix.py (7 tests). Fixes "Branch default_branch not found" error.
+- **Hierarchical Context Migration**: Updated TaskCompletionService to validate hierarchical context instead of basic context. All error messages now use manage_hierarchical_context commands. Created test_task_completion_hierarchical_context.py (7 tests). Replaced manage_context calls in: error_handler.py, task_workflow_guidance.py, workflow_hint_enhancer.py, next_task.py, complete_task_optimized.py. Progress on Issue #2.
+- **Task Status Update Fix**: Fixed error where updating task status to 'in_progress' incorrectly triggered completion validation. Added context-aware routing in error_handler.py for ValueError exceptions. Created test_task_status_update_error_fix.py with 3 TDD tests. Now properly routes "context must be updated" errors based on action parameter.
+- **Documentation Updates**: Updated all project documentation to reflect hierarchical context system:
+  - CLAUDE.md: Added 4-tier hierarchy diagram, context tool selection guide, and v9.1 key updates
+  - CLAUDE.local.md: Added hierarchical context system section with usage examples
+  - docs/HIERARCHICAL_CONTEXT_MIGRATION.md: Created comprehensive migration guide with architecture diagram
+  - docs/index.md: Updated with migration guide reference

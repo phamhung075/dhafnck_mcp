@@ -249,23 +249,16 @@ class DDDCompliantMCPTools:
             # Context enforcing functionality is now integrated into TaskMCPController
             # No need for a separate ContextEnforcingController
             
-            # Create a task facade for Vision System (using default project)
-            vision_task_facade = self._task_facade_factory.create_task_facade(
-                project_id="default_project",
-                git_branch_name="main",
-                user_id="vision_system"
-            )
-            
-            # Update subtask controller with vision task facade and context facade
-            self._subtask_controller._task_facade = vision_task_facade
-            
-            # Create a context facade for Vision System
-            vision_context_facade = self._context_facade_factory.create_context_facade(
-                user_id="vision_system",
-                project_id="default_project",
-                git_branch_name="main"
-            )
-            self._subtask_controller._context_facade = vision_context_facade
+            # Initialize Vision System - skip project/branch creation since it requires async
+            # The project and branch will be created on first use
+            try:
+                # For now, skip Vision System initialization that requires project/branch
+                # This will be handled when the system is first used
+                logger.info("Vision System initialization deferred - will create project/branch on first use")
+                
+            except Exception as e:
+                logger.warning(f"Failed to initialize Vision System: {e}. Vision System features may be limited.")
+                # Continue without Vision System facades - non-critical error
             
             self._workflow_hint_enhancer = WorkflowHintEnhancer()
             

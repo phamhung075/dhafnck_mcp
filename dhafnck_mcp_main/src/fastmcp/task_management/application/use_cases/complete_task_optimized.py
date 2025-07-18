@@ -153,7 +153,7 @@ class OptimizedCompleteTaskUseCase(CompleteTaskUseCase):
                     "error_code": "CONTEXT_REQUIRED",
                     "hint": "Update the task context before completing",
                     "example": {
-                        "step1": "manage_context(action='update', task_id='...', data_status='done')",
+                        "step1": "manage_hierarchical_context(action='update', level='task', context_id='...', data={'status': 'done'})",
                         "step2": "manage_task(action='complete', task_id='...', completion_summary='...')"
                     }
                 }
