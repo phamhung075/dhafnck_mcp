@@ -42,9 +42,7 @@ class TestTaskCompletionHierarchicalContext:
     @pytest.fixture
     def task_completion_service(self, mock_subtask_repository, mock_hierarchical_context_service):
         """Create task completion service with mocked dependencies"""
-        service = TaskCompletionService(mock_subtask_repository)
-        # Inject the hierarchical context service
-        service._hierarchical_context_service = mock_hierarchical_context_service
+        service = TaskCompletionService(mock_subtask_repository, mock_hierarchical_context_service)
         return service
     
     @pytest.fixture

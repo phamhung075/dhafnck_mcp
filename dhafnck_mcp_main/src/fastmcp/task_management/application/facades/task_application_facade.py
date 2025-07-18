@@ -64,12 +64,12 @@ class TaskApplicationFacade:
         self._get_task_use_case = GetTaskUseCase(task_repository, context_service)
         self._delete_task_use_case = DeleteTaskUseCase(task_repository)
         
-        # CompleteTaskUseCase needs both repositories if subtask validation is enabled
+        # CompleteTaskUseCase needs both repositories and hierarchical context service
         if subtask_repository:
-            self._complete_task_use_case = CompleteTaskUseCase(task_repository, subtask_repository)
+            self._complete_task_use_case = CompleteTaskUseCase(task_repository, subtask_repository, self._hierarchical_context_service)
         else:
             # Fallback to old behavior for backward compatibility
-            self._complete_task_use_case = CompleteTaskUseCase(task_repository, None)
+            self._complete_task_use_case = CompleteTaskUseCase(task_repository, None, self._hierarchical_context_service)
             
         self._list_tasks_use_case = ListTasksUseCase(task_repository)
         self._search_tasks_use_case = SearchTasksUseCase(task_repository)

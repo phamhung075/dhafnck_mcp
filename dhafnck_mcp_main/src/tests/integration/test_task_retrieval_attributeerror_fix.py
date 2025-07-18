@@ -23,6 +23,7 @@ from fastmcp.task_management.domain.value_objects.subtask_id import SubtaskId
 from fastmcp.task_management.domain.value_objects.task_status import TaskStatus
 from fastmcp.task_management.domain.value_objects.priority import Priority
 from fastmcp.task_management.infrastructure.database.database_config import get_session
+from unittest.mock import Mock
 
 
 class TestTaskRetrievalAttributeErrorFix:
@@ -212,8 +213,13 @@ class TestTaskRetrievalAttributeErrorFix:
         # Retrieve the task (this is where the AttributeError occurred)
         retrieved_task = task_repo.get_task(str(task.id))
         
-        # Create completion service
-        completion_service = TaskCompletionService(subtask_repo)
+        # Create completion service with mock hierarchical context service
+        mock_context_service = Mock()
+        mock_context_service.get_context.return_value = {
+            "success": True,
+            "context": {"level": "task", "context_id": str(task.id), "data": {"status": "in_progress"}}
+        }
+        completion_service = TaskCompletionService(subtask_repo, mock_context_service)
         
         # THIS IS THE CRITICAL TEST: This should NOT raise AttributeError
         # The completion service should be able to work with the retrieved task

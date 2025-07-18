@@ -13,6 +13,7 @@ from fastmcp.task_management.domain.value_objects.priority import Priority
 from fastmcp.task_management.domain.services.task_completion_service import TaskCompletionService
 from fastmcp.task_management.domain.exceptions.task_exceptions import TaskCompletionError
 from fastmcp.task_management.application.use_cases.complete_task import CompleteTaskUseCase
+from unittest.mock import Mock
 
 
 class MockSubtaskRepository:
@@ -52,6 +53,24 @@ class MockTaskRepository:
     
     def find_all(self) -> list[Task]:
         return list(self.tasks.values())
+
+
+class MockHierarchicalContextService:
+    """Mock implementation of HierarchicalContextService for testing"""
+    
+    def __init__(self):
+        self.contexts = {}
+    
+    def get_context(self, level, context_id):
+        """Mock get_context method"""
+        return {
+            "success": True,
+            "context": {
+                "level": level,
+                "context_id": context_id,
+                "data": {"status": "in_progress"}
+            }
+        }
 
 
 class TestTaskCompletionWithSubtasks:
@@ -101,8 +120,9 @@ class TestTaskCompletionWithSubtasks:
         subtask_repo.save(subtask1)
         subtask_repo.save(subtask2)
         
-        # Create service
-        completion_service = TaskCompletionService(subtask_repo)
+        # Create service with mock hierarchical context service
+        mock_context_service = MockHierarchicalContextService()
+        completion_service = TaskCompletionService(subtask_repo, mock_context_service)
         
         # Act & Assert
         can_complete, error_msg = completion_service.can_complete_task(task)
@@ -213,8 +233,9 @@ class TestTaskCompletionWithSubtasks:
             )
             subtask_repo.save(subtask)
         
-        # Create service
-        completion_service = TaskCompletionService(subtask_repo)
+        # Create service with mock hierarchical context service
+        mock_context_service = MockHierarchicalContextService()
+        completion_service = TaskCompletionService(subtask_repo, mock_context_service)
         
         # Act & Assert
         with pytest.raises(TaskCompletionError) as exc_info:
@@ -253,8 +274,9 @@ class TestTaskCompletionWithSubtasks:
             )
             subtask_repo.save(subtask)
         
-        # Create service
-        completion_service = TaskCompletionService(subtask_repo)
+        # Create service with mock hierarchical context service
+        mock_context_service = MockHierarchicalContextService()
+        completion_service = TaskCompletionService(subtask_repo, mock_context_service)
         
         # Act
         summary = completion_service.get_subtask_completion_summary(task)

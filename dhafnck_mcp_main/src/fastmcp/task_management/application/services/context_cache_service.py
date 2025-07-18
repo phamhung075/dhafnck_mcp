@@ -156,8 +156,25 @@ class ContextCacheService:
             # Check expiration
             expires_at = cache_entry.get("expires_at")
             if expires_at:
-                expire_time = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
-                if datetime.now(timezone.utc) > expire_time:
+                # Handle both datetime objects and ISO strings
+                if isinstance(expires_at, str):
+                    # Parse ISO string - ensure timezone aware
+                    expire_time = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                    if expire_time.tzinfo is None:
+                        expire_time = expire_time.replace(tzinfo=timezone.utc)
+                else:
+                    # Already a datetime object from SQLAlchemy
+                    expire_time = expires_at
+                    # Ensure it's timezone-aware (SQLAlchemy DateTime fields are timezone-naive by default)
+                    if expire_time.tzinfo is None:
+                        expire_time = expire_time.replace(tzinfo=timezone.utc)
+                
+                # Ensure comparison times are both timezone-aware
+                current_time = datetime.now(timezone.utc)
+                if expire_time.tzinfo is None:
+                    expire_time = expire_time.replace(tzinfo=timezone.utc)
+                
+                if current_time > expire_time:
                     logger.debug(f"Cache entry expired for {level}:{context_id}")
                     await self._cleanup_expired_entry(level, context_id)
                     return None

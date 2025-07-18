@@ -13,6 +13,7 @@ from ...domain.exceptions.vision_exceptions import MissingCompletionSummaryError
 from ...domain.services.task_completion_service import TaskCompletionService
 from ...domain.events import TaskUpdated
 from ...interface.utils.error_handler import UserFriendlyErrorHandler
+from ..services.hierarchical_context_service import HierarchicalContextService
 # from ..services.context_validation_service import ContextValidationService  # TODO: Fix circular import
 
 # Module-level logger
@@ -21,11 +22,13 @@ logger = logging.getLogger(__name__)
 class CompleteTaskUseCase:
     """Use case for completing a task (marking all subtasks as completed and task status as done)"""
     
-    def __init__(self, task_repository: TaskRepository, subtask_repository: Optional[SubtaskRepository] = None):
+    def __init__(self, task_repository: TaskRepository, subtask_repository: Optional[SubtaskRepository] = None, 
+                 hierarchical_context_service: Optional[HierarchicalContextService] = None):
         self._task_repository = task_repository
         self._subtask_repository = subtask_repository
-        # Only create completion service if subtask repository is provided
-        self._completion_service = TaskCompletionService(subtask_repository) if subtask_repository else None
+        self._hierarchical_context_service = hierarchical_context_service
+        # Only create completion service if both required dependencies are provided
+        self._completion_service = TaskCompletionService(subtask_repository, hierarchical_context_service) if (subtask_repository and hierarchical_context_service) else None
         # Vision System validation service
         # self._validation_service = ContextValidationService()  # TODO: Fix circular import
         self._validation_service = None
@@ -67,6 +70,34 @@ class CompleteTaskUseCase:
             # Validate task completion using domain service (if available)
             if self._completion_service:
                 self._completion_service.validate_task_completion(task)
+            elif self._subtask_repository:
+                # Fallback validation: Check subtasks directly when completion service is not available
+                subtasks = self._subtask_repository.find_by_parent_task_id(task.id)
+                if subtasks:
+                    incomplete_subtasks = [
+                        subtask for subtask in subtasks 
+                        if not subtask.is_completed
+                    ]
+                    
+                    if incomplete_subtasks:
+                        incomplete_count = len(incomplete_subtasks)
+                        total_count = len(subtasks)
+                        incomplete_titles = [st.title for st in incomplete_subtasks[:3]]  # Show first 3
+                        
+                        error_msg = f"Cannot complete task: {incomplete_count} of {total_count} subtasks are incomplete."
+                        if incomplete_titles:
+                            if len(incomplete_titles) < incomplete_count:
+                                error_msg += f" Incomplete subtasks include: {', '.join(incomplete_titles)}, and {incomplete_count - len(incomplete_titles)} more."
+                            else:
+                                error_msg += f" Incomplete subtasks: {', '.join(incomplete_titles)}."
+                        error_msg += " Complete all subtasks first."
+                        
+                        return {
+                            "success": False,
+                            "task_id": str(task_id),
+                            "message": error_msg,
+                            "status": str(task.status)
+                        }
             
             # Get context timestamp to validate context is newer than task
             # Only validate context timing if task has context_id (hasn't been updated after context creation)
@@ -178,6 +209,34 @@ class CompleteTaskUseCase:
         new_subtask_summary = None
         if self._completion_service:
             new_subtask_summary = self._completion_service.get_subtask_completion_summary(task)
+        elif self._subtask_repository:
+            # Fallback: Create subtask summary directly from repository when completion service is not available
+            try:
+                subtasks = self._subtask_repository.find_by_parent_task_id(task.id)
+                if subtasks:
+                    total = len(subtasks)
+                    completed = sum(1 for subtask in subtasks if subtask.is_completed)
+                    incomplete = total - completed
+                    completion_percentage = round((completed / total) * 100, 1) if total > 0 else 0
+                    
+                    new_subtask_summary = {
+                        "total": total,
+                        "completed": completed,
+                        "incomplete": incomplete,
+                        "completion_percentage": completion_percentage,
+                        "can_complete_parent": incomplete == 0
+                    }
+                else:
+                    # No subtasks case
+                    new_subtask_summary = {
+                        "total": 0,
+                        "completed": 0,
+                        "incomplete": 0,
+                        "completion_percentage": 100,  # No subtasks = 100% complete
+                        "can_complete_parent": True
+                    }
+            except Exception as e:
+                logger.warning(f"Error generating fallback subtask summary for task {task_id}: {e}")
         
         # Return success response with required message format
         response = {

@@ -12,6 +12,7 @@ from fastmcp.task_management.domain.value_objects.task_status import TaskStatus
 from fastmcp.task_management.domain.value_objects.priority import Priority
 from fastmcp.task_management.domain.services.task_completion_service import TaskCompletionService
 from fastmcp.task_management.domain.exceptions.task_exceptions import TaskCompletionError
+from unittest.mock import Mock
 
 
 class MockSubtaskRepository:
@@ -111,8 +112,13 @@ class TestSubtaskTypeMismatch:
         subtask_repo.save(subtask1)
         subtask_repo.save(subtask2)
         
-        # Create completion service
-        completion_service = TaskCompletionService(subtask_repo)
+        # Create completion service with mock hierarchical context service
+        mock_context_service = Mock()
+        mock_context_service.get_context.return_value = {
+            "success": True,
+            "context": {"level": "task", "context_id": str(task.id), "data": {"status": "in_progress"}}
+        }
+        completion_service = TaskCompletionService(subtask_repo, mock_context_service)
         
         # The task entity has no subtasks internally, so it thinks all are complete
         assert task.all_subtasks_completed()  # Returns True because task.subtasks is empty
