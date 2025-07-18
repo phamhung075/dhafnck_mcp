@@ -78,4 +78,9 @@ class TaskRepository(ABC):
     @abstractmethod
     def find_by_criteria(self, filters: Dict[str, Any], limit: Optional[int] = None) -> List[Task]:
         """Find tasks by multiple criteria"""
+        pass
+    
+    @abstractmethod
+    def find_by_id_all_states(self, task_id: TaskId) -> Optional[Task]:
+        """Find task by ID across all states (active, completed, archived)"""
         pass 

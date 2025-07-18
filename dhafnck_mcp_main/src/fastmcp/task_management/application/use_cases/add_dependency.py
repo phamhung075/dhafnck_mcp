@@ -34,7 +34,15 @@ class AddDependencyUseCase:
         """
         logger.debug(f"Searching for dependency task {dependency_id} across all states")
         
-        # First check the standard find_by_id (works for all statuses in current implementation)
+        # First try the new find_by_id_all_states method that searches all states
+        if hasattr(self._task_repository, 'find_by_id_all_states'):
+            logger.debug(f"Using find_by_id_all_states for {dependency_id}")
+            dependency_task = self._task_repository.find_by_id_all_states(dependency_id)
+            if dependency_task:
+                logger.debug(f"Found dependency task {dependency_id} with status {dependency_task.status}")
+                return dependency_task
+        
+        # Fallback to the standard find_by_id (for backward compatibility)
         dependency_task = self._task_repository.find_by_id(dependency_id)
         
         if dependency_task:

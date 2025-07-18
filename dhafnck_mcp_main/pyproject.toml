@@ -124,12 +124,13 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 asyncio_default_test_loop_scope = "function"
 # filterwarnings = ["error::DeprecationWarning"]
-timeout = 3
-env = [
-    "FASTMCP_TEST_MODE=1",
-    'D:FASTMCP_LOG_LEVEL=DEBUG',
-    'D:FASTMCP_ENABLE_RICH_TRACEBACKS=0',
-]
+# timeout = 3  # Requires pytest-timeout plugin
+# Environment variables for testing - handled by pytest-env plugin
+# env = [
+#     "FASTMCP_TEST_MODE=1",
+#     'FASTMCP_LOG_LEVEL=DEBUG',
+#     'FASTMCP_ENABLE_RICH_TRACEBACKS=0',
+# ]
 testpaths = ["src/tests", "src/**/task_management/**/__tests__"]
 norecursedirs = ["src/tests/manual"]
 pythonpath = ["src"]

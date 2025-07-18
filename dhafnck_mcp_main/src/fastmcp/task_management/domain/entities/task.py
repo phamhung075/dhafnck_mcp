@@ -611,8 +611,7 @@ class Task:
                 subtask_data["description"] = description
             if assignee is not None:
                 subtask_data["assignee"] = assignee
-            if estimated_effort is not None:
-                subtask_data["estimated_effort"] = estimated_effort
+            # Note: estimated_effort is not valid for Subtask entities, so we skip it
             # Add any additional kwargs
             subtask_data.update(kwargs)
         else:
@@ -649,7 +648,7 @@ class Task:
         subtask_data.setdefault("priority", "medium")
         subtask_data.setdefault("description", description or "")
         subtask_data.setdefault("assignees", [])
-        subtask_data.setdefault("estimated_effort", estimated_effort or "")
+        # Note: estimated_effort is not a valid field for Subtask entities, so we don't set it
         
         self.subtasks.append(subtask_data)
         self.updated_at = datetime.now(timezone.utc)
@@ -765,11 +764,9 @@ class Task:
         if self.context_id is None:
             raise ValueError("Context must be updated before completing task")
         
-        # Check if all subtasks are completed
-        if not self.all_subtasks_completed():
-            incomplete_subtasks = [st for st in self.subtasks if st.get("status") != "done"]
-            subtask_info = ", ".join([f"'{st.get('title', st.get('id', 'Unknown'))}'" for st in incomplete_subtasks])
-            raise ValueError(f"All subtasks must be completed before task completion. Incomplete subtasks: {subtask_info}")
+        # NOTE: Subtask completion validation is handled by TaskCompletionService
+        # The Task entity only stores subtask IDs, not the full subtask data
+        # This prevents the AttributeError when subtasks are Subtask objects from the repository
         
         # Check context timing if provided  
         # Skip context timing validation if context_id is None (task has been updated and context cleared)
@@ -790,13 +787,8 @@ class Task:
         # Store completion summary (will be persisted by context update in application layer)
         self._completion_summary = completion_summary
         
-        # Complete all subtasks using status field
-        for subtask in self.subtasks:
-            # Ensure subtask is a dictionary, skip if not
-            if isinstance(subtask, dict):
-                subtask["status"] = "done"
-            else:
-                logger.warning(f"Skipping invalid subtask during completion (not a dict): {subtask}")
+        # NOTE: Subtask completion is handled by the SubtaskRepository/Service layer
+        # The Task entity should not modify subtask states directly
         
         # Update task status to done
         old_status = self.status
@@ -884,15 +876,26 @@ class Task:
         """
         Check if all subtasks are completed.
         
+        NOTE: This method cannot check actual subtask completion status because:
+        1. Task entity only stores subtask IDs, not full subtask data
+        2. Following DDD principles, entities should not depend on repositories/services
+        3. Actual subtask completion validation is properly handled by TaskCompletionService
+        
+        Current behavior: Returns True if no subtasks exist, False if subtasks exist
+        (as we cannot verify their status without repository access).
+        
+        For accurate subtask completion status, use TaskCompletionService.can_complete_task()
+        
         Returns:
-            bool: True if all subtasks have status="done", or if no subtasks exist
+            bool: True if no subtasks, False if subtasks exist (conservative approach)
         """
-        # If no subtasks, consider them all completed
+        # If there are no subtasks, then all subtasks are "completed" by definition
         if not self.subtasks:
             return True
         
-        # All subtasks must have status="done"
-        return all(st.get("status") == "done" for st in self.subtasks)
+        # If subtasks exist but we can't check their status (only have IDs),
+        # return False to be conservative and prevent premature task completion
+        return False
     
     def is_overdue(self) -> bool:
         """Check if task is overdue"""

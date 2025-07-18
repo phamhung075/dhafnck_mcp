@@ -25,7 +25,6 @@ from fastmcp.task_management.infrastructure.utilities.path_resolver import PathR
 from fastmcp.exceptions import ToolError
 
 
-@pytest.mark.skip(reason="Temporarily skipping due to git_branch_id validation issues")
 class TestToolIssuesVerification:
     """Test suite to verify and fix specific tool action issues"""
     
@@ -119,12 +118,38 @@ class TestToolIssuesVerification:
                 
                 conn.commit()
                 print(f"DEBUG: Created git_branch_id: {git_branch_id} in database: {db_path}")
+                
+                # Verify the branch was created
+                result = conn.execute(
+                    'SELECT id FROM project_git_branchs WHERE id = ?',
+                    (git_branch_id,)
+                ).fetchone()
+                if result:
+                    print(f"DEBUG: Verified git_branch_id exists: {result[0]}")
+                else:
+                    print(f"ERROR: git_branch_id {git_branch_id} was not found after creation!")
+                    
         except Exception as e:
             print(f"Warning: Could not set up test context: {e}")
-            pass
+            # Try to use an existing branch from the database
+            try:
+                with sqlite3.connect(db_path) as conn:
+                    result = conn.execute(
+                        'SELECT id FROM project_git_branchs WHERE project_id = ? LIMIT 1',
+                        (project_id,)
+                    ).fetchone()
+                    if result:
+                        git_branch_id = result[0]
+                        print(f"DEBUG: Using existing git_branch_id: {git_branch_id}")
+            except Exception as e2:
+                print(f"ERROR: Could not find existing git branch: {e2}")
+                pass
         
         return {
-            "git_branch_id": git_branch_id
+            "git_branch_id": git_branch_id,
+            "project_id": project_id,
+            "git_branch_name": git_branch_name,
+            "user_id": user_id
         }
 
     # ===== MANAGE_TASK DEPENDENCY TESTS =====
@@ -241,7 +266,7 @@ class TestToolIssuesVerification:
         assert task_result and task_result.get("success"), "Parent task creation should succeed"
         
         # Extract task ID
-        parent_task_id = task_result.get("task", {}).get("id")
+        parent_task_id = task_result.get("data", {}).get("task", {}).get("id")
         
         if not parent_task_id:
             pytest.skip("Could not extract parent task ID from response")

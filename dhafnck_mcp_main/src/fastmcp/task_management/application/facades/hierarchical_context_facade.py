@@ -291,6 +291,26 @@ class HierarchicalContextFacade:
         try:
             # Normalize context_id to canonical UUID format
             context_id = self._normalize_uuid(context_id)
+            
+            # Check if context exists first
+            existing_context = self._hierarchy_service.get_context(level, context_id)
+            if not existing_context:
+                return {
+                    "success": False,
+                    "error": f"Context not found: {context_id}",
+                    "error_code": "NOT_FOUND"
+                }
+            
+            # Check if context is still in use (cascading delete validation)
+            usage_check = self._check_context_usage(level, context_id)
+            if usage_check["in_use"]:
+                return {
+                    "success": False,
+                    "error": f"Cannot delete context {context_id}: still in use by {usage_check['usage_details']}",
+                    "error_code": "CONTEXT_IN_USE",
+                    "usage_details": usage_check["usage_details"]
+                }
+            
             # Delete context
             deleted = self._hierarchy_service.delete_context(level, context_id)
             
@@ -879,3 +899,60 @@ class HierarchicalContextFacade:
             levels.append(("global", "global_singleton"))
         
         return levels
+    
+    def _check_context_usage(self, level: str, context_id: str) -> Dict[str, Any]:
+        """
+        Check if a context is still in use by other contexts.
+        
+        Args:
+            level: Context level
+            context_id: Context identifier
+            
+        Returns:
+            Dictionary with usage information
+        """
+        usage_details = []
+        
+        try:
+            if level == "global":
+                # Check if any project contexts exist
+                project_contexts = self._hierarchy_service.list_contexts_by_level("project")
+                if project_contexts:
+                    usage_details.append(f"{len(project_contexts)} project contexts")
+                
+                # Check if any task contexts exist
+                task_contexts = self._hierarchy_service.list_contexts_by_level("task")
+                if task_contexts:
+                    usage_details.append(f"{len(task_contexts)} task contexts")
+            
+            elif level == "project":
+                # Check if any task contexts reference this project
+                task_contexts = self._hierarchy_service.list_contexts_by_level("task")
+                dependent_tasks = []
+                
+                for task_ctx in task_contexts:
+                    # Check if task belongs to this project
+                    if task_ctx.get("parent_project_id") == context_id or task_ctx.get("parent_project_context_id") == context_id:
+                        dependent_tasks.append(task_ctx.get("task_id", "unknown"))
+                
+                if dependent_tasks:
+                    usage_details.append(f"{len(dependent_tasks)} task contexts: {', '.join(dependent_tasks[:3])}")
+                    if len(dependent_tasks) > 3:
+                        usage_details.append(f"... and {len(dependent_tasks) - 3} more")
+            
+            elif level == "task":
+                # Task contexts are leaf nodes, no dependencies to check
+                pass
+            
+            return {
+                "in_use": len(usage_details) > 0,
+                "usage_details": "; ".join(usage_details) if usage_details else "None"
+            }
+            
+        except Exception as e:
+            logger.warning(f"Error checking context usage: {e}")
+            # In case of error, allow deletion to proceed
+            return {
+                "in_use": False,
+                "usage_details": "Error checking usage"
+            }

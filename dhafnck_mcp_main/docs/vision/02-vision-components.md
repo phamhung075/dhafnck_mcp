@@ -86,7 +86,7 @@ class KeyFeature:
     priority: Priority
     success_criteria: List[str]
     
-    def to_git_branche(self) -> TaskTree:
+    def to_git_branch(self) -> TaskTree:
         """Convert feature to task tree structure"""
         pass
 ```

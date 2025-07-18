@@ -13,10 +13,28 @@ class RemoveSubtaskUseCase:
         subtask = self._subtask_repository.find_by_id(id)
         if not subtask:
             raise ValueError(f"Subtask {id} not found in task {task_id}")
+        
+        # Remove the subtask
         success = self._subtask_repository.remove_subtask(task_id, id)
+        
+        # Calculate progress after deletion
+        progress = {}
+        if success and self._subtask_repository:
+            try:
+                task_id_obj = self._convert_to_task_id(task_id)
+                progress = self._subtask_repository.get_subtask_progress(task_id_obj)
+            except Exception:
+                # If progress calculation fails, provide fallback
+                progress = {
+                    "total_subtasks": 0,
+                    "completed_subtasks": 0,
+                    "completion_percentage": 0
+                }
+        
         return {
             "success": success,
             "subtask": {"id": str(id)},
+            "progress": progress
         }
 
     def _convert_to_task_id(self, task_id: Union[str, int]) -> TaskId:

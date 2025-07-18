@@ -117,7 +117,7 @@ class GitBranchStatisticsRepository:
             # Get branch details
             cursor.execute("""
                 SELECT created_at, updated_at
-                FROM git_branches
+                FROM git_branchs
                 WHERE id = ? AND project_id = ?
             """, (git_branch_id, project_id))
             

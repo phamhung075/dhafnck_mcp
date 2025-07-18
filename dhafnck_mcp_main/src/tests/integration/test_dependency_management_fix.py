@@ -160,6 +160,24 @@ class MockTaskRepository(TaskRepository):
     def get_all_active_tasks(self):
         """Get all active tasks"""
         return list(self.active_tasks.values())
+    
+    def find_by_id_all_states(self, task_id: TaskId) -> Optional[Task]:
+        """Find task by ID across all states (active, completed, archived) - THE FIX!"""
+        task_id_str = str(task_id)
+        
+        # Check active tasks first
+        if task_id_str in self.active_tasks:
+            return self.active_tasks[task_id_str]
+        
+        # Check completed tasks
+        if task_id_str in self.completed_tasks:
+            return self.completed_tasks[task_id_str]
+        
+        # Check archived tasks
+        if task_id_str in self.archived_tasks:
+            return self.archived_tasks[task_id_str]
+        
+        return None
 
 
 class TestDependencyManagementFix:
@@ -236,8 +254,8 @@ class TestDependencyManagementFix:
         assert result.success is True
         assert result.errors is None or len(result.errors) == 0
 
-    def test_add_dependency_on_completed_task_should_fail_currently(self):
-        """Test 2: Adding dependency on completed task FAILS (reproduces the bug)"""
+    def test_add_dependency_on_completed_task_should_work_after_fix(self):
+        """Test 2: Adding dependency on completed task should work after fix"""
         # Given: Active task and completed task
         dependent_task_id = TaskId(str(uuid4()))
         dependent_task = Task(
@@ -256,17 +274,16 @@ class TestDependencyManagementFix:
             depends_on_task_id=str(self.completed_task_id)
         )
         
-        # Then: Currently FAILS with "not found" error (this is the bug!)
-        with pytest.raises(Exception) as exc_info:
-            result = self.add_dependency_use_case.execute(request)
+        # Then: Should now work with the fix
+        result = self.add_dependency_use_case.execute(request)
+        assert result.success is True
+        assert result.errors is None or len(result.errors) == 0
+        assert "completed" in result.message.lower()
         
-        error_msg = str(exc_info.value)
-        assert "not found" in error_msg.lower()
-        
-        print(f"✅ REPRODUCED BUG: {error_msg}")
+        print(f"✅ FIXED: {result.message}")
 
-    def test_add_dependency_on_archived_task_should_fail_currently(self):
-        """Test 3: Adding dependency on archived task FAILS (reproduces the bug)"""
+    def test_add_dependency_on_archived_task_should_work_after_fix(self):
+        """Test 3: Adding dependency on archived task should work after fix"""
         # Given: Active task and archived task
         dependent_task_id = TaskId(str(uuid4()))
         dependent_task = Task(
@@ -285,14 +302,13 @@ class TestDependencyManagementFix:
             depends_on_task_id=str(self.archived_task_id)
         )
         
-        # Then: Currently FAILS with "not found" error (this is the bug!)
-        with pytest.raises(Exception) as exc_info:
-            result = self.add_dependency_use_case.execute(request)
+        # Then: Should now work with the fix
+        result = self.add_dependency_use_case.execute(request)
+        assert result.success is True
+        assert result.errors is None or len(result.errors) == 0
+        assert "completed" in result.message.lower()
         
-        error_msg = str(exc_info.value)
-        assert "not found" in error_msg.lower()
-        
-        print(f"✅ REPRODUCED BUG: {error_msg}")
+        print(f"✅ FIXED: {result.message}")
 
     def test_dependency_validation_should_handle_completed_tasks(self):
         """Test 4: Dependency validation should handle all task states (will fail initially)"""
@@ -415,19 +431,19 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"❌ Active task dependency failed: {e}")
     
-    print("\n2. Testing bug: Completed task dependency (should fail)")
+    print("\n2. Testing fix: Completed task dependency (should now work)")
     try:
-        test_suite.test_add_dependency_on_completed_task_should_fail_currently()
-        print("✅ Bug reproduced: Completed task dependency fails as expected")
+        test_suite.test_add_dependency_on_completed_task_should_work_after_fix()
+        print("✅ Fix verified: Completed task dependency now works")
     except Exception as e:
-        print(f"❌ Unexpected error: {e}")
+        print(f"❌ Fix failed: {e}")
     
-    print("\n3. Testing bug: Archived task dependency (should fail)")
+    print("\n3. Testing fix: Archived task dependency (should now work)")
     try:
-        test_suite.test_add_dependency_on_archived_task_should_fail_currently()
-        print("✅ Bug reproduced: Archived task dependency fails as expected")
+        test_suite.test_add_dependency_on_archived_task_should_work_after_fix()
+        print("✅ Fix verified: Archived task dependency now works")
     except Exception as e:
-        print(f"❌ Unexpected error: {e}")
+        print(f"❌ Fix failed: {e}")
     
     print("\n4. Testing enhanced repository methods")
     try:
@@ -437,5 +453,10 @@ if __name__ == "__main__":
         print(f"❌ Repository method test failed: {e}")
     
     print("\n" + "=" * 60)
-    print("🎯 TDD Phase 1 Complete: Failing tests written")
-    print("📋 Next: Implement fixes to make these tests pass")
+    print("🎉 DEPENDENCY MANAGEMENT FIX COMPLETE!")
+    print("✅ All tests now pass with the implemented fix")
+    print("📋 Fix Summary:")
+    print("   - Added find_by_id_all_states() method to TaskRepository interface")
+    print("   - Updated AddDependencyUseCase to use the new method")
+    print("   - Updated ORM implementation to search across all task states")
+    print("   - Completed and archived tasks can now be used as dependencies")

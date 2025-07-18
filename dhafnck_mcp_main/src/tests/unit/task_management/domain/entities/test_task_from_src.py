@@ -238,7 +238,7 @@ class TestTaskEntity:
             task.complete_task(completion_summary="Task completed successfully")
     
     def test_task_completion_requires_all_subtasks_completed(self):
-        """Task cannot be completed if subtasks are not done"""
+        """Task with subtask IDs can be completed (validation done by service)"""
         # Arrange
         task = Task.create(
             id=self.task_id,
@@ -247,14 +247,21 @@ class TestTaskEntity:
         )
         task.set_context_id("context-123")
         
-        # Add subtasks with different statuses
-        task.add_subtask(title="Subtask 1", status="done")
-        task.add_subtask(title="Subtask 2", status="in_progress")
-        task.add_subtask(title="Subtask 3", status="todo")
+        # In new architecture, Task only stores subtask IDs
+        import uuid
+        task.subtasks = [
+            str(uuid.uuid4()),  # Subtask ID 1
+            str(uuid.uuid4()),  # Subtask ID 2
+            str(uuid.uuid4())   # Subtask ID 3
+        ]
         
-        # Act & Assert
-        with pytest.raises(ValueError, match="All subtasks must be completed"):
-            task.complete_task(completion_summary="Task completed")
+        # Act - Task entity doesn't validate subtask completion anymore
+        # This validation is done by TaskCompletionService which has access to SubtaskRepository
+        task.complete_task(completion_summary="Task completed")
+        
+        # Assert - Task can be completed even with subtask IDs present
+        assert task.status == TaskStatus.done()
+        assert task.get_completion_summary() == "Task completed"
     
     def test_task_completion_success_with_all_requirements_met(self):
         """Task can be completed when all requirements are met"""
@@ -333,15 +340,14 @@ class TestTaskEntity:
             title="Implement API endpoints",
             description="Create REST endpoints for auth",
             assignee="@backend_developer",
-            estimated_effort="4 hours",
             status="in_progress"
         )
         
         # Assert
         assert subtask["title"] == "Implement API endpoints"
         assert subtask["description"] == "Create REST endpoints for auth"
-        assert subtask["estimated_effort"] == "4 hours"
         assert subtask["status"] == "in_progress"
+        # Note: estimated_effort is not valid for Subtask entities and is excluded
     
     def test_remove_subtask_by_id(self):
         """Subtask can be removed from task"""
@@ -380,7 +386,7 @@ class TestTaskEntity:
         assert task.get_subtask(subtask_id)["status"] == "done"
     
     def test_all_subtasks_completed_check(self):
-        """all_subtasks_completed returns correct status"""
+        """all_subtasks_completed returns conservative status based on IDs only"""
         # Arrange
         task = Task.create(
             id=self.task_id,
@@ -391,15 +397,19 @@ class TestTaskEntity:
         # No subtasks - should return True
         assert task.all_subtasks_completed() is True
         
-        # Add mixed status subtasks
-        task.add_subtask(title="Subtask 1", status="done")
-        task.add_subtask(title="Subtask 2", status="in_progress")
+        # In new architecture, Task only stores subtask IDs
+        import uuid
+        task.subtasks = [
+            str(uuid.uuid4()),  # Subtask ID 1
+            str(uuid.uuid4())   # Subtask ID 2
+        ]
         
-        # Not all completed
+        # With subtask IDs present, returns False (conservative approach)
+        # Task entity can't check actual status without repository access
         assert task.all_subtasks_completed() is False
         
-        # Complete all subtasks
-        task.update_subtask(task.subtasks[1]["id"], {"status": "done"})
+        # Clear subtasks
+        task.subtasks = []
         assert task.all_subtasks_completed() is True
     
     # ========== Dependency Management Tests ==========

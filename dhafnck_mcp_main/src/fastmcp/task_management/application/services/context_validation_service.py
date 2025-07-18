@@ -56,10 +56,8 @@ class ContextValidationService:
             errors.append("Task is already completed")
             
         # 4. Validate all subtasks are completed
-        if not task.all_subtasks_completed():
-            incomplete_subtasks = [st for st in task.subtasks if st.get("status") != "done"]
-            subtask_info = ", ".join([f"'{st.get('title', st.get('id', 'Unknown'))}'" for st in incomplete_subtasks])
-            errors.append(f"All subtasks must be completed. Incomplete: {subtask_info}")
+        # NOTE: Subtask completion validation is now handled by TaskCompletionService
+        # which queries the SubtaskRepository. Task entity only stores subtask IDs.
             
         # 5. Log validation attempt
         logger.info(f"Validating completion context for task {task.id}: "

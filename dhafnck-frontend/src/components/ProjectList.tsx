@@ -39,8 +39,8 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect }) => {
     const countPromises: Promise<{ id: string; count: number }>[] = [];
     
     for (const project of projects) {
-      if (project.git_branches) {
-        for (const tree of Object.values(project.git_branches)) {
+      if (project.git_branchs) {
+        for (const tree of Object.values(project.git_branchs)) {
           countPromises.push(
             getTaskCount(tree.id)
               .then(count => ({ id: tree.id, count }))
@@ -71,8 +71,8 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect }) => {
       const countPromises: Promise<{ id: string; count: number }>[] = [];
       
       for (const project of projectsData) {
-        if (project.git_branches) {
-          for (const tree of Object.values(project.git_branches)) {
+        if (project.git_branchs) {
+          for (const tree of Object.values(project.git_branchs)) {
             countPromises.push(
               getTaskCount(tree.id)
                 .then(count => ({ id: tree.id, count }))
@@ -211,9 +211,9 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect }) => {
                   {openProjects[project.id] ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                   <Folder className="w-4 h-4" />
                   <span className="font-semibold text-sm truncate text-left" title={project.name}>{project.name}</span>
-                  {!openProjects[project.id] && project.git_branches && Object.keys(project.git_branches).length > 0 && (
+                  {!openProjects[project.id] && project.git_branchs && Object.keys(project.git_branchs).length > 0 && (
                     <Badge variant="outline" className="text-xs ml-2">
-                      {Object.keys(project.git_branches).length}
+                      {Object.keys(project.git_branchs).length}
                     </Badge>
                   )}
                 </div>
@@ -245,9 +245,9 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect }) => {
                   </Button>
                 </div>
               </div>
-              {openProjects[project.id] && project.git_branches && (
+              {openProjects[project.id] && project.git_branchs && (
                 <ul className="flex flex-col gap-1 ml-8 mt-1">
-                  {Object.values(project.git_branches).map((tree) => (
+                  {Object.values(project.git_branchs).map((tree) => (
                     <li key={tree.id}>
                       <div className="group relative flex items-center gap-1">
                         <span className="text-muted-foreground">—</span>
@@ -487,13 +487,13 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect }) => {
             )}
 
             {/* Task Trees / Branches */}
-            {showProjectDetails?.git_branches && Object.keys(showProjectDetails.git_branches).length > 0 && (
+            {showProjectDetails?.git_branchs && Object.keys(showProjectDetails.git_branchs).length > 0 && (
               <>
                 <div className="bg-indigo-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-semibold mb-3 text-indigo-700">Task Trees / Branches ({Object.keys(showProjectDetails.git_branches).length})</h3>
+                  <h3 className="text-lg font-semibold mb-3 text-indigo-700">Task Trees / Branches ({Object.keys(showProjectDetails.git_branchs).length})</h3>
                   <div className="bg-white p-3 rounded border border-indigo-200">
                     <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                      {JSON.stringify(showProjectDetails.git_branches, null, 2)}
+                      {JSON.stringify(showProjectDetails.git_branchs, null, 2)}
                     </pre>
                   </div>
                 </div>
@@ -505,7 +505,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect }) => {
             {showProjectDetails && (
               <>
                 {Object.entries(showProjectDetails).filter(([key]) => 
-                  !['id', 'name', 'description', 'git_branches', 'orchestration_status', 'registered_agents', 'agent_assignments'].includes(key)
+                  !['id', 'name', 'description', 'git_branchs', 'orchestration_status', 'registered_agents', 'agent_assignments'].includes(key)
                 ).map(([key, value]) => {
                   if (value === null || value === undefined) return null;
                   

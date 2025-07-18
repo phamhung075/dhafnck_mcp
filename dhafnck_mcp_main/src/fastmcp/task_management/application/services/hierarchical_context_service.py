@@ -206,18 +206,22 @@ class HierarchicalContextService:
         try:
             # Check cache first (unless force refresh)
             if not force_refresh:
-                cached_result = await self.cache_service.get_cached_context(level, context_id)
-                if cached_result:
-                    logger.debug(f"Cache hit for {level}:{context_id}")
-                    resolution_time = (datetime.now() - start_time).total_seconds() * 1000
-                    
-                    return ContextResolutionResult(
-                        resolved_context=cached_result['resolved_context'],
-                        resolution_path=json.loads(cached_result['resolution_path']),
-                        cache_hit=True,
-                        dependencies_hash=cached_result['dependencies_hash'],
-                        resolution_time_ms=resolution_time
-                    )
+                try:
+                    cached_result = await self.cache_service.get_cached_context(level, context_id)
+                    if cached_result:
+                        logger.debug(f"Cache hit for {level}:{context_id}")
+                        resolution_time = (datetime.now() - start_time).total_seconds() * 1000
+                        
+                        return ContextResolutionResult(
+                            resolved_context=cached_result['resolved_context'],
+                            resolution_path=json.loads(cached_result['resolution_path']),
+                            cache_hit=True,
+                            dependencies_hash=cached_result['dependencies_hash'],
+                            resolution_time_ms=resolution_time
+                        )
+                except Exception as cache_error:
+                    logger.warning(f"Cache retrieval failed for {level}:{context_id}: {cache_error}, proceeding with fresh resolution")
+                    # Continue with fresh resolution if cache fails
             
             # Fresh resolution
             logger.debug(f"Resolving fresh context for {level}:{context_id}")
@@ -232,13 +236,17 @@ class HierarchicalContextService:
                 raise ValueError(f"Invalid context level: {level}")
             
             # Cache the result
-            await self.cache_service.cache_resolved_context(
-                level=level,
-                context_id=context_id,
-                resolved_context=result.resolved_context,
-                dependencies_hash=result.dependencies_hash,
-                resolution_path=result.resolution_path
-            )
+            try:
+                await self.cache_service.cache_resolved_context(
+                    level=level,
+                    context_id=context_id,
+                    resolved_context=result.resolved_context,
+                    dependencies_hash=result.dependencies_hash,
+                    resolution_path=result.resolution_path
+                )
+            except Exception as cache_error:
+                logger.warning(f"Failed to cache resolved context for {level}:{context_id}: {cache_error}")
+                # Continue without caching if cache fails
             
             resolution_time = (datetime.now() - start_time).total_seconds() * 1000
             result.resolution_time_ms = resolution_time
@@ -296,7 +304,7 @@ class HierarchicalContextService:
         global_result = self._resolve_global_context(global_id)
         global_context = global_result.resolved_context
         
-        # Apply inheritance
+        # Apply inheritance (synchronous method)
         resolved = self.inheritance_service.inherit_project_from_global(
             global_context=global_context,
             project_context=project_context
@@ -353,7 +361,7 @@ class HierarchicalContextService:
         project_result = self._resolve_project_context(project_id)
         project_context = project_result.resolved_context
         
-        # Apply full inheritance chain
+        # Apply full inheritance chain (synchronous method)
         resolved = self.inheritance_service.inherit_task_from_project(
             project_context=project_context,
             task_context=task_context

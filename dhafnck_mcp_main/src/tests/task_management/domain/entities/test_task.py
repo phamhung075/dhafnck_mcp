@@ -93,21 +93,22 @@ class TestTaskCreation:
         assert isinstance(task._events[0], TaskCreated)
     
     def test_create_task_with_subtasks(self):
-        """Test creating task with subtasks."""
-        subtasks = [
-            {"id": "sub-1", "title": "Subtask 1"},
-            {"id": "sub-2", "title": "Subtask 2"}
+        """Test creating task with subtask IDs only."""
+        import uuid
+        subtask_ids = [
+            str(uuid.uuid4()),  # Subtask ID 1
+            str(uuid.uuid4())   # Subtask ID 2
         ]
         
         task = Task(
             title="Parent Task",
             description="Task with subtasks",
-            subtasks=subtasks
+            subtasks=subtask_ids
         )
         
         assert len(task.subtasks) == 2
-        assert task.subtasks[0]["id"] == "sub-1"
-        assert task.subtasks[1]["title"] == "Subtask 2"
+        assert task.subtasks[0] == subtask_ids[0]
+        assert task.subtasks[1] == subtask_ids[1]
     
     def test_create_task_with_dependencies(self):
         """Test creating task with dependencies."""
@@ -518,9 +519,12 @@ class TestTaskProgress:
         with pytest.raises(ValueError, match="percentage must be between 0 and 100"):
             task.update_progress(ProgressType.IMPLEMENTATION, 110)
     
+    @pytest.mark.skip(reason="Task now only stores subtask IDs - progress calculation should use SubtaskRepository")
     def test_calculate_progress_from_subtasks(self):
-        """Test calculating progress from subtasks."""
+        """Test calculating progress from subtasks - DEPRECATED."""
         task = Task(title="Test", description="Test")
+        # In new architecture, task.subtasks only contains IDs
+        # Progress calculation should be done via a service that has access to SubtaskRepository
         task.subtasks = [
             {"id": "sub-1", "status": "done"},
             {"id": "sub-2", "status": "in_progress"},

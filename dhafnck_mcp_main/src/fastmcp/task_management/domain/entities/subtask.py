@@ -339,6 +339,15 @@ class Subtask:
         if priority is None:
             priority = Priority.medium()
         
+        # Extract only valid parameters from kwargs
+        valid_params = {}
+        if 'assignees' in kwargs:
+            valid_params['assignees'] = kwargs['assignees']
+        if 'created_at' in kwargs:
+            valid_params['created_at'] = kwargs['created_at']
+        if 'updated_at' in kwargs:
+            valid_params['updated_at'] = kwargs['updated_at']
+        
         return cls(
             id=id,
             title=title,
@@ -346,7 +355,7 @@ class Subtask:
             parent_task_id=parent_task_id,
             status=status,
             priority=priority,
-            **kwargs
+            **valid_params
         )
     
     @classmethod

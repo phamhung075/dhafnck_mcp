@@ -137,6 +137,12 @@ class MockTaskRepository(TaskRepository):
             results = results[:limit]
         
         return results
+    
+    def find_by_id_all_states(self, task_id: TaskId) -> Optional[Task]:
+        """Find task by ID across all states (active, completed, archived)."""
+        # In this mock implementation, we don't differentiate between states
+        # so this is equivalent to find_by_id
+        return self.find_by_id(task_id)
 
 
 class TestTaskRepositoryInterface:
@@ -161,6 +167,7 @@ class TestTaskRepositoryInterface:
         assert hasattr(repo, 'count')
         assert hasattr(repo, 'get_statistics')
         assert hasattr(repo, 'find_by_criteria')
+        assert hasattr(repo, 'find_by_id_all_states')
     
     def test_repository_is_abstract(self):
         """Test that TaskRepository cannot be instantiated directly."""
@@ -367,6 +374,22 @@ class TestTaskRepositoryFindOperations:
         # Find tasks with non-existent label
         no_tasks = populated_repo.find_by_labels(["non-existent"])
         assert len(no_tasks) == 0
+    
+    def test_find_by_id_all_states(self, populated_repo):
+        """Test finding task by ID across all states."""
+        task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440001")
+        task = populated_repo.find_by_id_all_states(task_id)
+        
+        assert task is not None
+        assert task.id == task_id
+        assert task.title == "High Priority Bug"
+    
+    def test_find_by_id_all_states_non_existing(self, populated_repo):
+        """Test finding a non-existing task by ID across all states returns None."""
+        task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440099")
+        task = populated_repo.find_by_id_all_states(task_id)
+        
+        assert task is None
 
 
 class TestTaskRepositorySearchOperation:

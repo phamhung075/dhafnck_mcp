@@ -29,7 +29,7 @@ export interface Project {
     id: string;
     name: string;
     description: string;
-    git_branches: Record<string, Branch>;
+    git_branchs: Record<string, Branch>;
 }
 
 export interface Branch {
@@ -583,7 +583,7 @@ export async function listProjects(): Promise<Project[]> {
     try {
       const toolResult = JSON.parse(data.result.content[0].text);
       if (toolResult.success && Array.isArray(toolResult.projects)) {
-        // Get detailed project information including git_branches
+        // Get detailed project information including git_branchs
         const projectsWithDetails = await Promise.all(
           toolResult.projects.map(async (project: any) => {
             const detailedProject = await getProject(project.id);
@@ -727,8 +727,8 @@ export async function listBranches(project_id: string): Promise<Branch[]> {
       const toolResult = JSON.parse(data.result.content[0].text);
       if (toolResult.success && Array.isArray(toolResult.projects)) {
         const project = toolResult.projects.find((p: any) => p.id === project_id);
-        if (project && project.git_branches) {
-          return Object.values(project.git_branches);
+        if (project && project.git_branchs) {
+          return Object.values(project.git_branchs);
         }
       }
     } catch {}

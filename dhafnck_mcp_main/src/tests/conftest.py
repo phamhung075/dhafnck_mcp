@@ -268,16 +268,16 @@ def _initialize_test_database(db_path: Path):
         # Create default test project (no users table needed)
         try:
             conn.execute("""
-                INSERT OR REPLACE INTO projects (id, name, description, user_id) 
-                VALUES ('default_project', 'Default Test Project', 'Project for testing', 'default_id')
+                INSERT OR REPLACE INTO projects (id, name, description, user_id, status, created_at, updated_at, metadata) 
+                VALUES ('default_project', 'Default Test Project', 'Project for testing', 'default_id', 'active', datetime('now'), datetime('now'), '{}')
             """)
             
             # Create main git branch for default project
             # Use a deterministic ID so tests can find it
             main_branch_id = 'test-main-branch-' + str(uuid.uuid4())
             conn.execute("""
-                INSERT OR REPLACE INTO project_git_branchs (id, project_id, name, description, created_at, updated_at) 
-                VALUES (?, 'default_project', 'main', 'Main branch for testing', datetime('now'), datetime('now'))
+                INSERT OR REPLACE INTO project_git_branchs (id, project_id, name, description, created_at, updated_at, priority, status, metadata, task_count, completed_task_count) 
+                VALUES (?, 'default_project', 'main', 'Main branch for testing', datetime('now'), datetime('now'), 'medium', 'todo', '{}', 0, 0)
             """, (main_branch_id,))
             
             conn.commit()

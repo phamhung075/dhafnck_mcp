@@ -21,7 +21,7 @@ Create an ORM implementation of the Git Branch Repository for managing project b
 - `get_git_branch()`
 - `update_git_branch()`
 - `delete_git_branch()`
-- `list_git_branches()`
+- `list_git_branchs()`
 - `get_branches_by_project()`
 - `assign_agent_to_branch()`
 - `update_task_counts()`

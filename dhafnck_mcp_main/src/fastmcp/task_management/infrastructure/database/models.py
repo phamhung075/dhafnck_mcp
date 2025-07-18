@@ -27,7 +27,7 @@ class Project(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
     user_id: Mapped[str] = mapped_column(String, nullable=False, default="default_id")
     status: Mapped[str] = mapped_column(String, default="active")
-    model_metadata: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
+    model_metadata: Mapped[Dict[str, Any]] = mapped_column("metadata", JSON, default=dict)
     
     # Relationships
     git_branchs: Mapped[List["ProjectGitBranch"]] = relationship("ProjectGitBranch", back_populates="project", cascade="all, delete-orphan")
@@ -50,7 +50,7 @@ class ProjectGitBranch(Base):
     assigned_agent_id: Mapped[Optional[str]] = mapped_column(String)
     priority: Mapped[str] = mapped_column(String, default="medium")
     status: Mapped[str] = mapped_column(String, default="todo")
-    model_metadata: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
+    model_metadata: Mapped[Dict[str, Any]] = mapped_column("metadata", JSON, default=dict)
     task_count: Mapped[int] = mapped_column(Integer, default=0)
     completed_task_count: Mapped[int] = mapped_column(Integer, default=0)
     
@@ -181,7 +181,7 @@ class Agent(Base):
     last_active_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
-    model_metadata: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
+    model_metadata: Mapped[Dict[str, Any]] = mapped_column("metadata", JSON, default=dict)
     
     # Indexes
     __table_args__ = (

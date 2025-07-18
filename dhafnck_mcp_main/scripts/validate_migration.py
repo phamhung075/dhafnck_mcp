@@ -52,7 +52,7 @@ class MigrationValidator:
         expected_tables = {
             'projects': Project.__tablename__,
             'agents': Agent.__tablename__,
-            'project_git_branches': ProjectTaskTree.__tablename__,
+            'project_git_branchs': ProjectTaskTree.__tablename__,
             'tasks': Task.__tablename__,
             'task_subtasks': TaskSubtask.__tablename__,
             'labels': Label.__tablename__,
@@ -125,18 +125,18 @@ class MigrationValidator:
                 session.commit()
                 
                 # Create a task tree
-                git_branche = ProjectTaskTree(
+                git_branch = ProjectTaskTree(
                     project_id=project.project_id,
                     git_branch_name="main",
                     git_branch_description="Main branch",
                     git_branch_status="active"
                 )
-                session.add(git_branche)
+                session.add(git_branch)
                 session.commit()
                 
                 # Create a task
                 task = Task(
-                    git_branch_id=git_branche.git_branch_id,
+                    git_branch_id=git_branch.git_branch_id,
                     title="Test Task",
                     description="Test task for integrity",
                     priority="medium",
@@ -147,8 +147,8 @@ class MigrationValidator:
                 session.commit()
                 
                 # Test relationships
-                assert task.git_branche == git_branche
-                assert git_branche.project == project
+                assert task.git_branch == git_branch
+                assert git_branch.project == project
                 
                 integrity_results["foreign_key_constraints"].append("✅ Foreign key relationships working")
                 integrity_results["relationship_validation"].append("✅ ORM relationships working")

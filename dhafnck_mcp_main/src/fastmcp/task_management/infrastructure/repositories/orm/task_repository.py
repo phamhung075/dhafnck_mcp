@@ -16,6 +16,10 @@ from ...database.models import Task, TaskSubtask, TaskAssignee, TaskLabel
 from ....domain.repositories.task_repository import TaskRepository
 from ....domain.entities.task import Task as TaskEntity
 from ....domain.entities.subtask import Subtask
+from ....domain.value_objects.task_id import TaskId
+from ....domain.value_objects.subtask_id import SubtaskId
+from ....domain.value_objects.task_status import TaskStatus
+from ....domain.value_objects.priority import Priority
 from ....domain.exceptions.task_exceptions import (
     TaskNotFoundError,
     TaskCreationError,
@@ -63,29 +67,18 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
         subtasks = []
         for subtask in task.subtasks:
             subtasks.append(Subtask(
-                id=subtask.id,
-                parent_task_id=subtask.task_id,  # Fixed: changed from task_id to parent_task_id
+                id=SubtaskId(subtask.id),
+                parent_task_id=TaskId(subtask.task_id),  # Fixed: changed from task_id to parent_task_id
                 title=subtask.title,
                 description=subtask.description,
-                status=subtask.status,
-                priority=subtask.priority,
+                status=TaskStatus.from_string(subtask.status),
+                priority=Priority.from_string(subtask.priority),
                 assignees=subtask.assignees or [],
-                estimated_effort=subtask.estimated_effort,
-                progress_percentage=subtask.progress_percentage,
-                progress_notes=subtask.progress_notes,
-                blockers=subtask.blockers,
-                completion_summary=subtask.completion_summary,
-                impact_on_parent=subtask.impact_on_parent,
-                insights_found=subtask.insights_found or [],
                 created_at=subtask.created_at,
-                updated_at=subtask.updated_at,
-                completed_at=subtask.completed_at
+                updated_at=subtask.updated_at
             ))
         
         # Convert status and priority to proper value objects
-        from ....domain.value_objects.task_status import TaskStatus
-        from ....domain.value_objects.priority import Priority
-        from ....domain.value_objects.task_id import TaskId
         
         status_obj = TaskStatus(task.status) if task.status else None
         priority_obj = Priority(task.priority) if task.priority else None
@@ -486,3 +479,16 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
             "in_progress_tasks": self.get_task_count(status="in_progress"),
             "todo_tasks": self.get_task_count(status="todo")
         }
+    
+    def find_by_id_all_states(self, task_id) -> Optional[TaskEntity]:
+        """Find task by ID across all states (active, completed, archived)"""
+        with self.get_db_session() as session:
+            # Search across all statuses without any git_branch_id filter
+            # This ensures we find tasks regardless of their current state
+            task = session.query(Task).options(
+                joinedload(Task.assignees),
+                joinedload(Task.labels).joinedload(TaskLabel.label),
+                joinedload(Task.subtasks)
+            ).filter(Task.id == str(task_id)).first()
+            
+            return self._model_to_entity(task) if task else None

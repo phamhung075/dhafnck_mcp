@@ -1,13 +1,82 @@
 #!/usr/bin/env python3
 """
-Simple test for dependency management fix using the actual system database.
+Simple test for dependency management fix (without database dependencies)
 """
 
+import pytest
 import sys
-import os
+from datetime import datetime
+from uuid import uuid4
+from typing import List, Optional, Dict, Any
 
 # Add the source path to sys.path for imports
 sys.path.insert(0, '/home/daihungpham/agentic-project/dhafnck_mcp_main/src')
+
+from fastmcp.task_management.domain.entities.task import Task
+from fastmcp.task_management.domain.value_objects.task_id import TaskId
+from fastmcp.task_management.domain.value_objects.task_status import TaskStatus
+from fastmcp.task_management.domain.value_objects.priority import Priority
+from fastmcp.task_management.application.use_cases.add_dependency import AddDependencyUseCase
+from fastmcp.task_management.application.dtos.dependency.add_dependency_request import AddDependencyRequest
+from fastmcp.task_management.domain.repositories.task_repository import TaskRepository
+
+
+class SimpleTaskRepository(TaskRepository):
+    """Simple mock repository for testing"""
+    
+    def __init__(self):
+        self.tasks = {}
+    
+    def save(self, task: Task) -> bool:
+        self.tasks[str(task.id)] = task
+        return True
+    
+    def find_by_id(self, task_id: TaskId) -> Optional[Task]:
+        return self.tasks.get(str(task_id))
+    
+    def find_by_id_all_states(self, task_id: TaskId) -> Optional[Task]:
+        """The fix - search all tasks regardless of state"""
+        return self.tasks.get(str(task_id))
+    
+    def find_all(self) -> List[Task]:
+        return list(self.tasks.values())
+    
+    def find_by_status(self, status: TaskStatus) -> List[Task]:
+        return [t for t in self.tasks.values() if t.status == status]
+    
+    def find_by_priority(self, priority: Priority) -> List[Task]:
+        return [t for t in self.tasks.values() if t.priority == priority]
+    
+    def find_by_assignee(self, assignee: str) -> List[Task]:
+        return [t for t in self.tasks.values() if assignee in (t.assignees or [])]
+    
+    def find_by_labels(self, labels: List[str]) -> List[Task]:
+        return [t for t in self.tasks.values() if any(label in (t.labels or []) for label in labels)]
+    
+    def search(self, query: str, limit: int = 10) -> List[Task]:
+        return []
+    
+    def delete(self, task_id: TaskId) -> bool:
+        if str(task_id) in self.tasks:
+            del self.tasks[str(task_id)]
+            return True
+        return False
+    
+    def exists(self, task_id: TaskId) -> bool:
+        return str(task_id) in self.tasks
+    
+    def get_next_id(self) -> TaskId:
+        return TaskId(str(uuid4()))
+    
+    def count(self) -> int:
+        return len(self.tasks)
+    
+    def get_statistics(self) -> Dict[str, Any]:
+        return {"total": len(self.tasks)}
+    
+    def find_by_criteria(self, filters: Dict[str, Any], limit: Optional[int] = None) -> List[Task]:
+        return []
+
 
 def test_dependency_fix_simple():
     """Test the dependency management fix with simple validation"""
@@ -15,164 +84,99 @@ def test_dependency_fix_simple():
     print("🧪 DEPENDENCY MANAGEMENT FIX - SIMPLE TEST")
     print("=" * 50)
     
-    # Test 1: Check that AddDependencyUseCase has enhanced lookup
-    print("\n1. Testing AddDependencyUseCase enhancement...")
+    repository = SimpleTaskRepository()
+    use_case = AddDependencyUseCase(repository)
     
-    try:
-        from fastmcp.task_management.application.use_cases.add_dependency import AddDependencyUseCase
-        
-        # Check if the enhanced method exists
-        if hasattr(AddDependencyUseCase, '_find_dependency_task'):
-            print("   ✅ Enhanced dependency lookup method found")
-        else:
-            print("   ❌ Enhanced dependency lookup method missing")
-            
-        # Check method signature
-        import inspect
-        execute_method = getattr(AddDependencyUseCase, 'execute')
-        source = inspect.getsource(execute_method)
-        
-        if '_find_dependency_task' in source:
-            print("   ✅ Execute method uses enhanced lookup")
-        else:
-            print("   ❌ Execute method doesn't use enhanced lookup")
-            
-        if 'across_contexts' in source:
-            print("   ✅ Cross-context lookup implemented")
-        else:
-            print("   ⚠️  Cross-context lookup may not be implemented")
-            
-    except Exception as e:
-        print(f"   ❌ Error testing AddDependencyUseCase: {e}")
+    # Test 1: Active task dependency
+    print("\n1. Testing active task dependency...")
     
-    # Test 2: Check CompleteTaskUseCase enhancements
-    print("\n2. Testing CompleteTaskUseCase enhancement...")
+    task1 = Task(
+        id=TaskId(str(uuid4())),
+        title="Task 1",
+        description="Task 1",
+        status=TaskStatus.todo(),
+        priority=Priority.medium(),
+        git_branch_id=str(uuid4())
+    )
     
-    try:
-        from fastmcp.task_management.application.use_cases.complete_task import CompleteTaskUseCase
-        
-        # Check if dependent task update methods exist
-        if hasattr(CompleteTaskUseCase, '_update_dependent_tasks'):
-            print("   ✅ Dependent task update method found")
-        else:
-            print("   ❌ Dependent task update method missing")
-            
-        if hasattr(CompleteTaskUseCase, '_check_all_dependencies_complete'):
-            print("   ✅ Dependency completion check method found")
-        else:
-            print("   ❌ Dependency completion check method missing")
-            
-        # Check that execute method calls the update
-        execute_method = getattr(CompleteTaskUseCase, 'execute')
-        source = inspect.getsource(execute_method)
-        
-        if '_update_dependent_tasks' in source:
-            print("   ✅ Execute method updates dependent tasks")
-        else:
-            print("   ❌ Execute method doesn't update dependent tasks")
-            
-    except Exception as e:
-        print(f"   ❌ Error testing CompleteTaskUseCase: {e}")
+    task2 = Task(
+        id=TaskId(str(uuid4())),
+        title="Task 2",
+        description="Task 2",
+        status=TaskStatus.todo(),
+        priority=Priority.medium(),
+        git_branch_id=str(uuid4())
+    )
     
-    # Test 3: Check dependency validation service
-    print("\n3. Testing dependency validation service...")
+    repository.save(task1)
+    repository.save(task2)
     
-    try:
-        from fastmcp.task_management.domain.services.dependency_validation_service import DependencyValidationService
-        print("   ✅ DependencyValidationService created")
-        
-        # Check key methods
-        key_methods = [
-            'validate_dependency_chain',
-            'get_dependency_chain_status',
-            '_check_circular_dependencies',
-            '_check_orphaned_dependencies'
-        ]
-        
-        for method in key_methods:
-            if hasattr(DependencyValidationService, method):
-                print(f"   ✅ Method {method} found")
-            else:
-                print(f"   ❌ Method {method} missing")
-                
-    except Exception as e:
-        print(f"   ❌ Error testing DependencyValidationService: {e}")
+    request = AddDependencyRequest(
+        task_id=str(task1.id),
+        depends_on_task_id=str(task2.id)
+    )
     
-    # Test 4: Check validation use case
-    print("\n4. Testing validation use case...")
+    result = use_case.execute(request)
+    assert result.success is True, f"Active task dependency failed: {result}"
+    print("   ✅ Active task dependency works")
     
-    try:
-        from fastmcp.task_management.application.use_cases.validate_dependencies import ValidateDependenciesUseCase
-        print("   ✅ ValidateDependenciesUseCase created")
-        
-        # Check key methods
-        key_methods = [
-            'validate_task_dependencies',
-            'get_dependency_chain_analysis',
-            'validate_multiple_tasks'
-        ]
-        
-        for method in key_methods:
-            if hasattr(ValidateDependenciesUseCase, method):
-                print(f"   ✅ Method {method} found")
-            else:
-                print(f"   ❌ Method {method} missing")
-                
-    except Exception as e:
-        print(f"   ❌ Error testing ValidateDependenciesUseCase: {e}")
+    # Test 2: Completed task dependency
+    print("\n2. Testing completed task dependency...")
     
-    # Test 5: Check parameter fix
-    print("\n5. Testing parameter name fix...")
+    completed_task = Task(
+        id=TaskId(str(uuid4())),
+        title="Completed Task",
+        description="Completed Task",
+        status=TaskStatus.done(),
+        priority=Priority.medium(),
+        git_branch_id=str(uuid4())
+    )
     
-    try:
-        from fastmcp.task_management.application.dtos.dependency.add_dependency_request import AddDependencyRequest
-        
-        # Check if DTO has correct parameter
-        if hasattr(AddDependencyRequest, 'depends_on_task_id'):
-            print("   ✅ AddDependencyRequest has depends_on_task_id parameter")
-        else:
-            print("   ❌ AddDependencyRequest missing depends_on_task_id parameter")
-            
-        # Check AddDependencyUseCase uses correct parameter
-        from fastmcp.task_management.application.use_cases.add_dependency import AddDependencyUseCase
-        execute_method = getattr(AddDependencyUseCase, 'execute')
-        source = inspect.getsource(execute_method)
-        
-        if 'depends_on_task_id' in source:
-            print("   ✅ AddDependencyUseCase uses correct parameter name")
-        else:
-            print("   ❌ AddDependencyUseCase parameter name not fixed")
-            
-    except Exception as e:
-        print(f"   ❌ Error testing parameter fix: {e}")
+    active_task = Task(
+        id=TaskId(str(uuid4())),
+        title="Active Task",
+        description="Active Task",
+        status=TaskStatus.todo(),
+        priority=Priority.medium(),
+        git_branch_id=str(uuid4())
+    )
     
-    # Test 6: Summary of fixes
-    print("\n6. Summary of implemented fixes...")
+    repository.save(completed_task)
+    repository.save(active_task)
     
-    fixes_implemented = [
-        ("Enhanced dependency lookup", "AddDependencyUseCase._find_dependency_task"),
-        ("Task completion updates dependents", "CompleteTaskUseCase._update_dependent_tasks"),
-        ("Dependency chain validation", "DependencyValidationService"),
-        ("Comprehensive validation use case", "ValidateDependenciesUseCase"),
-        ("Parameter name fix", "depends_on_task_id usage")
-    ]
+    request = AddDependencyRequest(
+        task_id=str(active_task.id),
+        depends_on_task_id=str(completed_task.id)
+    )
     
-    for fix_name, component in fixes_implemented:
-        print(f"   📋 {fix_name}: Implemented via {component}")
+    result = use_case.execute(request)
+    assert result.success is True, f"Completed task dependency failed: {result}"
+    assert "completed" in result.message.lower(), f"Expected 'completed' in message but got: {result.message}"
+    print("   ✅ Completed task dependency works (FIXED!)")
+    
+    # Test 3: Non-existent task dependency
+    print("\n3. Testing non-existent task dependency...")
+    
+    request = AddDependencyRequest(
+        task_id=str(task1.id),
+        depends_on_task_id=str(uuid4())
+    )
+    
+    with pytest.raises(Exception) as exc_info:
+        use_case.execute(request)
+    
+    error_message = str(exc_info.value).lower()
+    assert "not found" in error_message, f"Expected 'not found' error but got: {exc_info.value}"
+    print("   ✅ Non-existent task dependency correctly fails")
     
     print("\n" + "="*50)
-    print("🎯 DEPENDENCY MANAGEMENT FIX VERIFICATION COMPLETE")
-    print("✅ All core components have been implemented!")
-    print("\n📊 What was fixed:")
-    print("   1. ✅ Enhanced dependency lookup for completed/archived tasks")
-    print("   2. ✅ Task completion now updates dependent tasks")
-    print("   3. ✅ Added comprehensive dependency chain validation")
-    print("   4. ✅ Fixed parameter naming inconsistencies")
-    print("   5. ✅ Added detailed dependency status tracking")
-    
-    print("\n🎊 The original issue should now be resolved!")
-    print("   'Dependency task with ID X not found' errors should no longer occur")
-    print("   when adding dependencies on completed or archived tasks.")
+    print("🎉 ALL TESTS PASSED!")
+    print("✅ The dependency management fix is working correctly!")
+
 
 if __name__ == "__main__":
-    test_dependency_fix_simple()
+    try:
+        test_dependency_fix_simple()
+        print("\n🚀 Ready for production use!")
+    except Exception as e:
+        print(f"\n❌ Fix validation failed: {e}")
