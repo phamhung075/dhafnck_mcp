@@ -20,8 +20,8 @@ from sqlalchemy.orm import sessionmaker
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from fastmcp.task_management.infrastructure.database.models import (
-    Project, Agent, Task, TaskSubtask, GlobalContext, ProjectContext,
-    TaskContext, Template, Base
+    Project, ProjectGitBranch, Agent, Task, TaskSubtask, GlobalContext, ProjectContext,
+    BranchContext, TaskContext, Template, Base
 )
 
 
@@ -145,7 +145,6 @@ class TestJSONFieldCompatibility:
         self.session.add(project)
         self.session.commit()
         
-        from fastmcp.task_management.infrastructure.database.models import ProjectGitBranch, TaskContext, ProjectContext
         branch = ProjectGitBranch(
             id=str(uuid4()),
             project_id=project.id,
@@ -168,6 +167,20 @@ class TestJSONFieldCompatibility:
             delegation_rules={}
         )
         self.session.add(project_context)
+        self.session.commit()
+        
+        # Create branch context (required for 4-tier hierarchy)
+        branch_context = BranchContext(
+            branch_id=branch.id,
+            parent_project_id=project.id,
+            parent_project_context_id=project.id,
+            branch_workflow={},
+            branch_standards={},
+            agent_assignments={},
+            local_overrides={},
+            delegation_rules={}
+        )
+        self.session.add(branch_context)
         self.session.commit()
         
         # Create task
@@ -209,11 +222,11 @@ class TestJSONFieldCompatibility:
             ]
         }
         
-        # Create task context with metadata
+        # Create task context with metadata (updated for 4-tier hierarchy)
         task_context = TaskContext(
             task_id=task_id,
-            parent_project_id=project.id,
-            parent_project_context_id=project.id,
+            parent_branch_id=branch.id,
+            parent_branch_context_id=branch.id,
             task_data=task_metadata,
             local_overrides={},
             implementation_notes={},

@@ -64,11 +64,27 @@ class TestHierarchicalContextAsyncAwaitFix:
             "updated_at": "2024-01-01T00:00:00Z"
         })
         
-        # Mock task context
-        repository.get_task_context = Mock(return_value={
-            "task_id": "task-123",
+        # Mock branch context (new in 4-tier hierarchy)
+        repository.get_branch_context = Mock(return_value={
+            "branch_id": "branch-123",
             "parent_project_id": "project-123",
             "parent_project_context_id": "project-123",
+            "branch_workflow": {},
+            "branch_standards": {},
+            "agent_assignments": {},
+            "local_overrides": {},
+            "delegation_rules": {},
+            "inheritance_disabled": False,
+            "force_local_only": False,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        })
+        
+        # Mock task context (updated for 4-tier hierarchy)
+        repository.get_task_context = Mock(return_value={
+            "task_id": "task-123",
+            "parent_branch_id": "branch-123",
+            "parent_branch_context_id": "branch-123",
             "task_data": {
                 "title": "Test Task",
                 "description": "Test Description",
@@ -110,24 +126,41 @@ class TestHierarchicalContextAsyncAwaitFix:
             }
             return result
         
-        async def inherit_task_from_project(project_context, task_context):
-            """Async method that merges task with project context"""
+        async def inherit_branch_from_project(project_context, branch_context):
+            """Async method that merges branch with project context"""
             result = {
                 **project_context,
+                **branch_context.get("branch_workflow", {}),
+                "level": "branch",
+                "context_id": branch_context.get("branch_id"),
+                "inheritance_metadata": {
+                    "inherited_from": "project",
+                    "project_context_version": 1,
+                    "branch_overrides_applied": 0,
+                    "inheritance_chain": ["global", "project", "branch"]
+                }
+            }
+            return result
+        
+        async def inherit_task_from_branch(branch_context, task_context):
+            """Async method that merges task with branch context"""
+            result = {
+                **branch_context,
                 **task_context.get("task_data", {}),
                 "level": "task",
                 "context_id": task_context.get("task_id"),
                 "inheritance_metadata": {
-                    "inherited_from": "project",
-                    "project_context_version": 1,
+                    "inherited_from": "branch",
+                    "branch_context_version": 1,
                     "local_overrides_applied": 0,
-                    "inheritance_chain": ["global", "project", "task"]
+                    "inheritance_chain": ["global", "project", "branch", "task"]
                 }
             }
             return result
         
         service.inherit_project_from_global = inherit_project_from_global
-        service.inherit_task_from_project = inherit_task_from_project
+        service.inherit_branch_from_project = inherit_branch_from_project
+        service.inherit_task_from_branch = inherit_task_from_branch
         service.get_inherited_context = Mock(return_value=None)
         
         return service
@@ -227,18 +260,34 @@ class TestHierarchicalContextAsyncAwaitFix:
                 }
                 return result
             
-            def inherit_task_from_project(self, project_context, task_context):
-                """Sync version that properly handles inheritance"""
+            def inherit_branch_from_project(self, project_context, branch_context):
+                """Sync version that properly handles branch inheritance"""
                 result = {
                     **project_context,
+                    **branch_context.get("branch_workflow", {}),
+                    "level": "branch",
+                    "context_id": branch_context.get("branch_id"),
+                    "inheritance_metadata": {
+                        "inherited_from": "project",
+                        "project_context_version": 1,
+                        "branch_overrides_applied": 0,
+                        "inheritance_chain": ["global", "project", "branch"]
+                    }
+                }
+                return result
+            
+            def inherit_task_from_branch(self, branch_context, task_context):
+                """Sync version that properly handles task inheritance from branch"""
+                result = {
+                    **branch_context,
                     **task_context.get("task_data", {}),
                     "level": "task", 
                     "context_id": task_context.get("task_id"),
                     "inheritance_metadata": {
-                        "inherited_from": "project",
-                        "project_context_version": 1,
+                        "inherited_from": "branch",
+                        "branch_context_version": 1,
                         "local_overrides_applied": 0,
-                        "inheritance_chain": ["global", "project", "task"]
+                        "inheritance_chain": ["global", "project", "branch", "task"]
                     }
                 }
                 return result
@@ -265,7 +314,7 @@ class TestHierarchicalContextAsyncAwaitFix:
     @pytest.mark.asyncio
     async def test_resolve_task_context_with_full_inheritance(self, mock_repository, mock_cache_service,
                                                              mock_delegation_service):
-        """Test full inheritance chain: Global → Project → Task"""
+        """Test full inheritance chain: Global → Project → Branch → Task"""
         
         # Create fixed inheritance service
         class FixedContextInheritanceService(ContextInheritanceService):
@@ -288,18 +337,33 @@ class TestHierarchicalContextAsyncAwaitFix:
                     }
                 }
             
-            def inherit_task_from_project(self, project_context, task_context):
-                """Sync method for task inheritance"""
+            def inherit_branch_from_project(self, project_context, branch_context):
+                """Sync method for branch inheritance"""
                 return {
                     **project_context,
-                    **task_context.get("task_data", {}),
-                    "local_overrides": task_context.get("local_overrides", {}),
+                    **branch_context.get("branch_workflow", {}),
+                    "branch_standards": branch_context.get("branch_standards", {}),
+                    "agent_assignments": branch_context.get("agent_assignments", {}),
                     "inheritance_metadata": {
                         "inherited_from": "project",
                         "project_context_version": 1,
+                        "branch_overrides_applied": 0,
+                        "inheritance_chain": ["global", "project", "branch"]
+                    }
+                }
+            
+            def inherit_task_from_branch(self, branch_context, task_context):
+                """Sync method for task inheritance from branch"""
+                return {
+                    **branch_context,
+                    **task_context.get("task_data", {}),
+                    "local_overrides": task_context.get("local_overrides", {}),
+                    "inheritance_metadata": {
+                        "inherited_from": "branch",
+                        "branch_context_version": 1,
                         "local_overrides_applied": 0,
                         "force_local_only": False,
-                        "inheritance_chain": ["global", "project", "task"]
+                        "inheritance_chain": ["global", "project", "branch", "task"]
                     }
                 }
         
@@ -322,7 +386,7 @@ class TestHierarchicalContextAsyncAwaitFix:
         
         # Check inheritance chain
         metadata = result.resolved_context.get("inheritance_metadata", {})
-        assert metadata["inheritance_chain"] == ["global", "project", "task"]
+        assert metadata["inheritance_chain"] == ["global", "project", "branch", "task"]
         
         # Check inherited values
         assert result.resolved_context.get("autonomous_rules") == {"enable_auto_delegation": True}
@@ -349,13 +413,23 @@ class TestHierarchicalContextAsyncAwaitFix:
             }
         })
         
-        fixed_inheritance_service.inherit_task_from_project = Mock(return_value={
+        fixed_inheritance_service.inherit_branch_from_project = Mock(return_value={
+            "level": "branch",
+            "context_id": "branch-123",
+            "branch_workflow": {},
+            "inheritance_metadata": {
+                "inherited_from": "project",
+                "inheritance_chain": ["global", "project", "branch"]
+            }
+        })
+        
+        fixed_inheritance_service.inherit_task_from_branch = Mock(return_value={
             "level": "task",
             "context_id": "task-123",
             "title": "Test Task",
             "inheritance_metadata": {
-                "inherited_from": "project",
-                "inheritance_chain": ["global", "project", "task"]
+                "inherited_from": "branch",
+                "inheritance_chain": ["global", "project", "branch", "task"]
             }
         })
         
@@ -390,7 +464,7 @@ class TestHierarchicalContextAsyncAwaitFix:
         assert result["success"] is True
         assert result["data"]["resolved_context"]["level"] == "task"
         assert result["data"]["resolved_context"]["context_id"] == "task-123"
-        assert result["data"]["metadata"]["resolution_path"] == ["global", "project", "task"]
+        assert result["data"]["metadata"]["resolution_path"] == ["global", "project", "branch", "task"]
 
     @pytest.mark.asyncio
     async def test_missing_project_context_auto_creation(self, mock_cache_service, mock_delegation_service):

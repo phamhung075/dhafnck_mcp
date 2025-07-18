@@ -273,18 +273,24 @@ class TestTaskEntity:
         )
         task.set_context_id("context-123")
         
-        # Add completed subtasks
-        task.add_subtask(title="Subtask 1", status="done")
-        task.add_subtask(title="Subtask 2", status="done")
+        # Add subtask IDs (subtask completion validation is done by TaskCompletionService)
+        subtask_id_1 = "subtask-1-123"
+        subtask_id_2 = "subtask-2-456"
+        task.add_subtask(subtask_id_1)
+        task.add_subtask(subtask_id_2)
         
-        # Act
+        # Act - Task entity can be completed regardless of subtask status
+        # (Subtask completion validation happens in TaskCompletionService)
         completion_summary = "Successfully implemented authentication with JWT"
         task.complete_task(completion_summary=completion_summary)
         
         # Assert
         assert task.status == TaskStatus.done()
         assert task.get_completion_summary() == completion_summary
-        assert all(st["status"] == "done" for st in task.subtasks)
+        # Task entity only stores subtask IDs, not status information
+        assert len(task.subtasks) == 2
+        assert subtask_id_1 in task.subtasks
+        assert subtask_id_2 in task.subtasks
     
     def test_task_completion_with_context_timestamp_validation(self):
         """Task completion validates context was updated after task"""
@@ -309,56 +315,52 @@ class TestTaskEntity:
     # ========== Subtask Management Tests ==========
     
     def test_add_subtask_with_title(self):
-        """Subtask can be added to task"""
+        """Subtask ID can be added to task"""
         # Arrange
         task = Task.create(
             id=self.task_id,
             title=self.valid_title,
             description=self.valid_description
         )
+        subtask_id = "subtask-123"
         
         # Act
-        subtask = task.add_subtask(title="Design database schema")
+        returned_id = task.add_subtask(subtask_id)
         
         # Assert
         assert len(task.subtasks) == 1
-        assert subtask["title"] == "Design database schema"
-        assert subtask["status"] == "todo"
-        assert subtask["id"] is not None
+        assert returned_id == subtask_id
+        assert subtask_id in task.subtasks
     
     def test_add_subtask_with_full_details(self):
-        """Subtask can be added with all details"""
+        """Subtask ID can be added (note: full subtask objects are managed separately)"""
         # Arrange
         task = Task.create(
             id=self.task_id,
             title=self.valid_title,
             description=self.valid_description
         )
+        subtask_id = "api-endpoints-subtask-456"
         
         # Act
-        subtask = task.add_subtask(
-            title="Implement API endpoints",
-            description="Create REST endpoints for auth",
-            assignee="@backend_developer",
-            status="in_progress"
-        )
+        returned_id = task.add_subtask(subtask_id)
         
-        # Assert
-        assert subtask["title"] == "Implement API endpoints"
-        assert subtask["description"] == "Create REST endpoints for auth"
-        assert subtask["status"] == "in_progress"
-        # Note: estimated_effort is not valid for Subtask entities and is excluded
+        # Assert - Task entity only stores subtask IDs, not full objects
+        assert len(task.subtasks) == 1
+        assert returned_id == subtask_id
+        assert subtask_id in task.subtasks
+        # Note: Full subtask details (title, description, etc.) are managed by SubtaskRepository
     
     def test_remove_subtask_by_id(self):
-        """Subtask can be removed from task"""
+        """Subtask ID can be removed from task"""
         # Arrange
         task = Task.create(
             id=self.task_id,
             title=self.valid_title,
             description=self.valid_description
         )
-        subtask = task.add_subtask(title="Subtask to remove")
-        subtask_id = subtask["id"]
+        subtask_id = "subtask-to-remove-789"
+        task.add_subtask(subtask_id)
         
         # Act
         removed = task.remove_subtask(subtask_id)
@@ -368,22 +370,26 @@ class TestTaskEntity:
         assert len(task.subtasks) == 0
     
     def test_update_subtask_status(self):
-        """Subtask status can be updated"""
+        """Subtask status update is handled by repository (Task entity only stores IDs)"""
         # Arrange
         task = Task.create(
             id=self.task_id,
             title=self.valid_title,
             description=self.valid_description
         )
-        subtask = task.add_subtask(title="Subtask to update")
-        subtask_id = subtask["id"]
+        subtask_id = "subtask-to-update-123"
+        task.add_subtask(subtask_id)
         
-        # Act
-        updated = task.update_subtask(subtask_id, {"status": "done"})
+        # Act & Assert - Task entity doesn't have update_subtask method
+        # In the new architecture, subtask updates are handled by SubtaskRepository
+        # Task entity only manages subtask IDs, not full subtask objects
         
-        # Assert
-        assert updated is True
-        assert task.get_subtask(subtask_id)["status"] == "done"
+        # The test verifies that we can add and track subtask IDs
+        assert len(task.subtasks) == 1
+        assert subtask_id in task.subtasks
+        
+        # Note: Actual subtask status updates are handled by SubtaskRepository
+        # and TaskCompletionService, not by the Task entity itself
     
     def test_all_subtasks_completed_check(self):
         """all_subtasks_completed returns conservative status based on IDs only"""
@@ -596,7 +602,8 @@ class TestTaskEntity:
         # Act - Multiple operations
         task.update_status(TaskStatus.in_progress())
         task.update_title("New title")
-        task.add_subtask(title="Subtask")
+        subtask_id = "subtask-events-123"
+        task.add_subtask(subtask_id)
         
         # Assert
         events = task.get_events()

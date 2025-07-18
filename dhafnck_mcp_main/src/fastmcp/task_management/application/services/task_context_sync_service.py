@@ -88,9 +88,10 @@ class TaskContextSyncService:
                     "estimated_effort": domain_task.estimated_effort,
                     "due_date": domain_task.due_date.isoformat() if domain_task.due_date else None
                 },
-                # Add parent references for proper hierarchy
-                "parent_project_id": project_id if project_id else "default_project",
-                "parent_project_context_id": project_id if project_id else "default_project"
+                # Add parent references for proper 4-tier hierarchy
+                # Tasks belong to branches in the 4-tier system
+                "parent_branch_id": domain_task.git_branch_id,
+                "parent_branch_context_id": domain_task.git_branch_id
             }
             
             if not context_result:

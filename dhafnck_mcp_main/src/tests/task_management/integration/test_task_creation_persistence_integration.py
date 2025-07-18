@@ -14,6 +14,7 @@ was not properly handling constraint failures.
 import pytest
 import uuid
 from typing import Generator
+import asyncio
 
 from fastmcp.task_management.application.use_cases.create_task import CreateTaskUseCase
 from fastmcp.task_management.application.use_cases.get_task import GetTaskUseCase
@@ -21,17 +22,20 @@ from fastmcp.task_management.application.use_cases.list_tasks import ListTasksUs
 from fastmcp.task_management.application.dtos.task.create_task_request import CreateTaskRequest
 from fastmcp.task_management.application.dtos.task.list_tasks_request import ListTasksRequest
 from fastmcp.task_management.infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
-from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+from fastmcp.task_management.infrastructure.database.database_config import get_db_config, Base
 from fastmcp.task_management.infrastructure.database.models import ProjectGitBranch, Project
 
 
 class TestTaskCreationPersistenceIntegration:
     """Integration tests for task creation persistence fix"""
     
-    @pytest.fixture(scope="class")
+    @pytest.fixture
     def database_setup(self) -> Generator[None, None, None]:
         """Set up test database with required data"""
         db_config = get_db_config()
+        
+        # Create all tables
+        Base.metadata.create_all(bind=db_config.engine)
         
         # Create test project and git branch
         with db_config.get_session() as session:
@@ -39,7 +43,8 @@ class TestTaskCreationPersistenceIntegration:
             test_project = Project(
                 id="test-project-integration",
                 name="Test Project Integration",
-                description="Test project for integration tests"
+                description="Test project for integration tests",
+                user_id="test-user"
             )
             session.add(test_project)
             
@@ -64,6 +69,9 @@ class TestTaskCreationPersistenceIntegration:
                 Project.id == "test-project-integration"
             ).delete()
             session.commit()
+        
+        # Drop all tables
+        Base.metadata.drop_all(bind=db_config.engine)
     
     @pytest.fixture
     def task_repository(self, database_setup):
@@ -132,9 +140,10 @@ class TestTaskCreationPersistenceIntegration:
         
         # Verify task can be retrieved
         task_id = str(create_response.task.id)
-        retrieved_task = get_task_use_case.execute(task_id)
+        # GetTaskUseCase.execute is async
+        retrieved_task = asyncio.run(get_task_use_case.execute(task_id))
         assert retrieved_task is not None
-        assert retrieved_task.task.title == "Integration Test Task"
+        assert retrieved_task.title == "Integration Test Task"
         
         # Verify task appears in list
         list_request = ListTasksRequest(limit=100)

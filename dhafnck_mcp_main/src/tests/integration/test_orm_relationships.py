@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from fastmcp.task_management.infrastructure.database.models import (
     Project, Agent, ProjectGitBranch, Task, TaskSubtask, TaskLabel, Label,
-    GlobalContext, ProjectContext, TaskContext, ContextDelegation, 
+    GlobalContext, ProjectContext, BranchContext, TaskContext, ContextDelegation, 
     ContextInheritanceCache, Template, Base
 )
 from fastmcp.task_management.infrastructure.database.database_config import get_db_config
@@ -333,30 +333,45 @@ class TestORMRelationships:
             delegation_rules={}
         )
         
-        task_context = TaskContext(
-            task_id=task.id,
+        # Create branch context (required for 4-tier hierarchy)
+        branch_context = BranchContext(
+            branch_id=branch.id,
             parent_project_id=project.id,
             parent_project_context_id=project.id,
+            branch_workflow={},
+            branch_standards={},
+            agent_assignments={},
+            local_overrides={},
+            delegation_rules={}
+        )
+        
+        task_context = TaskContext(
+            task_id=task.id,
+            parent_branch_id=branch.id,
+            parent_branch_context_id=branch.id,
             task_data={"task_setting": "value"},
             local_overrides={},
             implementation_notes={},
             delegation_triggers={}
         )
         
-        self.session.add_all([global_context, project_context, task_context])
+        self.session.add_all([global_context, project_context, branch_context, task_context])
         self.session.commit()
         
         # Verify relationships
         # ProjectContext uses project_id as primary key, not a relationship
         assert project_context.project_id == project.id
+        # BranchContext has branch_id as primary key
+        assert branch_context.branch_id == branch.id
         # TaskContext doesn't have a direct 'task' relationship in the model
         # Verify through query instead
         found_task_context = self.session.query(TaskContext).filter_by(task_id=task.id).first()
         assert found_task_context is not None
         assert found_task_context.task_id == task.id
-        # Verify parent-child relationships
+        # Verify parent-child relationships (4-tier hierarchy)
         assert project_context.global_context == global_context
-        assert task_context.project_context == project_context
+        assert branch_context.project_context == project_context
+        assert task_context.branch_context == branch_context
         
         print("✅ Context hierarchy relationships test passed")
     

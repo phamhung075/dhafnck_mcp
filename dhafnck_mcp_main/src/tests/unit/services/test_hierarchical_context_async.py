@@ -99,6 +99,106 @@ class TestHierarchicalContextAsync:
         assert "health" in result
         assert isinstance(result["health"], dict)
     
+    @pytest.mark.asyncio
+    async def test_resolve_branch_context(self, service, mock_repository):
+        """Test async resolution of branch context in 4-tier hierarchy"""
+        # Mock repository methods
+        mock_repository.get_global_context = Mock(return_value={
+            "id": "global_singleton",
+            "organization_id": "test_org",
+            "autonomous_rules": {"ai_enabled": True},
+            "security_policies": {"mfa_required": True}
+        })
+        
+        mock_repository.get_project_context = Mock(return_value={
+            "project_id": "test_project",
+            "parent_global_id": "global_singleton",
+            "team_preferences": {"code_review": "required"},
+            "technology_stack": {"language": "python"}
+        })
+        
+        mock_repository.get_branch_context = Mock(return_value={
+            "branch_id": "test_branch",
+            "parent_project_id": "test_project",
+            "parent_project_context_id": "test_project",
+            "branch_workflow": {"ci_enabled": True},
+            "branch_standards": {"pr_required": True}
+        })
+        
+        # Mock inheritance service
+        with patch.object(service.inheritance_service, 'inherit_branch_from_project') as mock_inherit:
+            mock_inherit.return_value = {
+                "level": "branch",
+                "context_id": "test_branch",
+                "autonomous_rules": {"ai_enabled": True},
+                "security_policies": {"mfa_required": True},
+                "team_preferences": {"code_review": "required"},
+                "technology_stack": {"language": "python"},
+                "branch_workflow": {"ci_enabled": True},
+                "branch_standards": {"pr_required": True}
+            }
+            
+            # Test branch context resolution
+            result = await service.resolve_full_context("branch", "test_branch", force_refresh=True)
+            
+            assert result.resolved_context["level"] == "branch"
+            assert result.resolution_path == ["global", "project", "branch"]
+            assert "branch_workflow" in result.resolved_context
+            assert "team_preferences" in result.resolved_context  # Inherited from project
+            assert "autonomous_rules" in result.resolved_context  # Inherited from global
+    
+    @pytest.mark.asyncio
+    async def test_resolve_task_context_4_tier(self, service, mock_repository):
+        """Test async resolution of task context with full 4-tier hierarchy"""
+        # Mock repository methods
+        mock_repository.get_global_context = Mock(return_value={
+            "id": "global_singleton",
+            "organization_id": "test_org",
+            "autonomous_rules": {"ai_enabled": True}
+        })
+        
+        mock_repository.get_project_context = Mock(return_value={
+            "project_id": "test_project",
+            "parent_global_id": "global_singleton",
+            "team_preferences": {"code_review": "required"}
+        })
+        
+        mock_repository.get_branch_context = Mock(return_value={
+            "branch_id": "test_branch",
+            "parent_project_id": "test_project",
+            "branch_workflow": {"ci_enabled": True}
+        })
+        
+        mock_repository.get_task_context = Mock(return_value={
+            "task_id": "test_task",
+            "parent_branch_id": "test_branch",
+            "parent_branch_context_id": "test_branch",
+            "task_data": {"priority": "high"},
+            "local_overrides": {"timeout": 3600}
+        })
+        
+        # Mock inheritance service
+        with patch.object(service.inheritance_service, 'inherit_task_from_branch') as mock_inherit:
+            mock_inherit.return_value = {
+                "level": "task",
+                "context_id": "test_task",
+                "autonomous_rules": {"ai_enabled": True},
+                "team_preferences": {"code_review": "required"},
+                "branch_workflow": {"ci_enabled": True},
+                "task_data": {"priority": "high"},
+                "local_overrides": {"timeout": 3600}
+            }
+            
+            # Test task context resolution
+            result = await service.resolve_full_context("task", "test_task", force_refresh=True)
+            
+            assert result.resolved_context["level"] == "task"
+            assert result.resolution_path == ["global", "project", "branch", "task"]
+            assert "task_data" in result.resolved_context
+            assert "branch_workflow" in result.resolved_context  # Inherited from branch
+            assert "team_preferences" in result.resolved_context  # Inherited from project
+            assert "autonomous_rules" in result.resolved_context  # Inherited from global
+    
     def test_async_method_signature(self):
         """Test the method signature is correct"""
         import inspect

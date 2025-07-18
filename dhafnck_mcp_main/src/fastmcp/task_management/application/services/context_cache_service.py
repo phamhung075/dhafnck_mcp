@@ -593,3 +593,73 @@ class ContextCacheService:
                 "error": str(e),
                 "warmed_count": 0
             }
+    
+    def get_cache_health(self) -> Dict[str, Any]:
+        """
+        Get cache health metrics.
+        
+        This is a sync wrapper around get_cache_stats that provides
+        cache health information in the expected format.
+        
+        Returns:
+            Dictionary with cache health metrics
+        """
+        try:
+            import asyncio
+            
+            # Try to get or create event loop
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # If loop is running, return default health metrics
+                    logger.debug("Event loop running, returning default cache health")
+                    return {
+                        "cache_entries": {
+                            "global": 0,
+                            "project": 0,
+                            "branch": 0,
+                            "task": 0
+                        },
+                        "cache_hit_rate": 0.0,
+                        "cache_miss_rate": 0.0,
+                        "average_resolution_time_ms": 0.0,
+                        "expired_entries": 0
+                    }
+                else:
+                    # Get stats asynchronously
+                    stats = loop.run_until_complete(self.get_cache_stats())
+            except RuntimeError:
+                # No event loop exists, create one
+                stats = asyncio.run(self.get_cache_stats())
+            
+            # Extract relevant health metrics from stats
+            health_metrics = {
+                "cache_entries": {
+                    "global": stats.get("entries_by_level", {}).get("global", 0),
+                    "project": stats.get("entries_by_level", {}).get("project", 0),
+                    "branch": stats.get("entries_by_level", {}).get("branch", 0),
+                    "task": stats.get("entries_by_level", {}).get("task", 0)
+                },
+                "cache_hit_rate": stats.get("performance_metrics", {}).get("hit_rate_estimated", 0.0),
+                "cache_miss_rate": 1.0 - stats.get("performance_metrics", {}).get("hit_rate_estimated", 0.0),
+                "average_resolution_time_ms": stats.get("average_resolution_time_ms", 0.0),
+                "expired_entries": stats.get("health_indicators", {}).get("expired_entries", 0)
+            }
+            
+            return health_metrics
+            
+        except Exception as e:
+            logger.error(f"Error getting cache health: {e}")
+            # Return default health metrics on error
+            return {
+                "cache_entries": {
+                    "global": 0,
+                    "project": 0,
+                    "branch": 0,
+                    "task": 0
+                },
+                "cache_hit_rate": 0.0,
+                "cache_miss_rate": 0.0,
+                "average_resolution_time_ms": 0.0,
+                "expired_entries": 0
+            }

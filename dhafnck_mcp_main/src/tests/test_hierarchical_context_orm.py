@@ -61,7 +61,7 @@ class TestORMHierarchicalContextRepository:
         session.commit()
         session.close()
     
-    def _setup_hierarchical_contexts(self, project_id: str = "test_project"):
+    def _setup_hierarchical_contexts(self, project_id: str = "test_project", branch_id: str = "test_branch"):
         """Helper method to set up full hierarchical context chain"""
         # Create global context first (required for foreign key constraint)
         global_data = {
@@ -81,10 +81,60 @@ class TestORMHierarchicalContextRepository:
         }
         self.repository.create_project_context(project_id, project_data)
         
-        # Create project entity (required for TaskContext foreign key)
+        # Create project entity (required for foreign key constraints)
         self._create_project_entity(project_id)
         
-        return project_id
+        # Create git branch entity (required for BranchContext foreign key)
+        self._create_git_branch_entity(branch_id, project_id)
+        
+        # Create branch context
+        branch_data = {
+            "parent_project_id": project_id,
+            "parent_project_context_id": project_id,
+            "branch_workflow": {"ci_enabled": True},
+            "branch_standards": {"pr_required": True}
+        }
+        self.repository.create_branch_context(branch_id, branch_data)
+        
+        return project_id, branch_id
+    
+    def _create_git_branch_entity(self, branch_id: str, project_id: str):
+        """Helper method to create a Git Branch entity required for BranchContext foreign key"""
+        from fastmcp.task_management.infrastructure.database.models import ProjectGitBranch
+        from sqlalchemy.orm import sessionmaker
+        
+        Session = sessionmaker(bind=self.db_config.engine)
+        session = Session()
+        
+        git_branch = ProjectGitBranch(
+            id=branch_id,
+            name=f"branch_{branch_id}",
+            description="Test git branch for hierarchical context",
+            project_id=project_id
+        )
+        session.add(git_branch)
+        session.commit()
+        session.close()
+    
+    def _create_task_entity(self, task_id: str, branch_id: str):
+        """Helper method to create a Task entity required for TaskContext foreign key"""
+        from fastmcp.task_management.infrastructure.database.models import Task
+        from sqlalchemy.orm import sessionmaker
+        
+        Session = sessionmaker(bind=self.db_config.engine)
+        session = Session()
+        
+        task = Task(
+            id=task_id,
+            title=f"Test Task {task_id}",
+            description="Test task for hierarchical context",
+            git_branch_id=branch_id,
+            status="todo",
+            priority="medium"
+        )
+        session.add(task)
+        session.commit()
+        session.close()
 
     def test_create_global_context(self):
         """Test creating a global context"""
@@ -280,15 +330,153 @@ class TestORMHierarchicalContextRepository:
         assert updated_context["team_preferences"]["slack_integration"] is True
         assert updated_context["technology_stack"]["language"] == "python"
 
-    def test_create_task_context(self):
-        """Test creating a task context"""
-        # Set up full hierarchical context chain
-        project_id = self._setup_hierarchical_contexts()
+    def test_create_branch_context(self):
+        """Test creating a branch context"""
+        # Set up global and project contexts first (skip branch creation for this test)
+        project_id = "test_project_branch"
+        global_data = {
+            "organization_id": "test_org",
+            "autonomous_rules": {},
+            "security_policies": {},
+            "coding_standards": {},
+            "workflow_templates": {},
+            "delegation_rules": {}
+        }
+        self.repository.create_global_context("global_singleton", global_data)
+        project_data = {
+            "parent_global_id": "global_singleton",
+            "team_preferences": {"notification_enabled": True}
+        }
+        self.repository.create_project_context(project_id, project_data)
+        self._create_project_entity(project_id)
         
-        task_id = "test_task"
+        branch_id = "test_branch"
+        self._create_git_branch_entity(branch_id, project_id)
         data = {
             "parent_project_id": project_id,
             "parent_project_context_id": project_id,
+            "branch_workflow": {"ci_enabled": True, "auto_merge": False},
+            "branch_standards": {"commit_format": "conventional", "pr_required": True},
+            "agent_assignments": {"primary": "@coding_agent", "reviewer": "@review_agent"},
+            "local_overrides": {"max_build_time": 1800},
+            "delegation_rules": {"auto_delegate_patterns": True}
+        }
+        
+        result = self.repository.create_branch_context(branch_id, data)
+        
+        assert result is not None
+        assert result["branch_id"] == branch_id
+        assert result["parent_project_id"] == project_id
+        assert result["branch_workflow"]["ci_enabled"] is True
+        assert result["branch_standards"]["commit_format"] == "conventional"
+        assert result["agent_assignments"]["primary"] == "@coding_agent"
+
+    def test_get_branch_context(self):
+        """Test retrieving a branch context"""
+        project_id, branch_id_setup = self._setup_hierarchical_contexts()
+        branch_id = "test_branch"
+        data = {
+            "parent_project_id": project_id,
+            "parent_project_context_id": project_id,
+            "branch_workflow": {"ci_enabled": True}
+        }
+        
+        # Create context first
+        self.repository.create_branch_context(branch_id, data)
+        
+        # Retrieve context
+        result = self.repository.get_branch_context(branch_id)
+        
+        assert result is not None
+        assert result["branch_id"] == branch_id
+        assert result["parent_project_id"] == project_id
+        assert result["branch_workflow"]["ci_enabled"] is True
+
+    def test_update_branch_context(self):
+        """Test updating a branch context"""
+        project_id, branch_id_setup = self._setup_hierarchical_contexts()
+        branch_id = "test_branch"
+        data = {
+            "parent_project_id": project_id,
+            "parent_project_context_id": project_id,
+            "branch_workflow": {"ci_enabled": True}
+        }
+        
+        # Create context first
+        self.repository.create_branch_context(branch_id, data)
+        
+        # Update context
+        updates = {
+            "branch_workflow": {"ci_enabled": False, "auto_deploy": True},
+            "agent_assignments": {"primary": "@senior_dev"}
+        }
+        
+        result = self.repository.update_branch_context(branch_id, updates)
+        assert result is True
+        
+        # Verify updates
+        updated_context = self.repository.get_branch_context(branch_id)
+        assert updated_context["branch_workflow"]["ci_enabled"] is False
+        assert updated_context["branch_workflow"]["auto_deploy"] is True
+        assert updated_context["agent_assignments"]["primary"] == "@senior_dev"
+
+    def test_delete_branch_context(self):
+        """Test deleting a branch context"""
+        project_id, branch_id_setup = self._setup_hierarchical_contexts()
+        branch_id = "test_branch"
+        data = {
+            "parent_project_id": project_id,
+            "parent_project_context_id": project_id
+        }
+        
+        # Create context first
+        self.repository.create_branch_context(branch_id, data)
+        
+        # Delete context
+        result = self.repository.delete_branch_context(branch_id)
+        assert result is True
+        
+        # Verify deletion
+        deleted_context = self.repository.get_branch_context(branch_id)
+        assert deleted_context is None
+
+    def test_list_branch_contexts(self):
+        """Test listing branch contexts"""
+        project_id, branch_id_setup = self._setup_hierarchical_contexts()
+        
+        # Create multiple branch contexts
+        for i in range(3):
+            branch_id = f"branch_{i}"
+            # Create git branch entity first (required for foreign key)
+            self._create_git_branch_entity(branch_id, project_id)
+            
+            self.repository.create_branch_context(
+                branch_id, 
+                {
+                    "parent_project_id": project_id,
+                    "parent_project_context_id": project_id
+                }
+            )
+        
+        # List all branch contexts for the project
+        contexts = self.repository.list_branch_contexts(project_id)
+        
+        # Should have 4 total (1 from setup + 3 created in this test)
+        assert len(contexts) == 4
+        assert all(ctx["parent_project_id"] == project_id for ctx in contexts)
+
+    def test_create_task_context(self):
+        """Test creating a task context"""
+        # Set up full hierarchical context chain
+        project_id, branch_id = self._setup_hierarchical_contexts()
+        
+        task_id = "test_task"
+        # Create Task entity first (required for foreign key)
+        self._create_task_entity(task_id, branch_id)
+        
+        data = {
+            "parent_branch_id": branch_id,
+            "parent_branch_context_id": branch_id,
             "task_data": {"priority": "high"},
             "local_overrides": {"timeout": 3600},
             "implementation_notes": {"approach": "iterative"},
@@ -299,18 +487,21 @@ class TestORMHierarchicalContextRepository:
         
         assert result is not None
         assert result["task_id"] == task_id
-        assert result["parent_project_id"] == project_id
+        assert result["parent_branch_id"] == branch_id
         assert result["task_data"]["priority"] == "high"
 
     def test_get_task_context(self):
         """Test retrieving a task context"""
         # Set up full hierarchical context chain
-        project_id = self._setup_hierarchical_contexts()
+        project_id, branch_id = self._setup_hierarchical_contexts()
         
         task_id = "test_task"
+        # Create Task entity first (required for foreign key)
+        self._create_task_entity(task_id, branch_id)
+        
         data = {
-            "parent_project_id": project_id,
-            "parent_project_context_id": project_id,
+            "parent_branch_id": branch_id,
+            "parent_branch_context_id": branch_id,
             "task_data": {"priority": "high"}
         }
         
@@ -327,12 +518,15 @@ class TestORMHierarchicalContextRepository:
     def test_update_task_context(self):
         """Test updating a task context"""
         # Set up full hierarchical context chain
-        project_id = self._setup_hierarchical_contexts()
+        project_id, branch_id = self._setup_hierarchical_contexts()
         
         task_id = "test_task"
+        # Create Task entity first (required for foreign key)
+        self._create_task_entity(task_id, branch_id)
+        
         data = {
-            "parent_project_id": project_id,
-            "parent_project_context_id": project_id,
+            "parent_branch_id": branch_id,
+            "parent_branch_context_id": branch_id,
             "task_data": {"priority": "high"}
         }
         
@@ -546,13 +740,29 @@ class TestORMHierarchicalContextRepository:
             "inheritance_disabled": False
         })
         
-        # Create project entity (required for TaskContext foreign key)
+        # Create project entity (required for BranchContext foreign key)
         self._create_project_entity("test_project")
         
-        # Create task context
-        self.repository.create_task_context("test_task", {
+        # Create git branch entity (required for BranchContext foreign key)
+        branch_id = "test_branch"
+        self._create_git_branch_entity(branch_id, "test_project")
+        
+        # Create branch context (required for 4-tier hierarchy)
+        self.repository.create_branch_context(branch_id, {
             "parent_project_id": "test_project",
             "parent_project_context_id": "test_project",
+            "branch_workflow": {"ci_enabled": True},
+            "inheritance_disabled": False
+        })
+        
+        # Create task entity (required for TaskContext foreign key)
+        task_id = "test_task"
+        self._create_task_entity(task_id, branch_id)
+        
+        # Create task context
+        self.repository.create_task_context(task_id, {
+            "parent_branch_id": branch_id,
+            "parent_branch_context_id": branch_id,
             "task_data": {"priority": "high"},
             "local_overrides": {"timeout": 3600},
             "inheritance_disabled": False
@@ -577,13 +787,17 @@ class TestORMHierarchicalContextRepository:
 
     def test_context_delegation(self):
         """Test context delegation between levels"""
-        # Set up source project and context
-        source_project_id = self._setup_hierarchical_contexts("source_project")
+        # Set up source project and context - returns (project_id, branch_id)
+        source_project_id, source_branch_id = self._setup_hierarchical_contexts("source_project", "source_branch")
+        
+        # Create source task entity (required for TaskContext foreign key)
+        source_task_id = "source_task"
+        self._create_task_entity(source_task_id, source_branch_id)
         
         # Create source task context
-        self.repository.create_task_context("source_task", {
-            "parent_project_id": source_project_id,
-            "parent_project_context_id": source_project_id,
+        self.repository.create_task_context(source_task_id, {
+            "parent_branch_id": source_branch_id,
+            "parent_branch_context_id": source_branch_id,
             "task_data": {"reusable_pattern": "singleton_implementation"}
         })
         
@@ -620,22 +834,37 @@ class TestORMHierarchicalContextRepository:
             "team_preferences": {"search_term": "findable_value"}
         })
         
-        # Set up project for task context
+        # Set up project for branch context
         self._create_project_entity("search_project")
         
-        self.repository.create_task_context("search_task", {
+        # Create git branch entity and branch context
+        branch_id = "search_branch"
+        self._create_git_branch_entity(branch_id, "search_project")
+        
+        self.repository.create_branch_context(branch_id, {
             "parent_project_id": "search_project",
             "parent_project_context_id": "search_project",
+            "branch_workflow": {"search_term": "findable_value"}
+        })
+        
+        # Create task entity and task context
+        task_id = "search_task"
+        self._create_task_entity(task_id, branch_id)
+        
+        self.repository.create_task_context(task_id, {
+            "parent_branch_id": branch_id,
+            "parent_branch_context_id": branch_id,
             "task_data": {"search_term": "findable_value"}
         })
         
         # Search across all levels
         results = self.repository.search_contexts("findable_value")
         
-        assert len(results) == 3
+        assert len(results) == 4
         levels = [result["_level"] for result in results]
         assert "global" in levels
         assert "project" in levels
+        assert "branch" in levels
         assert "task" in levels
 
     def test_get_context_hierarchy(self):
@@ -650,23 +879,39 @@ class TestORMHierarchicalContextRepository:
             "team_preferences": {"notification_enabled": True}
         })
         
-        # Set up project for task context
+        # Set up project for branch context
         self._create_project_entity("hierarchy_project")
         
-        self.repository.create_task_context("hierarchy_task", {
+        # Create git branch entity and branch context
+        branch_id = "hierarchy_branch"
+        self._create_git_branch_entity(branch_id, "hierarchy_project")
+        
+        self.repository.create_branch_context(branch_id, {
             "parent_project_id": "hierarchy_project",
             "parent_project_context_id": "hierarchy_project",
+            "branch_workflow": {"feature_flags": True}
+        })
+        
+        # Create task entity and task context
+        task_id = "hierarchy_task"
+        self._create_task_entity(task_id, branch_id)
+        
+        self.repository.create_task_context(task_id, {
+            "parent_branch_id": branch_id,
+            "parent_branch_context_id": branch_id,
             "task_data": {"priority": "high"}
         })
         
         # Get hierarchy for task
-        hierarchy = self.repository.get_context_hierarchy("task", "hierarchy_task")
+        hierarchy = self.repository.get_context_hierarchy("task", task_id)
         
         assert hierarchy["global"] is not None
         assert hierarchy["project"] is not None
+        assert hierarchy["branch"] is not None
         assert hierarchy["task"] is not None
         assert hierarchy["global"]["autonomous_rules"]["ai_enabled"] is True
         assert hierarchy["project"]["team_preferences"]["notification_enabled"] is True
+        assert hierarchy["branch"]["branch_workflow"]["feature_flags"] is True
         assert hierarchy["task"]["task_data"]["priority"] == "high"
 
     def test_merge_contexts(self):
@@ -683,22 +928,30 @@ class TestORMHierarchicalContextRepository:
             "team_preferences": {"notification_enabled": True}
         }
         
+        branch_context = {
+            "_level": "branch",
+            "autonomous_rules": {"feature_flags": True},  # Should merge with previous
+            "branch_workflow": {"ci_enabled": True}
+        }
+        
         task_context = {
             "_level": "task",
             "autonomous_rules": {"context_switching": True},  # Should merge with previous
             "task_data": {"priority": "high"}
         }
         
-        merged = self.repository.merge_contexts([global_context, project_context, task_context])
+        merged = self.repository.merge_contexts([global_context, project_context, branch_context, task_context])
         
         # Should have merged autonomous_rules
         assert merged["autonomous_rules"]["ai_enabled"] is True
         assert merged["autonomous_rules"]["auto_task_creation"] is True
+        assert merged["autonomous_rules"]["feature_flags"] is True
         assert merged["autonomous_rules"]["context_switching"] is True
         
         # Should have all other fields
         assert merged["security_policies"]["encryption"] == "required"
         assert merged["team_preferences"]["notification_enabled"] is True
+        assert merged["branch_workflow"]["ci_enabled"] is True
         assert merged["task_data"]["priority"] == "high"
 
 

@@ -86,13 +86,16 @@ class HierarchicalContextService:
                 result = self.repository.create_global_context(context_id, data)
             elif level == "project":
                 result = self.repository.create_project_context(context_id, data)
+            elif level == "branch":
+                result = self.repository.create_branch_context(context_id, data)
             elif level == "task":
                 result = self.repository.create_task_context(context_id, data)
             else:
                 raise ValueError(f"Invalid context level: {level}")
             
             # Invalidate cache for new context
-            self.cache_service.invalidate_context_cache(level, context_id)
+            # Use the sync version of invalidate_context
+            self.cache_service.invalidate_context(level, context_id)
             
             return result
             
@@ -116,6 +119,8 @@ class HierarchicalContextService:
                 return self.repository.get_global_context(context_id)
             elif level == "project":
                 return self.repository.get_project_context(context_id)
+            elif level == "branch":
+                return self.repository.get_branch_context(context_id)
             elif level == "task":
                 return self.repository.get_task_context(context_id)
             else:
@@ -143,6 +148,8 @@ class HierarchicalContextService:
                 result = self.repository.delete_global_context(context_id)
             elif level == "project":
                 result = self.repository.delete_project_context(context_id)
+            elif level == "branch":
+                result = self.repository.delete_branch_context(context_id)
             elif level == "task":
                 result = self.repository.delete_task_context(context_id)
             else:
@@ -175,6 +182,8 @@ class HierarchicalContextService:
                 return self.repository.list_global_contexts()
             elif level == "project":
                 return self.repository.list_project_contexts()
+            elif level == "branch":
+                return self.repository.list_branch_contexts()
             elif level == "task":
                 return self.repository.list_task_contexts()
             else:
@@ -230,6 +239,8 @@ class HierarchicalContextService:
                 result = self._resolve_global_context(context_id)
             elif level == "project":
                 result = self._resolve_project_context(context_id)
+            elif level == "branch":
+                result = self._resolve_branch_context(context_id)
             elif level == "task":
                 result = self._resolve_task_context(context_id)
             else:
@@ -329,6 +340,48 @@ class HierarchicalContextService:
             resolution_time_ms=0.0
         )
     
+    def _resolve_branch_context(self, branch_id: str) -> ContextResolutionResult:
+        """Resolve branch context with project inheritance"""
+        branch_context = self.repository.get_branch_context(branch_id)
+        
+        if not branch_context:
+            raise ValueError(f"Branch context not found: {branch_id}")
+        
+        # Get project context for inheritance
+        project_id = branch_context.get("parent_project_id")
+        if not project_id:
+            raise ValueError(f"Branch context {branch_id} has no parent project")
+            
+        project_result = self._resolve_project_context(project_id)
+        project_context = project_result.resolved_context
+        
+        # Apply inheritance: project -> branch
+        resolved = self.inheritance_service.inherit_branch_from_project(
+            project_context=project_context,
+            branch_context=branch_context
+        )
+        
+        # Add branch-specific metadata
+        resolved.update({
+            "level": "branch",
+            "context_id": branch_id,
+            "parent_project_id": project_id,
+            "inheritance_disabled": branch_context.get("inheritance_disabled", False)
+        })
+        
+        dependencies_hash = self._calculate_dependencies_hash([
+            project_result.resolved_context, branch_context
+        ])
+        resolution_path = ["global", "project", "branch"]
+        
+        return ContextResolutionResult(
+            resolved_context=resolved,
+            resolution_path=resolution_path,
+            cache_hit=False,
+            dependencies_hash=dependencies_hash,
+            resolution_time_ms=0.0
+        )
+    
     def _resolve_task_context(self, task_id: str) -> ContextResolutionResult:
         """Resolve task context with full inheritance chain"""
         task_context = self.repository.get_task_context(task_id)
@@ -356,14 +409,19 @@ class HierarchicalContextService:
                 resolution_time_ms=0.0
             )
         
-        # Get project context for inheritance
-        project_id = task_context.get("parent_project_context_id")
-        project_result = self._resolve_project_context(project_id)
-        project_context = project_result.resolved_context
+        # Get branch context for inheritance
+        branch_id = task_context.get("parent_branch_context_id")
+        if not branch_id:
+            branch_id = task_context.get("parent_branch_id")
+        if not branch_id:
+            raise ValueError(f"Task context {task_id} has no parent branch")
+            
+        branch_result = self._resolve_branch_context(branch_id)
+        branch_context = branch_result.resolved_context
         
         # Apply full inheritance chain (synchronous method)
-        resolved = self.inheritance_service.inherit_task_from_project(
-            project_context=project_context,
+        resolved = self.inheritance_service.inherit_task_from_branch(
+            branch_context=branch_context,
             task_context=task_context
         )
         
@@ -371,16 +429,16 @@ class HierarchicalContextService:
         resolved.update({
             "level": "task",
             "context_id": task_id,
-            "parent_project_id": task_context.get("parent_project_id"),
-            "parent_project_context_id": project_id,
+            "parent_branch_id": task_context.get("parent_branch_id"),
+            "parent_branch_context_id": branch_id,
             "inheritance_disabled": False,
             "force_local_only": task_context.get("force_local_only", False)
         })
         
         dependencies_hash = self._calculate_dependencies_hash([
-            project_context, task_context
+            branch_context, task_context
         ])
-        resolution_path = ["global", "project", "task"]
+        resolution_path = ["global", "project", "branch", "task"]
         
         return ContextResolutionResult(
             resolved_context=resolved,
@@ -417,6 +475,8 @@ class HierarchicalContextService:
                 result = self.repository.update_global_context(context_id, changes)
             elif level == "project":
                 result = self.repository.update_project_context(context_id, changes)
+            elif level == "branch":
+                result = self.repository.update_branch_context(context_id, changes)
             elif level == "task":
                 result = self.repository.update_task_context(context_id, changes)
             else:
@@ -470,27 +530,52 @@ class HierarchicalContextService:
             affected_contexts = []
             
             if source_level == "global":
-                # Global changes affect all projects and tasks
-                projects = self.repository.get_all_project_contexts() if hasattr(self.repository, 'get_all_project_contexts') else []
+                # Global changes affect all projects, branches, and tasks
+                projects = self.repository.list_project_contexts()
                 for project in projects:
                     project_id = project["project_id"]
                     self.cache_service.invalidate_context_cache("project", project_id)
                     affected_contexts.append(("project", project_id))
                     
-                    # Also affect all tasks in this project
-                    tasks = self.repository.get_task_contexts_by_project(project_id) if hasattr(self.repository, 'get_task_contexts_by_project') else []
+                    # Also affect all branches in this project
+                    branches = self.repository.list_branch_contexts(project_id)
+                    for branch in branches:
+                        branch_id = branch["branch_id"]
+                        self.cache_service.invalidate_context_cache("branch", branch_id)
+                        affected_contexts.append(("branch", branch_id))
+                        
+                        # Also affect all tasks in this branch
+                        tasks = self.repository.list_task_contexts()
+                        for task in tasks:
+                            if task.get("parent_branch_id") == branch_id:
+                                task_id = task["task_id"]
+                                self.cache_service.invalidate_context_cache("task", task_id)
+                                affected_contexts.append(("task", task_id))
+            
+            elif source_level == "project":
+                # Project changes affect all branches and tasks in the project
+                branches = self.repository.list_branch_contexts(source_id)
+                for branch in branches:
+                    branch_id = branch["branch_id"]
+                    self.cache_service.invalidate_context_cache("branch", branch_id)
+                    affected_contexts.append(("branch", branch_id))
+                    
+                    # Also affect all tasks in this branch
+                    tasks = self.repository.list_task_contexts()
                     for task in tasks:
+                        if task.get("parent_branch_id") == branch_id:
+                            task_id = task["task_id"]
+                            self.cache_service.invalidate_context_cache("task", task_id)
+                            affected_contexts.append(("task", task_id))
+            
+            elif source_level == "branch":
+                # Branch changes affect all tasks in the branch
+                tasks = self.repository.list_task_contexts()
+                for task in tasks:
+                    if task.get("parent_branch_id") == source_id:
                         task_id = task["task_id"]
                         self.cache_service.invalidate_context_cache("task", task_id)
                         affected_contexts.append(("task", task_id))
-            
-            elif source_level == "project":
-                # Project changes affect all tasks in the project
-                tasks = self.repository.get_task_contexts_by_project(source_id) if hasattr(self.repository, 'get_task_contexts_by_project') else []
-                for task in tasks:
-                    task_id = task["task_id"]
-                    self.cache_service.invalidate_context_cache("task", task_id)
-                    affected_contexts.append(("task", task_id))
             
             # Log propagation (if repository supports it)
             if hasattr(self.repository, 'log_propagation'):
@@ -698,11 +783,8 @@ class HierarchicalContextService:
             # Check cache health
             if hasattr(self.cache_service, 'get_cache_stats'):
                 try:
-                    cache_stats = self.cache_service.get_cache_stats()
-                    if asyncio.iscoroutine(cache_stats):
-                        health["components"]["cache"] = await cache_stats
-                    else:
-                        health["components"]["cache"] = cache_stats
+                    # get_cache_stats is async, so await it
+                    health["components"]["cache"] = await self.cache_service.get_cache_stats()
                 except Exception as e:
                     health["components"]["cache"] = {"status": "error", "error": str(e)}
             else:
@@ -711,11 +793,8 @@ class HierarchicalContextService:
             # Check delegation queue
             if hasattr(self.delegation_service, 'get_queue_status'):
                 try:
-                    queue_status = self.delegation_service.get_queue_status()
-                    if asyncio.iscoroutine(queue_status):
-                        health["components"]["delegation"] = await queue_status
-                    else:
-                        health["components"]["delegation"] = queue_status
+                    # get_queue_status is async, so await it
+                    health["components"]["delegation"] = await self.delegation_service.get_queue_status()
                 except Exception as e:
                     health["components"]["delegation"] = {"status": "error", "error": str(e)}
             else:

@@ -152,10 +152,10 @@ class ContextMCPController:
         @mcp.tool(name="manage_hierarchical_context", description=hierarchical_context_desc.get("description", "Enhanced hierarchical context management"))
         async def manage_hierarchical_context(
             action: Annotated[str, Field(description="Context management action: 'resolve', 'update', 'create', 'delegate', 'propagate', 'get_health', 'cleanup_cache'")],
-            level: Annotated[str, Field(description="Context level: 'global', 'project', 'task'")] = "task",
+            level: Annotated[str, Field(description="Context level: 'global', 'project', 'branch', 'task'")] = "task",
             context_id: Annotated[str, Field(description="Context identifier (task_id, project_id, or 'global_singleton')")] = None,
             data: Annotated[Dict[str, Any], Field(description="Context data to create/update")] = None,
-            delegate_to: Annotated[str, Field(description="Target level for delegation: 'project', 'global'")] = None,
+            delegate_to: Annotated[str, Field(description="Target level for delegation: 'branch', 'project', 'global'")] = None,
             delegate_data: Annotated[Dict[str, Any], Field(description="Data to delegate")] = None,
             delegation_reason: Annotated[str, Field(description="Reason for delegation")] = "Manual delegation via MCP",
             force_refresh: Annotated[bool, Field(description="Force cache refresh for resolve action")] = False,
@@ -734,6 +734,8 @@ class ContextMCPController:
                 result = self._create_global_context(data)
             elif level == "project":
                 result = self._create_project_context(context_id, data)
+            elif level == "branch":
+                result = self._create_branch_context(context_id, data)
             elif level == "task":
                 result = self._create_task_context(context_id, data)
             else:
@@ -863,6 +865,18 @@ class ContextMCPController:
             "success": True,
             "level": "project",
             "context_id": project_id,
+            "context": result,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+    
+    def _create_branch_context(self, branch_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create branch context"""
+        # Call the hierarchy service's create_context method (synchronous)
+        result = self.hierarchy_service.create_context("branch", branch_id, data)
+        return {
+            "success": True,
+            "level": "branch",
+            "context_id": branch_id,
             "context": result,
             "created_at": datetime.now(timezone.utc).isoformat()
         }

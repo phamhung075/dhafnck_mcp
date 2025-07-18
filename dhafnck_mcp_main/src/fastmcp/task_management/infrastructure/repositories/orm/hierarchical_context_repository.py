@@ -10,7 +10,7 @@ from sqlalchemy import select, update, delete, func, and_, or_
 
 from ..base_orm_repository import BaseORMRepository
 from ...database.models import (
-    GlobalContext, ProjectContext, TaskContext, 
+    GlobalContext, ProjectContext, BranchContext, TaskContext, 
     ContextDelegation, ContextInheritanceCache
 )
 from ...logging import TaskManagementLogger, log_operation
@@ -25,7 +25,8 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
     Provides data access methods for:
     - Global contexts (singleton)
     - Project contexts (inheriting from global)
-    - Task contexts (inheriting from project)
+    - Branch contexts (inheriting from project)
+    - Task contexts (inheriting from branch)
     - Delegation queue management
     - Cache management
     """
@@ -368,6 +369,195 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
             return []
     
     # ===============================================
+    # BRANCH CONTEXT OPERATIONS
+    # ===============================================
+    
+    def create_branch_context(self, branch_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create branch context"""
+        try:
+            with self.get_db_session() as session:
+                # Extract project ID from data
+                project_id = data.get("parent_project_id")
+                if not project_id:
+                    raise ValueError("parent_project_id is required for branch context")
+                
+                # Ensure project exists
+                from ...database.models import Project
+                project = session.get(Project, project_id)
+                if not project:
+                    raise ValueError(f"Project {project_id} not found")
+                
+                # Ensure project context exists
+                project_context_id = data.get("parent_project_context_id", project_id)
+                project_context = session.get(ProjectContext, project_context_id)
+                if not project_context:
+                    logger.info(f"Project context {project_context_id} not found, creating it")
+                    # Create project context using proper method that handles global context
+                    project_data = {
+                        "parent_global_id": "global_singleton",
+                        "team_preferences": {},
+                        "technology_stack": {},
+                        "project_workflow": {},
+                        "local_standards": {},
+                        "global_overrides": {},
+                        "delegation_rules": {}
+                    }
+                    self.create_project_context(project_context_id, project_data)
+                    project_context = session.get(ProjectContext, project_context_id)
+                
+                # Check if branch context already exists
+                existing = session.get(BranchContext, branch_id)
+                if existing:
+                    # Update existing context
+                    existing.parent_project_id = project_id
+                    existing.parent_project_context_id = project_context_id
+                    existing.branch_workflow = data.get("branch_workflow", existing.branch_workflow)
+                    existing.branch_standards = data.get("branch_standards", existing.branch_standards)
+                    existing.agent_assignments = data.get("agent_assignments", existing.agent_assignments)
+                    existing.local_overrides = data.get("local_overrides", existing.local_overrides)
+                    existing.delegation_rules = data.get("delegation_rules", existing.delegation_rules)
+                    existing.inheritance_disabled = data.get("inheritance_disabled", existing.inheritance_disabled)
+                    existing.force_local_only = data.get("force_local_only", existing.force_local_only)
+                    existing.updated_at = datetime.now(timezone.utc)
+                    existing.version += 1
+                else:
+                    # Create new context
+                    context = BranchContext(
+                        branch_id=branch_id,
+                        parent_project_id=project_id,
+                        parent_project_context_id=project_context_id,
+                        branch_workflow=data.get("branch_workflow", {}),
+                        branch_standards=data.get("branch_standards", {}),
+                        agent_assignments=data.get("agent_assignments", {}),
+                        local_overrides=data.get("local_overrides", {}),
+                        delegation_rules=data.get("delegation_rules", {}),
+                        inheritance_disabled=data.get("inheritance_disabled", False),
+                        force_local_only=data.get("force_local_only", False),
+                        version=1
+                    )
+                    session.add(context)
+                
+                session.commit()
+                
+                # Return the created context
+                return self.get_branch_context(branch_id)
+                
+        except Exception as e:
+            logger.error(f"Error creating branch context: {e}")
+            raise
+    
+    def get_branch_context(self, branch_id: str) -> Optional[Dict[str, Any]]:
+        """Get branch context"""
+        try:
+            with self.get_db_session() as session:
+                context = session.get(BranchContext, branch_id)
+                if not context:
+                    return None
+                
+                return {
+                    "branch_id": context.branch_id,
+                    "parent_project_id": context.parent_project_id,
+                    "parent_project_context_id": context.parent_project_context_id,
+                    "branch_workflow": context.branch_workflow,
+                    "branch_standards": context.branch_standards,
+                    "agent_assignments": context.agent_assignments,
+                    "local_overrides": context.local_overrides,
+                    "delegation_rules": context.delegation_rules,
+                    "inheritance_disabled": context.inheritance_disabled,
+                    "force_local_only": context.force_local_only,
+                    "created_at": context.created_at.isoformat(),
+                    "updated_at": context.updated_at.isoformat(),
+                    "version": context.version
+                }
+                
+        except Exception as e:
+            logger.error(f"Error getting branch context {branch_id}: {e}")
+            return None
+    
+    def update_branch_context(self, branch_id: str, updates: Dict[str, Any]) -> bool:
+        """Update branch context"""
+        try:
+            with self.get_db_session() as session:
+                context = session.get(BranchContext, branch_id)
+                if not context:
+                    return False
+                
+                # Update fields
+                for field in ["branch_workflow", "branch_standards", "agent_assignments",
+                           "local_overrides", "delegation_rules"]:
+                    if field in updates:
+                        setattr(context, field, updates[field])
+                
+                if "parent_project_id" in updates:
+                    context.parent_project_id = updates["parent_project_id"]
+                
+                if "parent_project_context_id" in updates:
+                    context.parent_project_context_id = updates["parent_project_context_id"]
+                
+                if "inheritance_disabled" in updates:
+                    context.inheritance_disabled = updates["inheritance_disabled"]
+                
+                if "force_local_only" in updates:
+                    context.force_local_only = updates["force_local_only"]
+                
+                context.updated_at = datetime.now(timezone.utc)
+                context.version += 1
+                
+                session.commit()
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error updating branch context {branch_id}: {e}")
+            return False
+    
+    def delete_branch_context(self, branch_id: str) -> bool:
+        """Delete branch context"""
+        try:
+            with self.get_db_session() as session:
+                context = session.get(BranchContext, branch_id)
+                if context:
+                    session.delete(context)
+                    session.commit()
+                    return True
+                return False
+        except Exception as e:
+            logger.error(f"Error deleting branch context: {e}")
+            return False
+    
+    def list_branch_contexts(self, project_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """List branch contexts, optionally filtered by project"""
+        try:
+            with self.get_db_session() as session:
+                query = select(BranchContext)
+                if project_id:
+                    query = query.where(BranchContext.parent_project_id == project_id)
+                
+                contexts = session.execute(query).scalars().all()
+                
+                return [
+                    {
+                        "branch_id": ctx.branch_id,
+                        "parent_project_id": ctx.parent_project_id,
+                        "parent_project_context_id": ctx.parent_project_context_id,
+                        "branch_workflow": ctx.branch_workflow,
+                        "branch_standards": ctx.branch_standards,
+                        "agent_assignments": ctx.agent_assignments,
+                        "local_overrides": ctx.local_overrides,
+                        "delegation_rules": ctx.delegation_rules,
+                        "inheritance_disabled": ctx.inheritance_disabled,
+                        "force_local_only": ctx.force_local_only,
+                        "created_at": ctx.created_at.isoformat(),
+                        "updated_at": ctx.updated_at.isoformat(),
+                        "version": ctx.version
+                    }
+                    for ctx in contexts
+                ]
+                
+        except Exception as e:
+            logger.error(f"Error listing branch contexts: {e}")
+            return []
+    
+    # ===============================================
     # TASK CONTEXT OPERATIONS
     # ===============================================
     
@@ -375,42 +565,38 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
         """Create task context"""
         try:
             with self.get_db_session() as session:
-                # Extract project ID from data or use default
-                project_id = data.get("parent_project_id", "default_project")
-                project_context_id = data.get("parent_project_context_id", project_id)
+                # Extract branch ID from data
+                branch_id = data.get("parent_branch_id")
+                if not branch_id:
+                    raise ValueError("parent_branch_id is required for task context")
                 
-                # Ensure project exists in projects table (required for foreign key)
-                from ...database.models import Project
-                project = session.get(Project, project_id)
-                if not project:
-                    logger.info(f"Project {project_id} not found, creating it")
-                    # Create a minimal project record
-                    project = Project(
-                        id=project_id,
-                        name=project_id,  # Use ID as name for default projects
-                        description="Auto-created project for task context"
-                    )
-                    session.add(project)
-                    session.commit()
+                # Ensure branch exists
+                from ...database.models import ProjectGitBranch
+                branch = session.get(ProjectGitBranch, branch_id)
+                if not branch:
+                    raise ValueError(f"Branch {branch_id} not found")
                 
-                # Ensure project context exists before creating task context
-                project_context = session.get(ProjectContext, project_context_id)
-                if not project_context:
-                    logger.info(f"Project context {project_context_id} not found, creating it")
-                    # Create a default project context if it doesn't exist
-                    self.create_project_context(project_context_id, {
-                        "team_preferences": {},
-                        "technology_stack": {},
-                        "project_workflow": {},
-                        "local_standards": {}
+                # Ensure branch context exists
+                branch_context_id = data.get("parent_branch_context_id", branch_id)
+                branch_context = session.get(BranchContext, branch_context_id)
+                if not branch_context:
+                    logger.info(f"Branch context {branch_context_id} not found, creating it")
+                    # Create default branch context
+                    project_id = branch.project_id
+                    self.create_branch_context(branch_context_id, {
+                        "parent_project_id": project_id,
+                        "parent_project_context_id": project_id,
+                        "branch_workflow": {},
+                        "branch_standards": {},
+                        "agent_assignments": {}
                     })
                 
                 # Check if context already exists
                 existing = session.get(TaskContext, task_id)
                 if existing:
                     # Update existing context
-                    existing.parent_project_id = project_id
-                    existing.parent_project_context_id = project_context_id
+                    existing.parent_branch_id = branch_id
+                    existing.parent_branch_context_id = branch_context_id
                     existing.task_data = data.get("task_data", existing.task_data)
                     existing.local_overrides = data.get("local_overrides", existing.local_overrides)
                     existing.implementation_notes = data.get("implementation_notes", existing.implementation_notes)
@@ -423,8 +609,8 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
                     # Create new context
                     context = TaskContext(
                         task_id=task_id,
-                        parent_project_id=project_id,
-                        parent_project_context_id=project_context_id,
+                        parent_branch_id=branch_id,
+                        parent_branch_context_id=branch_context_id,
                         task_data=data.get("task_data", {}),
                         local_overrides=data.get("local_overrides", {}),
                         implementation_notes=data.get("implementation_notes", {}),
@@ -454,8 +640,8 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
                 
                 return {
                     "task_id": context.task_id,
-                    "parent_project_id": context.parent_project_id,
-                    "parent_project_context_id": context.parent_project_context_id,
+                    "parent_branch_id": context.parent_branch_id,
+                    "parent_branch_context_id": context.parent_branch_context_id,
                     "task_data": context.task_data,
                     "local_overrides": context.local_overrides,
                     "implementation_notes": context.implementation_notes,
@@ -484,7 +670,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
                     if field in updates:
                         setattr(context, field, updates[field])
                 
-                for field in ["parent_project_id", "parent_project_context_id", 
+                for field in ["parent_branch_id", "parent_branch_context_id", 
                            "inheritance_disabled", "force_local_only"]:
                     if field in updates:
                         setattr(context, field, updates[field])
@@ -522,8 +708,8 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
                 return [
                     {
                         "task_id": ctx.task_id,
-                        "parent_project_id": ctx.parent_project_id,
-                        "parent_project_context_id": ctx.parent_project_context_id,
+                        "parent_branch_id": ctx.parent_branch_id,
+                        "parent_branch_context_id": ctx.parent_branch_context_id,
                         "task_data": ctx.task_data,
                         "local_overrides": ctx.local_overrides,
                         "implementation_notes": ctx.implementation_notes,
@@ -899,24 +1085,47 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
                             merged_context.update(project_context)
                             resolved_context = merged_context
                             
+            elif level == "branch":
+                branch_context = self.get_branch_context(context_id)
+                if branch_context:
+                    resolved_context.update(branch_context)
+                    
+                    # Include project and global context if inheritance is enabled
+                    if include_inheritance and not branch_context.get("inheritance_disabled", False):
+                        project_context = self.get_project_context(branch_context.get("parent_project_context_id"))
+                        if project_context and not project_context.get("inheritance_disabled", False):
+                            global_context = self.get_global_context(project_context.get("parent_global_id", "global_singleton"))
+                            
+                            # Merge contexts in order: global -> project -> branch
+                            merged_context = {}
+                            if global_context:
+                                merged_context.update(global_context)
+                            merged_context.update(project_context)
+                            merged_context.update(branch_context)
+                            resolved_context = merged_context
+                            
             elif level == "task":
                 task_context = self.get_task_context(context_id)
                 if task_context:
                     resolved_context.update(task_context)
                     
-                    # Include project and global context if inheritance is enabled
+                    # Include branch, project and global context if inheritance is enabled
                     if include_inheritance and not task_context.get("inheritance_disabled", False):
-                        project_context = self.get_project_context(task_context.get("parent_project_context_id"))
-                        if project_context and not project_context.get("inheritance_disabled", False):
-                            global_context = self.get_global_context(project_context.get("parent_global_id", "global_singleton"))
-                            
-                            # Merge contexts in order: global -> project -> task
-                            merged_context = {}
-                            if global_context:
-                                merged_context.update(global_context)
-                            merged_context.update(project_context)
-                            merged_context.update(task_context)
-                            resolved_context = merged_context
+                        branch_context = self.get_branch_context(task_context.get("parent_branch_context_id"))
+                        if branch_context and not branch_context.get("inheritance_disabled", False):
+                            project_context = self.get_project_context(branch_context.get("parent_project_context_id"))
+                            if project_context and not project_context.get("inheritance_disabled", False):
+                                global_context = self.get_global_context(project_context.get("parent_global_id", "global_singleton"))
+                                
+                                # Merge contexts in order: global -> project -> branch -> task
+                                merged_context = {}
+                                if global_context:
+                                    merged_context.update(global_context)
+                                if project_context:
+                                    merged_context.update(project_context)
+                                merged_context.update(branch_context)
+                                merged_context.update(task_context)
+                                resolved_context = merged_context
             
             return resolved_context
             
@@ -1002,7 +1211,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
         """
         try:
             results = []
-            levels = levels or ["global", "project", "task"]
+            levels = levels or ["global", "project", "branch", "task"]
             
             if "global" in levels:
                 global_contexts = self.list_global_contexts()
@@ -1017,6 +1226,16 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
                     if query.lower() in json.dumps(ctx).lower():
                         ctx["_level"] = "project"
                         results.append(ctx)
+            
+            if "branch" in levels:
+                # List all branch contexts - we need to get all projects first
+                all_projects = self.list_project_contexts()
+                for project in all_projects:
+                    branch_contexts = self.list_branch_contexts(project["project_id"])
+                    for ctx in branch_contexts:
+                        if query.lower() in json.dumps(ctx).lower():
+                            ctx["_level"] = "branch"
+                            results.append(ctx)
             
             if "task" in levels:
                 task_contexts = self.list_task_contexts()
@@ -1046,6 +1265,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
             hierarchy = {
                 "global": None,
                 "project": None,
+                "branch": None,
                 "task": None
             }
             
@@ -1053,7 +1273,21 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
                 task_context = self.get_task_context(context_id)
                 if task_context:
                     hierarchy["task"] = task_context
-                    project_context = self.get_project_context(task_context.get("parent_project_context_id"))
+                    branch_context = self.get_branch_context(task_context.get("parent_branch_context_id"))
+                    if branch_context:
+                        hierarchy["branch"] = branch_context
+                        project_context = self.get_project_context(branch_context.get("parent_project_context_id"))
+                        if project_context:
+                            hierarchy["project"] = project_context
+                            global_context = self.get_global_context(project_context.get("parent_global_id", "global_singleton"))
+                            if global_context:
+                                hierarchy["global"] = global_context
+                                
+            elif level == "branch":
+                branch_context = self.get_branch_context(context_id)
+                if branch_context:
+                    hierarchy["branch"] = branch_context
+                    project_context = self.get_project_context(branch_context.get("parent_project_context_id"))
                     if project_context:
                         hierarchy["project"] = project_context
                         global_context = self.get_global_context(project_context.get("parent_global_id", "global_singleton"))
@@ -1077,7 +1311,7 @@ class ORMHierarchicalContextRepository(BaseORMRepository):
             
         except Exception as e:
             logger.error(f"Error getting context hierarchy: {e}")
-            return {"global": None, "project": None, "task": None}
+            return {"global": None, "project": None, "branch": None, "task": None}
     
     def merge_contexts(self, contexts: List[Dict[str, Any]]) -> Dict[str, Any]:
         """

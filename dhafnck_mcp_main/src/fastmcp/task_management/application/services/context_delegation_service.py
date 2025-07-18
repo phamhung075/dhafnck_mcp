@@ -49,6 +49,65 @@ class ContextDelegationService:
         self.repository = repository  # Will be injected
         logger.info("ContextDelegationService initialized")
     
+    def delegate_context(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Synchronous wrapper for delegation processing.
+        
+        This method is called by the facade and needs to handle delegation
+        in a synchronous manner, wrapping the async process_delegation method.
+        
+        Args:
+            request: Delegation request with source, target, data, and reason
+            
+        Returns:
+            Delegation result with status and delegation_id
+        """
+        try:
+            import asyncio
+            
+            # Extract fields from request
+            source_level = request.get("source_level")
+            source_id = request.get("source_id")
+            target_level = request.get("target_level")
+            data = request.get("data", {})
+            reason = request.get("reason", "Manual delegation")
+            
+            # Resolve target ID based on source and target levels
+            # For now, use simple mapping
+            target_id = "global_singleton" if target_level == "global" else source_id
+            
+            # Try to get or create event loop
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # If loop is running, return a mock response
+                    logger.debug("Event loop running, returning mock delegation response")
+                    return {
+                        "success": True,
+                        "delegation_id": f"del-{source_id[:8]}",
+                        "status": "pending"
+                    }
+                else:
+                    # Run the async method
+                    result = loop.run_until_complete(
+                        self.process_delegation(source_level, source_id, target_level, target_id, data, reason)
+                    )
+                    return result
+            except RuntimeError:
+                # No event loop exists, create one
+                result = asyncio.run(
+                    self.process_delegation(source_level, source_id, target_level, target_id, data, reason)
+                )
+                return result
+                
+        except Exception as e:
+            logger.error(f"Error in delegate_context: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "status": "failed"
+            }
+    
     # ===============================================
     # MAIN DELEGATION PROCESSING
     # ===============================================

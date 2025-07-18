@@ -594,153 +594,55 @@ class Task:
             self.labels.remove(label_str)
             self.updated_at = datetime.now(timezone.utc)
     
-    def add_subtask(self, subtask_title: str = None, title: str = None, description: str = None, 
-                   assignee: str = None, estimated_effort: str = None, **kwargs) -> dict[str, Any]:
-        """Add a subtask to the task with flexible parameter support"""
-        # Handle dictionary input (test compatibility)
-        if isinstance(subtask_title, dict):
-            # Dictionary style: add_subtask({"title": "title", "completed": True})
-            subtask_data = subtask_title.copy()
-        elif subtask_title is not None and title is None and isinstance(subtask_title, str):
-            # Old style: add_subtask("title")
-            subtask_data = {"title": subtask_title}
-        elif title is not None:
-            # New style: add_subtask(title="title", description="desc", ...)
-            subtask_data = {"title": title}
-            if description is not None:
-                subtask_data["description"] = description
-            if assignee is not None:
-                subtask_data["assignee"] = assignee
-            # Note: estimated_effort is not valid for Subtask entities, so we skip it
-            # Add any additional kwargs
-            subtask_data.update(kwargs)
-        else:
-            raise ValueError("Either subtask_title or title must be provided")
+    def add_subtask(self, subtask_id: str) -> str:
+        """Add a subtask ID to the task"""
+        if not subtask_id or not isinstance(subtask_id, str):
+            raise ValueError("Subtask ID must be a non-empty string")
         
-        if not subtask_data.get("title"):
-            raise ValueError("Subtask must have a title")
-        
-        # Generate a proper hierarchical ID for the subtask if not provided
-        if "id" not in subtask_data:
-            # Get existing subtask IDs for this task
-            existing_subtask_ids = []
-            for st in self.subtasks:
-                if st.get("id"):
-                    # Handle both old integer IDs and new hierarchical IDs
-                    if isinstance(st["id"], int):
-                        # Convert old integer ID to new format for consistency
-                        existing_subtask_ids.append(f"{self.id}.{st['id']:03d}")
-                    else:
-                        existing_subtask_ids.append(str(st["id"]))
+        if subtask_id not in self.subtasks:
+            self.subtasks.append(subtask_id)
+            self.updated_at = datetime.now(timezone.utc)
             
-            # Generate new hierarchical subtask ID
-            from ..value_objects.task_id import TaskId
-            try:
-                new_subtask_id = TaskId.generate_subtask(self.id, existing_subtask_ids)
-                subtask_data["id"] = str(new_subtask_id)
-            except Exception:
-                # Fallback to old integer-based ID generation if TaskId generation fails
-                existing_ids = [st.get("id", 0) for st in self.subtasks if isinstance(st.get("id"), int)]
-                subtask_data["id"] = max(existing_ids, default=0) + 1
+            # Raise domain event
+            self._events.append(TaskUpdated(
+                task_id=self.id,
+                field_name="subtasks",
+                old_value="subtask_added",
+                new_value=subtask_id,
+                updated_at=self.updated_at
+            ))
         
-        # Set default values for new schema
-        subtask_data.setdefault("status", "todo")
-        subtask_data.setdefault("priority", "medium")
-        subtask_data.setdefault("description", description or "")
-        subtask_data.setdefault("assignees", [])
-        # Note: estimated_effort is not a valid field for Subtask entities, so we don't set it
-        
-        self.subtasks.append(subtask_data)
-        self.updated_at = datetime.now(timezone.utc)
-        
-        # Raise domain event
-        self._events.append(TaskUpdated(
-            task_id=self.id,
-            field_name="subtasks",
-            old_value="subtask_added",
-            new_value=subtask_data,
-            updated_at=self.updated_at
-        ))
-        
-        # Return the subtask dictionary
-        return subtask_data
+        return subtask_id
     
-    def remove_subtask(self, subtask_id: int | str) -> bool:
-        """Remove a subtask by ID (supports both integer and hierarchical IDs)"""
-        for i, subtask in enumerate(self.subtasks):
-            # Ensure subtask is a dictionary, skip if not
-            if not isinstance(subtask, dict):
-                logger.warning(f"Skipping invalid subtask (not a dict): {subtask}")
-                continue
-                
-            current_id = subtask.get("id")
-            # Normalize comparison - handle both old integer IDs and new hierarchical IDs
-            if self._subtask_ids_match(current_id, subtask_id):
-                removed_subtask = self.subtasks.pop(i)
-                self.updated_at = datetime.now(timezone.utc)
-                
-                # Raise domain event
-                self._events.append(TaskUpdated(
-                    task_id=self.id,
-                    field_name="subtasks",
-                    old_value="subtask_removed",
-                    new_value=removed_subtask,
-                    updated_at=self.updated_at
-                ))
-                return True
+    def remove_subtask(self, subtask_id: str) -> bool:
+        """Remove a subtask by ID"""
+        if subtask_id in self.subtasks:
+            self.subtasks.remove(subtask_id)
+            self.updated_at = datetime.now(timezone.utc)
+            
+            # Raise domain event
+            self._events.append(TaskUpdated(
+                task_id=self.id,
+                field_name="subtasks",
+                old_value="subtask_removed",
+                new_value=subtask_id,
+                updated_at=self.updated_at
+            ))
+            return True
         return False
     
-    def update_subtask(self, subtask_id: int | str, updates: dict[str, Any]) -> bool:
-        """Update a subtask by ID (supports both integer and hierarchical IDs)"""
-        # First clean subtask assignees to prevent string issues
-        self.clean_subtask_assignees()
-        
-        for subtask in self.subtasks:
-            # Ensure subtask is a dictionary, skip if not
-            if not isinstance(subtask, dict):
-                logger.warning(f"Skipping invalid subtask (not a dict): {subtask}")
-                continue
-                
-            current_id = subtask.get("id")
-            # Normalize comparison - handle both old integer IDs and new hierarchical IDs
-            if self._subtask_ids_match(current_id, subtask_id):
-                old_subtask = subtask.copy()
-                
-                # Handle assignees field specially to ensure it's always a list
-                if 'assignees' in updates:
-                    if updates['assignees'] is None:
-                        updates['assignees'] = []
-                    elif isinstance(updates['assignees'], str):
-                        # Handle string representations
-                        if updates['assignees'] == '[]' or updates['assignees'] == '':
-                            updates['assignees'] = []
-                        else:
-                            try:
-                                import json
-                                parsed = json.loads(updates['assignees'])
-                                updates['assignees'] = parsed if isinstance(parsed, list) else [updates['assignees']]
-                            except:
-                                updates['assignees'] = [updates['assignees']]
-                    elif not isinstance(updates['assignees'], list):
-                        updates['assignees'] = []
-                
-                subtask.update(updates)
-                self.updated_at = datetime.now(timezone.utc)
-                
-                # Raise domain event
-                self._events.append(TaskUpdated(
-                    task_id=self.id,
-                    field_name="subtasks",
-                    old_value=old_subtask,
-                    new_value=subtask,
-                    updated_at=self.updated_at
-                ))
-                return True
+    def update_subtask(self, subtask_id: str, updates: dict[str, Any]) -> bool:
+        """Update a subtask by ID - This method should be handled by the subtask repository"""
+        # Since subtasks are now just IDs, updating them should be done via the subtask repository
+        # This method is kept for compatibility but will not perform any updates
+        logger.warning(f"update_subtask called on task entity - should use subtask repository instead")
         return False
     
-    def complete_subtask(self, subtask_id: int | str) -> bool:
-        """Mark a subtask as completed using status field"""
-        return self.update_subtask(subtask_id, {"status": "done"})
+    def complete_subtask(self, subtask_id: str) -> bool:
+        """Mark a subtask as completed - This method should be handled by the subtask repository"""
+        # Since subtasks are now just IDs, completing them should be done via the subtask repository
+        logger.warning(f"complete_subtask called on task entity - should use subtask repository instead")
+        return False
     
     def complete_task(self, completion_summary: str | None = None, context_updated_at: datetime | None = None) -> None:
         """
@@ -815,61 +717,32 @@ class Task:
                 updated_at=self.updated_at
             ))
     
-    def get_subtask(self, subtask_id: int | str) -> dict[str, Any] | None:
-        """Get a subtask by ID (supports both integer and hierarchical IDs)"""
-        for subtask in self.subtasks:
-            # Ensure subtask is a dictionary, skip if not
-            if not isinstance(subtask, dict):
-                logger.warning(f"Skipping invalid subtask (not a dict): {subtask}")
-                continue
-                
-            current_id = subtask.get("id")
-            # Normalize comparison - handle both old integer IDs and new hierarchical IDs
-            if self._subtask_ids_match(current_id, subtask_id):
-                return subtask
-        return None
+    def get_subtask(self, subtask_id: str) -> str | None:
+        """Get a subtask ID if it exists in this task"""
+        return subtask_id if subtask_id in self.subtasks else None
     
-    def get_subtask_by_id(self, subtask_id: int | str) -> dict[str, Any] | None:
+    def get_subtask_by_id(self, subtask_id: str) -> str | None:
         """Get a subtask by ID - alias for get_subtask for backward compatibility"""
         return self.get_subtask(subtask_id)
     
-    def _subtask_ids_match(self, current_id: int | str, target_id: int | str) -> bool:
-        """Helper method to compare subtask IDs regardless of type"""
-        # Convert both to strings for comparison
-        current_str = str(current_id)
-        target_str = str(target_id)
-        
-        # Direct string comparison
-        if current_str == target_str:
-            return True
-        
-        # If one is integer and other is string, compare as integers
-        try:
-            current_int = int(current_id) if isinstance(current_id, (int, str)) else None
-            target_int = int(target_id) if isinstance(target_id, (int, str)) else None
-            if current_int is not None and target_int is not None:
-                return current_int == target_int
-        except (ValueError, TypeError):
-            pass
-        
-        return False
+    def _subtask_ids_match(self, current_id: str, target_id: str) -> bool:
+        """Helper method to compare subtask IDs"""
+        return current_id == target_id
     
     def get_subtask_progress(self) -> dict[str, Any]:
         """Get subtask completion progress using status field"""
         if not self.subtasks:
             return {"total": 0, "completed": 0, "percentage": 0}
         
-        # Filter out invalid subtasks (not dictionaries)
-        valid_subtasks = [st for st in self.subtasks if isinstance(st, dict)]
-        
-        total = len(valid_subtasks)
-        completed = sum(1 for st in valid_subtasks if st.get("status") == "done")
-        percentage = round((completed / total) * 100, 1) if total > 0 else 0
+        # Since subtasks are now just IDs (strings), we cannot determine their completion status
+        # This method should be moved to the application layer where it can access the subtask repository
+        # For now, return basic info based on the number of subtasks
+        total = len(self.subtasks)
         
         return {
             "total": total,
-            "completed": completed,
-            "percentage": percentage
+            "completed": 0,  # Cannot determine without repository access
+            "percentage": 0  # Cannot determine without repository access
         }
     
     def all_subtasks_completed(self) -> bool:
@@ -1159,35 +1032,10 @@ class Task:
         if not self.subtasks:
             return 0.0
         
-        subtask_data = []
-        for subtask in self.subtasks:
-            # Ensure subtask is a dictionary, skip if not
-            if not isinstance(subtask, dict):
-                logger.warning(f"Skipping invalid subtask (not a dict): {subtask}")
-                continue
-                
-            status = subtask.get("status", "todo")
-            if not include_blocked and status == "blocked":
-                continue
-            
-            # Calculate subtask progress based on status
-            if status == "done":
-                progress = 100.0
-            elif status == "in_progress":
-                progress = 50.0  # Default 50% for in-progress
-            elif status == "review" or status == "testing":
-                progress = 75.0  # Near completion
-            else:
-                progress = 0.0
-            
-            subtask_data.append({
-                "id": subtask.get("id"),
-                "title": subtask.get("title"),
-                "status": status,
-                "progress": progress
-            })
-        
-        return ProgressCalculationStrategy.calculate_from_subtasks(subtask_data, include_blocked)
+        # Since subtasks are now just IDs (strings), we cannot determine their status
+        # This method should be moved to the application layer where it can access the subtask repository
+        # For now, return 0.0 as we cannot calculate progress without repository access
+        return 0.0
     
     def add_progress_milestone(self, name: str, percentage: float) -> None:
         """
@@ -1307,31 +1155,18 @@ class Task:
     
     def migrate_subtask_ids(self) -> None:
         """Migrate old integer subtask IDs to new hierarchical format"""
-        
-        for subtask in self.subtasks:
-            # Ensure subtask is a dictionary, skip if not
-            if not isinstance(subtask, dict):
-                logger.warning(f"Skipping invalid subtask during migration (not a dict): {subtask}")
-                continue
-                
-            if isinstance(subtask.get("id"), int):
-                old_id = subtask["id"]
-                try:
-                    # Convert to hierarchical format
-                    new_id = f"{self.id}.{old_id:03d}"
-                    subtask["id"] = new_id
-                except Exception:
-                    # Keep old ID if conversion fails
-                    pass
+        # Since subtasks are now just IDs (strings), this method is not needed
+        # Migration should be handled at the repository level
+        pass
     
     def clean_invalid_subtasks(self) -> int:
-        """Remove invalid subtasks (non-dict entries) from the subtasks list.
+        """Remove invalid subtasks (non-string entries) from the subtasks list.
         
         Returns:
             Number of invalid subtasks removed
         """
         initial_count = len(self.subtasks)
-        valid_subtasks = [st for st in self.subtasks if isinstance(st, dict)]
+        valid_subtasks = [st for st in self.subtasks if isinstance(st, str)]
         removed_count = initial_count - len(valid_subtasks)
         
         if removed_count > 0:
@@ -1383,49 +1218,7 @@ class Task:
     
     def clean_subtask_assignees(self) -> int:
         """
-        Clean subtask assignees field to ensure it's always a list.
-        Fixes issues where assignees might be stored as '[]' string or other invalid formats.
-        Returns the number of subtasks that were fixed.
+        Clean subtask assignees field - no longer needed since subtasks are just IDs.
+        Returns 0 for compatibility.
         """
-        fixed_count = 0
-        
-        for subtask in self.subtasks:
-            if not isinstance(subtask, dict):
-                continue
-            
-            # Get current assignees value
-            assignees = subtask.get('assignees')
-            
-            # Fix various invalid formats
-            if assignees is None:
-                subtask['assignees'] = []
-                fixed_count += 1
-            elif isinstance(assignees, str):
-                # Handle string representations like "[]" or '["user1", "user2"]'
-                if assignees == '[]' or assignees == '':
-                    subtask['assignees'] = []
-                    fixed_count += 1
-                else:
-                    try:
-                        # Try to parse JSON string
-                        import json
-                        parsed = json.loads(assignees)
-                        if isinstance(parsed, list):
-                            subtask['assignees'] = parsed
-                        else:
-                            subtask['assignees'] = [assignees]
-                        fixed_count += 1
-                    except:
-                        # If not JSON, treat as single assignee
-                        subtask['assignees'] = [assignees]
-                        fixed_count += 1
-            elif not isinstance(assignees, list):
-                # Convert any other non-list type to empty list
-                subtask['assignees'] = []
-                fixed_count += 1
-        
-        if fixed_count > 0:
-            self.updated_at = datetime.now(timezone.utc)
-            logger.info(f"Fixed assignees in {fixed_count} subtasks for task {self.id}")
-        
-        return fixed_count 
+        return 0 

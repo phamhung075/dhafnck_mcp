@@ -18,6 +18,8 @@ GLOBAL (Singleton: 'global_singleton')
    ↓ inherits to
 PROJECT (ID: project_id)  
    ↓ inherits to
+BRANCH (ID: git_branch_id)
+   ↓ inherits to
 TASK (ID: task_id)
 ```
 
@@ -34,10 +36,11 @@ TASK (ID: task_id)
 🏗️ HIERARCHY LEVELS:
 • global: Singleton global context (context_id: 'global_singleton')
 • project: Project-level context (context_id: project_id)
+• branch: Branch-level context (context_id: git_branch_id)
 • task: Task-level context (context_id: task_id)
 
 🔄 INHERITANCE FLOW:
-Task → Project → Global (contexts inherit from higher levels)
+Task → Branch → Project → Global (contexts inherit from higher levels)
 
 🤖 AI DECISION MATRIX FOR DELEGATION:
 ```python
@@ -76,8 +79,8 @@ elif discovered_pattern.type == "company_coding_standard":
 
 3. **Understand inheritance chain** - Lower levels inherit from higher
    ```
-   Task Context = Task Data + Project Data + Global Data
-   (Most specific)                          (Most general)
+   Task Context = Task Data + Branch Data + Project Data + Global Data
+   (Most specific)                                         (Most general)
    ```
 
 📈 PROPAGATION RULES & IMPACT ANALYSIS:
@@ -113,6 +116,7 @@ elif discovered_pattern.type == "company_coding_standard":
 
 💡 USAGE EXAMPLES:
 • Resolve task context: action="resolve", level="task", context_id="task-123"
+• Resolve branch context: action="resolve", level="branch", context_id="branch-456"
 • Update project: action="update", level="project", context_id="proj-456", data={...}
 • Delegate to global: action="delegate", level="task", context_id="task-123", delegate_to="global", delegate_data={...}
 

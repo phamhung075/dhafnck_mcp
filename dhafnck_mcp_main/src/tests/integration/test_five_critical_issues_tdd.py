@@ -370,22 +370,82 @@ class TestFiveCriticalIssuesTDD:
         assert has_context, "Task should have context data"
     
     @pytest.mark.asyncio
-    async def test_context_auto_creation_for_missing_entities(self, test_db_path):
+    async def test_context_requires_parent_entities(self, test_db_path):
         """
-        Unit test that hierarchical context repository auto-creates missing entities.
+        Unit test that hierarchical context repository properly enforces parent entity requirements.
         
-        This tests the fix that auto-creates project and project_context records
-        when creating a task context.
+        In the 4-tier hierarchy, task contexts require their parent branch to exist,
+        and branches require their parent project to exist.
         """
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from fastmcp.task_management.infrastructure.database.models import Project, ProjectGitBranch
+        
         repository = ORMHierarchicalContextRepository()
+        db_config = get_db_config()
         
-        # Create a task context without pre-existing project/project_context
+        # First create the global context (singleton)
+        global_id = "global_singleton"
+        repository.create_global_context(
+            global_id=global_id,
+            data={
+                "autonomous_rules": {},
+                "security_policies": {},
+                "coding_standards": {}
+            }
+        )
+        
+        # Create a project in the database
+        project_id = str(uuid.uuid4())
+        with db_config.get_session() as session:
+            project = Project(
+                id=project_id,
+                name="Test Project",
+                description="Test Project for context creation",
+                user_id="test-user"
+            )
+            session.add(project)
+            session.commit()
+        
+        # Create a project context
+        repository.create_project_context(
+            project_id=project_id,
+            data={
+                "project_data": {
+                    "name": "Test Project",
+                    "description": "Test"
+                },
+                "parent_global_id": global_id
+            }
+        )
+        
+        # Create a branch in the database
+        branch_id = str(uuid.uuid4())
+        with db_config.get_session() as session:
+            branch = ProjectGitBranch(
+                id=branch_id,
+                project_id=project_id,
+                name="test-branch",
+                description="Test Branch"
+            )
+            session.add(branch)
+            session.commit()
+        
+        # Create a branch context
+        repository.create_branch_context(
+            branch_id=branch_id,
+            data={
+                "branch_data": {
+                    "name": "Test Branch",
+                    "description": "Test"
+                },
+                "parent_project_id": project_id
+            }
+        )
+        
+        # Test 1: Verify task context creation fails without branch
         task_id = str(uuid.uuid4())
-        project_id = str(uuid.uuid4())  # Non-existent project
-        
-        # This should auto-create the missing entities
-        try:
-            result = repository.create_task_context(
+        with pytest.raises(ValueError, match="Branch .* not found"):
+            repository.create_task_context(
                 task_id=task_id,
                 data={
                     "task_data": {
@@ -394,23 +454,72 @@ class TestFiveCriticalIssuesTDD:
                         "status": "todo",
                         "priority": "medium"
                     },
-                    "parent_project_id": project_id,
-                    "parent_project_context_id": project_id
+                    "parent_branch_id": "non-existent-branch",
+                    "parent_branch_context_id": "non-existent-branch"
                 }
             )
-            
-            # Verify that the result is returned successfully
-            assert result is not None, "Task context should be created successfully"
-            assert "task_id" in result, "Task context result should contain task_id"
-            assert result["task_id"] == task_id, "Task context should have correct task_id"
-            
-            # Verify that we can retrieve the created context
-            retrieved_context = repository.get_task_context(task_id)
-            assert retrieved_context is not None, "Task context should be retrievable"
-            assert retrieved_context["task_id"] == task_id, "Retrieved context should have correct task_id"
-            
-        except Exception as e:
-            pytest.fail(f"Context creation should not fail with foreign key error: {e}")
+        
+        # Test 2: Verify branch context creation fails without project
+        branch_id_test = str(uuid.uuid4())
+        with pytest.raises(ValueError, match="Project .* not found"):
+            repository.create_branch_context(
+                branch_id=branch_id_test,
+                data={
+                    "branch_data": {
+                        "name": "Test Branch",
+                        "description": "Test"
+                    },
+                    "parent_project_id": "non-existent-project"
+                }
+            )
+        
+        # Test 3: Verify proper creation works when all entities exist
+        # First create a task in the database
+        from fastmcp.task_management.infrastructure.database.models import Task as TaskModel
+        task_id = str(uuid.uuid4())
+        with db_config.get_session() as session:
+            task = TaskModel(
+                id=task_id,
+                title="Test Task",
+                description="Test task for context creation",
+                git_branch_id=branch_id,
+                status="todo",
+                priority="medium",
+                details="",
+                estimated_effort="",
+                assignees=[],
+                labels=[],
+                dependencies=[],
+                subtasks=[],
+                due_date=None
+            )
+            session.add(task)
+            session.commit()
+        
+        # Now create the task context
+        result = repository.create_task_context(
+            task_id=task_id,
+            data={
+                "task_data": {
+                    "title": "Test Task",
+                    "description": "Test",
+                    "status": "todo",
+                    "priority": "medium"
+                },
+                "parent_branch_id": branch_id,
+                "parent_branch_context_id": branch_id
+            }
+        )
+        
+        # Verify that the result is returned successfully
+        assert result is not None, "Task context should be created successfully"
+        assert "task_id" in result, "Task context result should contain task_id"
+        assert result["task_id"] == task_id, "Task context should have correct task_id"
+        
+        # Verify that we can retrieve the created context
+        retrieved_context = repository.get_task_context(task_id)
+        assert retrieved_context is not None, "Task context should be retrievable"
+        assert retrieved_context["task_id"] == task_id, "Retrieved context should have correct task_id"
     
     @pytest.mark.asyncio
     async def test_circular_dependency_resolution(self, server):

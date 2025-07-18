@@ -57,6 +57,7 @@ class ProjectGitBranch(Base):
     # Relationships
     project: Mapped[Project] = relationship("Project", back_populates="git_branchs")
     tasks: Mapped[List["Task"]] = relationship("Task", back_populates="git_branch", cascade="all, delete-orphan")
+    branch_context: Mapped[Optional["BranchContext"]] = relationship("BranchContext", back_populates="git_branch", uselist=False)
     
     __table_args__ = (
         UniqueConstraint('id', 'project_id', name='uq_branch_project'),
@@ -86,6 +87,7 @@ class Task(Base):
     assignees: Mapped[List["TaskAssignee"]] = relationship("TaskAssignee", back_populates="task", cascade="all, delete-orphan")
     dependencies: Mapped[List["TaskDependency"]] = relationship("TaskDependency", foreign_keys="TaskDependency.task_id", back_populates="task", cascade="all, delete-orphan")
     labels: Mapped[List["TaskLabel"]] = relationship("TaskLabel", back_populates="task", cascade="all, delete-orphan")
+    task_context: Mapped[Optional["TaskContext"]] = relationship("TaskContext", back_populates="task", uselist=False)
     
     # Create indexes for performance
     __table_args__ = (
@@ -195,7 +197,7 @@ class HierarchicalContext(Base):
     __tablename__ = "hierarchical_context"
     
     id: Mapped[str] = mapped_column(String, primary_key=True)
-    level: Mapped[str] = mapped_column(String, nullable=False)  # 'global', 'project', 'task'
+    level: Mapped[str] = mapped_column(String, nullable=False)  # 'global', 'project', 'branch', 'task'
     context_id: Mapped[str] = mapped_column(String, nullable=False)  # Reference ID for the level
     parent_level: Mapped[Optional[str]] = mapped_column(String)
     parent_context_id: Mapped[Optional[str]] = mapped_column(String)
@@ -323,18 +325,51 @@ class ProjectContext(Base):
     
     # Relationships
     global_context: Mapped[GlobalContext] = relationship("GlobalContext", back_populates="project_contexts")
-    task_contexts: Mapped[List["TaskContext"]] = relationship("TaskContext", back_populates="project_context", cascade="all, delete-orphan")
+    branch_contexts: Mapped[List["BranchContext"]] = relationship("BranchContext", back_populates="project_context", cascade="all, delete-orphan")
 
 
-class TaskContext(Base):
-    """Task contexts table - inherits from project context"""
-    __tablename__ = "task_contexts"
+class BranchContext(Base):
+    """Branch contexts table - inherits from project context"""
+    __tablename__ = "branch_contexts"
     
-    task_id: Mapped[str] = mapped_column(String, primary_key=True)
+    branch_id: Mapped[str] = mapped_column(String, ForeignKey("project_git_branchs.id"), primary_key=True)
     
     # Hierarchy relationships
     parent_project_id: Mapped[str] = mapped_column(String, ForeignKey("projects.id"), nullable=False)
     parent_project_context_id: Mapped[str] = mapped_column(String, ForeignKey("project_contexts.project_id"), nullable=False)
+    
+    # Branch-specific configuration
+    branch_workflow: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    branch_standards: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    agent_assignments: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    local_overrides: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    delegation_rules: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    
+    # Control flags
+    inheritance_disabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    force_local_only: Mapped[bool] = mapped_column(Boolean, default=False)
+    
+    # Timestamps and versioning
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    
+    # Relationships
+    project_context: Mapped[ProjectContext] = relationship("ProjectContext", back_populates="branch_contexts")
+    project: Mapped[Project] = relationship("Project", foreign_keys=[parent_project_id])
+    git_branch: Mapped[ProjectGitBranch] = relationship("ProjectGitBranch", back_populates="branch_context")
+    task_contexts: Mapped[List["TaskContext"]] = relationship("TaskContext", back_populates="branch_context", cascade="all, delete-orphan")
+
+
+class TaskContext(Base):
+    """Task contexts table - inherits from branch context"""
+    __tablename__ = "task_contexts"
+    
+    task_id: Mapped[str] = mapped_column(String, ForeignKey("tasks.id"), primary_key=True)
+    
+    # Hierarchy relationships (updated to inherit from branch)
+    parent_branch_id: Mapped[str] = mapped_column(String, ForeignKey("project_git_branchs.id"), nullable=False)
+    parent_branch_context_id: Mapped[str] = mapped_column(String, ForeignKey("branch_contexts.branch_id"), nullable=False)
     
     # Task-specific data
     task_data: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
@@ -351,9 +386,10 @@ class TaskContext(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
     version: Mapped[int] = mapped_column(Integer, default=1)
     
-    # Relationships
-    project_context: Mapped[ProjectContext] = relationship("ProjectContext", back_populates="task_contexts")
-    project: Mapped[Project] = relationship("Project", foreign_keys=[parent_project_id])
+    # Relationships (updated to reference branch)
+    branch_context: Mapped[BranchContext] = relationship("BranchContext", back_populates="task_contexts")
+    git_branch: Mapped[ProjectGitBranch] = relationship("ProjectGitBranch", foreign_keys=[parent_branch_id])
+    task: Mapped["Task"] = relationship("Task", back_populates="task_context")
 
 
 class ContextDelegation(Base):
@@ -386,8 +422,8 @@ class ContextDelegation(Base):
     processed_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
     
     __table_args__ = (
-        CheckConstraint("source_level IN ('task', 'project', 'global')", name='chk_source_level'),
-        CheckConstraint("target_level IN ('task', 'project', 'global')", name='chk_target_level'),
+        CheckConstraint("source_level IN ('task', 'branch', 'project', 'global')", name='chk_source_level'),
+        CheckConstraint("target_level IN ('task', 'branch', 'project', 'global')", name='chk_target_level'),
         CheckConstraint("trigger_type IN ('manual', 'auto_pattern', 'auto_threshold')", name='chk_trigger_type'),
         Index('idx_delegation_source', 'source_level', 'source_id'),
         Index('idx_delegation_target', 'target_level', 'target_id'),
@@ -400,7 +436,7 @@ class ContextInheritanceCache(Base):
     __tablename__ = "context_inheritance_cache"
     
     context_id: Mapped[str] = mapped_column(String, primary_key=True)
-    context_level: Mapped[str] = mapped_column(String, primary_key=True)  # 'task', 'project', 'global'
+    context_level: Mapped[str] = mapped_column(String, primary_key=True)  # 'task', 'branch', 'project', 'global'
     
     # Cache data
     resolved_context: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
@@ -419,7 +455,7 @@ class ContextInheritanceCache(Base):
     invalidation_reason: Mapped[Optional[str]] = mapped_column(String)
     
     __table_args__ = (
-        CheckConstraint("context_level IN ('task', 'project', 'global')", name='chk_cache_context_level'),
+        CheckConstraint("context_level IN ('task', 'branch', 'project', 'global')", name='chk_cache_context_level'),
         Index('idx_cache_level', 'context_level'),
         Index('idx_cache_expires', 'expires_at'),
         Index('idx_cache_invalidated', 'invalidated'),
