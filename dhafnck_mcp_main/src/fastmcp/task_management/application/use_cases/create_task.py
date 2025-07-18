@@ -41,6 +41,12 @@ class CreateTaskUseCase:
                 description = description[:1000]           
 
             
+            # Validate git_branch_id existence before creating task
+            if hasattr(self._task_repository, 'git_branch_exists') and not self._task_repository.git_branch_exists(request.git_branch_id):
+                return CreateTaskResponse.error_response(
+                    f"git_branch_id '{request.git_branch_id}' does not exist. Please ensure the git branch exists before creating tasks."
+                )
+            
             # Create domain entity using git_branch_id from request (follows clean relationship chain)
             task = Task.create(
                 id=task_id,
@@ -69,7 +75,13 @@ class CreateTaskUseCase:
                             logging.warning(f"Skipping invalid dependency {dep_id}: {e}")
             
             # Create the task (with duplicate detection)
-            self._task_repository.save(task)
+            save_result = self._task_repository.save(task)
+            
+            # Check if save was successful
+            if not save_result:
+                return CreateTaskResponse.error_response(
+                    "Failed to save task to database. This may be due to an invalid git_branch_id or database constraint violation."
+                )
             
             # Handle domain events
             events = task.get_events()

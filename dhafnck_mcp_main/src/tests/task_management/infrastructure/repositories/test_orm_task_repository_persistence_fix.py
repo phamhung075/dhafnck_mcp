@@ -281,3 +281,43 @@ class TestORMTaskRepositoryPersistenceFix:
         assert save_result is False
         task_ids = [task.id for task in task_list]
         assert str(invalid_git_branch_task_entity.id) not in task_ids
+
+    def test_repository_save_should_return_true_with_valid_git_branch_id(self):
+        """
+        Test that repository save returns True when git_branch_id is valid.
+        
+        This ensures the fix doesn't break valid saves.
+        """
+        # Arrange: Get the valid git_branch_id from the test database
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from fastmcp.task_management.infrastructure.database.models import ProjectGitBranch
+        
+        # Find a valid git branch ID from the test database
+        valid_branch_id = None
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            branch = session.query(ProjectGitBranch).first()
+            if branch:
+                valid_branch_id = branch.id
+        
+        # Skip test if no valid branch found
+        if not valid_branch_id:
+            pytest.skip("No valid git branch found in test database")
+        
+        # Create repository with valid git_branch_id
+        repository = ORMTaskRepository(git_branch_id=valid_branch_id)
+        
+        # Create a task entity
+        task = Task.create(
+            id=str(uuid.uuid4()),
+            title="Valid Task",
+            description="Task with valid git_branch_id",
+            git_branch_id=valid_branch_id,
+            priority="high"
+        )
+        
+        # Act: Save task
+        result = repository.save(task)
+        
+        # Assert: Save should return True
+        assert result is True

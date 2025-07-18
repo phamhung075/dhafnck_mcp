@@ -480,3 +480,13 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
             ).filter(Task.id == str(task_id)).first()
             
             return self._model_to_entity(task) if task else None
+    
+    def git_branch_exists(self, git_branch_id: str) -> bool:
+        """Check if git_branch_id exists in the database"""
+        from ...database.models import ProjectGitBranch
+        
+        with self.get_db_session() as session:
+            branch = session.query(ProjectGitBranch).filter(
+                ProjectGitBranch.id == git_branch_id
+            ).first()
+            return branch is not None

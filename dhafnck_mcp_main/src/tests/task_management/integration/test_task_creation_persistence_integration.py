@@ -165,7 +165,7 @@ class TestTaskCreationPersistenceIntegration:
         # Assert: Task creation should fail
         assert create_response.success is False
         assert create_response.task is None
-        assert create_response.error_message is not None
+        assert create_response.message is not None
 
     def test_failed_task_creation_should_not_leave_partial_data(
         self, invalid_create_task_use_case, get_task_use_case, list_tasks_use_case
