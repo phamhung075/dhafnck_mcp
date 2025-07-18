@@ -88,9 +88,16 @@ class TestTaskCompletionContextFacadeFix:
             )
             
             # Verify create_facade was called with git_branch_id from task
-            mock_factory_instance.create_facade.assert_called_once_with(
-                git_branch_id=self.branch_uuid  # Should use task.git_branch_id
-            )
+            # Should be called twice: once for context retrieval, once for context update
+            assert mock_factory_instance.create_facade.call_count == 2
+            
+            # Verify all calls used git_branch_id from task
+            expected_calls = [
+                mock_factory_instance.create_facade.call_args_list[0],
+                mock_factory_instance.create_facade.call_args_list[1]
+            ]
+            for call_args in expected_calls:
+                assert call_args[1]['git_branch_id'] == self.branch_uuid
             
             # Verify task completion succeeded
             assert result["success"] is True

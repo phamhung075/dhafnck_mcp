@@ -109,7 +109,11 @@ class CompleteTaskUseCase:
                     from ..factories.hierarchical_context_facade_factory import HierarchicalContextFacadeFactory
                     
                     # Use the hierarchical context facade to get context
-                    hierarchical_facade = HierarchicalContextFacadeFactory().create_facade()
+                    # Extract git_branch_id from task for facade creation
+                    git_branch_id = getattr(task, 'git_branch_id', None)
+                    hierarchical_facade = HierarchicalContextFacadeFactory().create_facade(
+                        git_branch_id=git_branch_id
+                    )
                     context_result = hierarchical_facade.get_context("task", str(task_id))
                     
                     if context_result.get("success") and "context" in context_result:
@@ -142,7 +146,11 @@ class CompleteTaskUseCase:
                     from ..factories.hierarchical_context_facade_factory import HierarchicalContextFacadeFactory
                     
                     # Use the hierarchical context facade to update context
-                    hierarchical_facade = HierarchicalContextFacadeFactory().create_facade()
+                    # Extract git_branch_id from task for facade creation
+                    git_branch_id = getattr(task, 'git_branch_id', None)
+                    hierarchical_facade = HierarchicalContextFacadeFactory().create_facade(
+                        git_branch_id=git_branch_id
+                    )
                     
                     # Update context with completion summary
                     context_update = {
