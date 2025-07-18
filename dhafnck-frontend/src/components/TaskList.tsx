@@ -1,10 +1,11 @@
 import { Eye, FileText, Link, Minus, Pencil, Plus, Trash2, Users } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { listTasks, Task, Subtask, updateTask, getTaskContext, listAgents, getAvailableAgents, getTask, callAgent } from "../api";
+import { listTasks, Task, Subtask, updateTask, getTaskContext, listAgents, getAvailableAgents, getTask, callAgent, createTask } from "../api";
 import { SubtaskList } from "./SubtaskList";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { RefreshButton } from "./ui/refresh-button";
 
 // Import all the new modular components
 import ClickableAssignees from "./ClickableAssignees";
@@ -39,6 +40,7 @@ const TaskList: React.FC<TaskListProps> = ({ projectId, taskTreeId }) => {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showTaskDetailsDialog, setShowTaskDetailsDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [showAgentResponse, setShowAgentResponse] = useState(false);
   const [showTaskContext, setShowTaskContext] = useState(false);
@@ -54,41 +56,58 @@ const TaskList: React.FC<TaskListProps> = ({ projectId, taskTreeId }) => {
   const [taskContext, setTaskContext] = useState<any>(null);
   const [loadingContext, setLoadingContext] = useState(false);
 
+  // Refresh function
+  const refreshTasks = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const taskList = await listTasks({ git_branch_id: taskTreeId });
+      setTasks(taskList);
+      
+      // Fetch titles for all dependencies
+      const depTitles: Record<string, string> = {};
+      const uniqueDeps = new Set<string>();
+      
+      taskList.forEach(task => {
+        if (task.dependencies && task.dependencies.length > 0) {
+          task.dependencies.forEach((dep: string) => uniqueDeps.add(dep));
+        }
+      });
+      
+      // Fetch dependency task details in parallel
+      const depPromises = Array.from(uniqueDeps).map(async (depId) => {
+        try {
+          const depTask = await getTask(depId);
+          if (depTask) {
+            depTitles[depId] = depTask.title;
+          }
+        } catch (e) {
+          console.error(`Error fetching dependency ${depId}:`, e);
+          depTitles[depId] = depId.substring(0, 8) + '...';
+        }
+      });
+      
+      await Promise.all(depPromises);
+      setDependencyTitles(depTitles);
+      
+      // Also refresh agents
+      listAgents(projectId)
+        .then(setAgents)
+        .catch((e) => console.error('Error fetching agents:', e));
+      
+      getAvailableAgents()
+        .then(setAvailableAgents)
+        .catch((e) => console.error('Error fetching agents:', e));
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Load tasks and dependencies
   useEffect(() => {
-    setLoading(true);
-    listTasks({ git_branch_id: taskTreeId })
-      .then(async (taskList) => {
-        setTasks(taskList);
-        
-        // Fetch titles for all dependencies
-        const depTitles: Record<string, string> = {};
-        const uniqueDeps = new Set<string>();
-        
-        taskList.forEach(task => {
-          if (task.dependencies && task.dependencies.length > 0) {
-            task.dependencies.forEach((dep: string) => uniqueDeps.add(dep));
-          }
-        });
-        
-        // Fetch dependency task details in parallel
-        const depPromises = Array.from(uniqueDeps).map(async (depId) => {
-          try {
-            const depTask = await getTask(depId);
-            if (depTask) {
-              depTitles[depId] = depTask.title;
-            }
-          } catch (e) {
-            console.error(`Error fetching dependency ${depId}:`, e);
-            depTitles[depId] = depId.substring(0, 8) + '...';
-          }
-        });
-        
-        await Promise.all(depPromises);
-        setDependencyTitles(depTitles);
-      })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+    refreshTasks();
   }, [projectId, taskTreeId]);
 
   // Load agents
@@ -149,6 +168,40 @@ const TaskList: React.FC<TaskListProps> = ({ projectId, taskTreeId }) => {
       }
     } catch (e: any) {
       setError(e.message || "Failed to update task");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Task Create handlers
+  const openCreateDialog = () => {
+    setSelectedTask(null);
+    setShowCreateDialog(true);
+  };
+
+  const closeCreateDialog = () => {
+    setShowCreateDialog(false);
+    setSelectedTask(null);
+  };
+
+  const handleTaskCreate = async (taskData: Partial<Task>) => {
+    setSaving(true);
+    setError(null);
+    try {
+      const newTask = await createTask({
+        ...taskData,
+        git_branch_id: taskTreeId
+      });
+      
+      if (newTask) {
+        closeCreateDialog();
+        // Refresh tasks list
+        await refreshTasks();
+      } else {
+        setError("Failed to create task - no response from server");
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to create task");
     } finally {
       setSaving(false);
     }
@@ -251,7 +304,28 @@ const TaskList: React.FC<TaskListProps> = ({ projectId, taskTreeId }) => {
 
   return (
     <>
-      <Table>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-semibold">Tasks</h2>
+        <div className="flex gap-2">
+          <Button
+            onClick={openCreateDialog}
+            size="sm"
+            variant="default"
+            className="flex items-center gap-1"
+          >
+            <Plus className="w-4 h-4" />
+            New Task
+          </Button>
+          <RefreshButton 
+            onClick={refreshTasks} 
+            loading={loading}
+            size="sm"
+          />
+        </div>
+      </div>
+      {/* Desktop Table View */}
+      <div className="hidden lg:block overflow-x-auto">
+        <Table>
         <TableHeader>
           <TableRow>
             <TableHead style={{ width: '50px' }}></TableHead>
@@ -277,7 +351,7 @@ const TaskList: React.FC<TaskListProps> = ({ projectId, taskTreeId }) => {
                     <span>{task.title}</span>
                     {task.subtasks && task.subtasks.length > 0 && (
                       <Badge variant="outline" className="text-xs ml-1">
-                        {task.subtasks.length}
+                        {Array.isArray(task.subtasks) ? task.subtasks.length : 0}
                       </Badge>
                     )}
                   </div>
@@ -371,7 +445,115 @@ const TaskList: React.FC<TaskListProps> = ({ projectId, taskTreeId }) => {
             </React.Fragment>
           ))}
         </TableBody>
-      </Table>
+        </Table>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="block lg:hidden space-y-3">
+        {tasks.map(task => (
+          <div key={task.id} className={`bg-white dark:bg-gray-800 rounded-lg border p-4 ${hoveredDependency === task.id ? "bg-yellow-100" : ""}`}>
+            <div className="flex justify-between items-start mb-3">
+              <div className="flex-1 pr-2">
+                <h3 className="font-semibold text-base flex items-center gap-2 flex-wrap">
+                  {task.title}
+                  {task.subtasks && task.subtasks.length > 0 && (
+                    <Badge variant="outline" className="text-xs">
+                      {Array.isArray(task.subtasks) ? task.subtasks.length : 0} subtasks
+                    </Badge>
+                  )}
+                </h3>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                className="shrink-0"
+                onClick={() => toggleTaskExpansion(task.id)}
+              >
+                {expandedTasks[task.id] ? <Minus className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+              </Button>
+            </div>
+            
+            <div className="flex flex-wrap gap-2 mb-3">
+              <Badge>{task.status}</Badge>
+              <Badge variant="secondary">{task.priority}</Badge>
+            </div>
+
+            {task.dependencies && task.dependencies.length > 0 && (
+              <div className="mb-3">
+                <p className="text-sm text-muted-foreground mb-1">Dependencies:</p>
+                <div className="flex flex-wrap gap-1">
+                  {task.dependencies.map((dep: string, index: number) => (
+                    <Badge 
+                      key={index} 
+                      variant="outline" 
+                      className="text-xs flex items-center gap-1"
+                      title={`Depends on: ${dependencyTitles[dep] || dep}`}
+                    >
+                      <Link className="w-3 h-3" />
+                      {dependencyTitles[dep] ? 
+                        (dependencyTitles[dep].length > 15 ? 
+                          dependencyTitles[dep].substring(0, 15) + '...' : 
+                          dependencyTitles[dep]
+                        ) : 
+                        dep.substring(0, 6) + '...'
+                      }
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {(task.assignees && task.assignees.length > 0) && (
+              <div className="mb-3">
+                <p className="text-sm text-muted-foreground mb-1">Assignees:</p>
+                <ClickableAssignees
+                  assignees={task.assignees || []}
+                  task={task}
+                  onAgentClick={handleCallAgent}
+                  variant="secondary"
+                />
+              </div>
+            )}
+
+            <div className="flex gap-1 justify-end flex-wrap">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => openTaskDetailsDialog(task)}
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => handleViewContext(task)}
+              >
+                <FileText className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => openAssignDialog(task)}
+              >
+                <Users className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => openEditDialog(task)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {expandedTasks[task.id] && (
+              <div className="mt-4 pt-4 border-t">
+                <SubtaskList projectId={projectId} taskTreeId={taskTreeId} parentTaskId={task.id} />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
 
       {/* All Dialog Components */}
       <TaskDetailsDialog
@@ -388,6 +570,15 @@ const TaskList: React.FC<TaskListProps> = ({ projectId, taskTreeId }) => {
         task={selectedTask}
         onClose={closeEditDialog}
         onSave={handleTaskEdit}
+        saving={saving}
+      />
+
+      <TaskEditDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        task={null}
+        onClose={closeCreateDialog}
+        onSave={handleTaskCreate}
         saving={saving}
       />
 

@@ -224,7 +224,9 @@ class SubtaskApplicationFacade:
             "success": True,
             "action": "create",
             "message": f"Subtask '{subtask_data['title']}' created for task {task_id}",
-            "subtask": response.to_dict()
+            "subtask": response.subtask,  # Direct access to subtask data, not wrapped response
+            "task_id": response.task_id,
+            "progress": response.progress
         }
     
     def _handle_update_subtask(self, task_id: str, subtask_data: Dict[str, Any], task_repository: TaskRepository, subtask_repository: SubtaskRepository) -> Dict[str, Any]:

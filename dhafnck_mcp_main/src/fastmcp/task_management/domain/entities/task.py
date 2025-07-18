@@ -44,7 +44,7 @@ class Task:
     assignees: list[str] = field(default_factory=list)
     labels: list[str] = field(default_factory=list)
     dependencies: list[TaskId] = field(default_factory=list)
-    subtasks: list[dict[str, Any]] = field(default_factory=list)
+    subtasks: list[str] = field(default_factory=list)  # List of subtask IDs
     due_date: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None

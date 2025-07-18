@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Checkbox } from "./ui/checkbox";
 import ClickableAssignees from "./ClickableAssignees";
 import AgentResponseDialog from "./AgentResponseDialog";
+import { RefreshButton } from "./ui/refresh-button";
 
 interface SubtaskListProps {
   projectId: string;
@@ -242,10 +243,18 @@ export function SubtaskList({ projectId, taskTreeId, parentTaskId }: SubtaskList
 
   return (
     <div className="overflow-x-auto bg-gray-100 rounded-lg p-4 border border-gray-200">
-      <div className="flex justify-end mb-2 gap-2">
-        <Button size="sm" variant="default" className="flex items-center gap-1" onClick={() => { setShowCreate(true); setForm({ title: "", description: "", priority: "medium", status: "pending" }); }}>
-          <Plus className="w-4 h-4" /> New Subtask
-        </Button>
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="text-sm font-semibold">Subtasks</h3>
+        <div className="flex gap-2">
+          <RefreshButton 
+            onClick={fetchSubtasks} 
+            loading={loading}
+            size="sm"
+          />
+          <Button size="sm" variant="default" className="flex items-center gap-1" onClick={() => { setShowCreate(true); setForm({ title: "", description: "", priority: "medium", status: "pending" }); }}>
+            <Plus className="w-4 h-4" /> New Subtask
+          </Button>
+        </div>
       </div>
       <Table className="bg-white rounded-lg shadow-md border border-gray-300">
         <TableHeader>

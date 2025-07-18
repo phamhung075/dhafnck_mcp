@@ -7,6 +7,7 @@ import { Card } from "./ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Table } from "./ui/table";
+import { RefreshButton } from "./ui/refresh-button";
 
 const emptyRule: Partial<Rule> = { name: "", description: "", type: "custom", content: "" };
 
@@ -114,7 +115,14 @@ export default function RuleList() {
     <Card className="p-6 dark:bg-gray-900 bg-white shadow-md">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl font-bold">Rules</h2>
-        <Button onClick={() => openDialog("create")}>New Rule</Button>
+        <div className="flex gap-2">
+          <RefreshButton 
+            onClick={fetchRules} 
+            loading={loading}
+            size="sm"
+          />
+          <Button onClick={() => openDialog("create")}>New Rule</Button>
+        </div>
       </div>
       {error && <Alert variant="destructive">{error}</Alert>}
       <Table>

@@ -197,25 +197,41 @@ export const TaskDetailsDialog: React.FC<TaskDetailsDialogProps> = ({
               )}
 
               {/* Subtasks Summary */}
-              {task.subtasks && task.subtasks.length > 0 && (
+              {task.subtasks && Array.isArray(task.subtasks) && (
                 <>
                   <Separator />
                   <div>
                     <h4 className="font-semibold text-sm mb-3 text-indigo-700">Subtasks Summary</h4>
                     <div className="bg-indigo-50 p-3 rounded">
-                      <p className="text-sm font-medium">Total subtasks: {task.subtasks.length}</p>
-                      <div className="mt-2 space-y-1">
-                        {task.subtasks.map((subtask: any, index: number) => (
-                          <div key={index} className="text-sm">
-                            <span className="text-muted-foreground">#{index + 1}:</span> {subtask.title || 'Untitled'}
-                            {subtask.status && (
-                              <Badge variant="outline" className="ml-2 text-xs">
-                                {subtask.status}
-                              </Badge>
-                            )}
-                          </div>
-                        ))}
-                      </div>
+                      {task.subtasks.length > 0 ? (
+                        <>
+                          <p className="text-sm font-medium">Total subtasks: {task.subtasks.length}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            View full subtask details in the Subtasks tab
+                          </p>
+                          {/* Only show subtask IDs if they are valid strings */}
+                          {task.subtasks.filter((id: any) => typeof id === 'string' && id.length > 0).length > 0 ? (
+                            <div className="mt-2 space-y-1">
+                              {task.subtasks
+                                .filter((id: any) => typeof id === 'string' && id.length > 0)
+                                .map((subtaskId: string, index: number) => (
+                                  <div key={index} className="text-sm">
+                                    <span className="text-muted-foreground">#{index + 1}:</span> 
+                                    <span className="font-mono text-xs ml-1">{subtaskId}</span>
+                                  </div>
+                                ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground mt-2 italic">
+                              Subtask IDs not available. View Subtasks tab for details.
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          No subtasks associated with this task.
+                        </p>
+                      )}
                     </div>
                   </div>
                 </>

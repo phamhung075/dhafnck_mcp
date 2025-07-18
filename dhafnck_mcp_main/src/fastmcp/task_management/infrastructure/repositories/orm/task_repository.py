@@ -15,9 +15,7 @@ from ..base_orm_repository import BaseORMRepository
 from ...database.models import Task, TaskSubtask, TaskAssignee, TaskLabel
 from ....domain.repositories.task_repository import TaskRepository
 from ....domain.entities.task import Task as TaskEntity
-from ....domain.entities.subtask import Subtask
 from ....domain.value_objects.task_id import TaskId
-from ....domain.value_objects.subtask_id import SubtaskId
 from ....domain.value_objects.task_status import TaskStatus
 from ....domain.value_objects.priority import Priority
 from ....domain.exceptions.task_exceptions import (
@@ -63,20 +61,10 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
         # Get label names
         label_names = [tl.label.name for tl in task.labels]
         
-        # Convert subtasks
-        subtasks = []
+        # Convert subtasks to IDs only (as per Task entity definition)
+        subtask_ids = []
         for subtask in task.subtasks:
-            subtasks.append(Subtask(
-                id=SubtaskId(subtask.id),
-                parent_task_id=TaskId(subtask.task_id),  # Fixed: changed from task_id to parent_task_id
-                title=subtask.title,
-                description=subtask.description,
-                status=TaskStatus.from_string(subtask.status),
-                priority=Priority.from_string(subtask.priority),
-                assignees=subtask.assignees or [],
-                created_at=subtask.created_at,
-                updated_at=subtask.updated_at
-            ))
+            subtask_ids.append(subtask.id)  # Only store subtask IDs, not full objects
         
         # Convert status and priority to proper value objects
         
@@ -99,7 +87,7 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
             created_at=task.created_at,
             updated_at=task.updated_at,
             context_id=task.context_id,
-            subtasks=subtasks
+            subtasks=subtask_ids
         )
     
     def create_task(self, title: str, description: str, priority: str = "medium",

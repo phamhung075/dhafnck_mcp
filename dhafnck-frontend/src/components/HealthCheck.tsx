@@ -2,6 +2,7 @@ import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Alert } from "./ui/alert";
 import { Badge } from "./ui/badge";
+import { RefreshButton } from "./ui/refresh-button";
 
 interface HealthStatus {
   success: boolean;
@@ -15,7 +16,7 @@ const HealthCheck: React.FC = () => {
   const [status, setStatus] = useState<HealthStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const checkHealth = () => {
     setLoading(true);
     // Call manage_connection tool for health check
     fetch("/mcp", {
@@ -55,6 +56,10 @@ const HealthCheck: React.FC = () => {
       })
       .catch((e) => setStatus({ success: false, error: e.message }))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    checkHealth();
   }, []);
 
   if (loading) return <div className="text-xs text-muted-foreground px-2 py-1">Checking server health...</div>;
@@ -70,6 +75,14 @@ const HealthCheck: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-2">
+      <div className="flex justify-between items-center mb-2">
+        <h2 className="text-lg font-semibold">Server Health</h2>
+        <RefreshButton 
+          onClick={checkHealth} 
+          loading={loading}
+          size="sm"
+        />
+      </div>
       {status && status.success ? (
         <Alert variant="default" className="flex items-center gap-4 border-green-400 bg-green-50 text-green-900 p-6 dark:bg-green-950 dark:text-green-100 dark:border-green-700">
           <CheckCircle2 className="w-8 h-8 text-green-500" />

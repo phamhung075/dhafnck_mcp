@@ -6,6 +6,7 @@ import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Separator } from "./ui/separator";
+import { RefreshButton } from "./ui/refresh-button";
 
 interface ProjectListProps {
   onSelect?: (projectId: string, branchId: string) => void;
@@ -172,9 +173,15 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect }) => {
 
   return (
     <div className="flex flex-col gap-2 overflow-visible">
-      <div className="flex justify-between items-center mb-2">
-        <span className="font-bold text-base">Projects</span>
-        <div className="flex gap-2">
+      <div className="flex justify-between items-center mb-2 gap-2">
+        <span className="font-bold text-base shrink-0">Projects</span>
+        <div className="flex gap-1 flex-wrap justify-end">
+          <RefreshButton 
+            onClick={fetchProjects} 
+            loading={loading}
+            size="sm"
+            variant="outline"
+          />
           <Button 
             size="sm" 
             variant="outline" 
@@ -217,11 +224,11 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect }) => {
                     </Badge>
                   )}
                 </div>
-                <div className="absolute right-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white shadow-lg rounded-md p-1 z-50">
-                  <Button size="icon" variant="ghost" aria-label="View Details" onClick={() => setShowProjectDetails(project)}>
-                    <Eye className="w-4 h-4" />
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">
+                  <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="View Details" onClick={() => setShowProjectDetails(project)}>
+                    <Eye className="w-3 h-3" />
                   </Button>
-                  <Button size="icon" variant="ghost" aria-label="View Context" onClick={async () => {
+                  <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="View Context" onClick={async () => {
                     setLoadingContext(true);
                     try {
                       const context = await getProjectContext(project.id);
@@ -232,16 +239,16 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect }) => {
                       setLoadingContext(false);
                     }
                   }}>
-                    <FileText className="w-4 h-4" />
+                    <FileText className="w-3 h-3" />
                   </Button>
-                  <Button size="icon" variant="ghost" aria-label="Create Branch" onClick={() => { setShowCreateBranch(project); setForm({ name: "", description: "" }); }}>
-                    <GitBranchPlus className="w-4 h-4" />
+                  <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="Create Branch" onClick={() => { setShowCreateBranch(project); setForm({ name: "", description: "" }); }}>
+                    <GitBranchPlus className="w-3 h-3" />
                   </Button>
-                  <Button size="icon" variant="ghost" aria-label="Edit" onClick={() => { setShowEdit(project); setForm({ name: project.name, description: project.description || "" }); }}>
-                    <Pencil className="w-4 h-4" />
+                  <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="Edit" onClick={() => { setShowEdit(project); setForm({ name: project.name, description: project.description || "" }); }}>
+                    <Pencil className="w-3 h-3" />
                   </Button>
-                  <Button size="icon" variant="ghost" aria-label="Delete" onClick={() => setShowDelete(project)}>
-                    <Trash2 className="w-4 h-4 text-destructive" />
+                  <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="Delete" onClick={() => setShowDelete(project)}>
+                    <Trash2 className="w-3 h-3 text-destructive" />
                   </Button>
                 </div>
               </div>
@@ -265,7 +272,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect }) => {
                             {taskCounts[tree.id] ?? '...'}
                           </Badge>
                         </Button>
-                        <div className="absolute right-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white shadow-lg rounded-md p-1 z-50">
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">
                           <Button 
                             size="icon" 
                             variant="ghost" 

@@ -10,7 +10,7 @@ export interface Task {
     description: string;
     status: string;
     priority: string;
-    subtasks: Subtask[];
+    subtasks: string[]; // Now just IDs following new architecture
     assignees?: string[];
     [key: string]: any;
 }
@@ -126,7 +126,8 @@ export async function listTasks(params: any = {}): Promise<Task[]> {
     try {
       const toolResult = JSON.parse(data.result.content[0].text);
       if (toolResult.success && Array.isArray(toolResult.tasks)) {
-        return toolResult.tasks;
+        // Sanitize each task to remove non-serializable properties
+        return toolResult.tasks.map(sanitizeTask);
       }
     } catch {}
   }
@@ -153,7 +154,8 @@ export async function getTask(task_id: string): Promise<Task | null> {
     try {
       const toolResult = JSON.parse(data.result.content[0].text);
       if (toolResult.success && toolResult.task) {
-        return toolResult.task;
+        // Sanitize the task data
+        return sanitizeTask(toolResult.task);
       }
     } catch {}
   }
@@ -180,7 +182,8 @@ export async function createTask(task: Partial<Task>): Promise<Task | null> {
     try {
       const toolResult = JSON.parse(data.result.content[0].text);
       if (toolResult.success && toolResult.task) {
-        return toolResult.task;
+        // Sanitize the task data
+        return sanitizeTask(toolResult.task);
       }
     } catch {}
   }
@@ -270,7 +273,44 @@ export async function deleteTask(task_id: string): Promise<boolean> {
   return false;
 }
 
+// --- Helper Functions ---
+// Helper function to sanitize subtask data by removing non-serializable properties
+function sanitizeSubtask(subtask: any): Subtask {
+  const { _events, _eventsCount, _maxListeners, ...cleanSubtask } = subtask;
+  return cleanSubtask;
+}
+
+// Helper function to sanitize task data by removing non-serializable properties
+function sanitizeTask(task: any): Task {
+  const { _events, _eventsCount, _maxListeners, ...cleanTask } = task;
+  
+  
+  // Ensure subtasks is an array of IDs, not objects
+  if (cleanTask.subtasks && Array.isArray(cleanTask.subtasks)) {
+    cleanTask.subtasks = cleanTask.subtasks
+      .map((subtask: any) => {
+        // If it's already a string, keep it
+        if (typeof subtask === 'string' && subtask.length > 0) {
+          return subtask;
+        }
+        // If it's an object with a 'value' property, extract the UUID
+        if (subtask && typeof subtask === 'object' && subtask.value && typeof subtask.value === 'string') {
+          return subtask.value;
+        }
+        // If it's an object with an 'id' property, try that
+        if (subtask && typeof subtask === 'object' && subtask.id && typeof subtask.id === 'string') {
+          return subtask.id;
+        }
+        return null;
+      })
+      .filter((id: string | null) => id !== null); // Remove any null values
+  }
+  
+  return cleanTask;
+}
+
 // --- Subtask Management ---
+
 export async function listSubtasks(task_id: string): Promise<any[]> {
   const body = {
     jsonrpc: "2.0",
@@ -291,7 +331,8 @@ export async function listSubtasks(task_id: string): Promise<any[]> {
     try {
       const toolResult = JSON.parse(data.result.content[0].text);
       if (toolResult.success && Array.isArray(toolResult.subtasks)) {
-        return toolResult.subtasks;
+        // Sanitize each subtask to remove non-serializable properties
+        return toolResult.subtasks.map(sanitizeSubtask);
       }
     } catch {}
   }
@@ -318,7 +359,8 @@ export async function createSubtask(task_id: string, subtask: any): Promise<any>
     try {
       const toolResult = JSON.parse(data.result.content[0].text);
       if (toolResult.success && toolResult.subtask) {
-        return toolResult.subtask;
+        // Sanitize the returned subtask
+        return sanitizeSubtask(toolResult.subtask);
       }
     } catch {}
   }
@@ -352,9 +394,9 @@ export async function updateSubtask(task_id: string, id: string, updates: any): 
         if (toolResult.subtask) {
           // Check if subtask has nested subtask property
           if (toolResult.subtask.subtask) {
-            return toolResult.subtask.subtask;
+            return sanitizeSubtask(toolResult.subtask.subtask);
           }
-          return toolResult.subtask;
+          return sanitizeSubtask(toolResult.subtask);
         }
         return { id, ...updates };
       }

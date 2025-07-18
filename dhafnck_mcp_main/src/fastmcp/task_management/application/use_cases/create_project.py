@@ -63,7 +63,7 @@ class CreateProjectUseCase:
             # Create default main task tree so the project has at least one branch
             project.create_git_branch(
                 git_branch_name="main",
-                name="Main Tasks",
+                name="main",
                 description="Main task tree for the project",
             )
 

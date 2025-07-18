@@ -23,10 +23,12 @@ class DatabaseSourceManager:
     Single source of truth for database path management.
     
     Determines which database to use based on execution context:
-    - Test mode (pytest): dhafnck_mcp_test.db
-    - Normal mode: dhafnck_mcp.db  
-    - Docker mode: database in docker
-    - Stdin mode: local database in project
+    - Test mode (pytest): dhafnck_mcp_test.db (for local testing, always isolated)
+    - Normal mode: /data/dhafnck_mcp.db (local development uses Docker database for consistency)
+    - Docker mode: /data/dhafnck_mcp.db (running inside Docker container)
+    - Stdin mode (MCP): local dhafnck_mcp.db (MCP stdin cannot access Docker database)
+    
+    Note: STDIN mode must use local database since it runs outside Docker container.
     """
     
     _instance: Optional['DatabaseSourceManager'] = None
@@ -113,21 +115,33 @@ class DatabaseSourceManager:
         project_root = self._find_project_root()
         
         if self._current_mode == DatabaseMode.TEST:
-            # Use test database for pytest
+            # Use test database for pytest (always local for test isolation)
             self._database_path = str(project_root / "dhafnck_mcp_main" / "database" / "data" / "dhafnck_mcp_test.db")
             
         elif self._current_mode == DatabaseMode.DOCKER:
             # Use docker database path - strictly /data/ directory as per Dockerfile
             docker_db_path = os.environ.get('DOCKER_DB_PATH', '/data/dhafnck_mcp.db')
+            if not os.path.exists(os.path.dirname(docker_db_path)):
+                raise RuntimeError(f"Docker database directory not accessible: {os.path.dirname(docker_db_path)}. Server cannot start without Docker database access.")
             self._database_path = docker_db_path
             
         elif self._current_mode == DatabaseMode.STDIN:
-            # Use local project database for MCP stdin mode
+            # STDIN mode (MCP) must use local database since it runs outside Docker container
+            # MCP communication happens via stdin/stdout, not inside Docker
             self._database_path = str(project_root / "dhafnck_mcp_main" / "database" / "data" / "dhafnck_mcp.db")
+            logger.info("MCP STDIN mode using local database (cannot access Docker database)")
             
         else:  # NORMAL mode
-            # Use main database for normal execution
-            self._database_path = str(project_root / "dhafnck_mcp_main" / "database" / "data" / "dhafnck_mcp.db")
+            # Use Docker database for local development to ensure consistency
+            # This ensures local dev and frontend all use the same database
+            docker_db_path = "/data/dhafnck_mcp.db"
+            if os.path.exists(docker_db_path):
+                # Docker database exists, use it for consistency
+                self._database_path = docker_db_path
+                logger.info("Local development will use Docker database for consistency")
+            else:
+                # Docker database must be accessible for local development
+                raise RuntimeError(f"Docker database not accessible: {docker_db_path}. Local development requires Docker database access for consistency. Please start Docker container first.")
         
         logger.info(f"Database path set to: {self._database_path}")
     

@@ -45,7 +45,7 @@ Create a new project with basic structure.
         "git_branchs": {
             "main": {
                 "id": "main",
-                "name": "Main Tasks",
+                "name": "main",
                 "description": "Main task tree"
             }
         }
