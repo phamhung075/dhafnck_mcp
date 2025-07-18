@@ -134,7 +134,9 @@ class TestContextStorageValidation:
         except ImportError as e:
             pytest.fail(f"HierarchicalContextFacade not available: {e}")
     
+    @patch('fastmcp.task_management.infrastructure.database.database_config.get_session')
     def test_git_branch_context_should_be_stored_with_git_branch_id(self, 
+                                                                   mock_get_session,
                                                                    test_project_id,
                                                                    test_git_branch_id, 
                                                                    test_branch_context_data,
@@ -148,6 +150,16 @@ class TestContextStorageValidation:
         """
         try:
             from fastmcp.task_management.application.facades.hierarchical_context_facade import HierarchicalContextFacade
+            
+            # Mock the database session and task lookup for task context creation
+            mock_session = Mock()
+            mock_get_session.return_value.__enter__.return_value = mock_session
+            mock_get_session.return_value.__exit__.return_value = None
+            
+            # Create a mock task with git_branch_id
+            mock_task = Mock()
+            mock_task.git_branch_id = test_git_branch_id
+            mock_session.query.return_value.filter_by.return_value.first.return_value = mock_task
             
             # Create facade with mock services
             facade = HierarchicalContextFacade(
@@ -191,7 +203,9 @@ class TestContextStorageValidation:
         except ImportError as e:
             pytest.fail(f"HierarchicalContextFacade not available: {e}")
     
+    @patch('fastmcp.task_management.infrastructure.database.database_config.get_session')
     def test_task_context_should_be_stored_with_task_id(self, 
+                                                       mock_get_session,
                                                        test_project_id,
                                                        test_git_branch_id,
                                                        test_task_id, 
@@ -206,6 +220,16 @@ class TestContextStorageValidation:
         """
         try:
             from fastmcp.task_management.application.facades.hierarchical_context_facade import HierarchicalContextFacade
+            
+            # Mock the database session and task lookup for task context creation
+            mock_session = Mock()
+            mock_get_session.return_value.__enter__.return_value = mock_session
+            mock_get_session.return_value.__exit__.return_value = None
+            
+            # Create a mock task with git_branch_id
+            mock_task = Mock()
+            mock_task.git_branch_id = test_git_branch_id
+            mock_session.query.return_value.filter_by.return_value.first.return_value = mock_task
             
             # Create facade with mock services
             facade = HierarchicalContextFacade(

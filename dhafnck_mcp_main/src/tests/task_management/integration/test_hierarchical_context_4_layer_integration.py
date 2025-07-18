@@ -104,10 +104,21 @@ class TestHierarchicalContext4LayerIntegration:
             }
         }
 
+    @patch('fastmcp.task_management.infrastructure.database.database_config.get_session')
     @patch('fastmcp.task_management.application.services.hierarchical_context_service.HierarchicalContextService.create_context')
-    def test_create_contexts_at_all_levels(self, mock_create):
+    def test_create_contexts_at_all_levels(self, mock_create, mock_get_session):
         """Test creating contexts at all hierarchy levels"""
         mock_create.return_value = {"success": True}
+        
+        # Mock the database session and task lookup for task context creation
+        mock_session = Mock()
+        mock_get_session.return_value.__enter__.return_value = mock_session
+        mock_get_session.return_value.__exit__.return_value = None
+        
+        # Create a mock task with git_branch_id
+        mock_task = Mock()
+        mock_task.git_branch_id = self.branch_id
+        mock_session.query.return_value.filter_by.return_value.first.return_value = mock_task
         
         # Create global context
         global_result = self.facade.create_context("global", "global_singleton", self.global_data)
@@ -123,6 +134,8 @@ class TestHierarchicalContext4LayerIntegration:
         
         # Create task context
         task_result = self.facade.create_context("task", self.task_id, self.task_data)
+        if not task_result.get("success"):
+            print(f"Task creation failed: {task_result}")
         assert task_result["success"] is True
         
         # Verify all levels were called
@@ -143,11 +156,11 @@ class TestHierarchicalContext4LayerIntegration:
         }
         assert calls[2][0] == ("branch", self.branch_id, expected_branch_data)
         
-        # Task context is wrapped in task_data field by facade
+        # Task context is wrapped in task_data field by facade with actual branch_id
         expected_task_data = {
             "task_data": self.task_data,
-            "parent_branch_id": "default_branch",
-            "parent_branch_context_id": "default_branch"
+            "parent_branch_id": self.branch_id,
+            "parent_branch_context_id": self.branch_id
         }
         assert calls[3][0] == ("task", self.task_id, expected_task_data)
 

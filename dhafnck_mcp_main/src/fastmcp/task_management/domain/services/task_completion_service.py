@@ -8,7 +8,6 @@ from ..repositories.subtask_repository import SubtaskRepository
 from ..value_objects.task_id import TaskId
 from ..exceptions.task_exceptions import TaskCompletionError
 from ...application.services.hierarchical_context_service import HierarchicalContextService
-from ...infrastructure.repositories.hierarchical_context_repository_factory import HierarchicalContextRepositoryFactory
 
 logger = logging.getLogger(__name__)
 
@@ -21,20 +20,16 @@ class TaskCompletionService:
     including checking subtask completion status and context requirements.
     """
     
-    def __init__(self, subtask_repository: SubtaskRepository, hierarchical_context_service: Optional[HierarchicalContextService] = None):
+    def __init__(self, subtask_repository: SubtaskRepository, hierarchical_context_service: HierarchicalContextService):
         """
         Initialize the task completion service.
         
         Args:
             subtask_repository: Repository for accessing subtask data
-            hierarchical_context_service: Service for hierarchical context management
+            hierarchical_context_service: Service for hierarchical context management (required)
         """
         self._subtask_repository = subtask_repository
-        if hierarchical_context_service is None:
-            # Create default hierarchical context service
-            self._hierarchical_context_service = HierarchicalContextService()
-        else:
-            self._hierarchical_context_service = hierarchical_context_service
+        self._hierarchical_context_service = hierarchical_context_service
     
     def can_complete_task(self, task: Task) -> tuple[bool, Optional[str]]:
         """

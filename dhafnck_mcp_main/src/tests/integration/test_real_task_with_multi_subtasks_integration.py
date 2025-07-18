@@ -43,7 +43,7 @@ class TestRealTaskWithMultiSubtasksIntegration:
         self.mock_context_service = Mock()  # Use hierarchical context service
         
         # Create task completion service
-        self.completion_service = TaskCompletionService(self.mock_subtask_repository)
+        self.completion_service = TaskCompletionService(self.mock_subtask_repository, self.mock_context_service)
         
         # Create test task WITHOUT context (real-world scenario)
         self.test_task = Task(
@@ -108,13 +108,15 @@ class TestRealTaskWithMultiSubtasksIntegration:
         """Test: Task fails completion when subtasks are incomplete AND no context"""
         # Arrange
         self.mock_subtask_repository.find_by_parent_task_id.return_value = self.subtasks
+        # Mock hierarchical context service to return no context
+        self.mock_context_service.get_context.return_value = {"success": False}
         
         # Act
         can_complete, error_message = self.completion_service.can_complete_task(self.test_task)
         
         # Assert
         assert can_complete is False
-        assert "Task completion requires context to be created first" in error_message
+        assert "Task completion requires hierarchical context to be created first" in error_message
         # Should also mention incomplete subtasks
         assert "4 of 5 subtasks are incomplete" in error_message
         
@@ -122,8 +124,8 @@ class TestRealTaskWithMultiSubtasksIntegration:
         blockers = self.completion_service.get_completion_blockers(self.test_task)
         assert len(blockers) == 2  # Context + subtasks
         
-        context_blocker = [b for b in blockers if "Task completion requires context" in b][0]
-        assert "Task completion requires context to be created first" in context_blocker
+        context_blocker = [b for b in blockers if "Task completion requires hierarchical context" in b][0]
+        assert "Task completion requires hierarchical context to be created first" in context_blocker
         
         subtask_blocker = [b for b in blockers if "subtasks are incomplete" in b][0]
         assert "Implement Core Features" in subtask_blocker
@@ -153,13 +155,15 @@ class TestRealTaskWithMultiSubtasksIntegration:
         # Arrange
         completed_subtasks = [self._complete_subtask(st) for st in self.subtasks]
         self.mock_subtask_repository.find_by_parent_task_id.return_value = completed_subtasks
+        # Mock hierarchical context service to return no context
+        self.mock_context_service.get_context.return_value = {"success": False}
         
         # Act
         can_complete, error_message = self.completion_service.can_complete_task(self.test_task)
         
         # Assert
         assert can_complete is False
-        assert "Task completion requires context to be created first" in error_message
+        assert "Task completion requires hierarchical context to be created first" in error_message
         # Should NOT mention subtasks as they're all done
         assert "subtasks are incomplete" not in error_message
         
@@ -189,12 +193,14 @@ class TestRealTaskWithMultiSubtasksIntegration:
         """Test: Progressive workflow where subtasks are completed one by one"""
         # Start with all subtasks incomplete, no context
         self.mock_subtask_repository.find_by_parent_task_id.return_value = self.subtasks
+        # Mock hierarchical context service to return no context
+        self.mock_context_service.get_context.return_value = {"success": False}
         
         # Step 1: Cannot complete with incomplete subtasks and no context
         can_complete, error = self.completion_service.can_complete_task(self.test_task)
         assert can_complete is False
         assert "4 of 5 subtasks are incomplete" in error
-        assert "Task completion requires context to be created first" in error
+        assert "Task completion requires hierarchical context to be created first" in error
         
         # Step 2: Complete first subtask - still cannot complete
         self.subtasks[1] = self._complete_subtask(self.subtasks[1])  # Complete "Implement Core Features"
@@ -207,7 +213,7 @@ class TestRealTaskWithMultiSubtasksIntegration:
         self.mock_subtask_repository.find_by_parent_task_id.return_value = completed_subtasks
         can_complete, error = self.completion_service.can_complete_task(self.test_task)
         assert can_complete is False
-        assert "Task completion requires context to be created first" in error
+        assert "Task completion requires hierarchical context to be created first" in error
         assert "subtasks are incomplete" not in error
         
         # Step 4: Add context - now can complete
@@ -220,6 +226,8 @@ class TestRealTaskWithMultiSubtasksIntegration:
         """Test: Error messages provide helpful guidance for real-world scenarios"""
         # Arrange
         self.mock_subtask_repository.find_by_parent_task_id.return_value = self.subtasks
+        # Mock hierarchical context service to return no context
+        self.mock_context_service.get_context.return_value = {"success": False}
         
         # Act
         blockers = self.completion_service.get_completion_blockers(self.test_task)
@@ -228,9 +236,9 @@ class TestRealTaskWithMultiSubtasksIntegration:
         assert len(blockers) == 2
         
         # Context blocker should be helpful
-        context_blocker = [b for b in blockers if "Task completion requires context" in b][0]
+        context_blocker = [b for b in blockers if "Task completion requires hierarchical context" in b][0]
         # The new error message should provide recovery instructions
-        assert "Task completion requires context to be created first" in context_blocker
+        assert "Task completion requires hierarchical context to be created first" in context_blocker
         
         # Subtask blocker should list specific incomplete subtasks
         subtask_blocker = [b for b in blockers if "subtasks are incomplete" in b][0]
@@ -244,6 +252,8 @@ class TestRealTaskWithMultiSubtasksIntegration:
         """Test: validate_task_completion method with comprehensive real-world scenario"""
         # Arrange
         self.mock_subtask_repository.find_by_parent_task_id.return_value = self.subtasks
+        # Mock hierarchical context service to return no context
+        self.mock_context_service.get_context.return_value = {"success": False}
         
         # Act & Assert
         with pytest.raises(TaskCompletionError) as exc_info:
@@ -251,7 +261,7 @@ class TestRealTaskWithMultiSubtasksIntegration:
         
         # Should mention both issues
         error_msg = str(exc_info.value)
-        assert "Task completion requires context to be created first" in error_msg
+        assert "Task completion requires hierarchical context to be created first" in error_msg
         assert "4 of 5 subtasks are incomplete" in error_msg
         
     def test_large_number_of_subtasks_handling(self):
@@ -269,6 +279,8 @@ class TestRealTaskWithMultiSubtasksIntegration:
             ))
         
         self.mock_subtask_repository.find_by_parent_task_id.return_value = large_subtask_list
+        # Mock hierarchical context service to return no context
+        self.mock_context_service.get_context.return_value = {"success": False}
         
         # Act
         can_complete, error_message = self.completion_service.can_complete_task(self.test_task)
@@ -299,13 +311,15 @@ class TestRealTaskWithMultiSubtasksIntegration:
         """Test: Task with no subtasks but no context cannot complete"""
         # Arrange
         self.mock_subtask_repository.find_by_parent_task_id.return_value = []
+        # Mock hierarchical context service to return no context
+        self.mock_context_service.get_context.return_value = {"success": False}
         
         # Act
         can_complete, error_message = self.completion_service.can_complete_task(self.test_task)
         
         # Assert
         assert can_complete is False
-        assert "Task completion requires context to be created first" in error_message
+        assert "Task completion requires hierarchical context to be created first" in error_message
         
     def test_repository_error_handling_in_real_scenario(self):
         """Test: Service handles repository errors gracefully in real scenarios"""
@@ -431,14 +445,16 @@ class TestRealWorldWorkflowIntegration:
         mock_repository = Mock()
         mock_repository.find_by_parent_task_id.return_value = development_subtasks
         
-        # Create completion service
-        completion_service = TaskCompletionService(mock_repository)
+        # Create completion service with mock context service
+        mock_context_service = Mock()
+        mock_context_service.get_context.return_value = {"success": False}
+        completion_service = TaskCompletionService(mock_repository, mock_context_service)
         
         # Phase 1: Task cannot complete - incomplete subtasks, no context
         can_complete, error = completion_service.can_complete_task(task)
         assert can_complete is False
         assert "5 of 7 subtasks are incomplete" in error
-        assert "Task completion requires context to be created first" in error
+        assert "Task completion requires hierarchical context to be created first" in error
         
         # Phase 2: Complete more subtasks but still no context
         development_subtasks[2].status = TaskStatus.done()
@@ -447,7 +463,7 @@ class TestRealWorldWorkflowIntegration:
         can_complete, error = completion_service.can_complete_task(task)
         assert can_complete is False
         assert "3 of 7 subtasks are incomplete" in error
-        assert "Task completion requires context to be created first" in error
+        assert "Task completion requires hierarchical context to be created first" in error
         
         # Phase 3: Complete all subtasks but no context
         for subtask in development_subtasks:
@@ -455,7 +471,7 @@ class TestRealWorldWorkflowIntegration:
             
         can_complete, error = completion_service.can_complete_task(task)
         assert can_complete is False
-        assert "Task completion requires context to be created first" in error
+        assert "Task completion requires hierarchical context to be created first" in error
         assert "subtasks are incomplete" not in error
         
         # Phase 4: Add context - now ready for completion
@@ -531,13 +547,16 @@ class TestRealWorldWorkflowIntegration:
         
         mock_repository = Mock()
         mock_repository.find_by_parent_task_id.return_value = content_subtasks
-        completion_service = TaskCompletionService(mock_repository)
+        # Create completion service with mock context service
+        mock_context_service = Mock()
+        mock_context_service.get_context.return_value = {"success": False}
+        completion_service = TaskCompletionService(mock_repository, mock_context_service)
         
         # Verify progressive completion workflow
         can_complete, error = completion_service.can_complete_task(task)
         assert can_complete is False
         assert "4 of 6 subtasks are incomplete" in error
-        assert "Task completion requires context to be created first" in error
+        assert "Task completion requires hierarchical context to be created first" in error
         
         # Complete all subtasks and add context
         for subtask in content_subtasks:

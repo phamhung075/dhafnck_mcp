@@ -333,7 +333,7 @@ class TestToolIssuesVerification:
         
         context_params = {
             "project_id": test_context["project_id"],
-            "git_branch_name": test_context["git_branch_name"],
+            "git_branch_id": test_context["git_branch_id"],
             "user_id": test_context["user_id"],
             "task_id": "non-existent-task-for-delete-test" # Use a non-existent ID
         }
