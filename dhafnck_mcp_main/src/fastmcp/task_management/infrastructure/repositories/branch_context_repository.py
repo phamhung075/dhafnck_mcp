@@ -1,0 +1,147 @@
+"""
+Branch Context Repository for unified context system.
+"""
+
+from typing import Optional, List, Dict, Any
+from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
+from datetime import datetime, timezone
+from contextlib import contextmanager
+import logging
+
+from ...domain.entities.context import BranchContext
+from ...infrastructure.database.models import BranchContext as BranchContextModel
+from .base_orm_repository import BaseORMRepository
+
+logger = logging.getLogger(__name__)
+
+
+class BranchContextRepository(BaseORMRepository):
+    """Repository for branch context operations."""
+    
+    def __init__(self, session_factory):
+        super().__init__(BranchContextModel)
+        self.session_factory = session_factory
+    
+    @contextmanager
+    def get_db_session(self):
+        """Override to use custom session factory for testing."""
+        if self._session:
+            # Use existing session from transaction
+            yield self._session
+        else:
+            # Use custom session factory
+            session = self.session_factory()
+            try:
+                yield session
+                session.commit()
+            except SQLAlchemyError as e:
+                session.rollback()
+                logger.error(f"Database error: {e}")
+                raise
+            finally:
+                session.close()
+    
+    def create(self, entity: BranchContext) -> BranchContext:
+        """Create a new branch context."""
+        with self.get_db_session() as session:
+            # Check if branch context already exists
+            existing = session.get(BranchContextModel, entity.id)
+            if existing:
+                raise ValueError(f"Branch context already exists: {entity.id}")
+            
+            # Create new branch context with proper field mapping
+            # Provide default project_id if not specified
+            project_id = entity.project_id or "default-project"
+            db_model = BranchContextModel(
+                branch_id=entity.id,
+                parent_project_id=project_id,
+                parent_project_context_id=project_id,  # Assuming project_id serves as context_id too
+                branch_workflow=entity.branch_settings.get('branch_workflow', {}),
+                branch_standards=entity.branch_settings.get('branch_standards', {}),
+                agent_assignments=entity.branch_settings.get('agent_assignments', {}),
+                local_overrides=entity.metadata.get('local_overrides', {}),
+                delegation_rules=entity.metadata.get('delegation_rules', {})
+            )
+            
+            session.add(db_model)
+            session.flush()
+            session.refresh(db_model)
+            
+            return self._to_entity(db_model)
+    
+    def get(self, context_id: str) -> Optional[BranchContext]:
+        """Get branch context by ID."""
+        with self.get_db_session() as session:
+            db_model = session.get(BranchContextModel, context_id)
+            return self._to_entity(db_model) if db_model else None
+    
+    def update(self, context_id: str, entity: BranchContext) -> BranchContext:
+        """Update branch context."""
+        with self.get_db_session() as session:
+            db_model = session.get(BranchContextModel, context_id)
+            if not db_model:
+                raise ValueError(f"Branch context not found: {context_id}")
+            
+            # Update fields with proper mapping
+            db_model.parent_project_id = entity.project_id
+            db_model.branch_workflow = entity.branch_settings.get('branch_workflow', {})
+            db_model.branch_standards = entity.branch_settings.get('branch_standards', {})
+            db_model.agent_assignments = entity.branch_settings.get('agent_assignments', {})
+            db_model.local_overrides = entity.metadata.get('local_overrides', {})
+            db_model.delegation_rules = entity.metadata.get('delegation_rules', {})
+            db_model.updated_at = datetime.now(timezone.utc)
+            
+            session.flush()
+            session.refresh(db_model)
+            
+            return self._to_entity(db_model)
+    
+    def delete(self, context_id: str) -> bool:
+        """Delete branch context."""
+        with self.get_db_session() as session:
+            db_model = session.get(BranchContextModel, context_id)
+            if not db_model:
+                return False
+            
+            session.delete(db_model)
+            return True
+    
+    def list(self, filters: Optional[Dict[str, Any]] = None) -> List[BranchContext]:
+        """List branch contexts."""
+        with self.get_db_session() as session:
+            stmt = select(BranchContextModel)
+            
+            # Apply filters if provided
+            if filters:
+                if "project_id" in filters:
+                    stmt = stmt.where(BranchContextModel.project_id == filters["project_id"])
+                if "git_branch_name" in filters:
+                    stmt = stmt.where(BranchContextModel.git_branch_name == filters["git_branch_name"])
+            
+            result = session.execute(stmt)
+            db_models = result.scalars().all()
+            
+            return [self._to_entity(model) for model in db_models]
+    
+    def _to_entity(self, db_model: BranchContextModel) -> BranchContext:
+        """Convert database model to domain entity."""
+        return BranchContext(
+            id=db_model.branch_id,
+            project_id=db_model.parent_project_id,
+            git_branch_name=f"branch-{db_model.branch_id}",  # Generate name from ID
+            branch_settings={
+                'branch_workflow': db_model.branch_workflow or {},
+                'branch_standards': db_model.branch_standards or {},
+                'agent_assignments': db_model.agent_assignments or {}
+            },
+            metadata={
+                'local_overrides': db_model.local_overrides or {},
+                'delegation_rules': db_model.delegation_rules or {},
+                'inheritance_disabled': db_model.inheritance_disabled,
+                'force_local_only': db_model.force_local_only,
+                'created_at': db_model.created_at.isoformat() if db_model.created_at else None,
+                'updated_at': db_model.updated_at.isoformat() if db_model.updated_at else None
+            }
+        )

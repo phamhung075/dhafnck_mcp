@@ -7,8 +7,7 @@ import asyncio
 
 from ...domain import TaskRepository
 from ...infrastructure.services.agent_doc_generator import generate_agent_docs, generate_docs_for_assignees
-from ...infrastructure.repositories.hierarchical_context_repository_factory import HierarchicalContextRepositoryFactory
-from ...application.services.hierarchical_context_service import HierarchicalContextService
+from ...application.services.unified_context_service import UnifiedContextService
 from ...domain.value_objects.task_status import TaskStatus
 from ...domain.value_objects.priority import Priority
 from ...application.dtos.context import GetContextRequest
@@ -52,9 +51,19 @@ class NextTaskResponse:
 class NextTaskUseCase:
     """Use case for finding the next task or subtask to work on"""
     
-    def __init__(self, task_repository: TaskRepository, context_service: Optional[Any] = None):
+    def __init__(self, task_repository: TaskRepository, context_service: Optional[Any] = None, context_factory: Optional[Any] = None):
         self._task_repository = task_repository
         self._context_service = context_service
+        self._context_factory = context_factory
+    
+    def _get_context_factory(self):
+        """Get context factory, creating one if needed"""
+        if self._context_factory is not None:
+            return self._context_factory
+        
+        # Import here to avoid circular import
+        from ...application.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+        return UnifiedContextFacadeFactory()
     
     async def execute(self, assignee: Optional[str] = None, project_id: Optional[str] = None, 
                 labels: Optional[List[str]] = None, git_branch_id: Optional[str] = None, 
@@ -166,9 +175,8 @@ class NextTaskUseCase:
                 if self._should_generate_context_info(task):
                     try:
                         # Create hierarchical context service with enhanced error handling
-                        factory = HierarchicalContextRepositoryFactory()
-                        repository = factory.create_hierarchical_context_repository()
-                        context_service = HierarchicalContextService(repository=repository)
+                        factory = self._get_context_factory()
+                        context_service = factory.create_unified_service()
                         
                         # Try to get existing context first with timeout protection
                         context_result = None
@@ -396,9 +404,8 @@ class NextTaskUseCase:
         if include_context:
             try:
                 # Use hierarchical context service to get context data with enhanced error handling
-                factory = HierarchicalContextRepositoryFactory()
-                repository = factory.create_hierarchical_context_repository()
-                context_service = HierarchicalContextService(repository=repository)
+                factory = self._get_context_factory()
+                context_service = factory.create_unified_service()
                 
                 # Get context data with timeout and permission error handling
                 context_result = None
@@ -538,9 +545,8 @@ class NextTaskUseCase:
         
         try:
             # Create hierarchical context service
-            factory = HierarchicalContextRepositoryFactory()
-            repository = factory.create_hierarchical_context_repository()
-            context_service = HierarchicalContextService(repository=repository)
+            factory = self._get_context_factory()
+            context_service = factory.create_unified_service()
             
             for task in tasks:
                 try:

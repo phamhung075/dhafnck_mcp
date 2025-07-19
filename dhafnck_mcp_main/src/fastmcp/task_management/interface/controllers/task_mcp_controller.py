@@ -15,7 +15,7 @@ from pydantic import Field # type: ignore
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .....server.server import FastMCP
+    from fastmcp.server.server import FastMCP
 
 from .desc import description_loader
 from .workflow_hint_enhancer import WorkflowHintEnhancer
@@ -27,12 +27,11 @@ from ...application.dtos.task.create_task_request import CreateTaskRequest
 from ...application.dtos.task.list_tasks_request import ListTasksRequest
 from ...application.dtos.task.search_tasks_request import SearchTasksRequest
 from ...application.dtos.task.update_task_request import UpdateTaskRequest
-from ...application.factories.hierarchical_context_facade_factory import HierarchicalContextFacadeFactory
+from ...application.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
 
 from ...application.facades.task_application_facade import TaskApplicationFacade
-from ...application.facades.hierarchical_context_facade import HierarchicalContextFacade
+from ...application.facades.unified_context_facade import UnifiedContextFacade
 from ...application.factories.task_facade_factory import TaskFacadeFactory
-from ...application.factories.hierarchical_context_facade_factory import HierarchicalContextFacadeFactory
 from ...application.services.context_validation_service import ContextValidationService
 from ...application.services.progress_tracking_service import ProgressTrackingService
 from ...application.services.hint_generation_service import HintGenerationService
@@ -55,7 +54,7 @@ class TaskMCPController:
     
     def __init__(self, 
                  task_facade_factory: TaskFacadeFactory,
-                 context_facade_factory: Optional[HierarchicalContextFacadeFactory] = None,
+                 context_facade_factory: Optional[UnifiedContextFacadeFactory] = None,
                  project_manager=None, 
                  repository_factory=None,
                  progress_service: Optional[ProgressTrackingService] = None,
@@ -76,7 +75,7 @@ class TaskMCPController:
             coordination_service: Optional agent coordination service
         """
         self._task_facade_factory = task_facade_factory
-        self._context_facade_factory = context_facade_factory or HierarchicalContextFacadeFactory()
+        self._context_facade_factory = context_facade_factory or UnifiedContextFacadeFactory()
         self._project_manager = project_manager
         self._repository_factory = repository_factory
         
@@ -588,7 +587,9 @@ class TaskMCPController:
                 logger.info(f"Attempting to create context for task {task_id}")
                 try:
                     # Create context facade
-                    context_facade = self._context_facade_factory.create_context_facade()
+                    context_facade = self._context_facade_factory.create_facade(
+                        git_branch_id=self._last_git_branch_id
+                    )
                     
                     # Create the context using synchronous method
                     # The create_context method is NOT async, so we call it directly
@@ -1276,10 +1277,10 @@ class TaskMCPController:
                         git_branch_id=task.get("git_branch_id")
                     )
                     
-                    context_facade = self._context_facade_factory.create_context_facade(
+                    context_facade = self._context_facade_factory.create_facade(
                         user_id=user_id or "default_id",
                         project_id=project_id or "default_project",
-                        git_branch_name=git_branch_name or "main"
+                        git_branch_id=task.get("git_branch_id")
                     )
                     
                     # Build context update data
@@ -1604,8 +1605,8 @@ class TaskMCPController:
         """Include project + branch + task context in the response."""
         try:
             # Get hierarchical context facade
-            from ...application.factories.hierarchical_context_facade_factory import HierarchicalContextFacadeFactory
-            context_factory = HierarchicalContextFacadeFactory()
+            from ...application.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+            context_factory = UnifiedContextFacadeFactory()
             context_facade = context_factory.create_facade()
             
             # Get project context

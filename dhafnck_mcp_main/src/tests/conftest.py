@@ -33,12 +33,8 @@ from tests.test_environment_config import (
     IsolatedTestEnvironmentConfig
 )
 
-# Import hierarchical context test fixtures
-try:
-    from tests.fixtures.hierarchical_context_fixtures import *
-except ImportError:
-    # Fixtures not available yet - will be loaded later
-    pass
+# Import unified context test fixtures if needed
+# (Currently no global fixtures needed for unified context)
 
 
 # =============================================

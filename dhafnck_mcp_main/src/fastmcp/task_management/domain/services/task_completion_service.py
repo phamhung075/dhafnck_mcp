@@ -1,13 +1,20 @@
 """Task Completion Service - Domain Service for Task Completion Business Rules"""
 
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Protocol
 
 from ..entities.task import Task
 from ..repositories.subtask_repository import SubtaskRepository
 from ..value_objects.task_id import TaskId
 from ..exceptions.task_exceptions import TaskCompletionError
-from ...application.services.hierarchical_context_service import HierarchicalContextService
+
+
+class TaskContextRepositoryProtocol(Protocol):
+    """Protocol for task context repository to avoid infrastructure dependency."""
+    
+    def get(self, context_id: str) -> Optional[Dict[str, Any]]:
+        """Get task context by ID."""
+        pass
 
 logger = logging.getLogger(__name__)
 
@@ -20,16 +27,16 @@ class TaskCompletionService:
     including checking subtask completion status and context requirements.
     """
     
-    def __init__(self, subtask_repository: SubtaskRepository, hierarchical_context_service: HierarchicalContextService):
+    def __init__(self, subtask_repository: SubtaskRepository, task_context_repository: Optional[TaskContextRepositoryProtocol] = None):
         """
         Initialize the task completion service.
         
         Args:
             subtask_repository: Repository for accessing subtask data
-            hierarchical_context_service: Service for hierarchical context management (required)
+            task_context_repository: Repository for task context management (optional for backward compatibility)
         """
         self._subtask_repository = subtask_repository
-        self._hierarchical_context_service = hierarchical_context_service
+        self._task_context_repository = task_context_repository
     
     def can_complete_task(self, task: Task) -> tuple[bool, Optional[str]]:
         """
@@ -47,15 +54,16 @@ class TaskCompletionService:
         """
         try:
             error_messages = []
-            # Rule 1: Check if task has hierarchical context (required for completion)
+            # Rule 1: Check if task has unified context (required for completion)
             # First check if task has context_id set
-            if task.context_id is None:
-                # Try to get context from hierarchical system
-                context_result = self._hierarchical_context_service.get_context("task", task.id.value)
-                if not context_result or not context_result.get("success", False):
+            if task.context_id is None and self._task_context_repository:
+                # Try to get context from unified system
+                context = self._task_context_repository.get(task.id.value)
+                    
+                if not context:
                     error_messages.append(
-                        "Task completion requires hierarchical context to be created first. "
-                        "Use: manage_hierarchical_context(action='create', level='task', "
+                        "Task completion requires context to be created first. "
+                        "Use: manage_context(action='create', level='task', "
                         "context_id='{}', data={{'title': '{}', 'description': 'Your work summary'}}) "
                         "to create context.".format(
                             task.id.value, task.title
@@ -124,14 +132,15 @@ class TaskCompletionService:
         blockers = []
         
         try:
-            # Check if task has hierarchical context (required for completion)
-            if task.context_id is None:
-                # Try to get context from hierarchical system
-                context_result = self._hierarchical_context_service.get_context("task", task.id.value)
-                if not context_result or not context_result.get("success", False):
+            # Check if task has unified context (required for completion)
+            if task.context_id is None and self._task_context_repository:
+                # Try to get context from unified system
+                context = self._task_context_repository.get(task.id.value)
+                    
+                if not context:
                     blockers.append(
-                        "Task completion requires hierarchical context to be created first. "
-                        "Use: manage_hierarchical_context(action='create', level='task', "
+                        "Task completion requires context to be created first. "
+                        "Use: manage_context(action='create', level='task', "
                         "context_id='{}', data={{'title': '{}', 'description': 'Your work summary'}}) "
                         "to create context.".format(
                             task.id.value, task.title
@@ -174,10 +183,10 @@ class TaskCompletionService:
     def _create_context_required_error(self, task: Task) -> Dict[str, Any]:
         """Create a user-friendly context required error message."""
         return {
-            "error": "Task completion requires hierarchical context to be created first.",
-            "explanation": "Hierarchical context stores task progress with inheritance from project and global contexts. This ensures work history is preserved with proper organizational structure.",
+            "error": "Task completion requires context to be created first.",
+            "explanation": "Context stores task progress with inheritance from branch, project and global contexts. This ensures work history is preserved with proper organizational structure.",
             "recovery_instructions": [
-                "Create hierarchical context for this task first",
+                "Create context for this task first",
                 "Update the context with your progress", 
                 "Then try completing the task again"
             ],
@@ -185,12 +194,12 @@ class TaskCompletionService:
                 {
                     "step": 1,
                     "action": "Create context",
-                    "command": f"manage_hierarchical_context(action='create', level='task', context_id='{task.id.value}', data={{'title': '{task.title}', 'description': 'Task context'}})"
+                    "command": f"manage_context(action='create', level='task', context_id='{task.id.value}', data={{'title': '{task.title}', 'description': 'Task context'}})"
                 },
                 {
                     "step": 2,
                     "action": "Update context status",
-                    "command": f"manage_hierarchical_context(action='update', level='task', context_id='{task.id.value}', data={{'status': 'done'}})"
+                    "command": f"manage_context(action='update', level='task', context_id='{task.id.value}', data={{'status': 'done'}})"
                 },
                 {
                     "step": 3,

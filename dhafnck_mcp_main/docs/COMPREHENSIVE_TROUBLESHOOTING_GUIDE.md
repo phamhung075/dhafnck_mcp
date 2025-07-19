@@ -16,6 +16,21 @@ mcp__dhafnck_mcp_http__manage_project(action="list")
 
 # Validate context inheritance
 mcp__dhafnck_mcp_http__validate_context_inheritance(level="task", context_id="your-task-id")
+
+# Verify January 2025 fixes are working (all should succeed without errors)
+# Test task creation (validates TaskId scoping fix)
+mcp__dhafnck_mcp_http__manage_task(
+    action="create", 
+    git_branch_id="test-branch-id", 
+    title="Health check task"
+)
+
+# Test context operations (validates async repository fixes)
+mcp__dhafnck_mcp_http__manage_context(
+    action="create",
+    task_id="test-task-id",
+    data_title="Test context"
+)
 ```
 
 ### Agent System Check
@@ -28,6 +43,123 @@ mcp__dhafnck_mcp_http__manage_agent(action="list", project_id="your-project-id")
 ```
 
 ## Known Issues and Solutions
+
+### 🆕 January 2025 Critical Fixes
+
+> **✅ RESOLVED**: The following issues have been fixed and are no longer problems. This section is maintained for historical reference and to help diagnose similar issues in the future.
+> 
+> **📋 Complete Fix Documentation**: For detailed technical information about these fixes, see [Unified Context System Fixes - January 19, 2025](fixes/unified_context_system_fixes_2025_01_19.md)
+
+#### ✅ TaskId Import Scoping Error (FIXED)
+
+**Problem**: `UnboundLocalError: cannot access local variable 'TaskId' where it is not associated with a value`
+
+**Root Cause**: Redundant import statements inside loops created variable scoping conflicts
+
+**How It Was Fixed**:
+- Removed redundant `TaskId` imports inside dependency conversion loops
+- Import statements now remain at module level only
+- Fixed in: `src/fastmcp/task_management/infrastructure/repositories/orm/task_repository.py`
+
+**If You Encounter Similar Issues**:
+```python
+# ❌ WRONG: Import inside loop
+for item in items:
+    from module import Class  # Creates scoping issues
+    result = Class(item)
+
+# ✅ CORRECT: Import at module level
+from module import Class
+
+for item in items:
+    result = Class(item)
+```
+
+#### ✅ Async Repository Pattern Mismatch (FIXED)
+
+**Problem**: Tests expecting async methods but repository implementation was synchronous
+
+**Root Cause**: Inconsistency between test patterns and repository implementation
+
+**How It Was Fixed**:
+- Converted all TaskContextRepository methods to async patterns
+- Updated method signatures: `def method()` → `async def method()`
+- Fixed in: `src/fastmcp/task_management/infrastructure/repositories/task_context_repository.py`
+
+**If You Encounter Similar Issues**:
+```python
+# Ensure consistency between tests and implementation
+# If tests use @pytest.mark.asyncio and await calls:
+async def test_repository_method():
+    result = await repository.create(entity)  # ✅
+
+# Then repository must be async:
+async def create(self, entity):  # ✅
+    # implementation
+```
+
+#### ✅ Database Schema Mismatch (FIXED)
+
+**Problem**: TaskContext table had outdated column structure (`parent_project_id` instead of `parent_branch_id`)
+
+**Root Cause**: Database schema not updated to match 4-tier hierarchy (Global → Project → Branch → Task)
+
+**How It Was Fixed**:
+- Dropped and recreated `task_contexts` table with correct schema
+- Updated foreign key references to point to `project_git_branchs` table
+- Aligned with hierarchical context system requirements
+
+**If You Encounter Similar Issues**:
+```bash
+# Check table schema matches model definitions
+PRAGMA table_info(task_contexts);
+
+# Look for correct foreign key references:
+# parent_branch_id → project_git_branchs(id)
+# parent_branch_context_id → branch_contexts(branch_id)
+```
+
+#### ✅ Context Manager Mock Configuration (FIXED)
+
+**Problem**: SQLAlchemy errors "Incorrect number of values in identifier to formulate primary key"
+
+**Root Cause**: Improper mock configuration for database context managers
+
+**How It Was Fixed**:
+- Fixed mock method names: `get_session` → `get_db_session`
+- Properly mocked context manager `__enter__` and `__exit__` methods
+- Updated expected method calls from `commit()` to `flush()`
+
+**If You Encounter Similar Issues**:
+```python
+# ✅ CORRECT: Mock context manager properly
+mock_session = Mock()
+mock_context_manager = MagicMock()
+mock_context_manager.__enter__ = Mock(return_value=mock_session)
+mock_context_manager.__exit__ = Mock(return_value=None)
+repository.get_db_session = Mock(return_value=mock_context_manager)
+```
+
+#### ✅ Import Path Conflicts (FIXED)
+
+**Problem**: Import errors for UnifiedContextService and related classes
+
+**Root Cause**: Inconsistent import paths between `hierarchical_context_service` and `unified_context_service`
+
+**How It Was Fixed**:
+- Updated all import statements to use correct unified context service paths
+- Fixed factory import locations from infrastructure to application/factories
+- Resolved in multiple files across the application layer
+
+**If You Encounter Similar Issues**:
+```python
+# ✅ CORRECT: Use unified context service paths
+from .unified_context_service import UnifiedContextService
+from ..factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+
+# ❌ WRONG: Old hierarchical paths
+from .hierarchical_context_service import UnifiedContextService
+```
 
 ### 1. Task Completion Validation Issue ⚠️
 
@@ -580,4 +712,58 @@ When reporting issues, include:
 3. Monitor database query time
 4. Clean up obsolete data
 
+## Validating January 2025 Fixes
+
+### Quick Validation Tests
+If you suspect any of the January 2025 fixes have regressed, run these tests:
+
+```bash
+# 1. Test TaskId scoping (should not show UnboundLocalError)
+mcp__dhafnck_mcp_http__manage_task(
+    action="create",
+    git_branch_id="test-branch-uuid",
+    title="TaskId validation test",
+    dependencies=["dep1", "dep2"]  # Tests dependency processing
+)
+
+# 2. Test async repository patterns (should not show async/sync mismatch errors)
+mcp__dhafnck_mcp_http__manage_context(
+    action="create",
+    task_id="test-task-uuid",
+    data_title="Async test context"
+)
+
+# 3. Test database schema (should not show foreign key errors)
+# Create task with proper branch reference
+task_result = mcp__dhafnck_mcp_http__manage_task(
+    action="create",
+    git_branch_id="valid-branch-uuid",
+    title="Schema validation test"
+)
+
+# 4. Test import path resolution (should not show ModuleNotFoundError)
+# Any context operation should work without import errors
+mcp__dhafnck_mcp_http__manage_hierarchical_context(
+    action="resolve",
+    level="task",
+    context_id="test-task-uuid"
+)
+```
+
+### Expected Results
+All tests above should complete successfully without:
+- ❌ `UnboundLocalError: cannot access local variable 'TaskId'`
+- ❌ `TypeError: object is not awaitable` or `RuntimeWarning: coroutine was never awaited`
+- ❌ `FOREIGN KEY constraint failed`
+- ❌ `ModuleNotFoundError: No module named 'hierarchical_context_service'`
+- ❌ `sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column`
+
+If any of these errors appear, the fixes may have regressed and need investigation.
+
+---
+
 This comprehensive guide should help diagnose and resolve most issues encountered in the DhafnckMCP system. For persistent issues, follow the systematic troubleshooting approach and use the emergency recovery procedures when necessary.
+
+**Document Version**: 2.0  
+**Last Updated**: January 19, 2025  
+**Major Updates**: Added January 2025 critical fixes section and validation procedures

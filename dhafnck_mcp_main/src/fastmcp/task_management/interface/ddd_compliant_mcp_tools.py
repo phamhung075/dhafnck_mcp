@@ -22,8 +22,8 @@ if TYPE_CHECKING:
 # Application layer imports (proper DDD dependency injection)
 from ..application.factories.task_facade_factory import TaskFacadeFactory
 from ..application.factories.subtask_facade_factory import SubtaskFacadeFactory
-# from ..application.factories.context_facade_factory import ContextFacadeFactory  # Replaced by HierarchicalContextFacadeFactory
-from ..application.factories.hierarchical_context_facade_factory import HierarchicalContextFacadeFactory
+# Legacy context factories removed - now using unified context system
+from ..application.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
 from ..application.factories.project_facade_factory import ProjectFacadeFactory
 from ..application.factories.git_branch_facade_factory import GitBranchFacadeFactory
 
@@ -44,7 +44,7 @@ from ..infrastructure.utilities.path_resolver import PathResolver
 # Interface layer imports (same layer, acceptable)
 from .controllers.task_mcp_controller import TaskMCPController
 from .controllers.subtask_mcp_controller import SubtaskMCPController
-from .controllers.context_mcp_controller import ContextMCPController
+from .controllers.unified_context_controller import UnifiedContextMCPController
 from .controllers.project_mcp_controller import ProjectMCPController
 from .controllers.git_branch_mcp_controller import GitBranchMCPController
 from .controllers.agent_mcp_controller import AgentMCPController
@@ -95,10 +95,15 @@ class DDDCompliantMCPTools:
         self._task_repository_factory = TaskRepositoryFactory()
         self._subtask_repository_factory = SubtaskRepositoryFactory()
         
+        # Initialize session factory for unified context controller
+        from ..infrastructure.database.database_config import get_db_config
+        db_config = get_db_config()
+        self._session_factory = db_config.SessionLocal
+        
         # Initialize facade factories
         # Use hierarchical context facade factory for new context system
-        self._hierarchical_context_facade_factory = HierarchicalContextFacadeFactory()
-        self._context_facade_factory = self._hierarchical_context_facade_factory  # Use hierarchical factory directly
+        self._unified_context_facade_factory = UnifiedContextFacadeFactory()
+        self._context_facade_factory = self._unified_context_facade_factory  # Use unified factory directly
         self._project_facade_factory = ProjectFacadeFactory()
         self._git_branch_facade_factory = GitBranchFacadeFactory()
         
@@ -129,27 +134,14 @@ class DDDCompliantMCPTools:
             task_repository_factory=self._task_repository_factory
         )
         
-        # Initialize hierarchical context services
-        from ..infrastructure.repositories.hierarchical_context_repository_factory import HierarchicalContextRepositoryFactory
-        from ..application.services.hierarchical_context_service import HierarchicalContextService
-        from ..application.services.context_inheritance_service import ContextInheritanceService
-        from ..application.services.context_delegation_service import ContextDelegationService
-        from ..application.services.context_cache_service import ContextCacheService
+        # Initialize unified context facade factory
+        self._unified_context_facade_factory = UnifiedContextFacadeFactory(
+            session_factory=self._session_factory
+        )
         
-        hierarchical_factory = HierarchicalContextRepositoryFactory()
-        hierarchical_repo = hierarchical_factory.create_hierarchical_context_repository()
-        hierarchy_service = HierarchicalContextService(repository=hierarchical_repo)
-        inheritance_service = ContextInheritanceService(repository=hierarchical_repo)
-        delegation_service = ContextDelegationService(repository=hierarchical_repo)
-        cache_service = ContextCacheService(repository=hierarchical_repo)
-        
-        # Context controller now uses hierarchical context facade factory with all services
-        self._context_controller = ContextMCPController(
-            self._hierarchical_context_facade_factory,
-            hierarchy_service=hierarchy_service,
-            inheritance_service=inheritance_service,
-            delegation_service=delegation_service,
-            cache_service=cache_service
+        # Context controller with unified context system
+        self._context_controller = UnifiedContextMCPController(
+            unified_context_facade_factory=self._unified_context_facade_factory
         )
         
         self._project_controller = ProjectMCPController(self._project_facade_factory)
@@ -397,7 +389,7 @@ class DDDCompliantMCPTools:
         return self._subtask_controller
     
     @property
-    def context_controller(self) -> ContextMCPController:
+    def context_controller(self) -> UnifiedContextMCPController:
         """Get the context controller for direct access"""
         return self._context_controller
     

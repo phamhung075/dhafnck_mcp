@@ -6,7 +6,7 @@ Application layer factory for creating task facades with proper dependency injec
 # NOTE: Importing inside method to avoid circular import with TaskApplicationFacade
 from ...infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
 from ...infrastructure.repositories.subtask_repository_factory import SubtaskRepositoryFactory
-from .hierarchical_context_facade_factory import HierarchicalContextFacadeFactory as ContextServiceFactory
+from .unified_context_facade_factory import UnifiedContextFacadeFactory as ContextServiceFactory
 
 
 class TaskFacadeFactory:
@@ -58,7 +58,7 @@ class TaskFacadeFactory:
             subtask_repository = self._subtask_repository_factory.create_subtask_repository(project_id)
         
         # Create context service for context integration
-        context_service = self._context_service_factory.create_service(
+        context_service = self._context_service_factory.create_facade(
             user_id=user_id,
             project_id=project_id,
             git_branch_id=git_branch_id
@@ -94,7 +94,7 @@ class TaskFacadeFactory:
             subtask_repository = self._subtask_repository_factory.create_subtask_repository(project_id)
         
         # Create context service for context integration
-        context_service = self._context_service_factory.create_service(
+        context_service = self._context_service_factory.create_facade(
             user_id=user_id,
             project_id=project_id,
             git_branch_id=git_branch_id

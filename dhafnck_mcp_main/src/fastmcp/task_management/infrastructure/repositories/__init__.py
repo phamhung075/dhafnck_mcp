@@ -12,9 +12,9 @@ from .orm.agent_repository import ORMAgentRepository
 from .agent_repository_factory import AgentRepositoryFactory, create_agent_repository, get_default_agent_repository
 
 # Context repositories
-from .orm.hierarchical_context_repository import ORMHierarchicalContextRepository
-# Alias for backward compatibility
-ORMContextRepository = ORMHierarchicalContextRepository
+# from .orm.hierarchical_context_repository import ORMHierarchicalContextRepository
+# # Alias for backward compatibility
+# ORMContextRepository = ORMHierarchicalContextRepository
 
 __all__ = [
     # Project repositories
@@ -30,5 +30,5 @@ __all__ = [
     "get_default_agent_repository",
     
     # Context repositories
-    "ORMContextRepository",
+    # "ORMContextRepository",
 ] 

@@ -7,7 +7,7 @@ Facades help reduce complexity by providing a unified interface to
 a set of interfaces in the application layer.
 """
 from .agent_application_facade import AgentApplicationFacade
-from .hierarchical_context_facade import HierarchicalContextFacade as ContextApplicationFacade
+from .unified_context_facade import UnifiedContextFacade as ContextApplicationFacade
 from .task_application_facade import TaskApplicationFacade
 from .subtask_application_facade import SubtaskApplicationFacade
 from .dependency_application_facade import DependencyApplicationFacade

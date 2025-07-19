@@ -31,6 +31,10 @@ class ContextCacheService:
     # SYNC WRAPPER METHODS FOR FACADE COMPATIBILITY
     # ===============================================
     
+    async def get(self, level: str, context_id: str) -> Optional[Dict[str, Any]]:
+        """Simple async get method for cache compatibility"""
+        return await self.get_cached_context(level, context_id)
+    
     def get_context(self, level: str, context_id: str) -> Optional[Dict[str, Any]]:
         """Sync wrapper for get_cached_context"""
         try:
@@ -124,6 +128,10 @@ class ContextCacheService:
         """Sync version for compatibility"""
         # This just calls the existing invalidate_context method
         self.invalidate_context(level, context_id)
+    
+    async def invalidate(self, level: str, context_id: str, reason: str = "manual_invalidation") -> bool:
+        """Async invalidate method for unified context service compatibility"""
+        return await self.invalidate_context_cache(level, context_id, reason)
     
     # ===============================================
     # CACHE RETRIEVAL

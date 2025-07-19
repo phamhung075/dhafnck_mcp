@@ -1,7 +1,7 @@
 """Application Factories Package"""
 
 from .task_facade_factory import TaskFacadeFactory
-from .hierarchical_context_facade_factory import HierarchicalContextFacadeFactory as ContextServiceFactory
+from .unified_context_facade_factory import UnifiedContextFacadeFactory as ContextServiceFactory
 from .subtask_facade_factory import SubtaskFacadeFactory
 from .agent_facade_factory import AgentFacadeFactory
 from .rule_service_factory import RuleServiceFactory

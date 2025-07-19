@@ -13,7 +13,7 @@ from ...domain.exceptions.vision_exceptions import MissingCompletionSummaryError
 from ...domain.services.task_completion_service import TaskCompletionService
 from ...domain.events import TaskUpdated
 from ...interface.utils.error_handler import UserFriendlyErrorHandler
-from ..services.hierarchical_context_service import HierarchicalContextService
+from ...infrastructure.repositories.task_context_repository import TaskContextRepository
 # from ..services.context_validation_service import ContextValidationService  # TODO: Fix circular import
 
 # Module-level logger
@@ -23,12 +23,12 @@ class CompleteTaskUseCase:
     """Use case for completing a task (marking all subtasks as completed and task status as done)"""
     
     def __init__(self, task_repository: TaskRepository, subtask_repository: Optional[SubtaskRepository] = None, 
-                 hierarchical_context_service: Optional[HierarchicalContextService] = None):
+                 task_context_repository: Optional[TaskContextRepository] = None):
         self._task_repository = task_repository
         self._subtask_repository = subtask_repository
-        self._hierarchical_context_service = hierarchical_context_service
-        # Only create completion service if both required dependencies are provided
-        self._completion_service = TaskCompletionService(subtask_repository, hierarchical_context_service) if (subtask_repository and hierarchical_context_service) else None
+        self._task_context_repository = task_context_repository
+        # Only create completion service if subtask repository is provided
+        self._completion_service = TaskCompletionService(subtask_repository, task_context_repository) if subtask_repository else None
         # Vision System validation service
         # self._validation_service = ContextValidationService()  # TODO: Fix circular import
         self._validation_service = None
@@ -106,15 +106,15 @@ class CompleteTaskUseCase:
                 try:
                     # Get context for the task using hierarchical context facade
                     import asyncio
-                    from ..factories.hierarchical_context_facade_factory import HierarchicalContextFacadeFactory
+                    from ..factories.unified_context_facade_factory import UnifiedContextFacadeFactory
                     
-                    # Use the hierarchical context facade to get context
+                    # Use the unified context facade to get context
                     # Extract git_branch_id from task for facade creation
                     git_branch_id = getattr(task, 'git_branch_id', None)
-                    hierarchical_facade = HierarchicalContextFacadeFactory().create_facade(
+                    unified_facade = UnifiedContextFacadeFactory().create_facade(
                         git_branch_id=git_branch_id
                     )
-                    context_result = hierarchical_facade.get_context("task", str(task_id))
+                    context_result = unified_facade.get_context("task", str(task_id))
                     
                     if context_result.get("success") and "context" in context_result:
                         context = context_result["context"]
@@ -143,12 +143,12 @@ class CompleteTaskUseCase:
             # Update context with completion information using hierarchical context
             if completion_summary:
                 try:
-                    from ..factories.hierarchical_context_facade_factory import HierarchicalContextFacadeFactory
+                    from ..factories.unified_context_facade_factory import UnifiedContextFacadeFactory
                     
-                    # Use the hierarchical context facade to update context
+                    # Use the unified context facade to update context
                     # Extract git_branch_id from task for facade creation
                     git_branch_id = getattr(task, 'git_branch_id', None)
-                    hierarchical_facade = HierarchicalContextFacadeFactory().create_facade(
+                    unified_facade = UnifiedContextFacadeFactory().create_facade(
                         git_branch_id=git_branch_id
                     )
                     
@@ -163,7 +163,7 @@ class CompleteTaskUseCase:
                     }
                     
                     # Merge update into task context
-                    hierarchical_facade.merge_context("task", str(task_id), context_update)
+                    unified_facade.merge_context("task", str(task_id), context_update)
                 except Exception as e:
                     logger.warning(f"Could not update context with completion summary: {e}")
             

@@ -600,8 +600,8 @@ class GitBranchMCPController:
         """Include project + branch context in the response."""
         try:
             # Get hierarchical context facade
-            from ...application.factories.hierarchical_context_facade_factory import HierarchicalContextFacadeFactory
-            context_factory = HierarchicalContextFacadeFactory()
+            from ...application.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+            context_factory = UnifiedContextFacadeFactory()
             context_facade = context_factory.create_facade()
             
             # Get project context

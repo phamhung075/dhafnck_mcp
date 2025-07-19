@@ -10,6 +10,7 @@ import logging
 
 from ...domain.entities.context import TaskContext
 from ...domain.entities.task import Task
+from ...domain.value_objects.context_enums import ContextLevel
 from ...domain.exceptions.vision_exceptions import (
     InvalidContextUpdateError,
     MissingCompletionSummaryError
@@ -193,3 +194,63 @@ class ContextValidationService:
             errors.append("State data must be JSON serializable")
             
         return len(errors) == 0, errors
+    
+    def validate_context_data(self, 
+                                   level: ContextLevel, 
+                                   data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validate context data for unified context system.
+        
+        Args:
+            level: The context level being validated
+            data: The context data to validate
+            
+        Returns:
+            Dictionary with validation result: {"valid": bool, "errors": List[str]}
+        """
+        errors = []
+        
+        # Validate required fields based on level
+        if level == ContextLevel.TASK:
+            # Task level requirements
+            if 'title' in data and not data['title'].strip():
+                errors.append("Task title cannot be empty")
+                
+            if 'status' in data and data['status'] not in ['todo', 'in_progress', 'blocked', 'review', 'testing', 'done', 'cancelled']:
+                errors.append("Invalid task status")
+                
+            if 'priority' in data and data['priority'] not in ['low', 'medium', 'high', 'urgent', 'critical']:
+                errors.append("Invalid task priority")
+                
+        elif level == ContextLevel.PROJECT:
+            # Project level requirements
+            if 'name' in data and not data['name'].strip():
+                errors.append("Project name cannot be empty")
+                
+        elif level == ContextLevel.BRANCH:
+            # Branch level requirements
+            if 'name' in data and not data['name'].strip():
+                errors.append("Branch name cannot be empty")
+                
+        elif level == ContextLevel.GLOBAL:
+            # Global level requirements (minimal validation)
+            pass
+        
+        # Common validations for all levels
+        if 'completion_percentage' in data:
+            percentage = data['completion_percentage']
+            if not isinstance(percentage, (int, float)) or percentage < 0 or percentage > 100:
+                errors.append("completion_percentage must be a number between 0 and 100")
+                
+        if 'vision_alignment_score' in data:
+            score = data['vision_alignment_score']
+            if not isinstance(score, (int, float)) or score < 0 or score > 1:
+                errors.append("vision_alignment_score must be a number between 0 and 1")
+                
+        if 'labels' in data and not isinstance(data['labels'], list):
+            errors.append("labels must be a list")
+            
+        if 'assignees' in data and not isinstance(data['assignees'], list):
+            errors.append("assignees must be a list")
+            
+        return {"valid": len(errors) == 0, "errors": errors}

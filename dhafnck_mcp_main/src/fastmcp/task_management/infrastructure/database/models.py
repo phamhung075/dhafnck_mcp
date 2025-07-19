@@ -192,38 +192,7 @@ class Agent(Base):
     )
 
 
-class HierarchicalContext(Base):
-    """Hierarchical context system table"""
-    __tablename__ = "hierarchical_context"
-    
-    id: Mapped[str] = mapped_column(String, primary_key=True)
-    level: Mapped[str] = mapped_column(String, nullable=False)  # 'global', 'project', 'branch', 'task'
-    context_id: Mapped[str] = mapped_column(String, nullable=False)  # Reference ID for the level
-    parent_level: Mapped[Optional[str]] = mapped_column(String)
-    parent_context_id: Mapped[Optional[str]] = mapped_column(String)
-    
-    # Context data fields
-    patterns: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
-    architectures: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
-    constraints: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
-    decisions: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
-    insights: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
-    relationships: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
-    custom_data: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
-    
-    # Metadata
-    last_accessed_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
-    access_count: Mapped[int] = mapped_column(Integer, default=0)
-    version: Mapped[int] = mapped_column(Integer, default=1)
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
-    
-    __table_args__ = (
-        UniqueConstraint('level', 'context_id', name='uq_level_context'),
-        Index('idx_context_level', 'level'),
-        Index('idx_context_parent', 'parent_level', 'parent_context_id'),
-        Index('idx_context_accessed', 'last_accessed_at'),
-    )
+# HierarchicalContext model removed - replaced with granular context models (GlobalContext, ProjectContext, BranchContext, TaskContext)
 
 
 class Label(Base):

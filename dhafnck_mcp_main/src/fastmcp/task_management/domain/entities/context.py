@@ -11,6 +11,93 @@ from ..value_objects.task_id import TaskId
 import uuid
 
 
+# Unified Context System Entities
+
+@dataclass
+class GlobalContext:
+    """Global context entity for organization-wide settings."""
+    id: str  # Always 'global_singleton'
+    organization_name: str
+    global_settings: Dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    
+    def dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            "id": self.id,
+            "organization_name": self.organization_name,
+            "global_settings": self.global_settings,
+            "metadata": self.metadata
+        }
+
+
+@dataclass
+class ProjectContext:
+    """Project context entity for project-specific settings."""
+    id: str  # Project UUID
+    project_name: str
+    project_settings: Dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    
+    def dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            "id": self.id,
+            "project_name": self.project_name,
+            "project_settings": self.project_settings,
+            "metadata": self.metadata
+        }
+
+
+@dataclass
+class BranchContext:
+    """Branch context entity for git branch-specific settings."""
+    id: str  # Git branch UUID
+    project_id: str
+    git_branch_name: str
+    branch_settings: Dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    
+    def dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            "id": self.id,
+            "project_id": self.project_id,
+            "git_branch_name": self.git_branch_name,
+            "branch_settings": self.branch_settings,
+            "metadata": self.metadata
+        }
+
+
+@dataclass
+class TaskContextUnified:
+    """Task context entity for unified context system.
+    Named TaskContextUnified to avoid conflict with existing TaskContext.
+    """
+    id: str  # Task UUID
+    branch_id: str
+    task_data: Dict[str, Any] = field(default_factory=dict)
+    progress: int = 0
+    insights: List[Dict[str, Any]] = field(default_factory=list)
+    next_steps: List[str] = field(default_factory=list)
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    
+    def dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            "id": self.id,
+            "branch_id": self.branch_id,
+            "task_data": self.task_data,
+            "progress": self.progress,
+            "insights": self.insights,
+            "next_steps": self.next_steps,
+            "metadata": self.metadata
+        }
+
+
+# Existing Context Entities below...
+
+
 @dataclass
 class ContextMetadata:
     """Context metadata structure following clean relationship chain (uses Priority and TaskStatus value objects)"""

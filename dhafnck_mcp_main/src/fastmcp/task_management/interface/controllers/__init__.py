@@ -8,7 +8,7 @@ from .task_mcp_controller import TaskMCPController
 from .subtask_mcp_controller import SubtaskMCPController
 from .dependency_mcp_controller import DependencyMCPController
 from .cursor_rules_controller import CursorRulesController
-from .context_mcp_controller import ContextMCPController
+from .unified_context_controller import UnifiedContextMCPController
 from .project_mcp_controller import ProjectMCPController
 from .git_branch_mcp_controller import GitBranchMCPController
 from .agent_mcp_controller import AgentMCPController
@@ -20,7 +20,7 @@ __all__ = [
     "SubtaskMCPController",
     "DependencyMCPController",
     "CursorRulesController",
-    "ContextMCPController",
+    "UnifiedContextMCPController",
     "ProjectMCPController",
     "GitBranchMCPController",
     "AgentMCPController",

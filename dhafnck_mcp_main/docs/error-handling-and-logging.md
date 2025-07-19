@@ -265,22 +265,146 @@ grep "DATABASE_ERROR" logs/dhafnck_mcp_errors.log
 tail -f logs/dhafnck_mcp.log | jq '.'  # For JSON format
 ```
 
-### Common Error Patterns
+### Recent Improvements (January 2025)
 
-1. **Task Not Found**
-   - Check if task ID is correct
-   - Verify task hasn't been deleted
-   - Ensure correct project/branch context
+### Critical Error Handling Fixes
 
-2. **Database Connection Errors**
-   - Check database service is running
-   - Verify connection string in environment
-   - Check for connection pool exhaustion
+> **📋 Status**: All critical infrastructure errors have been resolved. Error handling has been significantly improved with better patterns and clearer error messages.
 
-3. **Validation Errors**
-   - Review input data format
-   - Check for required fields
-   - Validate data types match schema
+#### Fixed Error Categories
+
+**1. Import Scoping Errors (RESOLVED)**
+- **Previous Issue**: `UnboundLocalError: cannot access local variable 'TaskId'`
+- **Root Cause**: Import statements inside loops causing variable scoping conflicts
+- **Fix Applied**: Moved all imports to module level, eliminated scoping issues
+- **Prevention**: Added validation patterns in testing guide
+
+**2. Async/Sync Pattern Mismatches (RESOLVED)**
+- **Previous Issue**: `TypeError: object is not awaitable` and `RuntimeWarning: coroutine was never awaited`
+- **Root Cause**: Inconsistent async patterns between tests and repository implementations
+- **Fix Applied**: Converted all repository methods to proper async patterns
+- **Prevention**: Added async consistency validation in testing framework
+
+**3. Database Schema Constraint Errors (RESOLVED)**
+- **Previous Issue**: `FOREIGN KEY constraint failed` and `no such column` errors
+- **Root Cause**: Outdated database schema not matching model definitions
+- **Fix Applied**: Updated schema with correct foreign key references
+- **Prevention**: Added schema validation tests and migration procedures
+
+**4. Context Management Errors (RESOLVED)**
+- **Previous Issue**: "Task completion requires context to be created first"
+- **Enhanced**: More descriptive error messages with clear resolution steps
+- **Improvement**: Better error handling with specific suggestions for context operations
+
+### Enhanced Error Messages
+
+The system now provides more helpful error messages with actionable suggestions:
+
+```json
+{
+  "success": false,
+  "error": "Task completion requires context to be created first",
+  "suggestions": [
+    "Update context using manage_hierarchical_context",
+    "Ensure context exists before completing task",
+    "Check context inheritance chain is complete"
+  ],
+  "suggested_actions": [
+    {
+      "action": "manage_hierarchical_context",
+      "parameters": {
+        "action": "update",
+        "level": "task",
+        "context_id": "your-task-id",
+        "data": {"progress": "completed"}
+      }
+    }
+  ]
+}
+```
+
+## Common Error Patterns
+
+### 1. Task Management Errors
+
+**Task Not Found**
+- Check if task ID is correct
+- Verify task hasn't been deleted
+- Ensure correct project/branch context
+
+**Task Completion Errors**
+- ✅ **NEW**: Clear guidance on context requirements
+- Update context before completion using `manage_hierarchical_context`
+- Verify all subtasks are completed
+- Check task status allows completion
+
+### 2. Infrastructure Errors
+
+**Database Connection Errors**
+- Check database service is running
+- Verify connection string in environment
+- Check for connection pool exhaustion
+- ✅ **NEW**: Validate database schema matches models
+
+**Import and Module Errors**
+- ✅ **NEW**: All import path conflicts resolved
+- Use unified context service imports only
+- Avoid imports inside loops or conditional blocks
+- Ensure all async methods are properly awaited
+
+### 3. Context System Errors
+
+**Context Resolution Errors**
+- ✅ **NEW**: Enhanced error messages with specific guidance
+- Use `validate_context_inheritance` to debug issues
+- Ensure parent contexts exist before creating child contexts
+- Check inheritance chain is not broken
+
+**Schema Validation Errors**
+- ✅ **NEW**: Database schema automatically validated
+- Foreign key constraints properly enforced
+- Column names match current model definitions
+- Migration procedures available for schema updates
+
+### 4. Development Errors
+
+**Testing Errors**
+- ✅ **NEW**: Proper mock configuration patterns documented
+- Use correct context manager mocking
+- Ensure async test patterns match repository implementation
+- Validate test database schema matches production
+
+### Debugging January 2025 Fixes
+
+For detailed information about the fixes and how to validate they're working:
+
+```bash
+# Quick validation commands
+# 1. Test TaskId scoping (should work without UnboundLocalError)
+mcp__dhafnck_mcp_http__manage_task(
+    action="create",
+    git_branch_id="test-branch-uuid",
+    title="Validation test",
+    dependencies=["dep1", "dep2"]
+)
+
+# 2. Test async repository patterns (should complete without warnings)
+mcp__dhafnck_mcp_http__manage_context(
+    action="create",
+    task_id="test-task-uuid",
+    data_title="Test context"
+)
+
+# 3. Test database schema (should not show constraint errors)
+# Any valid task creation should work without foreign key errors
+
+# 4. Test import resolution (should not show ModuleNotFoundError)
+# Any context operation should work without import errors
+```
+
+**Complete Fix Documentation**: See [Unified Context System Fixes - January 19, 2025](fixes/unified_context_system_fixes_2025_01_19.md) for comprehensive technical details.
+
+**Regression Testing**: See [Testing Guide - Recent Fixes and Validation Testing](testing.md#recent-fixes-and-validation-testing-january-2025) for test patterns to validate fixes.
 
 ### Performance Monitoring
 
@@ -396,6 +520,26 @@ export LOG_FORMAT=text  # Easier to read for debugging
    - Ensure sufficient disk space
    - Check file permissions for creating new files
 
+4. **✅ "UnboundLocalError: TaskId" (RESOLVED)**
+   - This error has been permanently fixed in January 2025
+   - All TaskId imports are now at module level
+   - If you encounter this, check for regression in import patterns
+
+5. **✅ "ModuleNotFoundError: hierarchical_context_service" (RESOLVED)**
+   - All import paths have been updated to use unified context services
+   - Old hierarchical import paths have been eliminated
+   - If you encounter this, check for outdated import statements
+
+6. **✅ "Foreign key constraint failed" (RESOLVED)**
+   - Database schema has been updated to match current model definitions
+   - All foreign key references are now correct
+   - If you encounter this, verify database schema is up to date
+
+7. **✅ "TypeError: object is not awaitable" (RESOLVED)**
+   - All repository methods have been converted to proper async patterns
+   - Async/sync consistency is now maintained across the codebase
+   - If you encounter this, check for regression in async patterns
+
 ### Getting Help
 
 When reporting issues, include:
@@ -405,3 +549,11 @@ When reporting issues, include:
 3. Relevant log entries (sanitized)
 4. Steps to reproduce
 5. Environment details (OS, Python version, etc.)
+
+**Important**: If you encounter any of the resolved errors (UnboundLocalError, ModuleNotFoundError, foreign key constraints, async/await issues), these may indicate regressions that need immediate attention. Please reference the [January 2025 fixes documentation](fixes/unified_context_system_fixes_2025_01_19.md) for context.
+
+---
+
+**Document Version**: 2.0  
+**Last Updated**: January 19, 2025  
+**Major Updates**: Added January 2025 error handling improvements, enhanced error messages, validation procedures, and cross-references to fix documentation

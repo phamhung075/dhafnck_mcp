@@ -507,18 +507,19 @@ export async function removeDependency(task_id: string, dependency_id: string): 
   return false;
 }
 
-// --- Context Management ---
+// --- Context Management - Updated to use unified manage_context ---
 export async function getTaskContext(task_id: string): Promise<any> {
   const body = {
     jsonrpc: "2.0",
     method: "tools/call",
     params: {
-      name: "manage_hierarchical_context",
+      name: "manage_context",
       arguments: { 
         action: "resolve",
         level: "task",
         context_id: task_id,
-        force_refresh: false
+        force_refresh: false,
+        include_inherited: true  // Include inherited context from parent levels
       }
     },
     id: getRpcId(),
@@ -545,12 +546,13 @@ export async function getProjectContext(project_id: string): Promise<any> {
     jsonrpc: "2.0",
     method: "tools/call",
     params: {
-      name: "manage_hierarchical_context",
+      name: "manage_context",
       arguments: { 
         action: "resolve",
         level: "project",
         context_id: project_id,
-        force_refresh: false
+        force_refresh: false,
+        include_inherited: true  // Include inherited context from parent levels
       }
     },
     id: getRpcId(),
@@ -577,12 +579,13 @@ export async function getGlobalContext(): Promise<any> {
     jsonrpc: "2.0",
     method: "tools/call",
     params: {
-      name: "manage_hierarchical_context",
+      name: "manage_context",
       arguments: { 
         action: "resolve",
         level: "global",
         context_id: "global_singleton",
-        force_refresh: false
+        force_refresh: false,
+        include_inherited: false  // Global has no parents to inherit from
       }
     },
     id: getRpcId(),
@@ -599,6 +602,112 @@ export async function getGlobalContext(): Promise<any> {
       return toolResult;
     } catch (e) {
       console.error('Error parsing global context:', e);
+    }
+  }
+  return null;
+}
+
+// --- New context operations available with unified system ---
+export async function addTaskInsight(
+  task_id: string, 
+  content: string, 
+  category: string = "general",
+  importance: string = "medium"
+): Promise<any> {
+  const body = {
+    jsonrpc: "2.0",
+    method: "tools/call",
+    params: {
+      name: "manage_context",
+      arguments: {
+        action: "add_insight",
+        level: "task",
+        context_id: task_id,
+        content: content,
+        category: category,
+        importance: importance,
+      }
+    },
+    id: getRpcId(),
+  };
+  const res = await fetch(`${API_BASE}`, {
+    method: "POST",
+    headers: withMcpHeaders(),
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
+    try {
+      const toolResult = JSON.parse(data.result.content[0].text);
+      return toolResult;
+    } catch (e) {
+      console.error('Error adding task insight:', e);
+    }
+  }
+  return null;
+}
+
+export async function addTaskProgress(task_id: string, content: string): Promise<any> {
+  const body = {
+    jsonrpc: "2.0",
+    method: "tools/call",
+    params: {
+      name: "manage_context",
+      arguments: {
+        action: "add_progress",
+        level: "task",
+        context_id: task_id,
+        content: content,
+      }
+    },
+    id: getRpcId(),
+  };
+  const res = await fetch(`${API_BASE}`, {
+    method: "POST",
+    headers: withMcpHeaders(),
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
+    try {
+      const toolResult = JSON.parse(data.result.content[0].text);
+      return toolResult;
+    } catch (e) {
+      console.error('Error adding task progress:', e);
+    }
+  }
+  return null;
+}
+
+export async function listContexts(
+  level: string = "task",
+  filters?: Record<string, any>
+): Promise<any> {
+  const body = {
+    jsonrpc: "2.0",
+    method: "tools/call",
+    params: {
+      name: "manage_context",
+      arguments: {
+        action: "list",
+        level: level,
+        filters: filters,
+      }
+    },
+    id: getRpcId(),
+  };
+  const res = await fetch(`${API_BASE}`, {
+    method: "POST",
+    headers: withMcpHeaders(),
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
+    try {
+      const toolResult = JSON.parse(data.result.content[0].text);
+      return toolResult;
+    } catch (e) {
+      console.error('Error listing contexts:', e);
     }
   }
   return null;

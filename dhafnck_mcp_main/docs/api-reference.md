@@ -15,10 +15,17 @@ This document provides comprehensive reference for all MCP tools available in th
 - [manage_git_branch](#manage_git_branch) - Branch operations and task trees
 
 ### Context Management
-- [manage_context](#manage_context) - Basic context operations (backward compatible)
+- [manage_context](#manage_context) - Unified context system (recommended) 
 - [manage_hierarchical_context](#manage_hierarchical_context) - Advanced 4-tier context system
 - [validate_context_inheritance](#validate_context_inheritance) - Debug inheritance chains
 - [manage_delegation_queue](#manage_delegation_queue) - Manual delegation review
+
+> **⚠️ IMPORTANT UPDATE (January 2025)**: The context management system has been significantly improved with critical bug fixes:
+> - Fixed TaskId import scoping issues in repositories
+> - Implemented async repository patterns for better performance
+> - Resolved database schema mismatches
+> - Updated all import paths to use unified context services
+> - All context operations now work reliably with proper error handling
 
 ### Agent Orchestration
 - [manage_agent](#manage_agent) - Agent registration and assignment
@@ -241,6 +248,107 @@ mcp__dhafnck_mcp_http__manage_git_branch(
 ---
 
 ## Context Management Tools
+
+> **📋 Status Update (January 2025)**: All context management tools have been fixed and are fully operational. Recent critical fixes include:
+>
+> 1. **Repository Fixes**: Resolved TaskId import scoping issues that caused UnboundLocalError
+> 2. **Async Pattern Updates**: All repositories now use proper async/await patterns
+> 3. **Database Schema**: Updated TaskContext table structure with correct foreign key references
+> 4. **Import Path Resolution**: Fixed all import conflicts between hierarchical and unified services
+> 5. **Test Infrastructure**: Corrected mock configurations for proper context manager testing
+>
+> **Result**: All context operations now work reliably without errors. Task completion functionality fully restored.
+
+### manage_context
+
+Unified context management system providing a single interface for all context operations across the 4-tier hierarchy (Global → Project → Branch → Task).
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| action | string | Yes | Context operation: 'create', 'get', 'update', 'delete', 'list', 'get_property', 'update_property', 'merge', 'add_insight', 'add_progress', 'update_next_steps' |
+| task_id | string | Conditional | Task context identifier (required for most operations) |
+| git_branch_id | string | Optional | Git branch ID (auto-detected from task when possible) |
+| user_id | string | Optional | User identifier (default: 'default_id') |
+| project_id | string | Optional | Project identifier (default: '') |
+| data_title | string | Optional | Context title for create/update operations |
+| data_description | string | Optional | Context description |
+| data_status | string | Optional | Context status |
+| data_priority | string | Optional | Context priority: 'low', 'medium', 'high', 'urgent', 'critical' |
+| content | string | Conditional | Content for insights/progress (required for add_insight, add_progress) |
+| next_steps | string\|array | Optional | Next steps for the context |
+
+#### Examples
+
+```bash
+# Create task context
+mcp__dhafnck_mcp_http__manage_context(
+    action="create",
+    task_id="task-uuid-123",
+    data_title="Implement Authentication",
+    data_description="Add JWT-based authentication system",
+    data_priority="high"
+)
+
+# Add insight to context
+mcp__dhafnck_mcp_http__manage_context(
+    action="add_insight",
+    task_id="task-uuid-123",
+    content="Found existing validation utility that can be reused",
+    category="technical",
+    importance="medium"
+)
+
+# Update context with progress
+mcp__dhafnck_mcp_http__manage_context(
+    action="add_progress",
+    task_id="task-uuid-123",
+    content="Completed login UI, starting JWT integration"
+)
+
+# Update next steps
+mcp__dhafnck_mcp_http__manage_context(
+    action="update_next_steps",
+    task_id="task-uuid-123",
+    next_steps=["Create auth service", "Add middleware", "Write tests"]
+)
+```
+
+#### Response Format
+
+```json
+{
+  "success": true,
+  "context": {
+    "id": "task-uuid-123",
+    "level": "task",
+    "data": {
+      "title": "Implement Authentication",
+      "description": "Add JWT-based authentication system",
+      "priority": "high",
+      "status": "in_progress"
+    },
+    "insights": [
+      {
+        "content": "Found existing validation utility that can be reused",
+        "category": "technical",
+        "importance": "medium",
+        "timestamp": "2025-01-19T10:30:00Z"
+      }
+    ],
+    "progress": [
+      {
+        "content": "Completed login UI, starting JWT integration",
+        "timestamp": "2025-01-19T10:35:00Z"
+      }
+    ],
+    "next_steps": ["Create auth service", "Add middleware", "Write tests"]
+  }
+}
+```
+
+---
 
 ### manage_hierarchical_context
 

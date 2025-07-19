@@ -12,7 +12,7 @@ from sqlalchemy import and_, or_, desc, asc
 from sqlalchemy.orm import joinedload
 
 from ..base_orm_repository import BaseORMRepository
-from ...database.models import Task, TaskSubtask, TaskAssignee, TaskLabel
+from ...database.models import Task, TaskSubtask, TaskAssignee, TaskLabel, TaskDependency
 from ....domain.repositories.task_repository import TaskRepository
 from ....domain.entities.task import Task as TaskEntity
 from ....domain.value_objects.task_id import TaskId
@@ -66,6 +66,11 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
         for subtask in task.subtasks:
             subtask_ids.append(subtask.id)  # Only store subtask IDs, not full objects
         
+        # Convert dependencies to TaskId objects
+        dependency_ids = []
+        for dependency in task.dependencies:
+            dependency_ids.append(TaskId(dependency.depends_on_task_id))
+        
         # Convert status and priority to proper value objects
         
         status_obj = TaskStatus(task.status) if task.status else None
@@ -87,7 +92,8 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
             created_at=task.created_at,
             updated_at=task.updated_at,
             context_id=task.context_id,
-            subtasks=subtask_ids
+            subtasks=subtask_ids,
+            dependencies=dependency_ids
         )
     
     def create_task(self, title: str, description: str, priority: str = "medium",
@@ -135,7 +141,8 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
                     task = session.query(Task).options(
                         joinedload(Task.assignees),
                         joinedload(Task.labels),
-                        joinedload(Task.subtasks)
+                        joinedload(Task.subtasks),
+                        joinedload(Task.dependencies)
                     ).filter(Task.id == task.id).first()
                 
                 return self._model_to_entity(task)
@@ -150,7 +157,8 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
             task = session.query(Task).options(
                 joinedload(Task.assignees),
                 joinedload(Task.labels).joinedload(TaskLabel.label),
-                joinedload(Task.subtasks)
+                joinedload(Task.subtasks),
+                joinedload(Task.dependencies)
             ).filter(
                 and_(
                     Task.id == task_id,
@@ -214,7 +222,8 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
             query = session.query(Task).options(
                 joinedload(Task.assignees),
                 joinedload(Task.labels).joinedload(TaskLabel.label),
-                joinedload(Task.subtasks)
+                joinedload(Task.subtasks),
+                joinedload(Task.dependencies)
             )
             
             # Apply filters
@@ -332,6 +341,19 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
                     existing.due_date = task.due_date
                     existing.updated_at = task.updated_at
                     existing.context_id = task.context_id
+                    
+                    # Update dependencies
+                    # First, remove all existing dependencies
+                    session.query(TaskDependency).filter(TaskDependency.task_id == str(task.id)).delete()
+                    
+                    # Then add new dependencies
+                    for dependency in task.dependencies:
+                        new_dependency = TaskDependency(
+                            task_id=str(task.id),
+                            depends_on_task_id=str(dependency.value if hasattr(dependency, 'value') else dependency),
+                            dependency_type="blocks"
+                        )
+                        session.add(new_dependency)
                 else:
                     # Create new task
                     new_task = Task(
@@ -349,6 +371,15 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
                         context_id=task.context_id
                     )
                     session.add(new_task)
+                    
+                    # Add dependencies for new task
+                    for dependency in task.dependencies:
+                        new_dependency = TaskDependency(
+                            task_id=str(task.id),
+                            depends_on_task_id=str(dependency.value if hasattr(dependency, 'value') else dependency),
+                            dependency_type="blocks"
+                        )
+                        session.add(new_dependency)
                 
                 session.commit()
                 return True

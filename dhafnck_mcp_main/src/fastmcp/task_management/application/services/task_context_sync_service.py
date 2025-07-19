@@ -1,8 +1,8 @@
 from typing import Optional, Any
 import logging
 
-from ...infrastructure.repositories.hierarchical_context_repository_factory import HierarchicalContextRepositoryFactory
-from ...application.services.hierarchical_context_service import HierarchicalContextService
+from ..factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+from .unified_context_service import UnifiedContextService
 from ...domain.repositories.task_repository import TaskRepository
 from ...domain.value_objects.task_id import TaskId
 from ..use_cases.get_task import GetTaskUseCase
@@ -22,9 +22,8 @@ class TaskContextSyncService:
     def __init__(self, task_repository: TaskRepository, context_service: Optional[Any] = None):
         self._task_repository = task_repository
         # Initialize hierarchical context service
-        factory = HierarchicalContextRepositoryFactory()
-        repository = factory.create_hierarchical_context_repository()
-        self._hierarchical_context_service = HierarchicalContextService(repository=repository)
+        factory = UnifiedContextFacadeFactory()
+        self._hierarchical_context_service = factory.create_unified_service()
         self._get_task_use_case = GetTaskUseCase(task_repository, context_service)
 
     # ------------------------------------------------------------------

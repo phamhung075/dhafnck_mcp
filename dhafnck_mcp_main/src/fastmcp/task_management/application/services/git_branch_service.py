@@ -7,19 +7,24 @@ import logging
 from ...domain.repositories.project_repository import ProjectRepository
 from ...domain.entities.git_branch import GitBranch
 from ...infrastructure.repositories.project_repository_factory import GlobalRepositoryManager
-from .hierarchical_context_service import HierarchicalContextService
+from .unified_context_service import UnifiedContextService
 
 logger = logging.getLogger(__name__)
 
 class GitBranchService:
     def __init__(self, project_repo: Optional[ProjectRepository] = None, 
-                 hierarchical_context_service: Optional[HierarchicalContextService] = None):
+                 hierarchical_context_service: Optional[UnifiedContextService] = None):
         self._project_repo = project_repo or GlobalRepositoryManager.get_default()
         # Initialize git branch repository
         from ...infrastructure.repositories.orm.git_branch_repository import ORMGitBranchRepository
         self._git_branch_repo = ORMGitBranchRepository()
         # Initialize hierarchical context service for branch context creation
-        self._hierarchical_context_service = hierarchical_context_service or HierarchicalContextService()
+        if hierarchical_context_service:
+            self._hierarchical_context_service = hierarchical_context_service
+        else:
+            from ..factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+            factory = UnifiedContextFacadeFactory()
+            self._hierarchical_context_service = factory.create_unified_service()
 
     async def create_git_branch(self, project_id: str, branch_name: str, description: str = "") -> Dict[str, Any]:
         project = await self._project_repo.find_by_id(project_id)
@@ -48,7 +53,7 @@ class GitBranchService:
                 "branch_standards": {}
             }
             
-            branch_context = self._hierarchical_context_service.create_context(
+            branch_context = await self._hierarchical_context_service.create_context(
                 level="branch",
                 context_id=git_branch.id,
                 data=branch_context_data

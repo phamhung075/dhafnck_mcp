@@ -72,35 +72,33 @@ class CreateProjectUseCase:
             
             # Auto-create project context for hierarchical context inheritance
             try:
-                from ..facades.hierarchical_context_facade import HierarchicalContextFacade
-                from ..services.hierarchical_context_service import HierarchicalContextService
-                from ..services.context_inheritance_service import ContextInheritanceService
-                from ..services.context_delegation_service import ContextDelegationService
-                from ..services.context_cache_service import ContextCacheService
                 
-                # Create facade with mocked services for now
-                # In production, these would be injected properly
-                hierarchy_service = HierarchicalContextService()
-                inheritance_service = ContextInheritanceService()
-                delegation_service = ContextDelegationService() 
-                cache_service = ContextCacheService()
+                # Use unified context facade for project context creation
+                from ..factories.unified_context_facade_factory import UnifiedContextFacadeFactory
                 
-                context_facade = HierarchicalContextFacade(
-                    hierarchy_service=hierarchy_service,
-                    inheritance_service=inheritance_service,
-                    delegation_service=delegation_service,
-                    cache_service=cache_service
+                # Create unified context facade
+                factory = UnifiedContextFacadeFactory()
+                context_facade = factory.create_facade(
+                    user_id="default_id",
+                    project_id=project.id
                 )
                 
                 # Create default project context
-                project_dict = {
-                    "id": project.id,
+                context_data = {
+                    "project_id": project.id,
                     "name": project.name,
-                    "description": project.description
+                    "description": project.description,
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "configuration": {},
+                    "standards": {},
+                    "team_settings": {}
                 }
                 
-                context_data = context_facade._create_default_project_context_data(project.id, project_dict)
-                context_response = context_facade.create_context("project", project.id, context_data)
+                context_response = context_facade.create_context(
+                    level="project",
+                    context_id=project.id,
+                    data=context_data
+                )
                 
                 if not context_response["success"]:
                     # Log warning but don't fail project creation
