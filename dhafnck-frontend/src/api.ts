@@ -12,6 +12,12 @@ export interface Task {
     priority: string;
     subtasks: string[]; // Now just IDs following new architecture
     assignees?: string[];
+    dependencies?: string[];
+    dependency_relationships?: {
+        depends_on: string[];
+        blocks: string[];
+        dependency_chains?: string[][];
+    };
     [key: string]: any;
 }
 
@@ -125,9 +131,15 @@ export async function listTasks(params: any = {}): Promise<Task[]> {
   if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
     try {
       const toolResult = JSON.parse(data.result.content[0].text);
-      if (toolResult.success && Array.isArray(toolResult.tasks)) {
-        // Sanitize each task to remove non-serializable properties
-        return toolResult.tasks.map(sanitizeTask);
+      if (toolResult.success) {
+        const data = extractResponseData(toolResult);
+        if (Array.isArray(data.tasks)) {
+          // Sanitize each task to remove non-serializable properties
+          return data.tasks.map(sanitizeTask);
+        } else if (Array.isArray(toolResult.tasks)) {
+          // Fallback for older format
+          return toolResult.tasks.map(sanitizeTask);
+        }
       }
     } catch {}
   }
@@ -153,9 +165,15 @@ export async function getTask(task_id: string): Promise<Task | null> {
   if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
     try {
       const toolResult = JSON.parse(data.result.content[0].text);
-      if (toolResult.success && toolResult.task) {
-        // Sanitize the task data
-        return sanitizeTask(toolResult.task);
+      if (toolResult.success) {
+        const responseData = extractResponseData(toolResult);
+        if (responseData.task) {
+          // Sanitize the task data
+          return sanitizeTask(responseData.task);
+        } else if (toolResult.task) {
+          // Fallback for older format
+          return sanitizeTask(toolResult.task);
+        }
       }
     } catch {}
   }
@@ -181,9 +199,15 @@ export async function createTask(task: Partial<Task>): Promise<Task | null> {
   if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
     try {
       const toolResult = JSON.parse(data.result.content[0].text);
-      if (toolResult.success && toolResult.task) {
-        // Sanitize the task data
-        return sanitizeTask(toolResult.task);
+      if (toolResult.success) {
+        const responseData = extractResponseData(toolResult);
+        if (responseData.task) {
+          // Sanitize the task data
+          return sanitizeTask(responseData.task);
+        } else if (toolResult.task) {
+          // Fallback for older format
+          return sanitizeTask(toolResult.task);
+        }
       }
     } catch {}
   }
@@ -214,8 +238,9 @@ export async function updateTask(task_id: string, updates: Partial<Task>): Promi
       
       // Check if success is true, even if task is not returned
       if (toolResult.success) {
-        // Return a dummy task object if task is not in response
-        return toolResult.task || { id: task_id, ...updates } as Task;
+        const responseData = extractResponseData(toolResult);
+        // Return task from data or fallback to dummy task object
+        return responseData.task || toolResult.task || { id: task_id, ...updates } as Task;
       }
       
       // If not successful, check for error message
@@ -273,11 +298,60 @@ export async function deleteTask(task_id: string): Promise<boolean> {
   return false;
 }
 
+// Complete a task with completion summary and testing notes
+export async function completeTask(task_id: string, completion_summary: string, testing_notes?: string): Promise<Task | null> {
+  const body = {
+    jsonrpc: "2.0",
+    method: "tools/call",
+    params: {
+      name: "manage_task",
+      arguments: { 
+        action: "complete", 
+        task_id,
+        completion_summary,
+        ...(testing_notes && { testing_notes })
+      }
+    },
+    id: getRpcId(),
+  };
+  const res = await fetch(`${API_BASE}`, {
+    method: "POST",
+    headers: withMcpHeaders(),
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
+    try {
+      const toolResult = JSON.parse(data.result.content[0].text);
+      if (toolResult.success) {
+        const responseData = extractResponseData(toolResult);
+        if (responseData.task) {
+          return sanitizeTask(responseData.task);
+        } else if (toolResult.task) {
+          return sanitizeTask(toolResult.task);
+        }
+        // If no task returned but success, return a basic completed task
+        return { id: task_id, status: 'done' } as Task;
+      }
+    } catch {}
+  }
+  return null;
+}
+
 // --- Helper Functions ---
 // Helper function to sanitize subtask data by removing non-serializable properties
 function sanitizeSubtask(subtask: any): Subtask {
   const { _events, _eventsCount, _maxListeners, ...cleanSubtask } = subtask;
   return cleanSubtask;
+}
+
+// Helper function to extract data from nested response structure
+function extractResponseData(toolResult: any): any {
+  // Handle new nested data structure from backend
+  if (toolResult && toolResult.data) {
+    return toolResult.data;
+  }
+  return toolResult;
 }
 
 // Helper function to sanitize task data by removing non-serializable properties
@@ -330,9 +404,15 @@ export async function listSubtasks(task_id: string): Promise<any[]> {
   if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
     try {
       const toolResult = JSON.parse(data.result.content[0].text);
-      if (toolResult.success && Array.isArray(toolResult.subtasks)) {
-        // Sanitize each subtask to remove non-serializable properties
-        return toolResult.subtasks.map(sanitizeSubtask);
+      if (toolResult.success) {
+        const responseData = extractResponseData(toolResult);
+        if (Array.isArray(responseData.subtasks)) {
+          // Sanitize each subtask to remove non-serializable properties
+          return responseData.subtasks.map(sanitizeSubtask);
+        } else if (Array.isArray(toolResult.subtasks)) {
+          // Fallback for older format
+          return toolResult.subtasks.map(sanitizeSubtask);
+        }
       }
     } catch {}
   }
@@ -358,9 +438,15 @@ export async function createSubtask(task_id: string, subtask: any): Promise<any>
   if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
     try {
       const toolResult = JSON.parse(data.result.content[0].text);
-      if (toolResult.success && toolResult.subtask) {
-        // Sanitize the returned subtask
-        return sanitizeSubtask(toolResult.subtask);
+      if (toolResult.success) {
+        const responseData = extractResponseData(toolResult);
+        if (responseData.subtask) {
+          // Sanitize the returned subtask
+          return sanitizeSubtask(responseData.subtask);
+        } else if (toolResult.subtask) {
+          // Fallback for older format
+          return sanitizeSubtask(toolResult.subtask);
+        }
       }
     } catch {}
   }
@@ -390,9 +476,16 @@ export async function updateSubtask(task_id: string, id: string, updates: any): 
       const toolResult = JSON.parse(data.result.content[0].text);
       
       if (toolResult.success) {
+        const responseData = extractResponseData(toolResult);
         // Handle nested subtask structure from API response
-        if (toolResult.subtask) {
+        if (responseData.subtask) {
           // Check if subtask has nested subtask property
+          if (responseData.subtask.subtask) {
+            return sanitizeSubtask(responseData.subtask.subtask);
+          }
+          return sanitizeSubtask(responseData.subtask);
+        } else if (toolResult.subtask) {
+          // Fallback for older format
           if (toolResult.subtask.subtask) {
             return sanitizeSubtask(toolResult.subtask.subtask);
           }
@@ -450,6 +543,53 @@ export async function deleteSubtask(task_id: string, id: string): Promise<boolea
     } catch {}
   }
   return false;
+}
+
+// Complete a subtask with completion summary
+export async function completeSubtask(
+  task_id: string, 
+  subtask_id: string, 
+  completion_summary: string,
+  impact_on_parent?: string,
+  challenges_overcome?: string[]
+): Promise<any> {
+  const body = {
+    jsonrpc: "2.0",
+    method: "tools/call",
+    params: {
+      name: "manage_subtask",
+      arguments: { 
+        action: "complete", 
+        task_id, 
+        subtask_id,
+        completion_summary,
+        ...(impact_on_parent && { impact_on_parent }),
+        ...(challenges_overcome && { challenges_overcome })
+      }
+    },
+    id: getRpcId(),
+  };
+  const res = await fetch(`${API_BASE}`, {
+    method: "POST",
+    headers: withMcpHeaders(),
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
+    try {
+      const toolResult = JSON.parse(data.result.content[0].text);
+      if (toolResult.success) {
+        const responseData = extractResponseData(toolResult);
+        if (responseData.subtask) {
+          return sanitizeSubtask(responseData.subtask);
+        } else if (toolResult.subtask) {
+          return sanitizeSubtask(toolResult.subtask);
+        }
+        return { id: subtask_id, status: 'done' };
+      }
+    } catch {}
+  }
+  return null;
 }
 
 // --- Dependency Management ---
@@ -733,15 +873,19 @@ export async function listProjects(): Promise<Project[]> {
   if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
     try {
       const toolResult = JSON.parse(data.result.content[0].text);
-      if (toolResult.success && Array.isArray(toolResult.projects)) {
-        // Get detailed project information including git_branchs
-        const projectsWithDetails = await Promise.all(
-          toolResult.projects.map(async (project: any) => {
-            const detailedProject = await getProject(project.id);
-            return detailedProject || project;
-          })
-        );
-        return projectsWithDetails;
+      if (toolResult.success) {
+        const responseData = extractResponseData(toolResult);
+        const projects = responseData.projects || toolResult.projects;
+        if (Array.isArray(projects)) {
+          // Get detailed project information including git_branchs
+          const projectsWithDetails = await Promise.all(
+            projects.map(async (project: any) => {
+              const detailedProject = await getProject(project.id);
+              return detailedProject || project;
+            })
+          );
+          return projectsWithDetails;
+        }
       }
     } catch {}
   }
@@ -767,8 +911,13 @@ export async function getProject(project_id: string): Promise<Project | null> {
   if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
     try {
       const toolResult = JSON.parse(data.result.content[0].text);
-      if (toolResult.success && toolResult.project) {
-        return toolResult.project;
+      if (toolResult.success) {
+        const responseData = extractResponseData(toolResult);
+        if (responseData.project) {
+          return responseData.project;
+        } else if (toolResult.project) {
+          return toolResult.project;
+        }
       }
     } catch {}
   }
@@ -794,8 +943,13 @@ export async function createProject(project: Partial<Project>): Promise<Project 
   if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
     try {
       const toolResult = JSON.parse(data.result.content[0].text);
-      if (toolResult.success && toolResult.project) {
-        return toolResult.project;
+      if (toolResult.success) {
+        const responseData = extractResponseData(toolResult);
+        if (responseData.project) {
+          return responseData.project;
+        } else if (toolResult.project) {
+          return toolResult.project;
+        }
       }
     } catch {}
   }
@@ -821,8 +975,13 @@ export async function updateProject(project_id: string, updates: Partial<Project
   if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
     try {
       const toolResult = JSON.parse(data.result.content[0].text);
-      if (toolResult.success && toolResult.project) {
-        return toolResult.project;
+      if (toolResult.success) {
+        const responseData = extractResponseData(toolResult);
+        if (responseData.project) {
+          return responseData.project;
+        } else if (toolResult.project) {
+          return toolResult.project;
+        }
       }
     } catch {}
   }
@@ -912,8 +1071,13 @@ export async function createBranch(projectId: string, branchName: string, descri
     if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
         try {
             const toolResult = JSON.parse(data.result.content[0].text);
-            if (toolResult.success && toolResult.git_branch) {
-                return toolResult.git_branch;
+            if (toolResult.success) {
+                const responseData = extractResponseData(toolResult);
+                if (responseData.git_branch) {
+                    return responseData.git_branch;
+                } else if (toolResult.git_branch) {
+                    return toolResult.git_branch;
+                }
             }
         } catch {}
     }

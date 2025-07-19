@@ -659,7 +659,11 @@ class TaskApplicationFacade:
             # First try to find dependency in current context
             dependency_task = self._task_repository.find_by_id(TaskId(dependency_id))
             
-            # If not found and repository supports cross-context search, try that
+            # If not found, try to find across all states (active, completed, archived)
+            if not dependency_task and hasattr(self._task_repository, 'find_by_id_all_states'):
+                dependency_task = self._task_repository.find_by_id_all_states(TaskId(dependency_id))
+            
+            # If still not found and repository supports cross-context search, try that
             if not dependency_task and hasattr(self._task_repository, 'find_by_id_across_contexts'):
                 dependency_task = self._task_repository.find_by_id_across_contexts(TaskId(dependency_id))
             

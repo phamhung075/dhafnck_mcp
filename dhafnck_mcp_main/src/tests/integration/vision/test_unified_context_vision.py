@@ -108,48 +108,60 @@ def test_unified_context_vision():
         assert global_create_result.get("success"), f"Global context creation failed: {global_create_result.get('error')}"
         print("      ✓ Global context created")
     
-    # Create project context
+    # Create project context (or use existing)
     print("      Creating project context...")
-    project_create_result = facade.create_context(
-        level="project",
-        context_id=project_id,
-        data={
-            "project_name": "Unified Context Test Project",
-            "project_settings": {"test_mode": True}
-        }
-    )
-    assert project_create_result.get("success"), f"Project context creation failed: {project_create_result.get('error')}"
-    print("      ✓ Project context created")
-    
-    # Create branch context
-    print("      Creating branch context...")
-    branch_create_result = facade.create_context(
-        level="branch",
-        context_id=branch_id,
-        data={
-            "project_id": project_id,
-            "git_branch_name": "feature/test-unified-context",
-            "branch_settings": {"branch_type": "feature"}
-        }
-    )
-    assert branch_create_result.get("success"), f"Branch context creation failed: {branch_create_result.get('error')}"
-    print("      ✓ Branch context created")
-    
-    # Create task context
-    print("      Creating task context...")
-    task_create_result = facade.create_context(
-        level="task",
-        context_id=task_id,
-        data={
-            "branch_id": branch_id,
-            "task_data": {
-                "title": "Test Unified Context Task",
-                "status": "todo"
+    project_get_result = facade.get_context(level="project", context_id=project_id)
+    if not project_get_result.get("success"):
+        project_create_result = facade.create_context(
+            level="project",
+            context_id=project_id,
+            data={
+                "project_name": "Unified Context Test Project",
+                "project_settings": {"test_mode": True}
             }
-        }
-    )
-    assert task_create_result.get("success"), f"Task context creation failed: {task_create_result.get('error')}"
-    print("      ✓ Task context created")
+        )
+        assert project_create_result.get("success"), f"Project context creation failed: {project_create_result.get('error')}"
+        print("      ✓ Project context created")
+    else:
+        print("      ✓ Project context already exists")
+    
+    # Create branch context (or use existing)
+    print("      Creating branch context...")
+    branch_get_result = facade.get_context(level="branch", context_id=branch_id)
+    if not branch_get_result.get("success"):
+        branch_create_result = facade.create_context(
+            level="branch",
+            context_id=branch_id,
+            data={
+                "project_id": project_id,
+                "git_branch_name": "feature/test-unified-context",
+                "branch_settings": {"branch_type": "feature"}
+            }
+        )
+        assert branch_create_result.get("success"), f"Branch context creation failed: {branch_create_result.get('error')}"
+        print("      ✓ Branch context created")
+    else:
+        print("      ✓ Branch context already exists")
+    
+    # Create task context (or use existing)
+    print("      Creating task context...")
+    task_get_result = facade.get_context(level="task", context_id=task_id)
+    if not task_get_result.get("success"):
+        task_create_result = facade.create_context(
+            level="task",
+            context_id=task_id,
+            data={
+                "branch_id": branch_id,
+                "task_data": {
+                    "title": "Test Unified Context Task",
+                    "status": "todo"
+                }
+            }
+        )
+        assert task_create_result.get("success"), f"Task context creation failed: {task_create_result.get('error')}"
+        print("      ✓ Task context created")
+    else:
+        print("      ✓ Task context already exists")
     
     # Test get context
     print("   a) Testing get context...")

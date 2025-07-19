@@ -104,6 +104,17 @@ class DDDCompliantMCPTools:
         # Use hierarchical context facade factory for new context system
         self._unified_context_facade_factory = UnifiedContextFacadeFactory()
         self._context_facade_factory = self._unified_context_facade_factory  # Use unified factory directly
+        
+        # Auto-create global context on system startup
+        try:
+            global_context_created = self._unified_context_facade_factory.auto_create_global_context()
+            if global_context_created:
+                logger.info("Global context initialization completed")
+            else:
+                logger.warning("Global context auto-creation failed - hierarchical context operations may not work properly")
+        except Exception as e:
+            logger.warning(f"Exception during global context initialization: {e}")
+            # Continue with startup - this is not a critical failure
         self._project_facade_factory = ProjectFacadeFactory()
         self._git_branch_facade_factory = GitBranchFacadeFactory()
         

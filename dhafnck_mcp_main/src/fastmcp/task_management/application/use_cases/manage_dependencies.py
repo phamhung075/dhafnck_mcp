@@ -45,7 +45,8 @@ class ManageDependenciesUseCase:
         if not task:
             raise TaskNotFoundError(f"Task {request.task_id} not found")
         
-        dependency_task = self._task_repository.find_by_id(dependency_id)
+        # Try to find dependency task in all states (active, completed, archived)
+        dependency_task = self._task_repository.find_by_id_all_states(dependency_id)
         if not dependency_task:
             raise TaskNotFoundError(f"Dependency task {request.dependency_id} not found")
         
@@ -115,7 +116,8 @@ class ManageDependenciesUseCase:
         # Get detailed dependency information
         dependency_details = []
         for dep_id in task.get_dependency_ids():
-            dep_task = self._task_repository.find_by_id(self._convert_to_task_id(str(dep_id)))
+            # Search in all states for dependency details
+            dep_task = self._task_repository.find_by_id_all_states(self._convert_to_task_id(str(dep_id)))
             if dep_task:
                 dependency_details.append({
                     "id": str(dep_id),

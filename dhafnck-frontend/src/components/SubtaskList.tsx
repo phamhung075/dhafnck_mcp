@@ -1,6 +1,6 @@
 import { Check, Eye, Pencil, Play, Plus, Trash2, Users } from "lucide-react";
 import { useEffect, useState } from "react";
-import { deleteSubtask, listSubtasks, createSubtask as newSubtask, updateSubtask as saveSubtask, Subtask, listAgents, getAvailableAgents, callAgent } from "../api";
+import { deleteSubtask, listSubtasks, createSubtask as newSubtask, updateSubtask as saveSubtask, Subtask, listAgents, getAvailableAgents, callAgent, completeSubtask } from "../api";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
@@ -11,6 +11,7 @@ import { Checkbox } from "./ui/checkbox";
 import ClickableAssignees from "./ClickableAssignees";
 import AgentResponseDialog from "./AgentResponseDialog";
 import { RefreshButton } from "./ui/refresh-button";
+import SubtaskCompleteDialog from "./SubtaskCompleteDialog";
 
 interface SubtaskListProps {
   projectId: string;
@@ -44,6 +45,7 @@ export function SubtaskList({ projectId, taskTreeId, parentTaskId }: SubtaskList
   const [showEdit, setShowEdit] = useState<Subtask | null>(null);
   const [showDelete, setShowDelete] = useState<Subtask | null>(null);
   const [showDetails, setShowDetails] = useState<Subtask | null>(null);
+  const [showComplete, setShowComplete] = useState<Subtask | null>(null);
   const [form, setForm] = useState<Partial<Subtask>>({ title: "", description: "", priority: "medium", status: "todo" });
   const [saving, setSaving] = useState(false);
   const [agents, setAgents] = useState<any[]>([]);
@@ -238,6 +240,16 @@ export function SubtaskList({ projectId, taskTreeId, parentTaskId }: SubtaskList
     setCurrentAgentResponse(null);
   };
 
+  const handleSubtaskComplete = async (completedSubtask: any) => {
+    // Update the subtask in the list
+    setSubtasks(prevSubtasks => 
+      prevSubtasks.map(s => s.id === completedSubtask.id ? { ...s, status: 'done' } : s)
+    );
+    setShowComplete(null);
+    // Refresh the list
+    fetchSubtasks();
+  };
+
   if (loading) return <div className="text-xs text-muted-foreground px-2 py-1">Loading subtasks...</div>;
   if (error) return <div className="text-xs text-destructive px-2 py-1">Error: {error}</div>;
 
@@ -312,6 +324,11 @@ export function SubtaskList({ projectId, taskTreeId, parentTaskId }: SubtaskList
                     <Button size="icon" variant="ghost" className="hover:bg-primary/10" onClick={() => handleEdit(subtask)} title="Edit subtask">
                       <Pencil className="w-4 h-4 text-muted-foreground" />
                     </Button>
+                    {subtask.status !== 'done' && (
+                      <Button size="icon" variant="ghost" className="hover:bg-primary/10" onClick={() => setShowComplete(subtask)} title="Complete subtask">
+                        <Check className="w-4 h-4 text-muted-foreground" />
+                      </Button>
+                    )}
                     <Button size="icon" variant="ghost" className="hover:text-destructive" onClick={() => setShowDelete(subtask)} title="Delete subtask">
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -797,6 +814,16 @@ export function SubtaskList({ projectId, taskTreeId, parentTaskId }: SubtaskList
         onOpenChange={setShowAgentResponse}
         agentResponse={currentAgentResponse}
         onClose={closeAgentResponseDialog}
+      />
+      
+      {/* Subtask Complete Dialog */}
+      <SubtaskCompleteDialog
+        open={!!showComplete}
+        onOpenChange={(v) => { if (!v) setShowComplete(null); }}
+        subtask={showComplete}
+        parentTaskId={parentTaskId}
+        onClose={() => setShowComplete(null)}
+        onComplete={handleSubtaskComplete}
       />
     </div>
   );

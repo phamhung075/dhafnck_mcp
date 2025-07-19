@@ -7,6 +7,7 @@ from ...application.dtos.subtask.subtask_response import SubtaskResponse
 from ...domain import TaskRepository, TaskId, TaskNotFoundError
 from ...domain.repositories.subtask_repository import SubtaskRepository
 from ...domain.entities.subtask import Subtask
+from ...domain.value_objects.priority import Priority
 import logging
 
 class AddSubtaskUseCase:
@@ -15,6 +16,7 @@ class AddSubtaskUseCase:
         self._subtask_repository = subtask_repository
 
     def execute(self, request: AddSubtaskRequest) -> SubtaskResponse:
+        logging.debug(f"[AddSubtask] Request received - priority: {request.priority}")
         task_id = self._convert_to_task_id(request.task_id)
         task = self._task_repository.find_by_id(task_id)
         if not task:
@@ -23,18 +25,28 @@ class AddSubtaskUseCase:
         # Create subtask using the new domain entity
         if self._subtask_repository:
             # Use dedicated subtask repository if available
+            logging.debug("[AddSubtask] Using subtask repository path")
             subtask_id = self._subtask_repository.get_next_id(task_id)
+            
+            # Convert string priority to Priority value object
+            priority = None
+            if request.priority:
+                priority = Priority.from_string(request.priority)
+                logging.debug(f"[AddSubtask] Creating subtask with priority: {request.priority} -> {priority}")
+            
             subtask = Subtask.create(
                 id=subtask_id,
                 title=request.title,
                 description=request.description,
                 parent_task_id=task_id,
-                assignees=request.assignees
+                assignees=request.assignees,
+                priority=priority
             )
             self._subtask_repository.save(subtask)
             added_subtask = subtask.to_dict()
         else:
             # Fallback to existing task entity method for backward compatibility
+            logging.debug("[AddSubtask] Using legacy task entity path")
             subtask = {
                 "title": request.title,
                 "description": request.description,

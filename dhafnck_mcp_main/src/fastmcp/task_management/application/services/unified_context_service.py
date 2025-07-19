@@ -82,14 +82,38 @@ class UnifiedContextService:
             )
             
             if not is_valid:
-                # Return user-friendly error with guidance
-                response = {
-                    "success": False,
-                    "error": error_msg
-                }
-                if guidance:
-                    response.update(guidance)
-                return response
+                # Try auto-creating missing parent contexts
+                logger.info(f"Attempting auto-creation of parent contexts for {level} context: {context_id}")
+                auto_creation_success = self._auto_create_parent_contexts(
+                    target_level=context_level,
+                    context_id=context_id,
+                    data=data,
+                    user_id=user_id,
+                    project_id=project_id
+                )
+                
+                if auto_creation_success:
+                    # Re-validate after auto-creation
+                    is_valid, error_msg, guidance = self.hierarchy_validator.validate_hierarchy_requirements(
+                        level=context_level,
+                        context_id=context_id,
+                        data=data
+                    )
+                    
+                    if is_valid:
+                        logger.info(f"Successfully auto-created parent contexts for {level}")
+                    else:
+                        logger.warning(f"Auto-creation succeeded but validation still fails for {level}")
+                
+                if not is_valid:
+                    # Return user-friendly error with guidance
+                    response = {
+                        "success": False,
+                        "error": error_msg
+                    }
+                    if guidance:
+                        response.update(guidance)
+                    return response
             
             # Validate context data
             validation_result = self.validation_service.validate_context_data(
@@ -641,3 +665,359 @@ class UnifiedContextService:
         # This would handle cascading deletes based on level
         # For now, just log
         logger.info(f"Cleaning up dependent contexts for {level}:{context_id}")
+    
+    def auto_create_context_if_missing(
+        self,
+        level: str,
+        context_id: str,
+        data: Optional[Dict[str, Any]] = None,
+        user_id: Optional[str] = None,
+        project_id: Optional[str] = None,
+        git_branch_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Auto-create context if it doesn't exist, with fallback data.
+        
+        This method attempts to create a context if it doesn't already exist.
+        It's designed to be used in scenarios where a context should be present
+        but may not have been explicitly created (e.g., during task completion).
+        
+        Args:
+            level: Context level (global, project, branch, task)
+            context_id: Unique identifier for the context
+            data: Optional context data, will use defaults if not provided
+            user_id: Optional user identifier
+            project_id: Optional project identifier  
+            git_branch_id: Optional git branch identifier for branch/task contexts
+            
+        Returns:
+            Dict with success status and context data or error information
+        """
+        try:
+            # First, check if context already exists
+            existing_result = self.get_context(level, context_id)
+            if existing_result["success"]:
+                logger.info(f"Context already exists for {level}:{context_id}")
+                return existing_result
+            
+            # Context doesn't exist, create it with default data
+            logger.info(f"Auto-creating context for {level}:{context_id}")
+            
+            # Build default data based on level and provided data
+            default_data = self._build_default_context_data(
+                level=level,
+                context_id=context_id,
+                data=data,
+                project_id=project_id,
+                git_branch_id=git_branch_id
+            )
+            
+            # Create the context
+            create_result = self.create_context(
+                level=level,
+                context_id=context_id,
+                data=default_data,
+                user_id=user_id,
+                project_id=project_id
+            )
+            
+            if create_result["success"]:
+                logger.info(f"Successfully auto-created context for {level}:{context_id}")
+            else:
+                logger.warning(f"Failed to auto-create context for {level}:{context_id}: {create_result.get('error')}")
+            
+            return create_result
+            
+        except Exception as e:
+            logger.error(f"Error in auto_create_context_if_missing for {level}:{context_id}: {e}")
+            return {
+                "success": False,
+                "error": f"Auto-creation failed: {str(e)}"
+            }
+    
+    def _build_default_context_data(
+        self,
+        level: str,
+        context_id: str,
+        data: Optional[Dict[str, Any]] = None,
+        project_id: Optional[str] = None,
+        git_branch_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Build default context data for auto-creation based on level.
+        
+        This provides sensible defaults when auto-creating contexts,
+        ensuring they have the minimum required data for each level.
+        """
+        base_data = data or {}
+        timestamp = datetime.now(timezone.utc).isoformat()
+        
+        # Common metadata for all levels
+        default_metadata = {
+            "auto_created": True,
+            "created_at": timestamp,
+            "created_by": "auto_creation_service"
+        }
+        
+        if level == "global":
+            return {
+                "organization_name": base_data.get("organization_name", "Default Organization"),
+                "global_settings": base_data.get("global_settings", {
+                    "default_timezone": "UTC",
+                    "auto_create_contexts": True
+                }),
+                "metadata": {**default_metadata, **base_data.get("metadata", {})}
+            }
+            
+        elif level == "project":
+            return {
+                "project_name": base_data.get("project_name", f"Project {context_id[:8]}"),
+                "project_settings": base_data.get("project_settings", {
+                    "auto_context_creation": True,
+                    "default_branch": "main"
+                }),
+                "metadata": {**default_metadata, **base_data.get("metadata", {})}
+            }
+            
+        elif level == "branch":
+            return {
+                "project_id": project_id or base_data.get("project_id"),
+                "git_branch_name": base_data.get("git_branch_name", "main"),
+                "branch_settings": base_data.get("branch_settings", {
+                    "auto_created": True,
+                    "workflow_type": "standard"
+                }),
+                "metadata": {**default_metadata, **base_data.get("metadata", {})}
+            }
+            
+        elif level == "task":
+            return {
+                "branch_id": git_branch_id or base_data.get("branch_id") or base_data.get("parent_branch_id"),
+                "task_data": base_data.get("task_data", {
+                    "title": base_data.get("title", f"Task {context_id[:8]}"),
+                    "description": base_data.get("description", "Auto-created task context"),
+                    "auto_created": True
+                }),
+                "progress": base_data.get("progress", 0),
+                "insights": base_data.get("insights", []),
+                "next_steps": base_data.get("next_steps", []),
+                "metadata": {**default_metadata, **base_data.get("metadata", {})}
+            }
+            
+        else:
+            # Fallback - return provided data with metadata
+            return {
+                **base_data,
+                "metadata": {**default_metadata, **base_data.get("metadata", {})}
+            }
+    
+    def _auto_create_parent_contexts(
+        self,
+        target_level: "ContextLevel",
+        context_id: str,
+        data: Dict[str, Any],
+        user_id: Optional[str] = None,
+        project_id: Optional[str] = None
+    ) -> bool:
+        """
+        Auto-create missing parent contexts for the target context.
+        
+        Args:
+            target_level: The level of context being created
+            context_id: The ID of the target context
+            data: The data for the target context (may contain parent IDs)
+            user_id: Optional user ID
+            project_id: Optional project ID
+            
+        Returns:
+            bool: True if all required parent contexts were created/verified, False otherwise
+        """
+        try:
+            logger.info(f"Auto-creating parent contexts for {target_level} context")
+            
+            # Determine what parent contexts are needed based on target level
+            if target_level == ContextLevel.PROJECT:
+                # Project needs global context
+                global_result = self.auto_create_context_if_missing(
+                    level="global",
+                    context_id="global_singleton"
+                )
+                return global_result.get("success", False)
+                
+            elif target_level == ContextLevel.BRANCH:
+                # Branch needs global and project contexts
+                # First ensure global exists
+                global_result = self.auto_create_context_if_missing(
+                    level="global",
+                    context_id="global_singleton"
+                )
+                if not global_result.get("success", False):
+                    logger.warning("Failed to auto-create global context for branch")
+                    return False
+                
+                # Determine project ID from data or parameter
+                branch_project_id = project_id or data.get("project_id")
+                if not branch_project_id:
+                    logger.warning("No project_id available for branch context auto-creation")
+                    return False
+                
+                # Create project context if missing
+                project_result = self.auto_create_context_if_missing(
+                    level="project",
+                    context_id=branch_project_id,
+                    project_id=branch_project_id
+                )
+                return project_result.get("success", False)
+                
+            elif target_level == ContextLevel.TASK:
+                # Task needs global, project, and branch contexts
+                # Get branch ID from data
+                branch_id = data.get("branch_id") or data.get("parent_branch_id")
+                if not branch_id:
+                    logger.warning("No branch_id available for task context auto-creation")
+                    return False
+                
+                # First ensure global exists
+                global_result = self.auto_create_context_if_missing(
+                    level="global",
+                    context_id="global_singleton"
+                )
+                if not global_result.get("success", False):
+                    logger.warning("Failed to auto-create global context for task")
+                    return False
+                
+                # Determine project ID (if not provided, we'll need to look it up from branch)
+                task_project_id = project_id
+                if not task_project_id:
+                    # Try to get project ID from branch context if it exists
+                    try:
+                        branch_repo = self.repositories.get(ContextLevel.BRANCH)
+                        if branch_repo:
+                            existing_branch = branch_repo.get(branch_id)
+                            if existing_branch:
+                                task_project_id = getattr(existing_branch, 'project_id', None)
+                    except Exception as e:
+                        logger.debug(f"Could not retrieve project_id from existing branch: {e}")
+                
+                if not task_project_id:
+                    logger.warning("No project_id available for task context auto-creation")
+                    return False
+                
+                # Create project context if missing
+                project_result = self.auto_create_context_if_missing(
+                    level="project",
+                    context_id=task_project_id,
+                    project_id=task_project_id
+                )
+                if not project_result.get("success", False):
+                    logger.warning("Failed to auto-create project context for task")
+                    return False
+                
+                # Create branch context if missing
+                branch_result = self.auto_create_context_if_missing(
+                    level="branch",
+                    context_id=branch_id,
+                    data={"project_id": task_project_id},
+                    project_id=task_project_id
+                )
+                return branch_result.get("success", False)
+                
+            else:
+                # Global level or unknown - no parent needed
+                return True
+                
+        except Exception as e:
+            logger.error(f"Exception during parent context auto-creation: {e}")
+            return False
+    
+    def auto_create_context_if_missing(
+        self,
+        level: str,
+        context_id: str,
+        data: Optional[Dict[str, Any]] = None,
+        user_id: Optional[str] = None,
+        project_id: Optional[str] = None,
+        git_branch_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Auto-create a context if it doesn't already exist.
+        
+        This method first checks if the context exists, and only creates it if missing.
+        It's safe to call multiple times and provides intelligent defaults.
+        
+        Args:
+            level: Context level (global, project, branch, task)
+            context_id: Context identifier
+            data: Optional context data (defaults will be provided if missing)
+            user_id: Optional user identifier
+            project_id: Optional project identifier
+            git_branch_id: Optional git branch identifier
+            
+        Returns:
+            Dict with success status and context information
+        """
+        try:
+            # Validate level
+            context_level = ContextLevel(level)
+            
+            # Check if context already exists
+            repository = self.repositories.get(context_level)
+            if not repository:
+                return {
+                    "success": False,
+                    "error": f"No repository configured for level: {level}"
+                }
+            
+            try:
+                existing_context = repository.get(context_id)
+                if existing_context:
+                    logger.info(f"Context {level}/{context_id} already exists")
+                    return {
+                        "success": True,
+                        "message": f"Context {context_id} already exists",
+                        "context": self._entity_to_dict(existing_context),
+                        "created": False
+                    }
+            except Exception:
+                # Context doesn't exist, continue with creation
+                logger.debug(f"Context {level}/{context_id} does not exist, will create")
+                pass
+            
+            # Prepare data with defaults if not provided
+            context_data = data or {}
+            if not context_data:
+                context_data = self._build_default_context_data(
+                    level=level,
+                    context_id=context_id,
+                    base_data={},
+                    user_id=user_id,
+                    project_id=project_id,
+                    git_branch_id=git_branch_id
+                )
+            
+            # Create the context using the main create_context method
+            # Note: This may trigger recursive auto-creation of parent contexts
+            result = self.create_context(
+                level=level,
+                context_id=context_id,
+                data=context_data,
+                user_id=user_id,
+                project_id=project_id
+            )
+            
+            if result.get("success", False):
+                logger.info(f"Successfully auto-created context {level}/{context_id}")
+                return {
+                    **result,
+                    "created": True
+                }
+            else:
+                logger.warning(f"Failed to auto-create context {level}/{context_id}: {result.get('error', 'Unknown error')}")
+                return result
+                
+        except Exception as e:
+            logger.error(f"Exception during auto-creation of {level}/{context_id}: {e}")
+            return {
+                "success": False,
+                "error": f"Exception during auto-creation: {str(e)}"
+            }

@@ -217,7 +217,8 @@ class SubtaskApplicationFacade:
             task_id=task_id,
             title=subtask_data["title"],
             description=subtask_data.get("description", ""),
-            assignees=subtask_data.get("assignees", [])
+            assignees=subtask_data.get("assignees", []),
+            priority=subtask_data.get("priority")
         )
         response = add_subtask_use_case.execute(request)
         return {

@@ -132,3 +132,55 @@ class UnifiedContextFacadeFactory:
         Alias for create_facade.
         """
         return self.create_facade(user_id=user_id, project_id=project_id, git_branch_id=git_branch_id)
+    
+    def auto_create_global_context(self) -> bool:
+        """
+        Auto-create global context if it doesn't exist.
+        
+        This method ensures the global singleton context exists for the hierarchical
+        context system to function properly. It's safe to call multiple times.
+        
+        Returns:
+            bool: True if global context was created or already exists, False if creation failed
+        """
+        try:
+            # Check if global context already exists
+            try:
+                existing_context = self.global_repo.get("global_singleton")
+                if existing_context:
+                    logger.info("Global context already exists")
+                    return True
+            except Exception:
+                # Context doesn't exist, continue with creation
+                pass
+            
+            # Create default global context
+            default_global_data = {
+                "organization_name": "Default Organization",
+                "global_settings": {
+                    "autonomous_rules": {},
+                    "security_policies": {},
+                    "coding_standards": {},
+                    "workflow_templates": {},
+                    "delegation_rules": {}
+                }
+            }
+            
+            # Create facade and use it to create global context
+            facade = self.create_facade()
+            result = facade.create_context(
+                level="global",
+                context_id="global_singleton",
+                data=default_global_data
+            )
+            
+            if result.get("success", False):
+                logger.info("Global context auto-created successfully")
+                return True
+            else:
+                logger.warning(f"Failed to auto-create global context: {result.get('error', 'Unknown error')}")
+                return False
+                
+        except Exception as e:
+            logger.warning(f"Exception during global context auto-creation: {e}")
+            return False

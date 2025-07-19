@@ -1,6 +1,6 @@
-import { Eye, FileText, Link, Minus, Pencil, Plus, Trash2, Users } from "lucide-react";
+import { Check, Eye, FileText, Link, Minus, Pencil, Plus, Trash2, Users } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { listTasks, Task, Subtask, updateTask, getTaskContext, listAgents, getAvailableAgents, getTask, callAgent, createTask } from "../api";
+import { listTasks, Task, Subtask, updateTask, getTaskContext, listAgents, getAvailableAgents, getTask, callAgent, createTask, completeTask } from "../api";
 import { SubtaskList } from "./SubtaskList";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -14,6 +14,7 @@ import TaskDetailsDialog from "./TaskDetailsDialog";
 import TaskEditDialog from "./TaskEditDialog";
 import AgentAssignmentDialog from "./AgentAssignmentDialog";
 import TaskContextDialog from "./TaskContextDialog";
+import TaskCompleteDialog from "./TaskCompleteDialog";
 
 interface TaskListProps {
   projectId: string;
@@ -44,6 +45,7 @@ const TaskList: React.FC<TaskListProps> = ({ projectId, taskTreeId }) => {
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [showAgentResponse, setShowAgentResponse] = useState(false);
   const [showTaskContext, setShowTaskContext] = useState(false);
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
 
   // Dialog-specific state
   const [currentAgentResponse, setCurrentAgentResponse] = useState<{
@@ -299,6 +301,27 @@ const TaskList: React.FC<TaskListProps> = ({ projectId, taskTreeId }) => {
     setTaskContext(null);
   };
 
+  // Task Complete Dialog handlers
+  const openCompleteDialog = (task: Task) => {
+    setSelectedTask(task);
+    setShowCompleteDialog(true);
+  };
+
+  const closeCompleteDialog = () => {
+    setShowCompleteDialog(false);
+    setSelectedTask(null);
+  };
+
+  const handleTaskComplete = async (completedTask: Task) => {
+    // Update the task in the list
+    setTasks(prevTasks => 
+      prevTasks.map(t => t.id === completedTask.id ? { ...t, status: 'done' } : t)
+    );
+    closeCompleteDialog();
+    // Optionally refresh the entire list to get updated data
+    await refreshTasks();
+  };
+
   if (loading) return <div>Loading tasks...</div>;
   if (error) return <div>Error: {error}</div>;
 
@@ -430,6 +453,16 @@ const TaskList: React.FC<TaskListProps> = ({ projectId, taskTreeId }) => {
                   >
                     <Pencil />
                   </Button>
+                  {task.status !== 'done' && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      title="Complete task"
+                      onClick={() => openCompleteDialog(task)}
+                    >
+                      <Check />
+                    </Button>
+                  )}
                   <Button variant="ghost" size="icon" title="Delete task">
                     <Trash2 />
                   </Button>
@@ -544,6 +577,16 @@ const TaskList: React.FC<TaskListProps> = ({ projectId, taskTreeId }) => {
               >
                 <Pencil className="h-4 w-4" />
               </Button>
+              {task.status !== 'done' && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => openCompleteDialog(task)}
+                  title="Complete task"
+                >
+                  <Check className="h-4 w-4" />
+                </Button>
+              )}
             </div>
 
             {expandedTasks[task.id] && (
@@ -607,6 +650,14 @@ const TaskList: React.FC<TaskListProps> = ({ projectId, taskTreeId }) => {
         context={taskContext}
         onClose={closeTaskContextDialog}
         loading={loadingContext}
+      />
+
+      <TaskCompleteDialog
+        open={showCompleteDialog}
+        onOpenChange={setShowCompleteDialog}
+        task={selectedTask}
+        onClose={closeCompleteDialog}
+        onComplete={handleTaskComplete}
       />
     </>
   );
