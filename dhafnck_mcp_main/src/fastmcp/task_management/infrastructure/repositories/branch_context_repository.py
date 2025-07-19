@@ -51,6 +51,25 @@ class BranchContextRepository(BaseORMRepository):
             if existing:
                 raise ValueError(f"Branch context already exists: {entity.id}")
             
+            # Extract known fields and preserve custom fields
+            branch_settings = entity.branch_settings or {}
+            
+            # Get predefined fields
+            branch_workflow = branch_settings.get('branch_workflow', {})
+            branch_standards = branch_settings.get('branch_standards', {})
+            agent_assignments = branch_settings.get('agent_assignments', {})
+            
+            # Collect any custom fields not in the predefined set
+            known_fields = {'branch_workflow', 'branch_standards', 'agent_assignments'}
+            custom_fields = {}
+            for key, value in branch_settings.items():
+                if key not in known_fields:
+                    custom_fields[key] = value
+            
+            # Store custom fields in branch_standards to preserve them
+            if custom_fields:
+                branch_standards['_custom'] = custom_fields
+            
             # Create new branch context with proper field mapping
             # Provide default project_id if not specified
             project_id = entity.project_id or "default-project"
@@ -58,9 +77,9 @@ class BranchContextRepository(BaseORMRepository):
                 branch_id=entity.id,
                 parent_project_id=project_id,
                 parent_project_context_id=project_id,  # Assuming project_id serves as context_id too
-                branch_workflow=entity.branch_settings.get('branch_workflow', {}),
-                branch_standards=entity.branch_settings.get('branch_standards', {}),
-                agent_assignments=entity.branch_settings.get('agent_assignments', {}),
+                branch_workflow=branch_workflow,
+                branch_standards=branch_standards,
+                agent_assignments=agent_assignments,
                 local_overrides=entity.metadata.get('local_overrides', {}),
                 delegation_rules=entity.metadata.get('delegation_rules', {})
             )
@@ -84,11 +103,30 @@ class BranchContextRepository(BaseORMRepository):
             if not db_model:
                 raise ValueError(f"Branch context not found: {context_id}")
             
+            # Extract known fields and preserve custom fields
+            branch_settings = entity.branch_settings or {}
+            
+            # Get predefined fields
+            branch_workflow = branch_settings.get('branch_workflow', {})
+            branch_standards = branch_settings.get('branch_standards', {})
+            agent_assignments = branch_settings.get('agent_assignments', {})
+            
+            # Collect any custom fields not in the predefined set
+            known_fields = {'branch_workflow', 'branch_standards', 'agent_assignments'}
+            custom_fields = {}
+            for key, value in branch_settings.items():
+                if key not in known_fields:
+                    custom_fields[key] = value
+            
+            # Store custom fields in branch_standards to preserve them
+            if custom_fields:
+                branch_standards['_custom'] = custom_fields
+            
             # Update fields with proper mapping
             db_model.parent_project_id = entity.project_id
-            db_model.branch_workflow = entity.branch_settings.get('branch_workflow', {})
-            db_model.branch_standards = entity.branch_settings.get('branch_standards', {})
-            db_model.agent_assignments = entity.branch_settings.get('agent_assignments', {})
+            db_model.branch_workflow = branch_workflow
+            db_model.branch_standards = branch_standards
+            db_model.agent_assignments = agent_assignments
             db_model.local_overrides = entity.metadata.get('local_overrides', {})
             db_model.delegation_rules = entity.metadata.get('delegation_rules', {})
             db_model.updated_at = datetime.now(timezone.utc)
@@ -127,15 +165,29 @@ class BranchContextRepository(BaseORMRepository):
     
     def _to_entity(self, db_model: BranchContextModel) -> BranchContext:
         """Convert database model to domain entity."""
+        # Reconstruct branch_settings
+        branch_settings = {
+            'branch_workflow': db_model.branch_workflow or {},
+            'branch_standards': db_model.branch_standards or {},
+            'agent_assignments': db_model.agent_assignments or {}
+        }
+        
+        # Extract custom fields from branch_standards if they exist
+        branch_standards = db_model.branch_standards or {}
+        if '_custom' in branch_standards:
+            # Make a copy to avoid mutating the original
+            branch_standards_copy = branch_standards.copy()
+            custom_fields = branch_standards_copy.pop('_custom', {})
+            # Add custom fields back to branch_settings at root level
+            branch_settings.update(custom_fields)
+            # Update branch_standards with the cleaned version
+            branch_settings['branch_standards'] = branch_standards_copy
+        
         return BranchContext(
             id=db_model.branch_id,
             project_id=db_model.parent_project_id,
             git_branch_name=f"branch-{db_model.branch_id}",  # Generate name from ID
-            branch_settings={
-                'branch_workflow': db_model.branch_workflow or {},
-                'branch_standards': db_model.branch_standards or {},
-                'agent_assignments': db_model.agent_assignments or {}
-            },
+            branch_settings=branch_settings,
             metadata={
                 'local_overrides': db_model.local_overrides or {},
                 'delegation_rules': db_model.delegation_rules or {},

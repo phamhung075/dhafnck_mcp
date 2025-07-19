@@ -124,6 +124,25 @@ mcp__dhafnck_mcp_http__manage_hierarchical_context(
   - **Files Modified**: unified_context_service.py, context_cache_service.py, next_task.py, task_application_facade.py, git_branch_service.py, task_context_sync_service.py, create_project.py, unified_context_facade_factory.py
   - **Impact**: Context system now fully functional - project creation ✓, branch creation ✓, task creation ✓, context retrieval ✓, all without async errors
   - **Architecture Rationale**: Sync approach correct because: repositories are sync, MCP tools expect sync, database operations don't need async, simpler debugging, eliminates async/await mismatches
+- **TASK COMPLETION CONTEXT REQUIREMENT FIX**: Successfully resolved "Task completion requires hierarchical context to be created first" error:
+  - **Problem**: Tasks were failing completion with context requirement error even though auto-context creation should handle it
+  - **Root Cause**: Task entity validation required context_id to be set, but it wasn't being updated when context existed
+  - **Solution**: Enhanced complete_task.py to set task.context_id when finding existing context (both legacy and unified systems)
+  - **Tests Added**: test_mcp_task_completion_context_issue.py, test_task_completion_context_requirement_fix.py - all passing
+  - **Result**: Users can now complete tasks without manual context creation - system auto-creates full hierarchy
+- **UNIFIED CONTEXT VISION TEST FIX**: Fixed test failure "Project context already exists":
+  - **Issue**: Test was trying to create contexts that were already auto-created during project/branch/task creation
+  - **Solution**: Added existence checks before creating contexts - only create if doesn't exist
+  - **Files Modified**: test_unified_context_vision.py - added get_context checks before create_context calls
+- **PARAMETER TYPE VALIDATION DOCUMENTATION**: Documented automatic parameter type conversion:
+  - **Updated**: docs/api-behavior/parameter-type-validation.md
+  - **Discovery**: System already has comprehensive auto-conversion implemented in parameter_validation_fix.py
+  - **Features**: 
+    - Boolean strings auto-convert: "true"/"false", "1"/"0", "yes"/"no", "on"/"off" → boolean
+    - Integer strings auto-convert: "50", "100" → integers with range validation
+    - Implemented in ParameterTypeCoercer class with intelligent conversion logic
+  - **Status**: RESOLVED - Automatic type coercion already implemented
+  - **Impact**: None - System automatically handles common string representations
 - **UNIFIED CONTEXT INTEGRATION TEST FIXES**: Fixed foreign key constraint errors in integration tests:
   - **Issue**: Integration tests failing with "FOREIGN KEY constraint failed" when creating task contexts
   - **Root Cause**: 4-tier hierarchy requires creating contexts in proper order due to foreign key constraints:

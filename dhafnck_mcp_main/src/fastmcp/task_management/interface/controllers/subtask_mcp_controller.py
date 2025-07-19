@@ -433,7 +433,8 @@ class SubtaskMCPController:
                 "description": description,
                 "status": status,
                 "priority": priority,
-                "assignees": assignees
+                "assignees": assignees,
+                "progress_percentage": progress_percentage
             }
             # Remove None values
             subtask_data = {k: v for k, v in subtask_data.items() if v is not None}

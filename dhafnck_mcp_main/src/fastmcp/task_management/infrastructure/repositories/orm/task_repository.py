@@ -77,7 +77,8 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
         priority_obj = Priority(task.priority) if task.priority else None
         task_id_obj = TaskId(task.id) if task.id else None
         
-        return TaskEntity(
+        # Create the entity
+        entity = TaskEntity(
             id=task_id_obj,
             title=task.title,
             description=task.description,
@@ -95,6 +96,12 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
             subtasks=subtask_ids,
             dependencies=dependency_ids
         )
+        
+        # Set progress_percentage if available
+        if hasattr(task, 'progress_percentage'):
+            entity.progress_percentage = task.progress_percentage
+        
+        return entity
     
     def create_task(self, title: str, description: str, priority: str = "medium",
                    assignee_ids: Optional[List[str]] = None, label_names: Optional[List[str]] = None,

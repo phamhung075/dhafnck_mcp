@@ -345,7 +345,9 @@ class TestToolIssuesVerification:
         
         # We now expect this to fail gracefully because the context does not exist.
         assert not result.get("success"), "Expected delete action to fail for non-existent context"
-        assert "not found" in result.get("error", "").lower()
+        error = result.get("error", "")
+        error_str = str(error) if not isinstance(error, str) else error
+        assert "not found" in error_str.lower()
 
     # ===== MANAGE_AGENT TESTS =====
     

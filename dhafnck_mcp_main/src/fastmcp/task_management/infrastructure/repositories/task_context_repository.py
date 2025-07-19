@@ -51,17 +51,21 @@ class TaskContextRepository(BaseORMRepository):
             if existing:
                 raise ValueError(f"Task context already exists: {entity.id}")
             
+            # Task data already supports any JSON, no need to extract custom fields
+            # since task_data is a flexible JSON field
+            task_data = entity.task_data or {}
+            
             # Create new task context with unified schema
             db_model = TaskContextModel(
                 task_id=entity.id,
                 parent_branch_id=entity.branch_id,
                 parent_branch_context_id=entity.branch_id,  # Assuming branch_id serves as both
-                task_data=entity.task_data,
-                local_overrides=getattr(entity, 'local_overrides', {}),
-                implementation_notes=getattr(entity, 'implementation_notes', {}),
-                delegation_triggers=getattr(entity, 'delegation_triggers', {}),
-                inheritance_disabled=getattr(entity, 'inheritance_disabled', False),
-                force_local_only=getattr(entity, 'force_local_only', False),
+                task_data=task_data,
+                local_overrides=entity.metadata.get('local_overrides', {}),
+                implementation_notes=entity.metadata.get('implementation_notes', {}),
+                delegation_triggers=entity.metadata.get('delegation_triggers', {}),
+                inheritance_disabled=entity.metadata.get('inheritance_disabled', False),
+                force_local_only=entity.metadata.get('force_local_only', False),
                 version=1
             )
             
@@ -84,14 +88,17 @@ class TaskContextRepository(BaseORMRepository):
             if not db_model:
                 raise ValueError(f"Task context not found: {context_id}")
             
+            # Task data already supports any JSON
+            task_data = entity.task_data or {}
+            
             # Update fields with unified schema
             db_model.parent_branch_id = entity.branch_id
-            db_model.task_data = entity.task_data
-            db_model.local_overrides = getattr(entity, 'local_overrides', {})
-            db_model.implementation_notes = getattr(entity, 'implementation_notes', {})
-            db_model.delegation_triggers = getattr(entity, 'delegation_triggers', {})
-            db_model.inheritance_disabled = getattr(entity, 'inheritance_disabled', False)
-            db_model.force_local_only = getattr(entity, 'force_local_only', False)
+            db_model.task_data = task_data
+            db_model.local_overrides = entity.metadata.get('local_overrides', {})
+            db_model.implementation_notes = entity.metadata.get('implementation_notes', {})
+            db_model.delegation_triggers = entity.metadata.get('delegation_triggers', {})
+            db_model.inheritance_disabled = entity.metadata.get('inheritance_disabled', False)
+            db_model.force_local_only = entity.metadata.get('force_local_only', False)
             db_model.version += 1
             
             session.flush()

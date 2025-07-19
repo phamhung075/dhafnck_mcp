@@ -336,10 +336,15 @@ class GitBranchMCPController:
                     "error_code": "MISSING_IDENTIFIER"
                 }
             
+            # Get the actual branch name from the database if not provided
+            actual_branch_name = git_branch_name
+            if not actual_branch_name and resolved_git_branch_id:
+                actual_branch_name = self._resolve_branch_id_to_name(project_id, resolved_git_branch_id)
+            
             # Add action and git_branch info to response
             response["action"] = "assign_agent"
             response["git_branch_id"] = resolved_git_branch_id
-            response["git_branch_name"] = git_branch_name
+            response["git_branch_name"] = actual_branch_name
             response["agent_id"] = agent_id
             
         except Exception as e:
@@ -388,10 +393,15 @@ class GitBranchMCPController:
                     "error_code": "MISSING_IDENTIFIER"
                 }
             
+            # Get the actual branch name from the database if not provided
+            actual_branch_name = git_branch_name
+            if not actual_branch_name and resolved_git_branch_id:
+                actual_branch_name = self._resolve_branch_id_to_name(project_id, resolved_git_branch_id)
+            
             # Add action and git_branch info to response
             response["action"] = "unassign_agent"
             response["git_branch_id"] = resolved_git_branch_id
-            response["git_branch_name"] = git_branch_name
+            response["git_branch_name"] = actual_branch_name
             response["agent_id"] = agent_id
             
         except Exception as e:
@@ -555,6 +565,58 @@ class GitBranchMCPController:
             
         except Exception as e:
             logger.error(f"Error in _resolve_branch_name_to_id: {e}")
+            return None
+
+    def _resolve_branch_id_to_name(self, project_id: str, git_branch_id: str) -> Optional[str]:
+        """
+        Helper method to resolve a git branch ID to its name within a project.
+        
+        Args:
+            project_id: The project ID
+            git_branch_id: The branch ID to resolve
+            
+        Returns:
+            The branch name if found, None otherwise
+        """
+        try:
+            # Use the git branch repository directly to find the branch by ID
+            from ...infrastructure.repositories.orm.git_branch_repository import ORMGitBranchRepository
+            import asyncio
+            import threading
+            
+            repo = ORMGitBranchRepository()
+            
+            # Handle async operation in a sync context
+            result = None
+            exception = None
+            
+            def run_in_new_loop():
+                nonlocal result, exception
+                new_loop = None
+                try:
+                    new_loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(new_loop)
+                    git_branch = new_loop.run_until_complete(repo.find_by_id(project_id, git_branch_id))
+                    if git_branch:
+                        result = git_branch.name
+                    new_loop.close()
+                except Exception as e:
+                    exception = e
+                    if new_loop:
+                        new_loop.close()
+            
+            thread = threading.Thread(target=run_in_new_loop)
+            thread.start()
+            thread.join()
+            
+            if exception:
+                logger.error(f"Error resolving branch ID to name: {exception}")
+                return None
+                
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error in _resolve_branch_id_to_name: {e}")
             return None
 
     def _get_git_branch_management_descriptions(self) -> Dict[str, Any]:

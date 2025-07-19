@@ -227,6 +227,149 @@ class StandardResponseFormatter:
             response.get("status") == ResponseStatus.PARTIAL_SUCCESS.value or
             len(response.get("confirmation", {}).get("partial_failures", [])) > 0
         )
+    
+    @staticmethod
+    def format_success(
+        data: Dict[str, Any], 
+        operation: str,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Format a raw data response into standardized success format.
+        
+        This method handles converting facade/service responses into the standard format.
+        
+        Args:
+            data: Raw response data from facade/service
+            operation: The operation that was performed
+            metadata: Additional metadata
+            
+        Returns:
+            Standardized success response
+        """
+        # If already standardized, return as-is
+        if "status" in data and "operation_id" in data:
+            return data
+            
+        # If it's a simple success/error response, extract relevant data
+        if data.get("success") is True:
+            # Extract the main data payload
+            main_data = {}
+            operation_info = {}
+            
+            # Standard fields to move to operation_info
+            operation_fields = {"level", "context_id", "source_level", "target_level", "propagated", "inherited", "created", "count"}
+            
+            for key, value in data.items():
+                if key in ["success", "error"]:
+                    continue  # Skip these, they'll be replaced by standard format
+                elif key in operation_fields:
+                    operation_info[key] = value
+                else:
+                    main_data[key] = value
+            
+            # Add operation info to metadata
+            if not metadata:
+                metadata = {}
+            metadata["operation_details"] = operation_info
+            
+            return StandardResponseFormatter.create_success_response(
+                operation=operation,
+                data=main_data,
+                metadata=metadata
+            )
+        
+        # If it's an error response
+        elif data.get("success") is False:
+            error_message = data.get("error", "Unknown error occurred")
+            return StandardResponseFormatter.create_error_response(
+                operation=operation,
+                error=error_message,
+                metadata=metadata
+            )
+        
+        # If it's raw data without success field, treat as success
+        else:
+            return StandardResponseFormatter.create_success_response(
+                operation=operation,
+                data=data,
+                metadata=metadata
+            )
+    
+    @staticmethod
+    def format_context_response(
+        data: Dict[str, Any], 
+        operation: str,
+        standardize_field_names: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Format context operation responses with consistent field names.
+        
+        Args:
+            data: Raw context response data
+            operation: The context operation performed
+            standardize_field_names: Whether to standardize field names
+            
+        Returns:
+            Standardized context response
+        """
+        if not standardize_field_names:
+            return StandardResponseFormatter.format_success(data, operation)
+        
+        # Standardize context data field names
+        standardized_data = {}
+        metadata = {}
+        
+        if data.get("success") is True:
+            # Handle different context operations
+            if operation.endswith('.create') or operation.endswith('.get') or operation.endswith('.update'):
+                # Single context operations - standardize to "context_data"
+                if "context" in data:
+                    standardized_data["context_data"] = data["context"]
+                
+            elif operation.endswith('.list'):
+                # List operations - standardize to "contexts"
+                if "contexts" in data:
+                    standardized_data["contexts"] = data["contexts"]
+                elif "context" in data:
+                    # Handle case where single context is returned instead of list
+                    standardized_data["contexts"] = [data["context"]]
+                    
+            elif operation.endswith('.delegate'):
+                # Delegation operations - keep delegation info
+                if "delegation" in data:
+                    standardized_data["delegation_result"] = data["delegation"]
+                    
+            elif operation.endswith('.resolve'):
+                # Resolve operations - standardize to "resolved_context"
+                if "context" in data:
+                    standardized_data["resolved_context"] = data["context"]
+                elif "resolved" in data:
+                    standardized_data["resolved_context"] = data["resolved"]
+            
+            # Add operation metadata
+            metadata["context_operation"] = {
+                "level": data.get("level"),
+                "context_id": data.get("context_id"),
+                "source_level": data.get("source_level"),
+                "target_level": data.get("target_level"),
+                "inherited": data.get("inherited", False),
+                "propagated": data.get("propagated", False),
+                "created": data.get("created", False),
+                "count": data.get("count")
+            }
+            
+            # Remove None values from metadata
+            metadata["context_operation"] = {k: v for k, v in metadata["context_operation"].items() if v is not None}
+            
+            return StandardResponseFormatter.create_success_response(
+                operation=operation,
+                data=standardized_data,
+                metadata=metadata
+            )
+        
+        # Handle error cases
+        return StandardResponseFormatter.format_success(data, operation)
 
 
 class ErrorCodes:

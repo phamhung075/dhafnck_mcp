@@ -155,6 +155,7 @@ class TestORMSubtaskRepository:
                 self.status = "todo"
                 self.priority = "low"
                 self.assignees = ["@tester"]
+                self.progress_percentage = 25  # Add missing progress_percentage
                 self.created_at = datetime.now(timezone.utc)
                 self.updated_at = datetime.now(timezone.utc)
         

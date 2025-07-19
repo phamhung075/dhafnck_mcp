@@ -51,15 +51,38 @@ class GlobalContextRepository(BaseORMRepository):
             if existing:
                 raise ValueError("Global context already exists. Use update instead.")
             
+            # Extract global settings and preserve custom fields
+            global_settings = entity.global_settings or {}
+            
+            # Get the predefined fields
+            autonomous_rules = global_settings.get("autonomous_rules", {})
+            security_policies = global_settings.get("security_policies", {})
+            coding_standards = global_settings.get("coding_standards", {})
+            workflow_templates = global_settings.get("workflow_templates", {})
+            delegation_rules = global_settings.get("delegation_rules", {})
+            
+            # Collect any custom fields not in the predefined set
+            known_fields = {"autonomous_rules", "security_policies", "coding_standards", 
+                          "workflow_templates", "delegation_rules"}
+            custom_fields = {}
+            for key, value in global_settings.items():
+                if key not in known_fields:
+                    custom_fields[key] = value
+            
+            # Store custom fields in one of the existing JSON fields
+            # We'll use workflow_templates to store custom data
+            if custom_fields:
+                workflow_templates["_custom"] = custom_fields
+            
             # Create new global context - map domain entity to database model
             db_model = GlobalContextModel(
                 id="global_singleton",
                 organization_id=entity.organization_name,  # Map organization_name to organization_id
-                autonomous_rules=entity.global_settings.get("autonomous_rules", {}),
-                security_policies=entity.global_settings.get("security_policies", {}),
-                coding_standards=entity.global_settings.get("coding_standards", {}),
-                workflow_templates=entity.global_settings.get("workflow_templates", {}),
-                delegation_rules=entity.global_settings.get("delegation_rules", {}),
+                autonomous_rules=autonomous_rules,
+                security_policies=security_policies,
+                coding_standards=coding_standards,
+                workflow_templates=workflow_templates,
+                delegation_rules=delegation_rules,
                 created_at=datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc)
             )
@@ -83,13 +106,35 @@ class GlobalContextRepository(BaseORMRepository):
             if not db_model:
                 raise ValueError(f"Global context not found: {context_id}")
             
+            # Extract global settings and preserve custom fields
+            global_settings = entity.global_settings or {}
+            
+            # Get the predefined fields
+            autonomous_rules = global_settings.get("autonomous_rules", {})
+            security_policies = global_settings.get("security_policies", {})
+            coding_standards = global_settings.get("coding_standards", {})
+            workflow_templates = global_settings.get("workflow_templates", {})
+            delegation_rules = global_settings.get("delegation_rules", {})
+            
+            # Collect any custom fields not in the predefined set
+            known_fields = {"autonomous_rules", "security_policies", "coding_standards", 
+                          "workflow_templates", "delegation_rules"}
+            custom_fields = {}
+            for key, value in global_settings.items():
+                if key not in known_fields:
+                    custom_fields[key] = value
+            
+            # Store custom fields in workflow_templates
+            if custom_fields:
+                workflow_templates["_custom"] = custom_fields
+            
             # Update fields - map domain entity to database model
             db_model.organization_id = entity.organization_name
-            db_model.autonomous_rules = entity.global_settings.get("autonomous_rules", {})
-            db_model.security_policies = entity.global_settings.get("security_policies", {})
-            db_model.coding_standards = entity.global_settings.get("coding_standards", {})
-            db_model.workflow_templates = entity.global_settings.get("workflow_templates", {})
-            db_model.delegation_rules = entity.global_settings.get("delegation_rules", {})
+            db_model.autonomous_rules = autonomous_rules
+            db_model.security_policies = security_policies
+            db_model.coding_standards = coding_standards
+            db_model.workflow_templates = workflow_templates
+            db_model.delegation_rules = delegation_rules
             db_model.updated_at = datetime.now(timezone.utc)
             
             session.flush()
@@ -126,6 +171,17 @@ class GlobalContextRepository(BaseORMRepository):
             "workflow_templates": db_model.workflow_templates or {},
             "delegation_rules": db_model.delegation_rules or {}
         }
+        
+        # Extract custom fields from workflow_templates if they exist
+        workflow_templates = db_model.workflow_templates or {}
+        if "_custom" in workflow_templates:
+            # Make a copy to avoid mutating the original
+            workflow_templates_copy = workflow_templates.copy()
+            custom_fields = workflow_templates_copy.pop("_custom", {})
+            # Add custom fields back to global_settings at root level
+            global_settings.update(custom_fields)
+            # Update workflow_templates with the cleaned version
+            global_settings["workflow_templates"] = workflow_templates_copy
         
         metadata = {
             "created_at": db_model.created_at.isoformat() if db_model.created_at else None,

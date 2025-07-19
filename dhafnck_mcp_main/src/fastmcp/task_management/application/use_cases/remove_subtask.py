@@ -17,6 +17,10 @@ class RemoveSubtaskUseCase:
         # Remove the subtask
         success = self._subtask_repository.remove_subtask(task_id, id)
         
+        # Update parent task progress
+        if success:
+            self._update_parent_task_progress(str(task_id))
+        
         # Calculate progress after deletion
         progress = {}
         if success and self._subtask_repository:
@@ -41,4 +45,14 @@ class RemoveSubtaskUseCase:
         if isinstance(task_id, int):
             return TaskId.from_int(task_id)
         else:
-            return TaskId.from_string(str(task_id)) 
+            return TaskId.from_string(str(task_id))
+    
+    def _update_parent_task_progress(self, task_id: str) -> None:
+        """Update parent task progress based on subtask completion."""
+        try:
+            from ..services.task_progress_service import TaskProgressService
+            progress_service = TaskProgressService(self._task_repository, self._subtask_repository)
+            progress_service.update_task_progress_from_subtasks(task_id)
+        except Exception as e:
+            import logging
+            logging.warning(f"Failed to update parent task progress: {e}") 

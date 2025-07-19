@@ -139,16 +139,19 @@ class TestResponseFormatting:
         # The response should include branch information with name
         if "data" in result and "git_branch" in result["data"]:
             branch_data = result["data"]["git_branch"]
+            branch_name = branch_data.get("name") or branch_data.get("git_branch_name")
         elif "git_branch" in result:
             branch_data = result["git_branch"]
+            branch_name = branch_data.get("name") or branch_data.get("git_branch_name")
+        elif "git_branch_name" in result:
+            # Handle case where git_branch_name is at top level
+            branch_name = result["git_branch_name"]
         else:
             pytest.fail("No branch data found in response")
         
         # Check if branch name is included
-        assert "name" in branch_data or "git_branch_name" in branch_data, \
+        assert branch_name is not None, \
             "Branch name not included in agent assignment response"
-        
-        branch_name = branch_data.get("name") or branch_data.get("git_branch_name")
         assert branch_name == "feature/test-formatting", \
             f"Expected branch name 'feature/test-formatting', got '{branch_name}'"
     

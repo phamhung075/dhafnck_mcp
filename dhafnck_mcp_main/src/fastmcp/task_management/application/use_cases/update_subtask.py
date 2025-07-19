@@ -1,5 +1,6 @@
 """Update Subtask Use Case"""
 
+import logging
 from typing import Union
 from ...application.dtos.subtask import (
     UpdateSubtaskRequest,
@@ -11,6 +12,8 @@ from ...domain.repositories.subtask_repository import SubtaskRepository
 from ...domain.entities.subtask import Subtask
 from ...domain.value_objects.priority import Priority
 from ...domain.value_objects.task_status import TaskStatus
+
+logger = logging.getLogger(__name__)
 
 
 class UpdateSubtaskUseCase:
@@ -49,9 +52,19 @@ class UpdateSubtaskUseCase:
                 subtask.update_priority(priority_obj)
             if request.assignees is not None:
                 subtask.update_assignees(request.assignees)
+            if request.progress_percentage is not None:
+                # Update subtask progress percentage (0-100)
+                if hasattr(subtask, 'progress_percentage'):
+                    subtask.progress_percentage = request.progress_percentage
+                else:
+                    # Add progress_percentage as an attribute if it doesn't exist
+                    setattr(subtask, 'progress_percentage', request.progress_percentage)
             
             self._subtask_repository.save(subtask)
             updated_subtask = subtask.to_dict()
+            
+            # Update parent task progress
+            self._update_parent_task_progress(str(request.task_id))
         else:
             # Fallback to existing task entity method for backward compatibility
             updates = {}
@@ -82,4 +95,13 @@ class UpdateSubtaskUseCase:
         if isinstance(task_id, int):
             return TaskId.from_int(task_id)
         else:
-            return TaskId.from_string(str(task_id)) 
+            return TaskId.from_string(str(task_id))
+    
+    def _update_parent_task_progress(self, task_id: str) -> None:
+        """Update parent task progress based on subtask completion."""
+        try:
+            from ..services.task_progress_service import TaskProgressService
+            progress_service = TaskProgressService(self._task_repository, self._subtask_repository)
+            progress_service.update_task_progress_from_subtasks(task_id)
+        except Exception as e:
+            logger.warning(f"Failed to update parent task progress: {e}") 

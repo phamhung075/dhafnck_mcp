@@ -21,6 +21,9 @@ Welcome to the DhafnckMCP Multi-Project AI Orchestration Platform documentation.
 - [ORM Agent Repository Implementation](orm-agent-repository-implementation.md) - ORM-based agent repository guide
 - [Context Auto-Detection Fix](CONTEXT_AUTO_DETECTION_FIX.md) - Enhanced auto-detection with error handling
 
+### API Behavior Documentation
+- [Parameter Type Validation](api-behavior/parameter-type-validation.md) - Strict type validation for MCP tool parameters
+
 ### Operations
 - [Docker Deployment](docker-deployment.md) - Running with Docker
 - [Configuration](configuration.md) - Environment variables and settings

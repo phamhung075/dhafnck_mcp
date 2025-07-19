@@ -329,8 +329,15 @@ class WorkflowHintEnhancer:
         else:
             phase = "unknown"
         
-        # Check subtask status
-        subtasks_complete = sum(1 for s in subtasks if s.get("status") == "done")
+        # Check subtask status - handle both dict objects and string IDs
+        subtasks_complete = 0
+        for s in subtasks:
+            if isinstance(s, dict) and s.get("status") == "done":
+                subtasks_complete += 1
+            elif isinstance(s, str):
+                # For string IDs, we can't determine status without repository access
+                # This is a temporary fix - ideally subtasks should be enriched with full data
+                continue
         
         return {
             "phase": phase,

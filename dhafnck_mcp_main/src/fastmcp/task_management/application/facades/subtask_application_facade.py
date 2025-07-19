@@ -245,7 +245,8 @@ class SubtaskApplicationFacade:
             description=subtask_data.get("description"),
             status=subtask_data.get("status"),
             priority=subtask_data.get("priority"),
-            assignees=subtask_data.get("assignees")
+            assignees=subtask_data.get("assignees"),
+            progress_percentage=subtask_data.get("progress_percentage")
         )
         response = update_subtask_use_case.execute(request)
         return {

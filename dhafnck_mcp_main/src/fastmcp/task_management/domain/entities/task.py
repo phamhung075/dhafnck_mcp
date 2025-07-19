@@ -1140,11 +1140,12 @@ class Task:
             "labels": self.labels.copy() if self.labels is not None else [],
             "dependencies": [dep.value if hasattr(dep, 'value') else str(dep) for dep in self.dependencies],
             "subtasks": self.subtasks.copy(),
-            "dueDate": self.due_date,
+            "dueDate": self.due_date.isoformat() if self.due_date else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "context_id": self.context_id,
-            "overall_progress": self.overall_progress
+            "overall_progress": self.overall_progress,
+            "progress_percentage": getattr(self, 'progress_percentage', 0)  # Include progress_percentage from DB
         }
         
         # Include progress timeline if exists

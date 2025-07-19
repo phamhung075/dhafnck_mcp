@@ -696,7 +696,7 @@ class ORMSubtaskRepository(BaseORMRepository[TaskSubtask], SubtaskRepository):
             "status": subtask.status.value if subtask.status else "todo",
             "priority": subtask.priority.value if subtask.priority else "medium",
             "assignees": assignees,
-            "progress_percentage": 0,  # Default for new subtasks
+            "progress_percentage": getattr(subtask, 'progress_percentage', 0),  # Use actual progress_percentage
             "created_at": subtask.created_at or datetime.now(timezone.utc),
             "updated_at": subtask.updated_at or datetime.now(timezone.utc)
         }
@@ -723,6 +723,7 @@ class ORMSubtaskRepository(BaseORMRepository[TaskSubtask], SubtaskRepository):
             status=TaskStatus.from_string(model.status),
             priority=Priority.from_string(model.priority),
             assignees=assignees,
+            progress_percentage=model.progress_percentage or 0,
             created_at=model.created_at,
             updated_at=model.updated_at
         )

@@ -30,9 +30,19 @@ function App() {
   }, []);
 
   return (
-    <div className="flex h-screen bg-background text-foreground relative overflow-hidden">
-      {/* Sidebar */}
-      <aside className={`
+    <div className="flex flex-col h-screen bg-background text-foreground">
+      {/* Header */}
+      <header className="border-b bg-white dark:bg-gray-900 px-4 py-3 shadow-sm">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">DhafnckMCP</h1>
+          <span className="text-sm text-gray-500 dark:text-gray-400">Multi-Project AI Orchestration Platform</span>
+        </div>
+      </header>
+      
+      {/* Main content area */}
+      <div className="flex flex-1 relative overflow-hidden">
+        {/* Sidebar */}
+        <aside className={`
         fixed lg:static
         ${sidebarOpen ? 'left-0' : '-left-full'}
         w-96 lg:w-1/3 lg:min-w-[400px] lg:max-w-[500px]
@@ -75,17 +85,18 @@ function App() {
         </Button>
       )}
 
-      {/* Main content */}
-      <main className="flex-1 flex flex-col p-4 w-full">
-        {/* Add padding top on mobile to account for menu button */}
-        <div className="flex-1 overflow-y-auto pt-12 lg:pt-0">
-          {selection ? (
-            <TaskList key={`${selection.projectId}-${selection.branchId}`} projectId={selection.projectId} taskTreeId={selection.branchId} />
-          ) : (
-            <div className="text-center text-muted-foreground mt-10">Select a project and branch to see tasks.</div>
-          )}
-        </div>
-      </main>
+        {/* Main content */}
+        <main className="flex-1 flex flex-col p-4 w-full">
+          {/* Add padding top on mobile to account for menu button */}
+          <div className="flex-1 overflow-y-auto pt-12 lg:pt-0">
+            {selection ? (
+              <TaskList key={`${selection.projectId}-${selection.branchId}`} projectId={selection.projectId} taskTreeId={selection.branchId} />
+            ) : (
+              <div className="text-center text-muted-foreground mt-10">Select a project and branch to see tasks.</div>
+            )}
+          </div>
+        </main>
+      </div>
     </div>
   )
 }

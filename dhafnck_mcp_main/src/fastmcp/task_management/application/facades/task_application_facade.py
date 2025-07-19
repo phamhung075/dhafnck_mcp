@@ -509,7 +509,7 @@ class TaskApplicationFacade:
             # Convert tasks to dict and optionally include dependency summaries
             tasks_list = []
             for task in response.tasks:
-                task_dict = asdict(task)
+                task_dict = task.to_dict()
                 
                 # Add dependency summary if requested
                 if include_dependencies:
@@ -565,7 +565,7 @@ class TaskApplicationFacade:
             return {
                 "success": True,
                 "action": "search",
-                "tasks": [asdict(task) for task in response.tasks],
+                "tasks": [task.to_dict() for task in response.tasks],
                 "count": response.count,
                 "query": response.query
             }
@@ -686,7 +686,7 @@ class TaskApplicationFacade:
             return {
                 "success": True,
                 "message": message,
-                "task": asdict(task)
+                "task": task.to_dict()
             }
         except (TaskNotFoundError, ValueError) as e:
             return {"success": False, "error": str(e)}
@@ -724,7 +724,7 @@ class TaskApplicationFacade:
             return {
                 "success": True,
                 "message": message,
-                "task": asdict(task)
+                "task": task.to_dict()
             }
         except (TaskNotFoundError, ValueError) as e:
             return {"success": False, "error": str(e)}

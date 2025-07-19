@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronRight, Eye, FileText, Folder, GitBranchPlus, Globe, Pencil, Plus, Trash2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { createBranch, createProject, deleteProject, getGlobalContext, getProjectContext, getTaskContext, getTaskCount, listProjects, Project, updateProject } from "../api";
+import { createBranch, createProject, deleteProject, getGlobalContext, getProjectContext, getBranchContext, getTaskCount, listProjects, Project, updateProject } from "../api";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
@@ -174,7 +174,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect }) => {
   return (
     <div className="flex flex-col gap-2 overflow-visible">
       <div className="flex justify-between items-center mb-2 gap-2">
-        <span className="font-bold text-base shrink-0">Projects</span>
+        <span className="font-bold text-base shrink-0">DhafnckMCP Projects</span>
         <div className="flex gap-1 flex-wrap justify-end">
           <RefreshButton 
             onClick={fetchProjects} 
@@ -289,7 +289,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect }) => {
                             onClick={async () => {
                               setLoadingContext(true);
                               try {
-                                const context = await getTaskContext(tree.id);
+                                const context = await getBranchContext(tree.id);
                                 setShowBranchContext({ project, branch: tree, context });
                               } catch (e) {
                                 console.error('Error fetching branch context:', e);

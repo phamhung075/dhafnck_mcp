@@ -196,8 +196,9 @@ class UnifiedContextService:
             
             context_data = self._entity_to_dict(context_entity)
             
-            # Skip inheritance for now (inheritance service is async)
-            # TODO: Make inheritance service sync or skip inheritance in sync mode
+            # Handle inheritance synchronously if requested
+            if include_inherited:
+                context_data = self._resolve_inheritance_sync(context_level, context_entity, context_data)
             
             # Skip cache update for now (cache service is async)
             # TODO: Make cache service sync or skip caching in sync mode
@@ -345,13 +346,20 @@ class UnifiedContextService:
     ) -> Dict[str, Any]:
         """Resolve full inheritance chain with caching."""
         try:
-            # This is essentially get_context with inheritance
-            return self.get_context(
+            # Always resolve with inheritance for this method
+            result = self.get_context(
                 level=level,
                 context_id=context_id,
                 include_inherited=True,
                 force_refresh=force_refresh
             )
+            
+            # Enhance the response to indicate this was a resolve operation
+            if result.get("success"):
+                result["resolved"] = True
+                result["inheritance_applied"] = True
+            
+            return result
             
         except Exception as e:
             logger.error(f"Failed to resolve context: {e}")
@@ -734,6 +742,175 @@ class UnifiedContextService:
                 "success": False,
                 "error": f"Auto-creation failed: {str(e)}"
             }
+    
+    def _resolve_inheritance_sync(self, level: ContextLevel, context_entity: Any, context_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Synchronously resolve context inheritance chain.
+        
+        Args:
+            level: Context level
+            context_entity: The context entity with parent references
+            context_data: The context data to augment with inheritance
+            
+        Returns:
+            Context data with inheritance chain resolved
+        """
+        try:
+            logger.info(f"Resolving inheritance for {level} context")
+            
+            # Build inheritance chain from bottom to top
+            inheritance_chain = []
+            
+            # Always start with global context
+            global_repo = self.repositories.get(ContextLevel.GLOBAL)
+            if global_repo:
+                try:
+                    global_entity = global_repo.get("global_singleton")
+                    if global_entity:
+                        global_data = self._entity_to_dict(global_entity)
+                        inheritance_chain.append({
+                            "level": "global",
+                            "id": "global_singleton",
+                            "data": global_data
+                        })
+                        logger.debug("Added global context to inheritance chain")
+                except Exception as e:
+                    logger.warning(f"Could not fetch global context: {e}")
+            
+            # Add project context if needed
+            if level in [ContextLevel.PROJECT, ContextLevel.BRANCH, ContextLevel.TASK]:
+                project_id = None
+                
+                # Extract project_id based on level
+                if level == ContextLevel.PROJECT:
+                    project_id = context_entity.id
+                elif level == ContextLevel.BRANCH:
+                    project_id = getattr(context_entity, 'project_id', None)
+                elif level == ContextLevel.TASK:
+                    # For task, we need to get branch first to find project
+                    branch_id = getattr(context_entity, 'branch_id', None)
+                    if branch_id:
+                        branch_repo = self.repositories.get(ContextLevel.BRANCH)
+                        if branch_repo:
+                            try:
+                                branch_entity = branch_repo.get(branch_id)
+                                if branch_entity:
+                                    project_id = getattr(branch_entity, 'project_id', None)
+                            except Exception as e:
+                                logger.warning(f"Could not fetch branch for project lookup: {e}")
+                
+                # Fetch project context if we have the ID
+                if project_id:
+                    project_repo = self.repositories.get(ContextLevel.PROJECT)
+                    if project_repo:
+                        try:
+                            project_entity = project_repo.get(project_id)
+                            if project_entity:
+                                project_data = self._entity_to_dict(project_entity)
+                                inheritance_chain.append({
+                                    "level": "project",
+                                    "id": project_id,
+                                    "data": project_data
+                                })
+                                logger.debug(f"Added project context {project_id} to inheritance chain")
+                        except Exception as e:
+                            logger.warning(f"Could not fetch project context {project_id}: {e}")
+            
+            # Add branch context if needed
+            if level in [ContextLevel.BRANCH, ContextLevel.TASK]:
+                branch_id = None
+                
+                # Extract branch_id based on level
+                if level == ContextLevel.BRANCH:
+                    branch_id = context_entity.id
+                elif level == ContextLevel.TASK:
+                    branch_id = getattr(context_entity, 'branch_id', None)
+                
+                # Fetch branch context if we have the ID
+                if branch_id:
+                    branch_repo = self.repositories.get(ContextLevel.BRANCH)
+                    if branch_repo:
+                        try:
+                            branch_entity = branch_repo.get(branch_id)
+                            if branch_entity:
+                                branch_data = self._entity_to_dict(branch_entity)
+                                inheritance_chain.append({
+                                    "level": "branch",
+                                    "id": branch_id,
+                                    "data": branch_data
+                                })
+                                logger.debug(f"Added branch context {branch_id} to inheritance chain")
+                        except Exception as e:
+                            logger.warning(f"Could not fetch branch context {branch_id}: {e}")
+            
+            # Add the current context to the chain (only if it's not already in the chain)
+            # This can happen when we're requesting a project context and it was already added above
+            current_level_in_chain = any(item["level"] == level.value for item in inheritance_chain)
+            if not current_level_in_chain:
+                inheritance_chain.append({
+                    "level": level.value,
+                    "id": context_entity.id,
+                    "data": context_data
+                })
+            
+            # Now merge the inheritance chain using the inheritance service
+            if len(inheritance_chain) > 1:
+                # Use inheritance service to merge contexts properly
+                merged_data = self._merge_inheritance_chain(inheritance_chain)
+                
+                # Add inheritance metadata
+                merged_data["_inheritance"] = {
+                    "chain": [item["level"] for item in inheritance_chain],
+                    "resolved_at": datetime.now(timezone.utc).isoformat(),
+                    "inheritance_depth": len(inheritance_chain)
+                }
+                
+                return merged_data
+            else:
+                # No inheritance needed, just return the original data
+                return context_data
+                
+        except Exception as e:
+            logger.error(f"Error resolving inheritance: {e}")
+            # Return original data on error
+            return context_data
+    
+    def _merge_inheritance_chain(self, inheritance_chain: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Merge inheritance chain using the inheritance service logic.
+        
+        Args:
+            inheritance_chain: List of contexts from global to specific
+            
+        Returns:
+            Merged context data
+        """
+        if not inheritance_chain:
+            return {}
+        
+        # Start with the first context (usually global)
+        merged = inheritance_chain[0]["data"].copy()
+        
+        # Apply each subsequent context using the inheritance service patterns
+        for i in range(1, len(inheritance_chain)):
+            current = inheritance_chain[i]
+            current_level = current["level"]
+            current_data = current["data"]
+            
+            if current_level == "project" and self.inheritance_service:
+                # Use project inheritance logic
+                merged = self.inheritance_service.inherit_project_from_global(merged, current_data)
+            elif current_level == "branch" and self.inheritance_service:
+                # Use branch inheritance logic
+                merged = self.inheritance_service.inherit_branch_from_project(merged, current_data)
+            elif current_level == "task" and self.inheritance_service:
+                # Use task inheritance logic
+                merged = self.inheritance_service.inherit_task_from_branch(merged, current_data)
+            else:
+                # Fallback to simple merge
+                merged = self._merge_context_data(merged, current_data)
+        
+        return merged
     
     def _build_default_context_data(
         self,

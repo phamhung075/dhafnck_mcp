@@ -53,16 +53,13 @@ class UnifiedContextMCPController:
             operation: The operation that was performed
             
         Returns:
-            Standardized response dict
+            Standardized response dict with consistent context field names
         """
-        # If the facade already returned a standardized response, pass it through
-        if "success" in facade_response:
-            return facade_response
-            
-        # Otherwise standardize it
-        return StandardResponseFormatter.format_success(
+        # Use the new context-specific formatter for consistent field names
+        return StandardResponseFormatter.format_context_response(
             facade_response,
-            operation=operation
+            operation=operation,
+            standardize_field_names=True
         )
     
     def _get_param_description(self, desc: Dict[str, Any], param_name: str, default: str) -> str:

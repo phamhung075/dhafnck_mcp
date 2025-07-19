@@ -26,6 +26,7 @@ class TaskResponse:
     context_id: Optional[str] = None
     context_data: Optional[Dict[str, Any]] = None
     dependency_relationships: Optional[DependencyRelationships] = None  # Enhanced dependency information
+    progress_percentage: int = 0  # Task completion progress (0-100)
     
     def __init__(
             self, 
@@ -46,7 +47,8 @@ class TaskResponse:
             git_branch_id: Optional[str] = None,  # Following clean relationship chain
             context_id: Optional[str] = None,
             context_data: Optional[Dict[str, Any]] = None,
-            dependency_relationships: Optional[DependencyRelationships] = None 
+            dependency_relationships: Optional[DependencyRelationships] = None,
+            progress_percentage: int = 0 
         ):
         """Initialize TaskResponse following clean relationship chain with git_branch_id, context_id, and context_data"""
         self.id = id
@@ -66,7 +68,8 @@ class TaskResponse:
         self.updated_at = updated_at
         self.context_id = context_id
         self.context_data = context_data
-        self.dependency_relationships = dependency_relationships    
+        self.dependency_relationships = dependency_relationships
+        self.progress_percentage = progress_percentage    
     @classmethod
     def from_domain(cls, task, context_data: Optional[Dict[str, Any]] = None, 
                    dependency_relationships: Optional[DependencyRelationships] = None) -> 'TaskResponse':
@@ -101,5 +104,30 @@ class TaskResponse:
             git_branch_id=task_dict.get("git_branch_id"),  # Following clean relationship chain
             context_id=task_dict.get("context_id"),
             context_data=context_data,
-            dependency_relationships=dependency_relationships
-        ) 
+            dependency_relationships=dependency_relationships,
+            progress_percentage=task_dict.get("progress_percentage", 0)
+        )
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert TaskResponse to dictionary representation with JSON-safe datetime serialization"""
+        return {
+            "id": self.id,
+            "title": self.title,
+            "description": self.description,
+            "status": self.status,
+            "priority": self.priority,
+            "details": self.details,
+            "estimatedEffort": self.estimated_effort,
+            "assignees": self.assignees,
+            "labels": self.labels,
+            "dependencies": self.dependencies,
+            "subtasks": self.subtasks,
+            "dueDate": self.due_date,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "git_branch_id": self.git_branch_id,
+            "context_id": self.context_id,
+            "context_data": self.context_data,
+            "dependency_relationships": self.dependency_relationships.to_dict() if self.dependency_relationships else None,
+            "progress_percentage": self.progress_percentage
+        } 

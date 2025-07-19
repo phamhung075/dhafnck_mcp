@@ -23,6 +23,7 @@ class Subtask:
     status: Optional[TaskStatus] = None
     priority: Optional[Priority] = None
     assignees: List[str] = field(default_factory=list)
+    progress_percentage: int = 0  # Progress tracking (0-100)
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     
