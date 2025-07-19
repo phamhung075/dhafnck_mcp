@@ -63,14 +63,24 @@ TASK (ID: task_id)
 • propagate_changes: Cascade updates to dependents (default: true)
 • delegate_to: Target level for delegation ('global', 'project', 'branch')
 • filters: JSON object for list filtering
+• data: Accepts dictionary object OR JSON string (automatically parsed)
 
 🚀 EXAMPLE USAGE:
 
-# Create task context
+# Create task context (Dictionary format)
 action="create", level="task", context_id="task-123", data={"title": "Implement feature"}
+
+# Create task context (JSON string format - NEW!)
+action="create", level="task", context_id="task-123", data='{"title": "Implement feature"}'
+
+# Create task context (Legacy parameter format)
+action="create", level="task", context_id="task-123", data_title="Implement feature", data_description="Feature details"
 
 # Get with inheritance
 action="get", level="task", context_id="task-123", include_inherited=true
+
+# Update with JSON string
+action="update", level="task", context_id="task-123", data='{"status": "completed", "progress": 100}'
 
 # Delegate pattern to project
 action="delegate", level="task", context_id="task-123", delegate_to="project", 
@@ -99,7 +109,7 @@ MANAGE_UNIFIED_CONTEXT_PARAMETERS = {
     "action": "Context operation to perform. Valid: create, get, update, delete, resolve, delegate, add_insight, add_progress, list",
     "level": "Context hierarchy level: global, project, branch, task. Default: task",
     "context_id": "Context identifier appropriate for the level (e.g., task_id for task level, project_id for project level)",
-    "data": "Context data for create/update operations. Dictionary format. Structure varies by level",
+    "data": "Context data for create/update operations. Accepts dictionary object OR JSON string (automatically parsed). Structure varies by level",
     "user_id": "User identifier for context scoping. Optional, uses default if not provided",
     "project_id": "Project identifier for scoping. Auto-detected from task/branch if not provided",
     "git_branch_id": "Git branch UUID for scoping. Auto-detected from task if not provided",

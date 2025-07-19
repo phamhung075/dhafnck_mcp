@@ -55,19 +55,19 @@ class TaskCompletionService:
         try:
             error_messages = []
             # Rule 1: Check if task has unified context (required for completion)
-            # First check if task has context_id set
+            # Note: The complete_task use case now auto-creates context if it doesn't exist
+            # So we only check for context if we're not being called from the completion flow
+            # We can detect this by checking if the context repository is provided
             if task.context_id is None and self._task_context_repository:
                 # Try to get context from unified system
                 context = self._task_context_repository.get(task.id.value)
                     
                 if not context:
-                    error_messages.append(
-                        "Task completion requires context to be created first. "
-                        "Use: manage_context(action='create', level='task', "
-                        "context_id='{}', data={{'title': '{}', 'description': 'Your work summary'}}) "
-                        "to create context.".format(
-                            task.id.value, task.title
-                        )
+                    # This will be auto-created in complete_task use case
+                    # We'll log a warning but not block completion
+                    logger.info(
+                        f"Task {task.id.value} has no context. "
+                        "Context will be auto-created during completion."
                     )
             
             # Rule 2: Check if all subtasks are completed
@@ -133,18 +133,15 @@ class TaskCompletionService:
         
         try:
             # Check if task has unified context (required for completion)
+            # Note: Context is now auto-created during completion if it doesn't exist
             if task.context_id is None and self._task_context_repository:
                 # Try to get context from unified system
                 context = self._task_context_repository.get(task.id.value)
                     
                 if not context:
-                    blockers.append(
-                        "Task completion requires context to be created first. "
-                        "Use: manage_context(action='create', level='task', "
-                        "context_id='{}', data={{'title': '{}', 'description': 'Your work summary'}}) "
-                        "to create context.".format(
-                            task.id.value, task.title
-                        )
+                    # This is no longer a blocker since context is auto-created
+                    logger.info(
+                        f"Task {task.id.value} has no context but will be auto-created during completion."
                     )
             
             # Check subtask completion

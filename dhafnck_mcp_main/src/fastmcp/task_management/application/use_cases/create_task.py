@@ -12,6 +12,7 @@ from ...domain.repositories.task_repository import TaskRepository
 from ...domain.value_objects import TaskStatus, Priority
 from ...domain.value_objects.task_status import TaskStatusEnum
 from ...domain.value_objects.priority import PriorityLevel
+from ...domain.value_objects.task_id import TaskId
 from ...domain.events import TaskCreated
 
 
@@ -64,7 +65,6 @@ class CreateTaskUseCase:
             
             # Add dependencies if provided
             if hasattr(request, 'dependencies') and request.dependencies:
-                from ...domain.value_objects.task_id import TaskId
                 for dep_id in request.dependencies:
                     if dep_id and dep_id.strip():
                         try:
@@ -89,6 +89,51 @@ class CreateTaskUseCase:
                 if isinstance(event, TaskCreated):
                     # Could trigger notifications, logging, etc.
                     pass
+            
+            # Auto-create task context for hierarchical context inheritance
+            try:
+                # Use unified context facade for task context creation
+                from ..factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+                
+                # Create unified context facade
+                factory = UnifiedContextFacadeFactory()
+                context_facade = factory.create_facade(
+                    user_id="default_id",
+                    git_branch_id=request.git_branch_id
+                )
+                
+                # Handle both TaskId objects and string IDs
+                task_id_str = str(task.id.value) if hasattr(task.id, 'value') else str(task.id)
+                
+                # Create default task context
+                context_data = {
+                    "branch_id": request.git_branch_id,
+                    "task_data": {
+                        "title": task.title,
+                        "status": str(task.status),
+                        "description": task.description or "",
+                        "priority": str(task.priority)
+                    }
+                }
+                
+                context_response = context_facade.create_context(
+                    level="task",
+                    context_id=task_id_str,
+                    data=context_data
+                )
+                
+                if not context_response["success"]:
+                    # Log warning but don't fail task creation
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Failed to create task context for {task_id_str}: {context_response.get('error')}")
+                    
+            except Exception as context_error:
+                # Log context creation error but don't fail task creation
+                import logging
+                logger = logging.getLogger(__name__)
+                task_id_str = str(task.id.value) if hasattr(task.id, 'value') else str(task.id)
+                logger.warning(f"Error creating task context for {task_id_str}: {context_error}")
             
             # Convert to response DTO
             task_response = TaskResponse.from_domain(task)

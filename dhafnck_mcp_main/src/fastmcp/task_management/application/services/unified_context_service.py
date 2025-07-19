@@ -14,6 +14,7 @@ from .context_cache_service import ContextCacheService
 from .context_inheritance_service import ContextInheritanceService
 from .context_delegation_service import ContextDelegationService
 from .context_validation_service import ContextValidationService
+from .context_hierarchy_validator import ContextHierarchyValidator
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,14 @@ class UnifiedContextService:
         )
         self.validation_service = validation_service or ContextValidationService()
         
+        # Initialize hierarchy validator
+        self.hierarchy_validator = ContextHierarchyValidator(
+            global_repo=global_context_repository,
+            project_repo=project_context_repository,
+            branch_repo=branch_context_repository,
+            task_repo=task_context_repository
+        )
+        
     def create_context(
         self, 
         level: str, 
@@ -64,6 +73,23 @@ class UnifiedContextService:
         try:
             # Validate level
             context_level = ContextLevel(level)
+            
+            # Validate hierarchy requirements first
+            is_valid, error_msg, guidance = self.hierarchy_validator.validate_hierarchy_requirements(
+                level=context_level,
+                context_id=context_id,
+                data=data
+            )
+            
+            if not is_valid:
+                # Return user-friendly error with guidance
+                response = {
+                    "success": False,
+                    "error": error_msg
+                }
+                if guidance:
+                    response.update(guidance)
+                return response
             
             # Validate context data
             validation_result = self.validation_service.validate_context_data(

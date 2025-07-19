@@ -263,31 +263,65 @@ mcp__dhafnck_mcp_http__manage_git_branch(
 
 Unified context management system providing a single interface for all context operations across the 4-tier hierarchy (Global → Project → Branch → Task).
 
+> **🚀 NEW in v9.1**: The `data` parameter now accepts JSON strings in addition to dictionary objects! JSON strings are automatically parsed, making it easier to work with serialized data.
+
 #### Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| action | string | Yes | Context operation: 'create', 'get', 'update', 'delete', 'list', 'get_property', 'update_property', 'merge', 'add_insight', 'add_progress', 'update_next_steps' |
-| task_id | string | Conditional | Task context identifier (required for most operations) |
-| git_branch_id | string | Optional | Git branch ID (auto-detected from task when possible) |
-| user_id | string | Optional | User identifier (default: 'default_id') |
-| project_id | string | Optional | Project identifier (default: '') |
-| data_title | string | Optional | Context title for create/update operations |
-| data_description | string | Optional | Context description |
-| data_status | string | Optional | Context status |
-| data_priority | string | Optional | Context priority: 'low', 'medium', 'high', 'urgent', 'critical' |
+| action | string | Yes | Context operation: 'create', 'get', 'update', 'delete', 'resolve', 'delegate', 'add_insight', 'add_progress', 'list' |
+| level | string | Optional | Context hierarchy level: 'global', 'project', 'branch', 'task' (default: 'task') |
+| context_id | string | Conditional | Context identifier appropriate for the level (e.g., task_id for task level) |
+| data | dict\|string | Optional | Context data - accepts dictionary object OR JSON string (automatically parsed) |
+| user_id | string | Optional | User identifier (default: system default) |
+| project_id | string | Optional | Project identifier (auto-detected from task/branch if not provided) |
+| git_branch_id | string | Optional | Git branch UUID (auto-detected from task if not provided) |
+| force_refresh | boolean | Optional | Bypass cache for fresh data (default: false) |
+| include_inherited | boolean | Optional | Include inherited data from parent levels (default: false) |
+| propagate_changes | boolean | Optional | Cascade updates to dependent contexts (default: true) |
+| delegate_to | string | Optional | Target level for delegation: 'global', 'project', 'branch' |
+| delegate_data | dict | Optional | Data to delegate to higher level |
+| delegation_reason | string | Optional | Explanation for delegation |
 | content | string | Conditional | Content for insights/progress (required for add_insight, add_progress) |
-| next_steps | string\|array | Optional | Next steps for the context |
+| category | string | Optional | Category for insights: 'technical', 'business', 'performance', 'risk', 'discovery' |
+| importance | string | Optional | Importance level: 'low', 'medium', 'high', 'critical' (default: 'medium') |
+| agent | string | Optional | Agent identifier performing the operation |
+| filters | dict | Optional | Filter criteria for list operation |
+| task_id | string | Legacy | Deprecated - use context_id with level='task' |
+| data_title | string | Legacy | Deprecated - use data.title or data='{"title": "..."}' |
+| data_description | string | Legacy | Deprecated - use data.description |
+| data_status | string | Legacy | Deprecated - use data.status |
+| data_priority | string | Legacy | Deprecated - use data.priority |
 
-#### Examples
+#### Data Parameter Format Examples
 
-```bash
-# Create task context
-mcp__dhafnck_mcp_http__manage_context(
+```python
+# Method 1: Dictionary object (standard)
+manage_context(
     action="create",
-    task_id="task-uuid-123",
+    level="task",
+    context_id="task-123",
+    data={
+        "title": "Implement Authentication",
+        "description": "Add JWT-based authentication",
+        "priority": "high"
+    }
+)
+
+# Method 2: JSON string (NEW! - automatically parsed)
+manage_context(
+    action="create",
+    level="task", 
+    context_id="task-123",
+    data='{"title": "Implement Authentication", "description": "Add JWT-based authentication", "priority": "high"}'
+)
+
+# Method 3: Legacy parameters (backward compatible)
+manage_context(
+    action="create",
+    task_id="task-123",  # legacy parameter
     data_title="Implement Authentication",
-    data_description="Add JWT-based authentication system",
+    data_description="Add JWT-based authentication",
     data_priority="high"
 )
 

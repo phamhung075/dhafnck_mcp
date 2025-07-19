@@ -8,7 +8,8 @@ Provides a single manage_context tool for all context operations across the hier
 
 import logging
 import asyncio
-from typing import Dict, Any, Optional, List, Annotated, TYPE_CHECKING
+import json
+from typing import Dict, Any, Optional, List, Annotated, TYPE_CHECKING, Union
 from datetime import datetime, timezone
 from pydantic import Field
 
@@ -75,6 +76,57 @@ class UnifiedContextMCPController:
         # Otherwise return as-is (flat string format)
         return str(param_value)
     
+    def _normalize_context_data(self, 
+                               data: Optional[Union[str, Dict[str, Any]]] = None,
+                               **kwargs) -> Optional[Dict[str, Any]]:
+        """
+        Normalize context data from various input formats.
+        
+        Handles:
+        1. JSON string: '{"title": "My Task", "description": "Task desc"}'
+        2. Dictionary: {"title": "My Task", "description": "Task desc"}
+        3. Legacy parameters: data_title="My Task", data_description="Task desc"
+        
+        Args:
+            data: Either a JSON string or dictionary object
+            **kwargs: Legacy data_* parameters
+            
+        Returns:
+            Normalized dictionary or None
+        """
+        # If data is provided, handle it first
+        if data is not None:
+            if isinstance(data, str):
+                try:
+                    # Try to parse JSON string
+                    parsed_data = json.loads(data)
+                    if not isinstance(parsed_data, dict):
+                        raise ValueError(f"JSON data must be an object, not {type(parsed_data).__name__}")
+                    return parsed_data
+                except json.JSONDecodeError as e:
+                    # Provide helpful error message
+                    raise ValueError(
+                        f"Invalid JSON string in 'data' parameter: {str(e)}. "
+                        f"Valid formats: data={{'title': 'My Title'}} or "
+                        f"data='{json.dumps({'title': 'My Title'})}'"
+                    )
+            elif isinstance(data, dict):
+                return data
+            else:
+                raise ValueError(
+                    f"Parameter 'data' must be a dictionary object or JSON string, "
+                    f"not {type(data).__name__}"
+                )
+        
+        # Build from legacy data_* parameters
+        context_data = {}
+        for key, value in kwargs.items():
+            if key.startswith('data_') and value is not None:
+                field_name = key[5:]  # Remove 'data_' prefix
+                context_data[field_name] = value
+        
+        return context_data if context_data else None
+    
     def _get_context_management_descriptions(self) -> Dict[str, Any]:
         """Load and return context management tool descriptions."""
         try:
@@ -117,7 +169,7 @@ class UnifiedContextMCPController:
             action: Annotated[str, Field(description=self._get_param_description(context_desc, "action", "Context management action"))],
             level: Annotated[Optional[str], Field(description=self._get_param_description(context_desc, "level", "Context level"))] = "task",
             context_id: Annotated[Optional[str], Field(description=self._get_param_description(context_desc, "context_id", "Context identifier"))] = None,
-            data: Annotated[Optional[Dict[str, Any]], Field(description=self._get_param_description(context_desc, "data", "Context data"))] = None,
+            data: Annotated[Optional[Union[str, Dict[str, Any]]], Field(description=self._get_param_description(context_desc, "data", "Context data (dictionary or JSON string)"))] = None,
             user_id: Annotated[Optional[str], Field(description=self._get_param_description(context_desc, "user_id", "User identifier"))] = None,
             project_id: Annotated[Optional[str], Field(description=self._get_param_description(context_desc, "project_id", "Project identifier"))] = None,
             git_branch_id: Annotated[Optional[str], Field(description=self._get_param_description(context_desc, "git_branch_id", "Git branch UUID"))] = None,
@@ -147,22 +199,37 @@ class UnifiedContextMCPController:
                 if task_id and not context_id:
                     context_id = task_id
                 
-                # Reconstruct data from legacy parameters if needed
-                if not data and any([data_title, data_description, data_status, 
-                                     data_priority, data_tags, data_metadata]):
-                    data = {}
-                    if data_title:
-                        data["title"] = data_title
-                    if data_description:
-                        data["description"] = data_description
-                    if data_status:
-                        data["status"] = data_status
-                    if data_priority:
-                        data["priority"] = data_priority
-                    if data_tags:
-                        data["tags"] = data_tags
-                    if data_metadata:
-                        data["metadata"] = data_metadata
+                # Normalize context data from various input formats
+                try:
+                    normalized_data = self._normalize_context_data(
+                        data=data,
+                        data_title=data_title,
+                        data_description=data_description,
+                        data_status=data_status,
+                        data_priority=data_priority,
+                        data_tags=data_tags,
+                        data_metadata=data_metadata
+                    )
+                    data = normalized_data
+                except ValueError as e:
+                    # Return user-friendly error with examples
+                    return StandardResponseFormatter.create_error_response(
+                        operation=f"manage_context.{action}",
+                        error=str(e),
+                        error_code="INVALID_PARAMETER_FORMAT",
+                        metadata={
+                            "suggestions": [
+                                "Use a dictionary object: data={'title': 'My Title', 'description': 'My Description'}",
+                                f"Or use a JSON string: data='{json.dumps({'title': 'My Title', 'description': 'My Description'})}'",
+                                "Or use legacy parameters: data_title='My Title', data_description='My Description'"
+                            ],
+                            "examples": {
+                                "dictionary_format": "manage_context(action='create', level='task', context_id='task-123', data={'title': 'My Task', 'description': 'Task description'})",
+                                "json_string_format": "manage_context(action='create', level='task', context_id='task-123', data='{\"title\": \"My Task\", \"description\": \"Task description\"}')",
+                                "legacy_format": "manage_context(action='create', level='task', context_id='task-123', data_title='My Task', data_description='Task description')"
+                            }
+                        }
+                    )
                 
                 # Handle special case for delegation
                 if action == "delegate" and delegate_data:

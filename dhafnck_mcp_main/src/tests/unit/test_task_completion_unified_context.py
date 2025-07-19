@@ -46,7 +46,7 @@ class TestTaskCompletionWithUnifiedContext:
         )
     
     def test_can_complete_task_without_context(self):
-        """Test task cannot be completed without context."""
+        """Test task can be completed without context (auto-created)."""
         # Mock no context exists
         self.task_context_repo.get = Mock(return_value=None)
         
@@ -56,11 +56,9 @@ class TestTaskCompletionWithUnifiedContext:
         # Check if can complete
         can_complete, error_msg = self.service.can_complete_task(self.task)
         
-        # Verify cannot complete
-        assert can_complete is False
-        assert "context to be created first" in error_msg
-        assert "manage_context" in error_msg  # Should use new command
-        assert "level='task'" in error_msg
+        # Verify CAN complete (context is auto-created now)
+        assert can_complete is True
+        assert error_msg is None
     
     def test_can_complete_task_with_context(self):
         """Test task can be completed when context exists."""
@@ -141,13 +139,24 @@ class TestTaskCompletionWithUnifiedContext:
         """Test validate_task_completion raises error when validation fails."""
         # Mock no context
         self.task_context_repo.get = Mock(return_value=None)
-        self.subtask_repo.find_by_parent_task_id = Mock(return_value=[])
+        
+        # Mock incomplete subtasks to trigger error
+        subtasks = [
+            Subtask(
+                id="sub-1",
+                parent_task_id=TaskId("12345678-1234-5678-1234-567812345678"),
+                title="Incomplete Subtask",
+                description="",
+                status=TaskStatus(TaskStatusEnum.IN_PROGRESS.value)
+            )
+        ]
+        self.subtask_repo.find_by_parent_task_id = Mock(return_value=subtasks)
         
         # Validate should raise error
         with pytest.raises(TaskCompletionError) as exc_info:
             self.service.validate_task_completion(self.task)
         
-        assert "context to be created first" in str(exc_info.value)
+        assert "1 of 1 subtasks are incomplete" in str(exc_info.value)
     
     def test_get_completion_blockers(self):
         """Test getting list of completion blockers."""
@@ -169,9 +178,8 @@ class TestTaskCompletionWithUnifiedContext:
         # Get blockers
         blockers = self.service.get_completion_blockers(self.task)
         
-        # Verify blockers
-        assert len(blockers) == 2
-        assert any("context to be created first" in b for b in blockers)
+        # Verify blockers (only subtask blocker since context is auto-created)
+        assert len(blockers) == 1
         assert any("1 of 1 subtasks are incomplete" in b for b in blockers)
     
     def test_task_with_existing_context_id(self):

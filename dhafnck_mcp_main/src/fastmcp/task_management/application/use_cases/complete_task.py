@@ -67,6 +67,161 @@ class CompleteTaskUseCase:
             }
         
         try:
+            # Auto-create context if it doesn't exist
+            # This addresses Issue #1: Task Completion Context Dependency
+            context_exists = False
+            
+            # Check for context existence using both legacy and unified systems
+            if self._task_context_repository:
+                legacy_context = self._task_context_repository.get(str(task_id))
+                logger.info(f"Legacy context check for task {task_id}: {legacy_context}")
+                if legacy_context:
+                    context_exists = True
+                    logger.info(f"Found legacy context for task {task_id}")
+                    
+                    # CRITICAL: Update the task's context_id to link to the context
+                    # This ensures the task entity validation passes
+                    if task.context_id is None:
+                        task.context_id = str(task_id)
+                        self._task_repository.save(task)
+                        logger.info(f"Updated task {task_id} context_id to link to existing legacy context")
+            
+            # Also check unified context system
+            if not context_exists:
+                logger.info(f"Checking unified context system for task {task_id}")
+                try:
+                    from ..factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+                    git_branch_id = getattr(task, 'git_branch_id', None)
+                    logger.info(f"Creating unified facade with git_branch_id: {git_branch_id}")
+                    unified_facade = UnifiedContextFacadeFactory().create_facade(git_branch_id=git_branch_id)
+                    logger.info(f"Getting unified context for task {task_id}")
+                    unified_context_result = unified_facade.get_context("task", str(task_id))
+                    logger.info(f"Unified context check result for task {task_id}: {unified_context_result}")
+                    if unified_context_result.get("success") and unified_context_result.get("context"):
+                        context_exists = True
+                        logger.info(f"Found existing unified context for task {task_id}")
+                        
+                        # CRITICAL: Update the task's context_id to link to the hierarchical context
+                        # This ensures the task entity validation passes
+                        if task.context_id is None:
+                            task.context_id = str(task_id)
+                            self._task_repository.save(task)
+                            logger.info(f"Updated task {task_id} context_id to link to existing hierarchical context")
+                        else:
+                            logger.info(f"Task {task_id} already has context_id: {task.context_id}")
+                    else:
+                        logger.info(f"No unified context found for task {task_id}")
+                        
+                except Exception as e:
+                    logger.warning(f"Could not check unified context for task {task_id}: {e}")
+                    import traceback
+                    logger.warning(f"Traceback: {traceback.format_exc()}")
+            
+            if not context_exists:
+                logger.info(f"Auto-creating context for task {task_id} during completion")
+                try:
+                    from ..factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+                    
+                    # Extract git_branch_id from task for facade creation
+                    git_branch_id = getattr(task, 'git_branch_id', None)
+                    project_id = getattr(task, 'project_id', None)
+                    
+                    # If project_id is not available, try to get it from the branch
+                    if not project_id and git_branch_id:
+                        try:
+                            # Get project_id from git branch
+                            from ...infrastructure.database.database_config import get_session
+                            from ...infrastructure.database.models import ProjectGitBranch
+                            with get_session() as session:
+                                branch = session.get(ProjectGitBranch, git_branch_id)
+                                if branch:
+                                    project_id = branch.project_id
+                        except Exception as e:
+                            logger.warning(f"Could not get project_id from branch {git_branch_id}: {e}")
+                    
+                    unified_facade = UnifiedContextFacadeFactory().create_facade(
+                        git_branch_id=git_branch_id,
+                        project_id=project_id
+                    )
+                    
+                    # Create the hierarchy: Project → Branch → Task
+                    created_any = False
+                    
+                    # 1. Create project context if it doesn't exist
+                    if project_id:
+                        try:
+                            project_result = unified_facade.create_context(
+                                level="project",
+                                context_id=project_id,
+                                data={
+                                    "project_id": project_id,
+                                    "auto_created": True,
+                                    "created_during": "task_completion"
+                                }
+                            )
+                            if project_result.get("success"):
+                                logger.info(f"Auto-created project context for {project_id}")
+                                created_any = True
+                        except Exception as e:
+                            logger.debug(f"Project context {project_id} might already exist: {e}")
+                    
+                    # 2. Create branch context if it doesn't exist
+                    if git_branch_id:
+                        try:
+                            branch_result = unified_facade.create_context(
+                                level="branch",
+                                context_id=git_branch_id,
+                                data={
+                                    "project_id": project_id,
+                                    "git_branch_id": git_branch_id,
+                                    "auto_created": True,
+                                    "created_during": "task_completion"
+                                }
+                            )
+                            if branch_result.get("success"):
+                                logger.info(f"Auto-created branch context for {git_branch_id}")
+                                created_any = True
+                        except Exception as e:
+                            logger.debug(f"Branch context {git_branch_id} might already exist: {e}")
+                    
+                    # 3. Create task context
+                    context_data = {
+                        "branch_id": git_branch_id,
+                        "project_id": project_id,
+                        "task_data": {
+                            "title": task.title,
+                            "status": str(task.status),
+                            "description": task.description or ""
+                        },
+                        "auto_created": True,
+                        "created_during": "task_completion"
+                    }
+                    
+                    create_result = unified_facade.create_context(
+                        level="task",
+                        context_id=str(task_id),
+                        data=context_data
+                    )
+                    
+                    if create_result.get("success"):
+                        logger.info(f"Successfully auto-created task context for task {task_id}")
+                        created_any = True
+                        
+                        # CRITICAL: Update the task's context_id field to link to the hierarchical context
+                        # This is necessary for the task completion validation to pass
+                        task.context_id = str(task_id)  # Use task_id as context_id for hierarchical context
+                        # Persist the context_id update to the database
+                        self._task_repository.save(task)
+                        logger.info(f"Updated task {task_id} with context_id={task.context_id}")
+                    else:
+                        logger.warning(f"Failed to auto-create task context for task {task_id}: {create_result.get('error')}")
+                    
+                    if created_any:
+                        logger.info(f"Auto-context creation completed for task {task_id} with hierarchy")
+                except Exception as e:
+                    logger.warning(f"Could not auto-create context for task {task_id}: {e}")
+                    # Continue with completion even if context creation fails
+            
             # Validate task completion using domain service (if available)
             if self._completion_service:
                 self._completion_service.validate_task_completion(task)
@@ -162,8 +317,13 @@ class CompleteTaskUseCase:
                         }
                     }
                     
-                    # Merge update into task context
-                    unified_facade.merge_context("task", str(task_id), context_update)
+                    # Update task context with completion summary
+                    unified_facade.update_context(
+                        level="task",
+                        context_id=str(task_id),
+                        data=context_update,
+                        propagate_changes=True
+                    )
                 except Exception as e:
                     logger.warning(f"Could not update context with completion summary: {e}")
             
