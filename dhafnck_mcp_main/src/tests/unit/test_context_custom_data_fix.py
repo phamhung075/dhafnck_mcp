@@ -77,15 +77,34 @@ class TestContextCustomDataPersistence:
         
         # Mock the repository update to return updated entity
         def mock_update(context_id, updated_entity):
-            # Verify the updated entity contains custom data
-            assert updated_entity.project_settings.get("custom_field") == "custom_value"
-            assert updated_entity.project_settings.get("debug_info") == "test data persistence"
-            assert updated_entity.project_settings.get("nested_custom") == {"level1": {"level2": "deep_value"}}
-            assert updated_entity.project_settings.get("new_settings_field") == "should_be_preserved"
+            # Verify the updated entity stores custom data in local_standards._custom (repository convention)
+            local_standards = updated_entity.project_settings.get("local_standards", {})
+            custom_data = local_standards.get("_custom", {})
+            
+            assert custom_data.get("custom_field") == "custom_value"
+            assert custom_data.get("debug_info") == "test data persistence" 
+            assert custom_data.get("nested_custom") == {"level1": {"level2": "deep_value"}}
+            assert custom_data.get("new_settings_field") == "should_be_preserved"
+            
             # Verify existing data is preserved and merged
             assert updated_entity.project_settings["team_preferences"]["style"] == "scrum"  # Updated
             assert updated_entity.project_settings["technology_stack"]["backend"] == "python"  # Preserved
-            return updated_entity
+            
+            # Simulate repository _to_entity behavior: extract custom fields to root level
+            reconstructed_settings = updated_entity.project_settings.copy()
+            if "_custom" in reconstructed_settings.get("local_standards", {}):
+                custom_fields = reconstructed_settings["local_standards"]["_custom"]
+                reconstructed_settings.update(custom_fields)
+                # Clean up local_standards
+                reconstructed_settings["local_standards"] = {k: v for k, v in reconstructed_settings["local_standards"].items() if k != "_custom"}
+            
+            # Return entity with reconstructed data (simulating repository round-trip)
+            return ProjectContext(
+                id=updated_entity.id,
+                project_name=updated_entity.project_name,
+                project_settings=reconstructed_settings,
+                metadata=updated_entity.metadata
+            )
         
         project_repo.update.side_effect = mock_update
         
@@ -128,10 +147,26 @@ class TestContextCustomDataPersistence:
             assert tech_stack["backend"] == "python"  # Preserved from existing
             assert tech_stack["frontend"] == "react"  # Added from update
             
-            assert "completely_new_section" in updated_entity.project_settings
-            assert updated_entity.project_settings["completely_new_section"]["config"]["setting1"] == "value1"
+            # Check custom data is stored in local_standards._custom
+            local_standards = updated_entity.project_settings.get("local_standards", {})
+            custom_data = local_standards.get("_custom", {})
+            assert "completely_new_section" in custom_data
+            assert custom_data["completely_new_section"]["config"]["setting1"] == "value1"
             
-            return updated_entity
+            # Simulate repository _to_entity behavior: extract custom fields to root level
+            reconstructed_settings = updated_entity.project_settings.copy()
+            if "_custom" in reconstructed_settings.get("local_standards", {}):
+                custom_fields = reconstructed_settings["local_standards"]["_custom"]
+                reconstructed_settings.update(custom_fields)
+                # Clean up local_standards
+                reconstructed_settings["local_standards"] = {k: v for k, v in reconstructed_settings["local_standards"].items() if k != "_custom"}
+            
+            return ProjectContext(
+                id=updated_entity.id,
+                project_name=updated_entity.project_name,
+                project_settings=reconstructed_settings,
+                metadata=updated_entity.metadata
+            )
         
         project_repo.update.side_effect = mock_update
         
@@ -163,8 +198,10 @@ class TestContextCustomDataPersistence:
         }
         
         def mock_update(context_id, updated_entity):
-            # Verify custom data in project_settings
-            assert updated_entity.project_settings.get("custom_field") == "test_value"
+            # Verify custom data in local_standards._custom
+            local_standards = updated_entity.project_settings.get("local_standards", {})
+            custom_data = local_standards.get("_custom", {})
+            assert custom_data.get("custom_field") == "test_value"
             
             # Verify metadata is updated
             assert updated_entity.metadata.get("new_meta_field") == "meta_value" 
@@ -172,7 +209,20 @@ class TestContextCustomDataPersistence:
             # Verify existing metadata is preserved
             assert "created_at" in updated_entity.metadata
             
-            return updated_entity
+            # Simulate repository _to_entity behavior: extract custom fields to root level
+            reconstructed_settings = updated_entity.project_settings.copy()
+            if "_custom" in reconstructed_settings.get("local_standards", {}):
+                custom_fields = reconstructed_settings["local_standards"]["_custom"]
+                reconstructed_settings.update(custom_fields)
+                # Clean up local_standards
+                reconstructed_settings["local_standards"] = {k: v for k, v in reconstructed_settings["local_standards"].items() if k != "_custom"}
+            
+            return ProjectContext(
+                id=updated_entity.id,
+                project_name=updated_entity.project_name,
+                project_settings=reconstructed_settings,
+                metadata=updated_entity.metadata
+            )
         
         project_repo.update.side_effect = mock_update
         

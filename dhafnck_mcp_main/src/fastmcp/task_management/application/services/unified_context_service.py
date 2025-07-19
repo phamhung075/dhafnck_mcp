@@ -633,11 +633,57 @@ class UnifiedContextService:
                 metadata=new_data.get("metadata", existing_entity.metadata)
             )
         elif isinstance(existing_entity, ProjectContext):
+            # Merge custom data into project_settings to preserve JSONB storage
+            existing_settings = existing_entity.project_settings.copy()
+            
+            # Standard fields that belong in project_settings structure
+            standard_fields = {"team_preferences", "technology_stack", "project_workflow", "local_standards"}
+            
+            # Extract project_settings if provided, otherwise start with existing
+            if "project_settings" in new_data:
+                merged_settings = existing_settings.copy()
+                for key, value in new_data["project_settings"].items():
+                    if isinstance(value, dict) and key in merged_settings and isinstance(merged_settings[key], dict):
+                        # Deep merge nested dicts
+                        merged_settings[key] = {**merged_settings[key], **value}
+                    else:
+                        merged_settings[key] = value
+            else:
+                merged_settings = existing_settings.copy()
+            
+            # Merge any custom fields from root level into project_settings
+            custom_fields_for_storage = {}
+            for key, value in new_data.items():
+                if key not in {"id", "project_name", "project_settings", "metadata"}:
+                    if key in standard_fields:
+                        # Handle standard fields with deep merge
+                        if isinstance(value, dict) and key in merged_settings and isinstance(merged_settings[key], dict):
+                            merged_settings[key] = {**merged_settings[key], **value}
+                        else:
+                            merged_settings[key] = value
+                    else:
+                        # Custom fields will be stored in local_standards._custom per repository convention
+                        custom_fields_for_storage[key] = value
+            
+            # Store custom fields in local_standards._custom for repository compatibility
+            if custom_fields_for_storage:
+                if "local_standards" not in merged_settings:
+                    merged_settings["local_standards"] = {}
+                if "_custom" not in merged_settings["local_standards"]:
+                    merged_settings["local_standards"]["_custom"] = {}
+                merged_settings["local_standards"]["_custom"].update(custom_fields_for_storage)
+            
+            # Merge metadata 
+            existing_metadata = existing_entity.metadata.copy()
+            if "metadata" in new_data and isinstance(new_data["metadata"], dict):
+                for key, value in new_data["metadata"].items():
+                    existing_metadata[key] = value
+            
             return ProjectContext(
                 id=new_data.get("id", existing_entity.id),
                 project_name=new_data.get("project_name", existing_entity.project_name),
-                project_settings=new_data.get("project_settings", existing_entity.project_settings),
-                metadata=new_data.get("metadata", existing_entity.metadata)
+                project_settings=merged_settings,
+                metadata=existing_metadata
             )
         elif isinstance(existing_entity, GlobalContext):
             return GlobalContext(
