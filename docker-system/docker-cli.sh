@@ -23,15 +23,16 @@ fi
 
 # Global variables
 COMMAND="${1:-}"
-SUBCOMMAND="${2:-}"
-shift 2 2>/dev/null || shift $# 2>/dev/null
+shift 1 2>/dev/null || shift $# 2>/dev/null
+SUBCOMMAND="${1:-}"
+shift 1 2>/dev/null || shift $# 2>/dev/null
 
 # Display help
 show_help() {
     cat << EOF
 🐳 DhafnckMCP Docker CLI - PostgreSQL Edition
 
-Usage: ./docker-cli.sh [command] [subcommand] [options]
+USAGE: ./docker-cli.sh [command] [subcommand] [options]
 
 CORE COMMANDS:
   start                    Start all services
@@ -130,7 +131,12 @@ case "$COMMAND" in
     # Core commands
     start|stop|restart|status|logs|shell)
         source "${LIB_DIR}/core.sh"
-        ${COMMAND}_command "$@"
+        # For commands that take a service parameter, pass SUBCOMMAND as first argument
+        if [[ "$COMMAND" == "logs" || "$COMMAND" == "shell" || "$COMMAND" == "restart" ]] && [[ -n "$SUBCOMMAND" ]]; then
+            ${COMMAND}_command "$SUBCOMMAND" "$@"
+        else
+            ${COMMAND}_command "$@"
+        fi
         ;;
     
     # Database commands

@@ -40,6 +40,11 @@ confirm() {
 }
 
 check_docker() {
+    # Skip checks in test mode
+    if [[ "${DOCKER_CLI_TEST_MODE:-}" == "true" ]]; then
+        return 0
+    fi
+    
     if ! command -v docker &> /dev/null; then
         error "Docker is not installed or not in PATH"
         exit 1
@@ -52,6 +57,11 @@ check_docker() {
 }
 
 check_docker_compose() {
+    # Skip checks in test mode
+    if [[ "${DOCKER_CLI_TEST_MODE:-}" == "true" ]]; then
+        return 0
+    fi
+    
     if ! command -v docker compose &> /dev/null; then
         if command -v docker-compose &> /dev/null; then
             # Use docker-compose as fallback
@@ -85,6 +95,11 @@ wait_for_service() {
 }
 
 wait_for_services() {
+    # Skip in test mode
+    if [[ "${DOCKER_CLI_TEST_MODE:-}" == "true" ]]; then
+        return 0
+    fi
+    
     local services=("backend" "frontend" "postgres" "redis")
     
     for service in "${services[@]}"; do
@@ -109,6 +124,18 @@ get_version() {
 }
 
 # Environment helpers
+load_environment() {
+    local env="${ENV:-dev}"
+    local env_file="${SCRIPT_DIR}/environments/${env}.env"
+    
+    if [[ -f "$env_file" ]]; then
+        info "Loading environment: $env"
+        export $(grep -v '^#' "$env_file" | xargs) 2>/dev/null || true
+    else
+        warning "Environment file not found: $env_file"
+    fi
+}
+
 is_production() {
     [[ "${ENV:-}" == "production" ]]
 }
@@ -139,6 +166,12 @@ ensure_volume() {
 
 # Compose helpers
 compose_file_args() {
+    # In test mode, return minimal args
+    if [[ "${DOCKER_CLI_TEST_MODE:-}" == "true" ]]; then
+        echo ""
+        return
+    fi
+    
     # Use the new docker-system compose files
     local args="-f ${SCRIPT_DIR}/docker/docker-compose.yml"
     

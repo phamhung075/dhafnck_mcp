@@ -139,35 +139,91 @@ skip_test() {
 
 # Mock functions
 create_mock_docker() {
-    cat > "$MOCK_DIR/docker" << 'EOF'
+    cat > "$MOCK_DIR/docker" << EOF
 #!/bin/bash
 # Mock docker command
-echo "$@" >> "$MOCK_DIR/docker.calls"
+MOCK_DIR="$MOCK_DIR"
+echo "\$@" >> "\$MOCK_DIR/docker.calls"
 
-case "$1" in
+case "\$1" in
     "compose")
         shift
-        source "$MOCK_DIR/docker-compose.mock" "$@"
+        if [[ -f "\$MOCK_DIR/docker-compose.mock" ]]; then
+            source "\$MOCK_DIR/docker-compose.mock" "\$@"
+        else
+            echo "Mock docker-compose not configured" >&2
+            exit 1
+        fi
         ;;
     "ps")
-        source "$MOCK_DIR/docker-ps.mock" "$@"
+        if [[ -f "\$MOCK_DIR/docker-ps.mock" ]]; then
+            source "\$MOCK_DIR/docker-ps.mock" "\$@"
+        else
+            echo "Mock docker ps not configured" >&2
+            exit 1
+        fi
         ;;
     "exec")
-        source "$MOCK_DIR/docker-exec.mock" "$@"
+        if [[ -f "\$MOCK_DIR/docker-exec.mock" ]]; then
+            source "\$MOCK_DIR/docker-exec.mock" "\$@"
+        else
+            echo "Mock docker exec not configured" >&2
+            exit 1
+        fi
         ;;
     "logs")
-        source "$MOCK_DIR/docker-logs.mock" "$@"
+        if [[ -f "\$MOCK_DIR/docker-logs.mock" ]]; then
+            source "\$MOCK_DIR/docker-logs.mock" "\$@"
+        else
+            echo "Mock docker logs not configured" >&2
+            exit 1
+        fi
         ;;
     "inspect")
-        source "$MOCK_DIR/docker-inspect.mock" "$@"
+        if [[ -f "\$MOCK_DIR/docker-inspect.mock" ]]; then
+            source "\$MOCK_DIR/docker-inspect.mock" "\$@"
+        else
+            echo "Mock docker inspect not configured" >&2
+            exit 1
+        fi
+        ;;
+    "info")
+        echo "Docker version 20.10.0"
+        exit 0
+        ;;
+    "stats")
+        echo "CONTAINER CPU% MEM%"
+        exit 0
+        ;;
+    "network")
+        if [[ "\$2" == "inspect" ]]; then
+            echo '{"Containers": {}}'
+        else
+            echo "dhafnck-network"
+        fi
+        exit 0
+        ;;
+    "volume")
+        if [[ "\$2" == "rm" ]]; then
+            echo "Volume removed"
+        fi
+        exit 0
         ;;
     *)
-        echo "Mock docker: Unknown command $1" >&2
+        echo "Mock docker: Unknown command \$1" >&2
         exit 1
         ;;
 esac
 EOF
     chmod +x "$MOCK_DIR/docker"
+    
+    # Create docker-compose wrapper
+    cat > "$MOCK_DIR/docker-compose" << EOF
+#!/bin/bash
+MOCK_DIR="$MOCK_DIR"
+"\$MOCK_DIR/docker" compose "\$@"
+EOF
+    chmod +x "$MOCK_DIR/docker-compose"
     
     # Add mock directory to PATH
     export PATH="$MOCK_DIR:$PATH"
@@ -179,8 +235,11 @@ mock_docker_compose() {
     
     cat > "$MOCK_DIR/docker-compose.mock" << EOF
 #!/bin/bash
-if [[ "\$*" == *"$command"* ]]; then
-    echo "$output"
+# If the command matches exactly or is contained in arguments
+if [[ "\$*" == "$command" ]] || [[ "\$*" == *"$command"* ]]; then
+    if [[ -n "$output" ]]; then
+        echo "$output"
+    fi
     exit 0
 else
     echo "Mock docker-compose: Unexpected arguments: \$*" >&2
@@ -227,7 +286,7 @@ mock_docker_exec() {
     
     cat > "$MOCK_DIR/docker-exec.mock" << EOF
 #!/bin/bash
-echo "Mock exec: \$*" >> "$MOCK_DIR/docker-exec.calls"
+echo "Mock exec: \$*" >> "\$MOCK_DIR/docker-exec.calls"
 if [[ "\$*" == *"$container"* ]]; then
     exit 0
 else
@@ -257,7 +316,7 @@ assert_docker_logs_called_with() {
     if [[ "$calls" == *"logs $expected"* ]]; then
         pass_test
     else
-        fail_test "Docker logs not called with expected arguments\n    Expected: 'logs $expected'"
+        fail_test "Docker logs not called with expected arguments\n    Expected: 'logs $expected'\n    Calls: $calls"
     fi
 }
 

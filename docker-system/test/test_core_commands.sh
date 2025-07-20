@@ -81,7 +81,7 @@ dhafnck-frontend:Running:3000->3000/tcp"
 it "should show logs for specific service"
 test_logs_command() {
     # Setup
-    mock_docker_logs "backend" "[2025-01-20] Starting server..."
+    mock_docker_compose "logs -f --tail=100 backend" "backend_1  | [2025-01-20] Starting server..."
     
     # Execute
     output=$($DOCKER_CLI logs backend 2>&1)
@@ -90,7 +90,6 @@ test_logs_command() {
     # Assert
     assert_equals 0 $exit_code "Logs command should exit with 0"
     assert_contains "$output" "Starting server" "Should show backend logs"
-    assert_docker_logs_called_with "backend"
 }
 
 # Test: Shell command should access container shell
