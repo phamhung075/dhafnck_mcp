@@ -15,6 +15,9 @@ test_framework_cleanup_per_test() {
     # Override cleanup function to log calls
     cleanup_test_artifacts() {
         echo "cleanup_test_artifacts called" >> "$cleanup_log"
+        # Still do actual cleanup
+        rm -rf test-temp test-dir concurrent-test test-perf test-artifacts 2>/dev/null || true
+        rm -f test-output.log test-file.txt .test-config 2>/dev/null || true
     }
     
     # Execute a single test
@@ -64,14 +67,21 @@ test_framework_cleanup_order() {
     # Override cleanup functions
     cleanup_docker_logs() {
         echo "1. docker_logs" >> "$order_log"
+        # Actual cleanup
+        rm -f docker-*.log 2>/dev/null || true
     }
     
     cleanup_test_artifacts() {
         echo "2. test_artifacts" >> "$order_log"
+        # Actual cleanup
+        rm -rf test-temp test-dir concurrent-test test-perf test-artifacts 2>/dev/null || true
+        rm -f test-output.log test-file.txt .test-config 2>/dev/null || true
     }
     
     cleanup_test_env() {
         echo "3. test_env" >> "$order_log"
+        # Actual cleanup
+        unset DOCKER_CLI_TEST_MODE 2>/dev/null || true
     }
     
     # Execute full cleanup
@@ -144,7 +154,9 @@ test_framework_cleanup_scope() {
     touch "README.md"
     touch ".test-config"
     
-    # Execute targeted cleanup
+    # Execute targeted cleanup - use the actual cleanup function from test_framework.sh
+    # Source it again to ensure we have the real function
+    source "$(dirname "$0")/test_framework.sh"
     cleanup_test_artifacts
     
     # Assert
@@ -155,7 +167,7 @@ test_framework_cleanup_scope() {
     assert_exists "README.md" "Project files should be preserved"
     
     # Cleanup remaining
-    rm -rf "src"
+    rm -rf "src" "README.md"
 }
 
 # Test: Should handle concurrent cleanup
@@ -165,6 +177,9 @@ test_framework_cleanup_concurrent() {
     mkdir -p "concurrent-test"
     touch "concurrent-test/file1.txt"
     touch "concurrent-test/file2.txt"
+    
+    # Source to ensure we have the cleanup function
+    source "$(dirname "$0")/test_framework.sh"
     
     # Execute concurrent cleanup
     cleanup_test_artifacts &
