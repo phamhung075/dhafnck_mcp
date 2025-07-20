@@ -1,0 +1,199 @@
+#!/bin/bash
+# docker-cli.sh - Unified Docker CLI Interface for DhafnckMCP
+# PostgreSQL-first architecture with no backward compatibility
+
+set -euo pipefail
+
+# Constants
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+readonly LIB_DIR="${SCRIPT_DIR}/lib"
+readonly ENV_DIR="${SCRIPT_DIR}/environments"
+readonly DEFAULT_ENV="${ENV:-dev}"
+
+# Source common functions
+source "${LIB_DIR}/common.sh"
+
+# Load default environment if exists
+if [[ -f "${SCRIPT_DIR}/.env" ]]; then
+    set -a
+    source "${SCRIPT_DIR}/.env"
+    set +a
+fi
+
+# Global variables
+COMMAND="${1:-}"
+SUBCOMMAND="${2:-}"
+shift 2 2>/dev/null || shift $# 2>/dev/null
+
+# Display help
+show_help() {
+    cat << EOF
+🐳 DhafnckMCP Docker CLI - PostgreSQL Edition
+
+Usage: ./docker-cli.sh [command] [subcommand] [options]
+
+CORE COMMANDS:
+  start                    Start all services
+  stop                     Stop all services  
+  restart                  Restart all services
+  status                   Show service status
+  logs [service]           View service logs
+  shell [service]          Access service shell
+
+DATABASE COMMANDS:
+  db status                Show database status
+  db init                  Initialize database
+  db migrate               Run migrations
+  db backup                Create database backup
+  db restore [file]        Restore from backup
+  db shell                 Access database shell
+  db reset                 Reset database (WARNING: destructive)
+
+DEVELOPMENT COMMANDS:
+  dev setup                Setup development environment
+  dev reset                Reset development data
+  dev seed                 Seed development data
+  build [service]          Build service images
+  test [type]              Run tests (unit|integration|e2e|all)
+
+DEPLOYMENT COMMANDS:
+  deploy [env]             Deploy to environment (staging|production)
+  scale [service] [count]  Scale service replicas
+  health                   System health check
+  monitor                  Real-time monitoring dashboard
+
+MAINTENANCE COMMANDS:
+  backup create [type]     Create backup (full|database|volumes|configs)
+  backup restore [file]    Restore from backup
+  backup list              List available backups
+  cleanup                  Clean unused resources
+  update                   Update system components
+
+CONFIGURATION COMMANDS:
+  config show              Show current configuration
+  config set [key] [val]   Set configuration value
+  config validate          Validate configuration
+  env [environment]        Switch environment (dev|staging|production)
+
+TROUBLESHOOTING COMMANDS:
+  diagnose                 Run system diagnostics
+  fix-permissions          Fix file permissions
+  emergency-backup         Create emergency backup
+  support-bundle           Generate support bundle
+
+WORKFLOW COMMANDS:
+  workflow dev-setup       Complete development setup
+  workflow prod-deploy     Production deployment workflow
+  workflow backup-restore  Backup and restore workflow
+
+OPTIONS:
+  -h, --help              Show this help message
+  -v, --verbose           Verbose output
+  -q, --quiet             Quiet mode
+  --dry-run               Show what would be done
+  --force                 Force operation without confirmation
+
+EXAMPLES:
+  ./docker-cli.sh start                    # Start all services
+  ./docker-cli.sh db backup                # Backup database
+  ./docker-cli.sh logs backend --tail 50   # View backend logs
+  ./docker-cli.sh deploy production        # Deploy to production
+  ./docker-cli.sh workflow dev-setup       # Full dev environment setup
+
+For detailed help on a specific command:
+  ./docker-cli.sh help [command]
+
+EOF
+}
+
+# Load environment
+load_environment() {
+    local env="${1:-$DEFAULT_ENV}"
+    local env_file="${ENV_DIR}/${env}.env"
+    
+    if [[ -f "$env_file" ]]; then
+        info "Loading environment: $env"
+        # Source the environment file properly
+        set -a  # automatically export all variables
+        source "$env_file"
+        set +a  # turn off automatic export
+        export ENV="$env"
+    else
+        error "Environment file not found: $env_file"
+        exit 1
+    fi
+}
+
+# Command routing
+case "$COMMAND" in
+    # Core commands
+    start|stop|restart|status|logs|shell)
+        source "${LIB_DIR}/core.sh"
+        ${COMMAND}_command "$@"
+        ;;
+    
+    # Database commands
+    db)
+        source "${LIB_DIR}/database/interface.sh"
+        db_command "$SUBCOMMAND" "$@"
+        ;;
+    
+    # Development commands
+    dev|build|test)
+        source "${LIB_DIR}/development.sh"
+        ${COMMAND}_command "$SUBCOMMAND" "$@"
+        ;;
+    
+    # Special case for monitor-snapshot
+    monitor-snapshot)
+        source "${LIB_DIR}/monitoring.sh"
+        monitor_snapshot_command
+        ;;
+    
+    # Deployment commands
+    deploy|scale|health|monitor)
+        source "${LIB_DIR}/deployment.sh"
+        ${COMMAND}_command "$@"
+        ;;
+    
+    # Maintenance commands
+    backup|cleanup|update)
+        source "${LIB_DIR}/maintenance.sh"
+        ${COMMAND}_command "$SUBCOMMAND" "$@"
+        ;;
+    
+    # Configuration commands
+    config|env)
+        source "${LIB_DIR}/configuration.sh"
+        ${COMMAND}_command "$SUBCOMMAND" "$@"
+        ;;
+    
+    # Troubleshooting commands
+    diagnose|fix-permissions|emergency-backup|support-bundle)
+        source "${LIB_DIR}/troubleshooting.sh"
+        ${COMMAND}_command "$@"
+        ;;
+    
+    # Workflow commands
+    workflow)
+        source "${LIB_DIR}/workflows.sh"
+        workflow_command "$SUBCOMMAND" "$@"
+        ;;
+    
+    # Help
+    help|-h|--help|"")
+        if [[ -n "${SUBCOMMAND:-}" ]]; then
+            show_command_help "$SUBCOMMAND"
+        else
+            show_help
+        fi
+        ;;
+    
+    # Unknown command
+    *)
+        error "Unknown command: $COMMAND"
+        echo "Run './docker-cli.sh help' for usage information"
+        exit 1
+        ;;
+esac
