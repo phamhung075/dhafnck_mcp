@@ -21,6 +21,8 @@ from ...application.facades.subtask_application_facade import SubtaskApplication
 from ...application.factories.subtask_facade_factory import SubtaskFacadeFactory
 from .workflow_guidance.subtask import SubtaskWorkflowFactory
 from ..utils.response_formatter import StandardResponseFormatter, ResponseStatus, ErrorCodes
+from ..utils.parameter_validation_fix import ParameterTypeCoercer
+from ..utils.schema_monkey_patch import apply_all_schema_patches
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +73,9 @@ class SubtaskMCPController:
     def register_tools(self, mcp: "FastMCP"):
         """Register subtask management tools with FastMCP."""
         
+        # Apply schema monkey patches for flexible array parameters BEFORE registering tools
+        apply_all_schema_patches()
+        
         # Get tool descriptions
         manage_subtask_desc = self._get_subtask_management_descriptions().get("manage_subtask", {})
         
@@ -83,19 +88,19 @@ class SubtaskMCPController:
             description: Annotated[Optional[str], Field(description="Detailed subtask description explaining what needs to be done. Include acceptance criteria if relevant. Optional for: create, update")] = None,
             status: Annotated[Optional[str], Field(description="Subtask status: 'todo', 'in_progress', 'done'. Optional - use progress_percentage instead for automatic status mapping.")] = None,
             priority: Annotated[Optional[str], Field(description="Subtask priority: 'low', 'medium', 'high', 'urgent', 'critical'. Optional for: create, update. Default: inherits from parent")] = None,
-            assignees: Annotated[Optional[List[str]], Field(description="List of assignee identifiers. Optional for: create, update. Example: ['user1', 'user2']")] = None,
+            assignees: Annotated[Optional[Union[List[str], str]], Field(description="List of assignee identifiers. Accepts array, JSON string array, or comma-separated string. Example: ['user1', 'user2'] or 'user1,user2'")] = None,
             progress_notes: Annotated[Optional[str], Field(description="Brief description of work done (for update action)")] = None,
             progress_percentage: Annotated[Optional[Union[int, str]], Field(description="Subtask completion percentage 0-100 (for update action). Accepts integer or string representation.")] = None,
             blockers: Annotated[Optional[str], Field(description="Any blockers encountered")] = None,
-            insights_found: Annotated[Optional[List[str]], Field(description="Insights discovered during subtask work")] = None,
+            insights_found: Annotated[Optional[Union[List[str], str]], Field(description="Insights discovered during subtask work. Accepts array, JSON string array, or comma-separated string.")] = None,
             completion_summary: Annotated[Optional[str], Field(description="Summary of what was accomplished (REQUIRED for complete action)")] = None,
             impact_on_parent: Annotated[Optional[str], Field(description="How this impacts the parent task")] = None,
             # Enhanced completion context parameters
             testing_notes: Annotated[Optional[str], Field(description="Detailed testing performed and results (for complete action)")] = None,
-            deliverables: Annotated[Optional[List[str]], Field(description="List of deliverables created - files, endpoints, components, etc. (for complete action)")] = None,
-            skills_learned: Annotated[Optional[List[str]], Field(description="New skills or knowledge gained during this subtask (for complete action)")] = None,
-            challenges_overcome: Annotated[Optional[List[str]], Field(description="Challenges faced and how they were solved (for complete action)")] = None,
-            next_recommendations: Annotated[Optional[List[str]], Field(description="Recommendations for future work or improvements (for complete action)")] = None,
+            deliverables: Annotated[Optional[Union[List[str], str]], Field(description="List of deliverables created - files, endpoints, components, etc. Accepts array, JSON string array, or comma-separated string. (for complete action)")] = None,
+            skills_learned: Annotated[Optional[Union[List[str], str]], Field(description="New skills or knowledge gained during this subtask. Accepts array, JSON string array, or comma-separated string. (for complete action)")] = None,
+            challenges_overcome: Annotated[Optional[Union[List[str], str]], Field(description="Challenges faced and how they were solved. Accepts array, JSON string array, or comma-separated string. (for complete action)")] = None,
+            next_recommendations: Annotated[Optional[Union[List[str], str]], Field(description="Recommendations for future work or improvements. Accepts array, JSON string array, or comma-separated string. (for complete action)")] = None,
             completion_quality: Annotated[Optional[str], Field(description="Quality assessment: 'excellent', 'good', 'satisfactory', 'needs_improvement' (for complete action)")] = None,
             verification_status: Annotated[Optional[str], Field(description="Verification status: 'verified', 'pending_review', 'needs_testing', 'failed_verification' (for complete action)")] = None
         ) -> Dict[str, Any]:
@@ -136,18 +141,18 @@ class SubtaskMCPController:
         description: Optional[str] = None,
         status: Optional[str] = None,
         priority: Optional[str] = None,
-        assignees: Optional[List[str]] = None,
+        assignees: Optional[Union[List[str], str]] = None,
         progress_notes: Optional[str] = None,
         progress_percentage: Optional[Union[int, str]] = None,
         blockers: Optional[str] = None,
-        insights_found: Optional[List[str]] = None,
+        insights_found: Optional[Union[List[str], str]] = None,
         completion_summary: Optional[str] = None,
         impact_on_parent: Optional[str] = None,
         testing_notes: Optional[str] = None,
-        deliverables: Optional[List[str]] = None,
-        skills_learned: Optional[List[str]] = None,
-        challenges_overcome: Optional[List[str]] = None,
-        next_recommendations: Optional[List[str]] = None,
+        deliverables: Optional[Union[List[str], str]] = None,
+        skills_learned: Optional[Union[List[str], str]] = None,
+        challenges_overcome: Optional[Union[List[str], str]] = None,
+        next_recommendations: Optional[Union[List[str], str]] = None,
         completion_quality: Optional[str] = None,
         verification_status: Optional[str] = None
     ) -> Dict[str, Any]:
@@ -155,22 +160,40 @@ class SubtaskMCPController:
         Public method for managing subtask operations.
         This method is called by both the MCP tool registration and tests.
         """
-        # Enhanced progress percentage type coercion and validation
-        if progress_percentage is not None:
-            # Type coercion: convert string to int if needed
-            if isinstance(progress_percentage, str):
-                try:
-                    progress_percentage = int(progress_percentage)
-                except ValueError:
-                    return {
-                        "success": False,
-                        "error": f"Invalid progress_percentage format. Expected: integer 0-100, got: '{progress_percentage}'",
-                        "error_code": "PARAMETER_TYPE_ERROR",
-                        "parameter": "progress_percentage",
-                        "hint": "Progress percentage must be a number between 0 and 100",
-                        "examples": ["progress_percentage=50", "progress_percentage=\"75\"", "progress_percentage=100"]
-                    }
+        # Parameter type coercion for all parameters
+        try:
+            params = {
+                k: v for k, v in locals().items() 
+                if k not in ['self', 'action', 'task_id'] and v is not None
+            }
+            coerced_params = ParameterTypeCoercer.coerce_parameter_types(params)
             
+            # Apply coerced values back to local variables
+            for param_name, coerced_value in coerced_params.items():
+                if param_name in locals():
+                    locals()[param_name] = coerced_value
+            
+            # Extract specific coerced values for type safety
+            if 'progress_percentage' in coerced_params:
+                progress_percentage = coerced_params['progress_percentage']
+            if 'insights_found' in coerced_params:
+                insights_found = coerced_params['insights_found']
+            if 'assignees' in coerced_params:
+                assignees = coerced_params['assignees']
+            if 'deliverables' in coerced_params:
+                deliverables = coerced_params['deliverables']
+            if 'skills_learned' in coerced_params:
+                skills_learned = coerced_params['skills_learned']
+            if 'challenges_overcome' in coerced_params:
+                challenges_overcome = coerced_params['challenges_overcome']
+            if 'next_recommendations' in coerced_params:
+                next_recommendations = coerced_params['next_recommendations']
+                
+        except Exception as e:
+            logger.warning(f"Parameter coercion failed: {e}, continuing with original values")
+        
+        # Enhanced progress percentage validation
+        if progress_percentage is not None:
             # Range validation: ensure value is between 0-100
             if not isinstance(progress_percentage, int) or not (0 <= progress_percentage <= 100):
                 return {

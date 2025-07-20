@@ -45,8 +45,16 @@ class ParameterTypeCoercer:
     # Define which parameters should be coerced to booleans
     BOOLEAN_PARAMETERS = {
         'include_context', 'force', 'audit_required', 'include_details',
-        'propagate_changes', 'force_refresh', 'next_thought_needed',
-        'is_revision', 'needs_more_thoughts', 'replace_all', 'multiline'
+        'propagate_changes', 'force_refresh', 'include_inherited',
+        'next_thought_needed', 'is_revision', 'needs_more_thoughts', 
+        'replace_all', 'multiline'
+    }
+    
+    # Define which parameters should be coerced to lists/arrays
+    LIST_PARAMETERS = {
+        'insights_found', 'assignees', 'labels', 'tags', 'dependencies',
+        'challenges_overcome', 'deliverables', 'next_recommendations',
+        'skills_learned'
     }
     
     # Boolean string values that should be considered True
@@ -84,6 +92,11 @@ class ParameterTypeCoercer:
         for param_name in cls.BOOLEAN_PARAMETERS:
             if param_name in coerced:
                 coerced[param_name] = cls._coerce_to_boolean(param_name, coerced[param_name])
+        
+        # Coerce list parameters
+        for param_name in cls.LIST_PARAMETERS:
+            if param_name in coerced:
+                coerced[param_name] = cls._coerce_to_list(param_name, coerced[param_name])
         
         return coerced
     
@@ -183,6 +196,57 @@ class ParameterTypeCoercer:
         logger.warning(f"Parameter '{param_name}' received unexpected type {type(value).__name__}, "
                       f"using Python truthiness evaluation")
         return bool(value)
+    
+    @classmethod
+    def _coerce_to_list(cls, param_name: str, value: Any) -> List[str]:
+        """
+        Coerce a value to list with helpful error messages.
+        
+        Args:
+            param_name: Name of the parameter being coerced
+            value: Value to coerce
+            
+        Returns:
+            List value
+            
+        Raises:
+            ParameterTypeCoercionError: If coercion fails
+        """
+        # If already a list, return as-is
+        if isinstance(value, list):
+            return value
+            
+        # If it's a string, try to parse as JSON array
+        if isinstance(value, str):
+            # Handle empty strings
+            if not value.strip():
+                return []
+            
+            # Try to parse as JSON array
+            try:
+                parsed = json.loads(value)
+                if isinstance(parsed, list):
+                    # Convert all items to strings for consistency
+                    return [str(item) for item in parsed]
+                else:
+                    # If JSON parsed but not a list, wrap in list
+                    return [str(parsed)]
+            except json.JSONDecodeError:
+                # If not valid JSON, treat as comma-separated string
+                if ',' in value:
+                    # Split by comma and clean up
+                    items = [item.strip() for item in value.split(',')]
+                    return [item for item in items if item]  # Remove empty strings
+                else:
+                    # Single string value, wrap in list
+                    return [value.strip()]
+        
+        # If it's any other iterable (tuple, set, etc.), convert to list
+        try:
+            return list(value)
+        except TypeError:
+            # If not iterable, wrap single value in list
+            return [str(value)]
 
 
 class FlexibleSchemaValidator:
@@ -237,6 +301,10 @@ class FlexibleSchemaValidator:
         # Handle boolean properties  
         elif prop_type == "boolean":
             return cls._create_flexible_boolean_schema(prop_name, prop_schema)
+        
+        # Handle array/list properties
+        elif prop_type == "array":
+            return cls._create_flexible_array_schema(prop_name, prop_schema)
         
         # For other types, return as-is
         return prop_schema
@@ -298,6 +366,36 @@ class FlexibleSchemaValidator:
                 }
             ],
             "description": f"Accepts boolean or string representation for {prop_name}"
+        }
+    
+    @classmethod
+    def _create_flexible_array_schema(cls, prop_name: str, original_schema: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Create a flexible schema for array properties that accepts arrays, strings, and JSON string arrays.
+        """
+        # Get the items schema from the original array schema
+        items_schema = original_schema.get("items", {"type": "string"})
+        
+        return {
+            "anyOf": [
+                # Original array schema
+                {
+                    "type": "array",
+                    "items": items_schema
+                },
+                # JSON string representation of array
+                {
+                    "type": "string",
+                    "description": "JSON string representation of array (e.g., '[\"item1\", \"item2\"]')"
+                },
+                # Comma-separated string
+                {
+                    "type": "string", 
+                    "pattern": "^[^\\[\\]]*$",  # No square brackets (to distinguish from JSON)
+                    "description": "Comma-separated string (e.g., 'item1, item2, item3')"
+                }
+            ],
+            "description": f"Accepts array, JSON string array, or comma-separated string for {prop_name}"
         }
 
 
@@ -560,6 +658,16 @@ def test_parameter_validation_fix():
         {"action": "get", "params": {"task_id": "test", "include_context": "true"}},
         # Boolean as actual bool
         {"action": "get", "params": {"task_id": "test", "include_context": True}},
+        # List as JSON string (the original issue)
+        {"action": "complete", "params": {"task_id": "test", "insights_found": '["Using jest-mock-extended library", "Test cases should cover edge cases"]'}},
+        # List as comma-separated string
+        {"action": "complete", "params": {"task_id": "test", "insights_found": "insight1, insight2, insight3"}},
+        # List as actual list
+        {"action": "complete", "params": {"task_id": "test", "insights_found": ["insight1", "insight2"]}},
+        # Empty list as empty string
+        {"action": "complete", "params": {"task_id": "test", "insights_found": ""}},
+        # Single item as string (should become list)
+        {"action": "complete", "params": {"task_id": "test", "insights_found": "single insight"}},
     ]
     
     for i, case in enumerate(test_cases, 1):

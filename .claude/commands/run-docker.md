@@ -409,6 +409,126 @@ Your development environment is ready when:
 - ✅ Backend responds at http://localhost:8000/health
 - ✅ Logs show no critical errors
 
+## 📂 File System Cleanup
+
+### Files Used by NEW System (docker-system/)
+These are the ONLY files needed for the new Docker system:
+
+```
+# NEW SYSTEM FILES - KEEP THESE:
+docker-system/
+├── docker-cli.sh                              # Main CLI entry point
+├── docker-menu.sh                             # Bash interactive menu
+├── docker-menu.py                             # Python interactive menu
+├── .env                                       # Generated environment file
+├── docker/
+│   ├── docker-compose.yml                     # Base configuration
+│   ├── docker-compose.dev.yml                 # Development overrides
+│   ├── docker-compose.prod.yml                # Production configuration
+│   ├── docker-compose.test.yml                # Test configuration
+│   ├── frontend.Dockerfile                    # Frontend production
+│   ├── frontend.dev.Dockerfile                # Frontend development
+│   └── init-scripts/
+│       └── 01-create-database.sql             # Database initialization
+├── environments/
+│   ├── dev.env                                # Development environment
+│   ├── staging.env                            # Staging environment
+│   ├── production.env                         # Production environment
+│   └── test.env                               # Test environment
+├── lib/
+│   ├── common.sh                              # Shared utilities
+│   ├── core.sh                                # Core operations
+│   ├── development.sh                         # Development commands
+│   ├── deployment.sh                          # Deployment operations
+│   ├── monitoring.sh                          # Monitoring dashboard
+│   ├── maintenance.sh                         # Backup/maintenance
+│   ├── configuration.sh                       # Config management
+│   ├── troubleshooting.sh                     # Diagnostics
+│   ├── workflows.sh                           # Automated workflows
+│   └── database/
+│       ├── interface.sh                       # Database factory
+│       ├── postgresql.sh                      # PostgreSQL implementation
+│       └── sqlite.sh                          # SQLite placeholder
+├── scripts/
+│   └── install-deps.sh                        # Dependency installer
+├── test/
+│   ├── test-runner.sh                         # Test execution
+│   └── test-*.sh                              # Test files
+├── tools/
+│   └── migration-helper.sh                    # Migration utilities
+├── backups/                                   # Backup directory
+├── logs/                                      # Log directory
+└── docs/
+    ├── README.md                              # Main documentation
+    ├── ARCHITECTURE.md                        # System architecture
+    └── MIGRATION.md                           # Migration guide
+
+# Docker volumes (managed by Docker):
+- dhafnck-postgres-data                        # PostgreSQL data
+- dhafnck-redis-data                           # Redis data
+- dhafnck-backend-data                         # Backend data
+- dhafnck-frontend-static                      # Frontend static files
+```
+
+### Files from OLD System (CAN BE REMOVED)
+These files are from the old system and are NO LONGER NEEDED:
+
+```
+# OLD SYSTEM FILES - SAFE TO REMOVE:
+/home/daihungpham/agentic-project/
+├── run_docker.sh                              # Old entry point
+├── dhafnck_mcp_main/
+│   └── docker/
+│       ├── mcp-docker.py                      # Old menu system
+│       ├── run_docker_tests.sh                # Old test runner
+│       └── docker-compose.*.yml               # Old compose files
+└── migration-backup-*/                        # Old migration backups
+
+# Old Docker volumes (can be removed if not needed):
+- dhafnck_mcp_main_postgres_data
+- dhafnck_mcp_main_redis_data
+- docker_dhafnck_data
+- docker_dhafnck_logs
+```
+
+### Cleanup Commands
+To remove old system files:
+
+```bash
+# 1. Remove old entry point
+rm -f /home/daihungpham/agentic-project/run_docker.sh
+
+# 2. Remove old Docker menu system
+rm -f /home/daihungpham/agentic-project/dhafnck_mcp_main/docker/mcp-docker.py
+rm -f /home/daihungpham/agentic-project/dhafnck_mcp_main/docker/run_docker_tests.sh
+
+# 3. Remove old Docker compose files (if not needed)
+rm -f /home/daihungpham/agentic-project/dhafnck_mcp_main/docker/docker-compose.*.yml
+
+# 4. Remove migration backups (after verifying new system works)
+rm -rf /home/daihungpham/agentic-project/migration-backup-*
+
+# 5. Clean up old Docker volumes (WARNING: This removes old data)
+docker volume rm dhafnck_mcp_main_postgres_data
+docker volume rm dhafnck_mcp_main_redis_data
+docker volume rm docker_dhafnck_data
+docker volume rm docker_dhafnck_logs
+
+# 6. Remove unused Docker images
+docker image prune -a
+
+# 7. Clean Docker build cache
+docker builder prune
+```
+
+### Migration Checklist
+Before removing old files:
+- [ ] Verify new system is working correctly
+- [ ] Backup any important data from old volumes
+- [ ] Test all critical functionality in new system
+- [ ] Document any custom configurations that need to be preserved
+- [ ] Confirm team members are using new system
+
 ---
 
 **Version**: 2.0.0  

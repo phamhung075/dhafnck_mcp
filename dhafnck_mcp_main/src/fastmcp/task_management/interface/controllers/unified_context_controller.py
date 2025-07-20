@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 from .desc import description_loader
 from ..utils.error_handler import UserFriendlyErrorHandler
 from ..utils.response_formatter import StandardResponseFormatter, ResponseStatus
+from ..utils.parameter_validation_fix import ParameterTypeCoercer
 
 from ...application.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
 from ...application.facades.unified_context_facade import UnifiedContextFacade
@@ -192,6 +193,23 @@ class UnifiedContextMCPController:
         ) -> Dict[str, Any]:
 
             try:
+                # Apply parameter type coercion for boolean parameters
+                local_vars = locals()
+                boolean_params = {
+                    'force_refresh': force_refresh,
+                    'include_inherited': include_inherited,
+                    'propagate_changes': propagate_changes
+                }
+                
+                try:
+                    coerced_params = ParameterTypeCoercer.coerce_parameter_types(boolean_params)
+                    force_refresh = coerced_params.get('force_refresh', force_refresh)
+                    include_inherited = coerced_params.get('include_inherited', include_inherited)
+                    propagate_changes = coerced_params.get('propagate_changes', propagate_changes)
+                except Exception as coercion_error:
+                    logger.warning(f"Parameter coercion error: {coercion_error}")
+                    # Continue with original values if coercion fails
+                
                 # Handle legacy parameter mapping
                 if task_id and not context_id:
                     context_id = task_id
