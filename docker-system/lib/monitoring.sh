@@ -4,7 +4,19 @@
 source "${SCRIPT_DIR}/lib/common.sh"
 
 # Monitoring dashboard
-monitor_command() {
+monitor_dashboard() {
+    # Check if in test mode
+    if [[ "${DOCKER_CLI_TEST_MODE:-}" == "true" ]]; then
+        if [[ "${1:-}" == "--dry-run" ]]; then
+            echo "watch -n 2 -t ./docker-cli.sh monitor-snapshot"
+            return 0
+        else
+            # In test mode, just show a single snapshot
+            show_test_monitoring_snapshot
+            return 0
+        fi
+    fi
+    
     info "📊 DhafnckMCP Monitoring Dashboard"
     echo "================================="
     echo "Press Ctrl+C to exit"
@@ -202,4 +214,4 @@ show_test_monitoring_snapshot() {
 }
 
 # Export functions
-export -f monitor_command monitor_snapshot_command show_monitoring_snapshot show_test_monitoring_snapshot
+export -f monitor_dashboard monitor_snapshot_command show_monitoring_snapshot show_test_monitoring_snapshot

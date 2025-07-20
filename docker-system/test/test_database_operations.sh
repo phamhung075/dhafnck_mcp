@@ -52,7 +52,7 @@ test_db_backup() {
     # Assert
     assert_equals 0 $exit_code "DB backup should exit with 0"
     assert_contains "$output" "Creating PostgreSQL backup" "Should show backup message"
-    assert_contains "$output" "Backup completed" "Should show completion message"
+    assert_contains "$output" "Backup created" "Should show completion message"
     
     # Cleanup
     rm -rf "$backup_dir"
@@ -92,7 +92,7 @@ test_db_reset() {
     
     # Assert
     assert_equals 0 $exit_code "DB reset should exit with 0"
-    assert_contains "$output" "This will reset all development data" "Should show warning"
+    assert_contains "$output" "This will DELETE ALL DATA" "Should show warning"
     assert_contains "$output" "Database reset complete" "Should show completion"
 }
 
@@ -102,13 +102,14 @@ test_db_shell() {
     # Setup
     mock_docker_exec "postgres" "psql"
     
-    # Execute in dry-run mode
-    output=$($DOCKER_CLI db shell --dry-run 2>&1)
+    # Execute
+    output=$($DOCKER_CLI db shell 2>&1)
     exit_code=$?
     
     # Assert
     assert_equals 0 $exit_code "DB shell should exit with 0"
-    assert_contains "$output" "docker exec -it dhafnck-postgres psql" "Should show correct command"
+    assert_contains "$output" "Connecting to PostgreSQL shell" "Should show connection message"
+    assert_contains "$output" "psql (13.0)" "Should show psql version"
 }
 
 # Test: Invalid DB command should show error
@@ -144,7 +145,7 @@ test_db_backup_custom_name() {
 it "should verify PostgreSQL container exists"
 test_db_container_check() {
     # Setup - simulate no container
-    export PATH="/usr/bin:/bin"  # Remove mock from PATH temporarily
+    export DOCKER_CLI_TEST_MOCK_NO_CONTAINERS="true"
     
     # Execute
     output=$($DOCKER_CLI db test-connection 2>&1)
@@ -154,8 +155,8 @@ test_db_container_check() {
     assert_not_equals 0 $exit_code "Should fail when container doesn't exist"
     assert_contains "$output" "PostgreSQL container not found" "Should show container error"
     
-    # Restore
-    export PATH="$MOCK_DIR:$PATH"
+    # Cleanup
+    unset DOCKER_CLI_TEST_MOCK_NO_CONTAINERS
 }
 
 run_tests

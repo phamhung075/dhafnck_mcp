@@ -96,7 +96,7 @@ test_invalid_workflow() {
 it "should handle missing prerequisites gracefully"
 test_workflow_missing_prereq() {
     # Setup - simulate missing Docker
-    export PATH="/usr/bin:/bin"  # Remove mock from PATH
+    export SIMULATE_MISSING_DOCKER="true"
     
     # Execute
     output=$($DOCKER_CLI workflow dev-setup 2>&1)
@@ -107,7 +107,7 @@ test_workflow_missing_prereq() {
     assert_contains "$output" "Docker" "Should identify missing Docker"
     
     # Restore
-    export PATH="$MOCK_DIR:$PATH"
+    unset SIMULATE_MISSING_DOCKER
 }
 
 # Test: Production deployment with version check

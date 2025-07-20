@@ -178,7 +178,9 @@ case "$COMMAND" in
     # Troubleshooting commands
     diagnose|fix-permissions|emergency-backup|support-bundle)
         source "${LIB_DIR}/troubleshooting.sh"
-        ${COMMAND}_command "$@"
+        # Convert dashes to underscores for function names
+        FUNCTION_NAME="${COMMAND//-/_}_command"
+        $FUNCTION_NAME "$@"
         ;;
     
     # Workflow commands

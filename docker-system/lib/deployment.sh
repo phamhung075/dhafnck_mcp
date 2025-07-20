@@ -127,5 +127,5 @@ health_command() {
 # Monitor command (delegates to monitoring.sh)
 monitor_command() {
     source "${SCRIPT_DIR}/lib/monitoring.sh"
-    monitor_command
+    monitor_dashboard "$@"
 }

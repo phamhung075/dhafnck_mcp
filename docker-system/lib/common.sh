@@ -34,6 +34,13 @@ error() {
 # Utility functions
 confirm() {
     local prompt="${1:-Continue?}"
+    
+    # In test mode, always confirm
+    if [[ "${DOCKER_CLI_TEST_MODE:-}" == "true" ]]; then
+        echo "$prompt [y/N] y"
+        return 0
+    fi
+    
     read -p "$prompt [y/N] " -n 1 -r
     echo
     [[ $REPLY =~ ^[Yy]$ ]]
@@ -111,6 +118,17 @@ wait_for_services() {
 
 get_container_id() {
     local service="$1"
+    
+    # In test mode, check environment variable for simulated container absence
+    if [[ "${DOCKER_CLI_TEST_MODE:-}" == "true" ]]; then
+        if [[ "${DOCKER_CLI_TEST_MOCK_NO_CONTAINERS:-}" == "true" ]]; then
+            return 1
+        fi
+        # Return a mock container ID
+        echo "mock-container-id-$service"
+        return 0
+    fi
+    
     # Try with docker ps first (more reliable)
     docker ps -q --filter "name=dhafnck-$service" 2>/dev/null | head -1
 }

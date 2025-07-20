@@ -188,8 +188,12 @@ case "\$1" in
         fi
         ;;
     "info")
-        echo "Docker version 20.10.0"
-        exit 0
+        if [[ -f "\$MOCK_DIR/docker-info.mock" ]]; then
+            source "\$MOCK_DIR/docker-info.mock" "\$@"
+        else
+            echo "Docker version 20.10.0"
+            exit 0
+        fi
         ;;
     "stats")
         echo "CONTAINER CPU% MEM%"
@@ -209,9 +213,25 @@ case "\$1" in
         fi
         exit 0
         ;;
+    "pull")
+        if [[ -f "\$MOCK_DIR/docker-pull.mock" ]]; then
+            source "\$MOCK_DIR/docker-pull.mock" "\$@"
+        else
+            echo "Pulling \$2..."
+            exit 0
+        fi
+        ;;
     *)
-        echo "Mock docker: Unknown command \$1" >&2
-        exit 1
+        # Check for generic mock file with sanitized name
+        SANITIZED=\$(echo "\$1" | tr ' /:' '___')
+        if [[ -f "\$MOCK_DIR/docker-\$SANITIZED.mock" ]]; then
+            source "\$MOCK_DIR/docker-\$SANITIZED.mock" "\$@"
+        elif [[ -f "\$MOCK_DIR/docker-\$1.mock" ]]; then
+            source "\$MOCK_DIR/docker-\$1.mock" "\$@"
+        else
+            echo "Mock docker: Unknown command \$1" >&2
+            exit 1
+        fi
         ;;
 esac
 EOF
@@ -227,6 +247,22 @@ EOF
     
     # Add mock directory to PATH
     export PATH="$MOCK_DIR:$PATH"
+}
+
+mock_docker() {
+    local command="$1"
+    local output="$2"
+    
+    # Use sanitized filename - replace spaces, colons, and slashes
+    local filename=$(echo "$command" | tr ' /:' '___')
+    cat > "$MOCK_DIR/docker-${filename}.mock" << EOF
+#!/bin/bash
+if [[ -n "$output" ]]; then
+    echo "$output"
+fi
+exit 0
+EOF
+    chmod +x "$MOCK_DIR/docker-${filename}.mock"
 }
 
 mock_docker_compose() {
