@@ -37,6 +37,7 @@ class TestCompletionSummaryContextStorageFix:
     def mock_task_repository(self):
         repo = Mock(spec=TaskRepository)
         # Return empty list for find_all to avoid iteration errors during dependency updates
+        # This fixes any "'Mock' object is not iterable" errors in task operations
         repo.find_all.return_value = []
         return repo
 
@@ -47,15 +48,19 @@ class TestCompletionSummaryContextStorageFix:
         task.task_id = task_id_str
         task.git_branch_id = str(uuid.uuid4())
         task.title = "Test Task"
-        task.status = TaskStatus.todo()
+        task.status = Mock()
+        task.status.is_done.return_value = False  # Initially not done
         task.priority = Priority.medium()
         task.created_at = datetime.now()
-        task.context_id = None  # Add context_id attribute
+        task.context_id = task_id_str  # Context exists (auto-created or manual) to pass validation
         task.project_id = "test-project"  # Add project_id for auto-context creation
         task.get_subtask_progress.return_value = {"total": 0, "completed": 0}
         
         # Mock the subtasks attribute that might be accessed during iteration
         task.subtasks = []  # Empty list to avoid iteration error
+        
+        # Mock the get_events method (required by complete_task use case) to return empty list
+        task.get_events.return_value = []  # Empty list to avoid "'Mock' object is not iterable" error
         
         # Mock the id property (required by TaskCompletionService) with proper .value attribute
         from fastmcp.task_management.domain.value_objects.task_id import TaskId
@@ -75,6 +80,7 @@ class TestCompletionSummaryContextStorageFix:
         from fastmcp.task_management.domain.repositories.subtask_repository import SubtaskRepository
         repo = Mock(spec=SubtaskRepository)
         # Return empty list for subtask search to avoid iteration errors
+        # This fixes the "'Mock' object is not iterable" error in TaskCompletionService
         repo.find_by_parent_task_id.return_value = []
         return repo
 
@@ -100,9 +106,6 @@ class TestCompletionSummaryContextStorageFix:
         mock_task_repository.find_by_id.return_value = mock_task
         mock_task_repository.save.return_value = mock_task
         
-        # Mock the task.status.is_done() check to return False initially
-        mock_task.status.is_done.return_value = False
-        
         completion_summary = "Task completed successfully with all features implemented"
         testing_notes = "All unit tests pass, integration tests verified"
         
@@ -122,12 +125,10 @@ class TestCompletionSummaryContextStorageFix:
             )
             
             # Assert - Check that context update was called with correct structure
-            print(f"Result: {result}")
-            print(f"Result keys: {list(result.keys()) if isinstance(result, dict) else 'Not a dict'}")
-            if isinstance(result, dict) and "success" in result:
-                print(f"Success value: {result['success']}, type: {type(result['success'])}")
-                if not result["success"]:
-                    print(f"Failure message: {result.get('message', 'No message')}")
+            # Debug result details  
+            if not result.get("success"):
+                pytest.fail(f"Task completion failed: {result}")
+            
             assert result["success"] is True
             mock_facade.update_context.assert_called_once()
             

@@ -44,9 +44,9 @@ class TestDatabaseConfig:
         # Get production database URL and modify for testing
         prod_db_url = os.environ.get("DATABASE_URL")
         if not prod_db_url:
-            # Fallback to local PostgreSQL test database
+            # Fallback to local PostgreSQL test database using actual Docker credentials
             logger.info("No DATABASE_URL found, using local PostgreSQL test database")
-            return "postgresql://postgres:postgres@localhost:5432/dhafnck_mcp_test"
+            return "postgresql://dhafnck_user:dhafnck_password@localhost:5432/dhafnck_mcp_test"
         
         # Fix malformed URL and create test variant
         fixed_url = self._fix_database_url(prod_db_url)
@@ -154,8 +154,8 @@ class TestDatabaseConfig:
             
         except Exception as e:
             logger.error(f"Failed to create test database URL: {e}")
-            # Fallback to local test database
-            return "postgresql://postgres:postgres@localhost:5432/dhafnck_mcp_test"
+            # Fallback to local test database using actual Docker credentials
+            return "postgresql://dhafnck_user:dhafnck_password@localhost:5432/dhafnck_mcp_test"
     
     def configure_test_environment(self) -> None:
         """

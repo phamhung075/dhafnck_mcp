@@ -67,6 +67,23 @@ class TaskRepositoryFactory:
         self.base_path = base_path or str(self.project_root / ".cursor" / "rules" / "tasks")
         self.default_user_id = default_user_id
     
+    @classmethod
+    def create(cls, project_id: str = "test-project", git_branch_name: str = "main", 
+               user_id: str = "test-user") -> TaskRepository:
+        """
+        Static factory method for creating task repositories (for integration tests)
+        
+        Args:
+            project_id: Project identifier
+            git_branch_name: Task tree identifier
+            user_id: User identifier
+            
+        Returns:
+            TaskRepository instance
+        """
+        factory = cls()
+        return factory.create_repository(project_id, git_branch_name, user_id)
+    
     def create_repository(self, project_id: str, git_branch_name: str = "main", user_id: Optional[str] = None) -> TaskRepository:
         """
         Create a task repository for specific user/project/task tree

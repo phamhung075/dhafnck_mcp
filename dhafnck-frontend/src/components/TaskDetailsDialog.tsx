@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Separator } from "./ui/separator";
 import { Task, Subtask } from "../api";
 import ClickableAssignees from "./ClickableAssignees";
+import { formatContextDisplay } from "../utils/contextHelpers";
 
 interface TaskDetailsDialogProps {
   open: boolean;
@@ -21,6 +22,8 @@ export const TaskDetailsDialog: React.FC<TaskDetailsDialogProps> = ({
   onClose,
   onAgentClick
 }) => {
+  // Format context data using helper functions
+  const contextDisplay = formatContextDisplay(task?.context_data);
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'urgent': return 'destructive';
@@ -241,8 +244,65 @@ export const TaskDetailsDialog: React.FC<TaskDetailsDialogProps> = ({
               {task.context_data && (
                 <>
                   <Separator />
+                  
+                  {/* Enhanced Context Display */}
+                  {contextDisplay.hasInfo && (
+                    <div>
+                      <h4 className="font-semibold text-sm mb-3 text-teal-700">Task Completion Details</h4>
+                      <div className="bg-teal-50 p-3 rounded space-y-3">
+                        
+                        {/* Completion Summary */}
+                        {contextDisplay.completionSummary && (
+                          <div>
+                            <h5 className="font-medium text-xs text-teal-800 mb-1">
+                              Completion Summary{contextDisplay.isLegacy ? ' (Legacy)' : ''}:
+                            </h5>
+                            <p className={`text-sm whitespace-pre-wrap p-2 rounded border ${contextDisplay.isLegacy ? 'bg-yellow-50' : 'bg-white'}`}>
+                              {contextDisplay.completionSummary}
+                            </p>
+                            {contextDisplay.completionPercentage && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Completion: {contextDisplay.completionPercentage}%
+                              </p>
+                            )}
+                            {contextDisplay.isLegacy && (
+                              <p className="text-xs text-muted-foreground mt-1 italic">
+                                Note: Using legacy completion_summary format
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Task Status */}
+                        {contextDisplay.taskStatus && (
+                          <div>
+                            <h5 className="font-medium text-xs text-teal-800 mb-1">Context Status:</h5>
+                            <span className="inline-block px-2 py-1 bg-teal-200 text-teal-800 text-xs font-medium rounded">
+                              {contextDisplay.taskStatus}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Testing Notes */}
+                        {contextDisplay.testingNotes.length > 0 && (
+                          <div>
+                            <h5 className="font-medium text-xs text-teal-800 mb-1">Testing Notes & Next Steps:</h5>
+                            <ul className="text-sm space-y-1">
+                              {contextDisplay.testingNotes.map((step: string, index: number) => (
+                                <li key={index} className="bg-white p-2 rounded border border-l-4 border-l-teal-300">
+                                  {step}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Raw Context Data */}
                   <div>
-                    <h4 className="font-semibold text-sm mb-3 text-teal-700">Context Data</h4>
+                    <h4 className="font-semibold text-sm mb-3 text-teal-700">Raw Context Data</h4>
                     <div className="bg-teal-50 p-3 rounded">
                       <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
                         {JSON.stringify(task.context_data, null, 2)}

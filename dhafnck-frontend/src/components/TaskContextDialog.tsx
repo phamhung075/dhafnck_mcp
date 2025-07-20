@@ -2,6 +2,7 @@ import React from "react";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Task } from "../api";
+import { formatContextDisplay } from "../utils/contextHelpers";
 
 interface TaskContextDialogProps {
   open: boolean;
@@ -20,6 +21,8 @@ export const TaskContextDialog: React.FC<TaskContextDialogProps> = ({
   onClose,
   loading = false
 }) => {
+  // Format context data using helper functions
+  const contextDisplay = formatContextDisplay(context?.data);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
@@ -88,8 +91,57 @@ export const TaskContextDialog: React.FC<TaskContextDialogProps> = ({
                 </div>
               )}
 
+              {/* Completion Summary - Enhanced Display */}
+              {contextDisplay.completionSummary && (
+                <div>
+                  <h4 className="font-semibold text-sm mb-3 text-green-700">
+                    Completion Summary{contextDisplay.isLegacy ? ' (Legacy Format)' : ''}
+                  </h4>
+                  <div className={`p-3 rounded ${contextDisplay.isLegacy ? 'bg-yellow-50' : 'bg-green-50'}`}>
+                    <p className="text-sm whitespace-pre-wrap">{contextDisplay.completionSummary}</p>
+                    {contextDisplay.completionPercentage && (
+                      <div className="mt-2 pt-2 border-t border-green-200">
+                        <span className="text-xs text-muted-foreground">Completion: </span>
+                        <span className="text-xs font-medium">{contextDisplay.completionPercentage}%</span>
+                      </div>
+                    )}
+                    {contextDisplay.isLegacy && (
+                      <p className="text-xs text-muted-foreground mt-2 italic">
+                        Note: This is using the legacy completion_summary format
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Task Status from Metadata */}
+              {contextDisplay.taskStatus && (
+                <div>
+                  <h4 className="font-semibold text-sm mb-3 text-blue-700">Task Status</h4>
+                  <div className="bg-blue-50 p-3 rounded">
+                    <span className="inline-block px-2 py-1 bg-blue-200 text-blue-800 text-xs font-medium rounded">
+                      {contextDisplay.taskStatus}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Testing Notes from Next Steps */}
+              {contextDisplay.testingNotes.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-sm mb-3 text-purple-700">Testing Notes & Next Steps</h4>
+                  <div className="bg-purple-50 p-3 rounded space-y-2">
+                    {contextDisplay.testingNotes.map((step: string, index: number) => (
+                      <div key={index} className="border-l-4 border-purple-300 pl-3">
+                        <p className="text-sm">{step}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Progress History */}
-              {context.progress && context.progress.length > 0 && (
+              {context.progress && Array.isArray(context.progress) && context.progress.length > 0 && (
                 <div>
                   <h4 className="font-semibold text-sm mb-3 text-orange-700">Progress History</h4>
                   <div className="bg-orange-50 p-3 rounded space-y-2">

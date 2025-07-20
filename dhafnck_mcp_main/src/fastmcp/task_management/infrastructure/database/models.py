@@ -11,6 +11,8 @@ from sqlalchemy import (
     Column, String, Text, DateTime, Integer, Boolean, ForeignKey,
     UniqueConstraint, CheckConstraint, Index, JSON, Float
 )
+from sqlalchemy.dialects.postgresql import UUID
+import uuid
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.sql import func
 from .database_config import Base
@@ -20,7 +22,7 @@ class Project(Base):
     """Project model - Core organizational structure"""
     __tablename__ = "projects"
     
-    id: Mapped[str] = mapped_column(String, primary_key=True)
+    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
@@ -41,8 +43,8 @@ class ProjectGitBranch(Base):
     """Git branches (task trees) - Project workspaces"""
     __tablename__ = "project_git_branchs"
     
-    id: Mapped[str] = mapped_column(String, primary_key=True)
-    project_id: Mapped[str] = mapped_column(String, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
+    project_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
@@ -68,10 +70,10 @@ class Task(Base):
     """Main tasks table"""
     __tablename__ = "tasks"
     
-    id: Mapped[str] = mapped_column(String, primary_key=True)
+    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
     title: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
-    git_branch_id: Mapped[str] = mapped_column(String, ForeignKey("project_git_branchs.id", ondelete="CASCADE"), nullable=False)
+    git_branch_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("project_git_branchs.id", ondelete="CASCADE"), nullable=False)
     status: Mapped[str] = mapped_column(String, nullable=False, default="todo")
     priority: Mapped[str] = mapped_column(String, nullable=False, default="medium")
     details: Mapped[str] = mapped_column(Text, default="")
@@ -103,8 +105,8 @@ class TaskSubtask(Base):
     """Subtasks table"""
     __tablename__ = "task_subtasks"
     
-    id: Mapped[str] = mapped_column(String, primary_key=True)
-    task_id: Mapped[str] = mapped_column(String, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
+    task_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
     title: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str] = mapped_column(Text, default="")
     status: Mapped[str] = mapped_column(String, nullable=False, default="todo")
@@ -136,7 +138,7 @@ class TaskAssignee(Base):
     __tablename__ = "task_assignees"
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    task_id: Mapped[str] = mapped_column(String, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    task_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
     assignee_id: Mapped[str] = mapped_column(String, nullable=False)
     role: Mapped[str] = mapped_column(String, default="contributor")
     assigned_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
@@ -156,8 +158,8 @@ class TaskDependency(Base):
     __tablename__ = "task_dependencies"
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    task_id: Mapped[str] = mapped_column(String, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
-    depends_on_task_id: Mapped[str] = mapped_column(String, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    task_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    depends_on_task_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
     dependency_type: Mapped[str] = mapped_column(String, default="blocks")
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     
@@ -200,7 +202,7 @@ class Label(Base):
     """Labels table"""
     __tablename__ = "labels"
     
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[str] = mapped_column(String, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     color: Mapped[str] = mapped_column(String, default="#0066cc")
     description: Mapped[str] = mapped_column(Text, default="")
@@ -214,8 +216,8 @@ class TaskLabel(Base):
     """Task labels relationship table"""
     __tablename__ = "task_labels"
     
-    task_id: Mapped[str] = mapped_column(String, ForeignKey("tasks.id", ondelete="CASCADE"), primary_key=True)
-    label_id: Mapped[int] = mapped_column(Integer, ForeignKey("labels.id", ondelete="CASCADE"), primary_key=True)
+    task_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("tasks.id", ondelete="CASCADE"), primary_key=True)
+    label_id: Mapped[str] = mapped_column(String, ForeignKey("labels.id", ondelete="CASCADE"), primary_key=True)
     applied_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     
     # Relationships
@@ -276,7 +278,7 @@ class ProjectContext(Base):
     """Project contexts table - inherits from global context"""
     __tablename__ = "project_contexts"
     
-    project_id: Mapped[str] = mapped_column(String, primary_key=True)
+    project_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
     parent_global_id: Mapped[str] = mapped_column(String, ForeignKey("global_contexts.id"), default="global_singleton")
     
     # Project-specific configuration
@@ -302,11 +304,11 @@ class BranchContext(Base):
     """Branch contexts table - inherits from project context"""
     __tablename__ = "branch_contexts"
     
-    branch_id: Mapped[str] = mapped_column(String, ForeignKey("project_git_branchs.id"), primary_key=True)
+    branch_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("project_git_branchs.id"), primary_key=True)
     
     # Hierarchy relationships
-    parent_project_id: Mapped[str] = mapped_column(String, ForeignKey("projects.id"), nullable=False)
-    parent_project_context_id: Mapped[str] = mapped_column(String, ForeignKey("project_contexts.project_id"), nullable=False)
+    parent_project_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("projects.id"), nullable=False)
+    parent_project_context_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("project_contexts.project_id"), nullable=False)
     
     # Branch-specific configuration
     branch_workflow: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
@@ -335,11 +337,11 @@ class TaskContext(Base):
     """Task contexts table - inherits from branch context"""
     __tablename__ = "task_contexts"
     
-    task_id: Mapped[str] = mapped_column(String, ForeignKey("tasks.id"), primary_key=True)
+    task_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("tasks.id"), primary_key=True)
     
     # Hierarchy relationships (updated to inherit from branch)
-    parent_branch_id: Mapped[str] = mapped_column(String, ForeignKey("project_git_branchs.id"), nullable=False)
-    parent_branch_context_id: Mapped[str] = mapped_column(String, ForeignKey("branch_contexts.branch_id"), nullable=False)
+    parent_branch_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("project_git_branchs.id"), nullable=False)
+    parent_branch_context_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("branch_contexts.branch_id"), nullable=False)
     
     # Task-specific data
     task_data: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)

@@ -67,6 +67,23 @@ class SubtaskRepositoryFactory:
         self.base_path = base_path or str(self.project_root / ".cursor" / "rules" / "subtasks")
         self.default_user_id = default_user_id
     
+    @classmethod
+    def create(cls, project_id: str = "test-project", git_branch_name: str = "main", 
+               user_id: str = "test-user") -> SubtaskRepository:
+        """
+        Static factory method for creating subtask repositories (for integration tests)
+        
+        Args:
+            project_id: Project identifier
+            git_branch_name: Task tree identifier
+            user_id: User identifier
+            
+        Returns:
+            SubtaskRepository instance
+        """
+        factory = cls()
+        return factory.create_subtask_repository(project_id, git_branch_name, user_id)
+    
     def create_subtask_repository(self, project_id: str, git_branch_name: str = "main", user_id: Optional[str] = None) -> SubtaskRepository:
         """
         Create a subtask repository for specific user/project/task tree
