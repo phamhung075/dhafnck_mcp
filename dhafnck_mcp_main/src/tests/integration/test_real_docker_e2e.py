@@ -97,7 +97,7 @@ class RealDockerE2ETest:
             await self.cleanup()
             self.print_summary()
     
-    async def test_docker_setup(self):
+    def test_docker_setup(self):
         """Test Docker container setup and deployment"""
         print("\n🐳 Phase 1: Docker Setup")
         print("-" * 30)
@@ -111,7 +111,7 @@ class RealDockerE2ETest:
                 raise Exception(f"Docker not available: {e}")
             
             # Stop any existing container
-            await self.stop_existing_container()
+            self.stop_existing_container()
             
             # Build image if needed
             print("🏗️ Building Docker image...")
@@ -168,7 +168,7 @@ class RealDockerE2ETest:
             print(f"✅ Container started: {container.id[:12]}...")
             
             # Wait for container to be ready
-            ready = await self.wait_for_container_ready(timeout=60)
+            ready = self.wait_for_container_ready(timeout=60)
             if not ready:
                 raise Exception("Container failed to become ready")
             
@@ -212,7 +212,7 @@ class RealDockerE2ETest:
         
         return False
     
-    async def test_mcp_functionality(self):
+    def test_mcp_functionality(self):
         """Test MCP server functionality"""
         print("\n🖥️ Phase 2: MCP Functionality")
         print("-" * 30)
@@ -259,7 +259,7 @@ class RealDockerE2ETest:
             print("✅ MCP session initialized")
             
             # Give the server a moment to complete initialization
-            await asyncio.sleep(0.1)
+            asyncio.sleep(0.1)
             
             # Test health check
             print("🩺 Testing health check...")
@@ -380,7 +380,7 @@ class RealDockerE2ETest:
             })
             raise
     
-    async def test_performance(self):
+    def test_performance(self):
         """Test performance and response times"""
         print("\n⚡ Phase 3: Performance Testing")
         print("-" * 30)
@@ -439,7 +439,7 @@ class RealDockerE2ETest:
                 "error": str(e)
             })
     
-    async def test_error_handling(self):
+    def test_error_handling(self):
         """Test error handling scenarios"""
         print("\n🚨 Phase 4: Error Handling")
         print("-" * 30)
@@ -492,7 +492,7 @@ class RealDockerE2ETest:
                 "error": str(e)
             })
     
-    async def test_data_persistence(self):
+    def test_data_persistence(self):
         """Test data persistence across container restarts"""
         print("\n💾 Phase 5: Data Persistence")
         print("-" * 30)
@@ -530,7 +530,7 @@ class RealDockerE2ETest:
             container.restart(timeout=30)
             
             # Wait for container to be ready
-            ready = await self.wait_for_container_ready(timeout=60)
+            ready = self.wait_for_container_ready(timeout=60)
             if not ready:
                 raise Exception("Container failed to restart properly")
             
@@ -538,7 +538,7 @@ class RealDockerE2ETest:
             
             # Check if data persists
             print("🔍 Checking data persistence...")
-            await asyncio.sleep(3)  # Give it a moment
+            asyncio.sleep(3)  # Give it a moment
             
             list_response = requests.post(
                 f"http://localhost:{self.test_port}/mcp/call",

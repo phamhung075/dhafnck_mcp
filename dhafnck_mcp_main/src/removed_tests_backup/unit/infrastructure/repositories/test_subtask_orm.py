@@ -16,14 +16,14 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import SQLAlchemyError
 
-from src.fastmcp.task_management.infrastructure.database.models import TaskSubtask, Base
-from src.fastmcp.task_management.infrastructure.repositories.orm.subtask_repository import ORMSubtaskRepository
-from src.fastmcp.task_management.domain.entities.subtask import Subtask
-from src.fastmcp.task_management.domain.value_objects.task_id import TaskId
-from src.fastmcp.task_management.domain.value_objects.subtask_id import SubtaskId
-from src.fastmcp.task_management.domain.value_objects.task_status import TaskStatus
-from src.fastmcp.task_management.domain.value_objects.priority import Priority
-from src.fastmcp.task_management.domain.exceptions.base_exceptions import (
+from fastmcp.task_management.infrastructure.database.models import TaskSubtask, Base
+from fastmcp.task_management.infrastructure.repositories.orm.subtask_repository import ORMSubtaskRepository
+from fastmcp.task_management.domain.entities.subtask import Subtask
+from fastmcp.task_management.domain.value_objects.task_id import TaskId
+from fastmcp.task_management.domain.value_objects.subtask_id import SubtaskId
+from fastmcp.task_management.domain.value_objects.task_status import TaskStatus
+from fastmcp.task_management.domain.value_objects.priority import Priority
+from fastmcp.task_management.domain.exceptions.base_exceptions import (
     DatabaseException,
     ResourceNotFoundException,
     ValidationException
@@ -31,6 +31,22 @@ from src.fastmcp.task_management.domain.exceptions.base_exceptions import (
 
 
 class TestORMSubtaskRepository:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test suite for ORM subtask repository"""
     
     @pytest.fixture
@@ -503,6 +519,22 @@ class TestORMSubtaskRepository:
 
 
 class TestORMSubtaskRepositoryIntegration:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Integration tests for ORM subtask repository"""
     
     @pytest.fixture

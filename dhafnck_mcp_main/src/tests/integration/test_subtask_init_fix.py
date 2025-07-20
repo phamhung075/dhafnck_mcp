@@ -19,6 +19,22 @@ from fastmcp.task_management.infrastructure.repositories.orm.subtask_repository 
 
 
 class TestSubtaskInitialization:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test cases for Subtask initialization with correct parameters"""
     
     def test_subtask_creation_with_parent_task_id(self):
@@ -110,6 +126,22 @@ class TestSubtaskInitialization:
 
 
 class TestORMSubtaskRepository:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test cases for ORM Subtask Repository to ensure correct entity creation"""
     
     @pytest.fixture
@@ -173,6 +205,22 @@ class TestORMSubtaskRepository:
 
 
 class TestSubtaskIntegrationWithTasks:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Integration tests to ensure Subtask works correctly with Task operations"""
     
     def test_task_can_add_subtask_with_correct_parameters(self):
@@ -203,6 +251,22 @@ class TestSubtaskIntegrationWithTasks:
 
 
 class TestSubtaskErrorScenarios:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test error scenarios that users are experiencing"""
     
     def test_mcp_tool_subtask_creation_scenario(self):

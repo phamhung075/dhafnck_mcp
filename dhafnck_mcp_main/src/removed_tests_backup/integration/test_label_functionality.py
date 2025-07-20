@@ -105,7 +105,7 @@ def test_label_functionality():
         print("\n2️⃣  Testing task label assignment...")
         
         # Create a task
-        cursor.execute("INSERT INTO tasks (id, title) VALUES (?, ?)", 
+        cursor.execute("INSERT INTO tasks (id, title) VALUES (?, ?) ON CONFLICT (name) DO UPDATE SET updated_at = labels.updated_at", 
                       ("task-1", "Test Task"))
         
         # Assign labels to task
@@ -114,7 +114,7 @@ def test_label_functionality():
         label_ids = [row[0] for row in cursor.fetchall()]
         
         for label_id in label_ids:
-            cursor.execute("INSERT INTO task_labels (task_id, label_id) VALUES (?, ?)",
+            cursor.execute("INSERT INTO task_labels (task_id, label_id) VALUES (?, ?) ON CONFLICT (id) DO NOTHING",
                           ("task-1", label_id))
         
         conn.commit()

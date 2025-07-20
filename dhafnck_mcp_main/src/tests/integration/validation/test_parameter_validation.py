@@ -18,7 +18,7 @@ from fastmcp.task_management.application.factories.subtask_facade_factory import
 from fastmcp.task_management.infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
 from fastmcp.task_management.infrastructure.repositories.subtask_repository_factory import SubtaskRepositoryFactory
 
-async def test_labels_array_validation():
+def test_labels_array_validation():
     """Test labels parameter with array format"""
     print("🧪 Testing Labels Array Validation...")
     
@@ -31,7 +31,7 @@ async def test_labels_array_validation():
     try:
         # Test 1: Labels as list (the documented format that fails)
         print("\n1. Testing labels=[\"test\", \"mcp\", \"validation\"]...")
-        result = await controller.manage_task_tool(
+        result = controller.manage_task_tool(
             action="create",
             git_branch_id="test-branch-123",
             title="Test Task with Labels Array",
@@ -44,7 +44,7 @@ async def test_labels_array_validation():
     try:
         # Test 2: Labels as comma-separated string
         print("\n2. Testing labels as comma-separated string...")
-        result = await controller.manage_task_tool(
+        result = controller.manage_task_tool(
             action="create", 
             git_branch_id="test-branch-124",
             title="Test Task with Labels String",
@@ -54,7 +54,7 @@ async def test_labels_array_validation():
     except Exception as e:
         print(f"❌ Error: {e}")
 
-async def test_progress_percentage_validation():
+def test_progress_percentage_validation():
     """Test progress_percentage parameter with integer format"""
     print("\n🧪 Testing Progress Percentage Validation...")
     
@@ -67,7 +67,7 @@ async def test_progress_percentage_validation():
     try:
         # Test 1: progress_percentage as integer (the documented format that fails)
         print("\n1. Testing progress_percentage=50...")
-        result = await controller.manage_subtask_tool(
+        result = controller.manage_subtask_tool(
             action="update",
             task_id="test-task-123",
             subtask_id="test-subtask-123", 
@@ -80,7 +80,7 @@ async def test_progress_percentage_validation():
     try:
         # Test 2: progress_percentage as string
         print("\n2. Testing progress_percentage=\"50\"...")
-        result = await controller.manage_subtask_tool(
+        result = controller.manage_subtask_tool(
             action="update",
             task_id="test-task-123", 
             subtask_id="test-subtask-123",

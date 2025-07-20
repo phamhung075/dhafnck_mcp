@@ -21,7 +21,7 @@ def print_result(success: bool, message: str):
     print(f"{emoji} {message}")
 
 
-async def test_parameter_validation():
+def test_parameter_validation():
     """Test Fix #1: Parameter Validation"""
     print_test_header("Parameter Validation (Arrays and Integers)")
     
@@ -35,7 +35,7 @@ async def test_parameter_validation():
     print_result(True, "Integer validation works correctly (progress_percentage=50)")
     
 
-async def test_context_data_corruption():
+def test_context_data_corruption():
     """Test Fix #2: Context Data Corruption"""
     print_test_header("Context Data Corruption")
     
@@ -44,7 +44,7 @@ async def test_context_data_corruption():
     print_result(True, "add_insight and add_progress now work correctly")
     
 
-async def test_task_completion_context():
+def test_task_completion_context():
     """Test Fix #3: Task Completion Context Requirement"""
     print_test_header("Task Completion Context Requirement")
     
@@ -54,7 +54,7 @@ async def test_task_completion_context():
     print_result(True, "Step-by-step fix instructions provided")
 
 
-async def test_data_synchronization():
+def test_data_synchronization():
     """Test Fix #4: Data Synchronization"""
     print_test_header("Data Synchronization")
     
@@ -64,7 +64,7 @@ async def test_data_synchronization():
     print_result(True, "Task context_id synchronization improved")
     
 
-async def test_workflow_guidance():
+def test_workflow_guidance():
     """Test Fix #5: Workflow Guidance"""
     print_test_header("Workflow Guidance")
     
@@ -94,7 +94,7 @@ async def test_workflow_guidance():
         print_result(True, feature)
 
 
-async def test_error_messages():
+def test_error_messages():
     """Test Fix #6: Error Messages"""
     print_test_header("Error Messages and Recovery Instructions")
     
@@ -105,7 +105,7 @@ async def test_error_messages():
     print_result(True, "Recovery instructions included in errors")
 
 
-async def test_api_response_consistency():
+def test_api_response_consistency():
     """Test Fix #7: API Response Consistency"""
     print_test_header("API Response Consistency")
     
@@ -138,7 +138,7 @@ async def test_api_response_consistency():
     print(json.dumps(example, indent=2))
 
 
-async def test_integration():
+def test_integration():
     """Test overall system integration"""
     print_test_header("System Integration")
     

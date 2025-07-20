@@ -68,7 +68,7 @@ class TestTaskCompletionWithUnifiedContext:
             branch_id="branch-456",
             task_data={"title": "Test Task"},
             progress=100,
-            insights=[],
+
             next_steps=[],
             metadata={}
         )
@@ -93,7 +93,7 @@ class TestTaskCompletionWithUnifiedContext:
             branch_id="branch-456",
             task_data={"title": "Test Task"},
             progress=50,
-            insights=[],
+
             next_steps=[],
             metadata={}
         )

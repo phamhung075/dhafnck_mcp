@@ -105,7 +105,7 @@ class TestUnifiedContextService:
             branch_id="branch-456",
             task_data={"title": "Test Task"},
             progress=0,
-            insights=[],
+
             next_steps=[],
             metadata={}
         ))
@@ -139,7 +139,7 @@ class TestUnifiedContextService:
             branch_id="branch-456", 
             task_data={"title": "Cached Task"},
             progress=50,
-            insights=[],
+
             next_steps=[],
             metadata={}
         ))
@@ -165,7 +165,7 @@ class TestUnifiedContextService:
             branch_id="branch-456",
             task_data={"title": "Test Task"},
             progress=0,
-            insights=[],
+
             next_steps=[],
             metadata={}
         )
@@ -207,7 +207,7 @@ class TestUnifiedContextService:
             branch_id="branch-456",
             task_data={"title": "Old Title"},
             progress=0,
-            insights=[],
+
             next_steps=[],
             metadata={}
         )
@@ -219,7 +219,7 @@ class TestUnifiedContextService:
             branch_id="branch-456",
             task_data={"title": "New Title", "status": "in_progress"},
             progress=50,
-            insights=[],
+
             next_steps=[],
             metadata={}
         )
@@ -287,7 +287,7 @@ class TestUnifiedContextService:
             branch_id="branch-456",
             task_data={"title": "Test Task"},
             progress=50,
-            insights=[],
+
             next_steps=[],
             metadata={}
         )
@@ -371,7 +371,7 @@ class TestContextRepositories:
             branch_id="branch-456",
             task_data={"title": "Test Task"},
             progress=0,
-            insights=[],
+
             next_steps=[],
             metadata={}
         )

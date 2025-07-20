@@ -12,17 +12,33 @@ from datetime import datetime, timezone
 from unittest.mock import Mock, MagicMock
 import uuid
 
-from src.fastmcp.task_management.domain.entities.task import Task
-from src.fastmcp.task_management.domain.entities.subtask import Subtask
-from src.fastmcp.task_management.domain.value_objects.task_id import TaskId
-from src.fastmcp.task_management.domain.value_objects.subtask_id import SubtaskId
-from src.fastmcp.task_management.domain.value_objects.task_status import TaskStatus
-from src.fastmcp.task_management.domain.value_objects.priority import Priority
-from src.fastmcp.task_management.application.use_cases.update_subtask import UpdateSubtaskUseCase
-from src.fastmcp.task_management.application.dtos.subtask import UpdateSubtaskRequest
+from fastmcp.task_management.domain.entities.task import Task
+from fastmcp.task_management.domain.entities.subtask import Subtask
+from fastmcp.task_management.domain.value_objects.task_id import TaskId
+from fastmcp.task_management.domain.value_objects.subtask_id import SubtaskId
+from fastmcp.task_management.domain.value_objects.task_status import TaskStatus
+from fastmcp.task_management.domain.value_objects.priority import Priority
+from fastmcp.task_management.application.use_cases.update_subtask import UpdateSubtaskUseCase
+from fastmcp.task_management.application.dtos.subtask import UpdateSubtaskRequest
 
 
 class TestSubtaskAssigneesUpdate:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test suite for updating subtask assignees"""
     
     def _create_task_and_subtask(self, subtask_assignees=None):

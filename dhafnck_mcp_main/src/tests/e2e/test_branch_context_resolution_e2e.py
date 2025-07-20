@@ -21,27 +21,59 @@ from fastmcp.task_management.infrastructure.database.database_config import get_
 
 
 class TestBranchContextResolutionE2E:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                # Clean up in dependency order to avoid foreign key errors
+                session.execute(text("DELETE FROM task_contexts WHERE task_id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("""
+                    DELETE FROM branch_contexts 
+                    WHERE branch_id IN (
+                        SELECT id FROM project_git_branchs 
+                        WHERE project_id LIKE 'test-%' OR id LIKE 'test-%'
+                    )
+                """))
+                session.execute(text("DELETE FROM project_git_branchs WHERE project_id LIKE 'test-%' OR id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM project_contexts WHERE project_id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                
+                # Clean up any test global contexts (but preserve global_singleton)
+                session.execute(text("DELETE FROM global_contexts WHERE id LIKE 'test-%'"))
+                session.commit()
+            except Exception as e:
+                print(f"Cleanup error: {e}")
+                session.rollback()
+
     """End-to-end test for the branch context resolution issue."""
     
     @pytest.fixture
     def setup_production_like_data(self):
         """Set up data that mimics production scenario."""
         db_session = get_session()
-        # Create project - mimicking "test-project-alpha"
+        # Create project - mimicking f"test-project-{uuid.uuid4().hex[:8]}"
         project = Project(
             id=str(uuid.uuid4()),
-            name="test-project-alpha",
+            name=f"test-project-{uuid.uuid4().hex[:8]}",
             description="Production-like test project",
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
         )
         db_session.add(project)
         
-        # Create branch with the exact problematic ID
+        # Create branch with dynamic UUID to prevent conflicts
+        branch_id = str(uuid.uuid4())  # Generate unique ID for each test run
         branch = ProjectGitBranch(
-            id="d4f91ee3-1f97-4768-b4ff-1e734180f874",
+            id=branch_id,
             project_id=project.id,
-            name="feature/auth-system",
+            name=f"test-feature-{uuid.uuid4().hex[:8]}",
             description="Authentication system implementation",
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
@@ -75,18 +107,23 @@ class TestBranchContextResolutionE2E:
         
         # Create the full context hierarchy
         # Global context
-        global_context = GlobalContext(
-            id="global_singleton",
-            organization_id="DhafnckMCP Corporation",
-            autonomous_rules={},
-            security_policies={},
-            coding_standards={"code_style": "PEP8", "testing": "TDD"},
-            workflow_templates={},
-            delegation_rules={},
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
-        )
-        db_session.add(global_context)
+        # Check if global_singleton already exists
+        existing_global = db_session.query(GlobalContext).filter_by(id="global_singleton").first()
+        if existing_global:
+            global_context = existing_global
+        else:
+            global_context = GlobalContext(
+                id="global_singleton",
+                organization_id="DhafnckMCP Corporation",
+                autonomous_rules={},
+                security_policies={},
+                coding_standards={"code_style": "PEP8", "testing": "TDD"},
+                workflow_templates={},
+                delegation_rules={},
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
+            )
+            db_session.add(global_context)
         
         # Project context
         project_context = ProjectContext(
@@ -98,6 +135,7 @@ class TestBranchContextResolutionE2E:
             global_overrides={},
             delegation_rules={},
             created_at=datetime.utcnow(),
+            version=1,
             updated_at=datetime.utcnow()
         )
         db_session.add(project_context)
@@ -116,8 +154,9 @@ class TestBranchContextResolutionE2E:
             agent_assignments={},
             local_overrides={},
             delegation_rules={},
+            updated_at=datetime.utcnow(),
             created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            version=1
         )
         db_session.add(branch_context)
         
@@ -135,6 +174,7 @@ class TestBranchContextResolutionE2E:
             implementation_notes={},
             delegation_triggers={},
             created_at=datetime.utcnow(),
+            version=1,
             updated_at=datetime.utcnow()
         )
         db_session.add(task1_context)
@@ -177,10 +217,11 @@ class TestBranchContextResolutionE2E:
         
         # Simulate the exact frontend API call pattern
         # This is what getBranchContext() sends
+        branch_id = setup_production_like_data["branch_id"]
         result = manage_context(
             action="resolve",
             level="branch",
-            context_id="d4f91ee3-1f97-4768-b4ff-1e734180f874",
+            context_id=branch_id,
             force_refresh=False,
             include_inherited=True
         )
@@ -191,7 +232,7 @@ class TestBranchContextResolutionE2E:
         assert "resolved_context" in result["data"]
         
         resolved_context = result["data"]["resolved_context"]
-        assert resolved_context["id"] == "d4f91ee3-1f97-4768-b4ff-1e734180f874"
+        assert resolved_context["id"] == branch_id
         
         # Verify inheritance through _inheritance metadata
         assert "_inheritance" in resolved_context
@@ -226,9 +267,10 @@ class TestBranchContextResolutionE2E:
         
         # This is what the frontend was incorrectly doing before the fix
         # Using getTaskContext for a branch ID
+        branch_id = setup_production_like_data["branch_id"]
         result = manage_context(
             action="get",
-            context_id="d4f91ee3-1f97-4768-b4ff-1e734180f874",  # Branch ID!
+            context_id=branch_id,  # Branch ID!
             level="task"  # Wrong level!
         )
         
@@ -312,7 +354,8 @@ class TestBranchContextResolutionE2E:
         assert "data" in branch_result
         assert "contexts" in branch_result["data"]
         assert len(branch_result["data"]["contexts"]) >= 1
-        assert any(ctx["id"] == "d4f91ee3-1f97-4768-b4ff-1e734180f874" 
+        branch_id = setup_production_like_data["branch_id"]
+        assert any(ctx["id"] == branch_id 
                   for ctx in branch_result["data"]["contexts"])
         
         # List task contexts
@@ -327,7 +370,8 @@ class TestBranchContextResolutionE2E:
         # Should have at least one task context
         assert len(task_result["data"]["contexts"]) >= 1
         # But should NOT include the branch ID
-        assert not any(ctx["id"] == "d4f91ee3-1f97-4768-b4ff-1e734180f874" 
+        branch_id = setup_production_like_data["branch_id"]
+        assert not any(ctx["id"] == branch_id 
                       for ctx in task_result["data"]["contexts"])
     
     def test_error_message_improvement(self, setup_production_like_data):
@@ -351,10 +395,11 @@ class TestBranchContextResolutionE2E:
         manage_context = tools["manage_context"]
         
         # Try to resolve branch ID as task level
+        branch_id = setup_production_like_data["branch_id"]
         result = manage_context(
             action="resolve",
             level="task",
-            context_id="d4f91ee3-1f97-4768-b4ff-1e734180f874",
+            context_id=branch_id,
             include_inherited=True
         )
         

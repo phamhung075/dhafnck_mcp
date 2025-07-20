@@ -4,17 +4,33 @@ import pytest
 import asyncio
 from datetime import datetime, timezone, timedelta
 from unittest.mock import Mock, AsyncMock, patch
-from src.fastmcp.task_management.domain.entities.project import Project
-from src.fastmcp.task_management.domain.entities.git_branch import GitBranch
-from src.fastmcp.task_management.domain.entities.agent import Agent, AgentCapability, AgentStatus
-from src.fastmcp.task_management.domain.entities.task import Task
-from src.fastmcp.task_management.domain.entities.work_session import WorkSession
-from src.fastmcp.task_management.domain.value_objects.task_id import TaskId
-from src.fastmcp.task_management.domain.value_objects.task_status import TaskStatus
-from src.fastmcp.task_management.domain.value_objects.priority import Priority
+from fastmcp.task_management.domain.entities.project import Project
+from fastmcp.task_management.domain.entities.git_branch import GitBranch
+from fastmcp.task_management.domain.entities.agent import Agent, AgentCapability, AgentStatus
+from fastmcp.task_management.domain.entities.task import Task
+from fastmcp.task_management.domain.entities.work_session import WorkSession
+from fastmcp.task_management.domain.value_objects.task_id import TaskId
+from fastmcp.task_management.domain.value_objects.task_status import TaskStatus
+from fastmcp.task_management.domain.value_objects.priority import Priority
 
 
 class TestProjectCreation:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test Project creation and initialization."""
     
     def test_create_project_with_factory_method(self):
@@ -82,6 +98,22 @@ class TestProjectCreation:
 
 
 class TestGitBranchManagement:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test Project task tree management functionality."""
     
     def test_create_git_branch_legacy_method(self):
@@ -216,6 +248,22 @@ class TestGitBranchManagement:
 
 
 class TestAgentManagement:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test Project agent management functionality."""
     
     def test_register_agent(self):
@@ -298,6 +346,22 @@ class TestAgentManagement:
 
 
 class TestCrossTreeDependencies:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test cross-tree dependency management."""
     
     def test_add_cross_tree_dependency(self):
@@ -385,6 +449,22 @@ class TestCrossTreeDependencies:
 
 
 class TestWorkCoordination:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test work coordination and session management."""
     
     def test_get_available_work_for_agent(self):
@@ -549,6 +629,22 @@ class TestWorkCoordination:
 
 
 class TestOrchestrationStatus:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test orchestration status and reporting."""
     
     def test_get_orchestration_status_empty_project(self):
@@ -655,6 +751,22 @@ class TestOrchestrationStatus:
 
 
 class TestDependencyCoordination:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test cross-tree dependency coordination."""
     
     def test_coordinate_cross_tree_dependencies_empty(self):
@@ -807,6 +919,22 @@ class TestDependencyCoordination:
 
 
 class TestProjectIntegration:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Integration tests for Project functionality."""
     
     @pytest.mark.asyncio

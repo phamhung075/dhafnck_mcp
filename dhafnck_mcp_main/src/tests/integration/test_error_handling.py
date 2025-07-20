@@ -13,7 +13,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 from uuid import uuid4
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 

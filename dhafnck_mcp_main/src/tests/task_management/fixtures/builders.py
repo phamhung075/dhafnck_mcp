@@ -4,16 +4,16 @@ from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 import uuid
 
-from src.fastmcp.task_management.domain.entities.task import Task
-from src.fastmcp.task_management.domain.entities.agent import Agent, AgentStatus, AgentCapability
-from src.fastmcp.task_management.domain.entities.project import Project
-from src.fastmcp.task_management.domain.entities.subtask import Subtask
-from src.fastmcp.task_management.domain.entities.work_session import WorkSession
-from src.fastmcp.task_management.domain.entities.git_branch import GitBranch
-from src.fastmcp.task_management.domain.value_objects.task_id import TaskId
-from src.fastmcp.task_management.domain.value_objects.subtask_id import SubtaskId
-from src.fastmcp.task_management.domain.value_objects.task_status import TaskStatus
-from src.fastmcp.task_management.domain.value_objects.priority import Priority
+from fastmcp.task_management.domain.entities.task import Task
+from fastmcp.task_management.domain.entities.agent import Agent, AgentStatus, AgentCapability
+from fastmcp.task_management.domain.entities.project import Project
+from fastmcp.task_management.domain.entities.subtask import Subtask
+from fastmcp.task_management.domain.entities.work_session import WorkSession
+from fastmcp.task_management.domain.entities.git_branch import GitBranch
+from fastmcp.task_management.domain.value_objects.task_id import TaskId
+from fastmcp.task_management.domain.value_objects.subtask_id import SubtaskId
+from fastmcp.task_management.domain.value_objects.task_status import TaskStatus
+from fastmcp.task_management.domain.value_objects.priority import Priority
 
 
 class TaskBuilder:

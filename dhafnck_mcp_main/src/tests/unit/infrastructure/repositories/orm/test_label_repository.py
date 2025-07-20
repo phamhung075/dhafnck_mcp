@@ -11,12 +11,12 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
-from src.fastmcp.task_management.infrastructure.repositories.orm.label_repository import ORMLabelRepository
-from src.fastmcp.task_management.infrastructure.database.models import Label, TaskLabel, Task
-from src.fastmcp.task_management.infrastructure.database.database_adapter import DatabaseAdapter
-from src.fastmcp.task_management.domain.entities.label import Label as LabelEntity
-from src.fastmcp.task_management.domain.entities.task import Task as TaskEntity
-from src.fastmcp.task_management.domain.exceptions.base_exceptions import (
+from fastmcp.task_management.infrastructure.repositories.orm.label_repository import ORMLabelRepository
+from fastmcp.task_management.infrastructure.database.models import Label, TaskLabel, Task
+from fastmcp.task_management.infrastructure.database.database_adapter import DatabaseAdapter
+from fastmcp.task_management.domain.entities.label import Label as LabelEntity
+from fastmcp.task_management.domain.entities.task import Task as TaskEntity
+from fastmcp.task_management.domain.exceptions.base_exceptions import (
     RepositoryError,
     NotFoundError,
     ValidationError
@@ -24,6 +24,22 @@ from src.fastmcp.task_management.domain.exceptions.base_exceptions import (
 
 
 class TestORMLabelRepository:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test cases for ORMLabelRepository"""
     
     @pytest.fixture

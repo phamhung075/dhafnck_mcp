@@ -4,14 +4,30 @@ import pytest
 from datetime import datetime, timezone
 from unittest.mock import Mock
 
-from src.fastmcp.task_management.domain.entities.git_branch import GitBranch
-from src.fastmcp.task_management.domain.entities.task import Task
-from src.fastmcp.task_management.domain.value_objects.task_id import TaskId
-from src.fastmcp.task_management.domain.value_objects.task_status import TaskStatus
-from src.fastmcp.task_management.domain.value_objects.priority import Priority
+from fastmcp.task_management.domain.entities.git_branch import GitBranch
+from fastmcp.task_management.domain.entities.task import Task
+from fastmcp.task_management.domain.value_objects.task_id import TaskId
+from fastmcp.task_management.domain.value_objects.task_status import TaskStatus
+from fastmcp.task_management.domain.value_objects.priority import Priority
 
 
 class TestGitBranchCreation:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test GitBranch entity creation."""
     
     def test_create_git_branch_with_factory(self):
@@ -69,6 +85,22 @@ class TestGitBranchCreation:
 
 
 class TestGitBranchTaskManagement:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test GitBranch task management operations."""
     
     def test_add_root_task(self):
@@ -187,6 +219,22 @@ class TestGitBranchTaskManagement:
 
 
 class TestGitBranchStatusAndProgress:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test GitBranch status and progress tracking."""
     
     def test_get_task_count(self):
@@ -288,6 +336,22 @@ class TestGitBranchStatusAndProgress:
 
 
 class TestGitBranchAvailability:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test GitBranch task availability operations."""
     
     def test_get_available_tasks_simple(self):
@@ -404,6 +468,22 @@ class TestGitBranchAvailability:
 
 
 class TestGitBranchIntegration:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test GitBranch integration scenarios."""
     
     def test_git_branch_with_hierarchy(self):

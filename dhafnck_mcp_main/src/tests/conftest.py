@@ -250,37 +250,71 @@ def test_data_validator():
 # TEST DATABASE INITIALIZATION
 # =============================================
 
-def _initialize_test_database(db_path: Path):
-    """Initialize test database with schema and basic test data."""
-    from fastmcp.task_management.infrastructure.database.database_initializer import initialize_database
-    import sqlite3
+def _initialize_test_database_with_basic_data():
+    """Initialize test database with basic test data for PostgreSQL."""
+    from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+    from sqlalchemy import text
     import uuid
+    from datetime import datetime
     
-    # First initialize the schema
-    initialize_database(str(db_path))
-    
-    # Then add basic test data that tests expect
-    with sqlite3.connect(str(db_path)) as conn:
-        # Create default test project (no users table needed)
-        try:
-            conn.execute("""
-                INSERT OR REPLACE INTO projects (id, name, description, user_id, status, created_at, updated_at, metadata) 
-                VALUES ('default_project', 'Default Test Project', 'Project for testing', 'default_id', 'active', datetime('now'), datetime('now'), '{}')
-            """)
-            
-            # Create main git branch for default project
-            # Use a deterministic ID so tests can find it
-            main_branch_id = 'test-main-branch-' + str(uuid.uuid4())
-            conn.execute("""
-                INSERT OR REPLACE INTO project_git_branchs (id, project_id, name, description, created_at, updated_at, priority, status, metadata, task_count, completed_task_count) 
-                VALUES (?, 'default_project', 'main', 'Main branch for testing', datetime('now'), datetime('now'), 'medium', 'todo', '{}', 0, 0)
-            """, (main_branch_id,))
-            
-            conn.commit()
-            print(f"📦 Initialized test database with basic test data (branch_id: {main_branch_id})")
-        except Exception as e:
-            print(f"⚠️ Error initializing test data: {e}")
-            # Don't fail - let individual tests handle missing data
+    try:
+        db_config = get_db_config()
+        
+        with db_config.get_session() as session:
+            # Create default test project
+            try:
+                session.execute(text("""
+                    INSERT INTO projects (id, name, description, user_id, status, created_at, updated_at, metadata) 
+                    VALUES (:id, :name, :description, :user_id, :status, :created_at, :updated_at, :metadata)
+                    ON CONFLICT (id) DO UPDATE SET 
+                        name = EXCLUDED.name,
+                        description = EXCLUDED.description,
+                        updated_at = EXCLUDED.updated_at
+                """), {
+                    'id': 'default_project',
+                    'name': 'Default Test Project',
+                    'description': 'Project for testing',
+                    'user_id': 'default_id',
+                    'status': 'active',
+                    'created_at': datetime.utcnow(),
+                    'updated_at': datetime.utcnow(),
+                    'metadata': '{}'
+                })
+                
+                # Create main git branch for default project
+                main_branch_id = 'test-main-branch-' + str(uuid.uuid4())
+                session.execute(text("""
+                    INSERT INTO project_git_branchs (id, project_id, name, description, created_at, updated_at, priority, status, metadata, task_count, completed_task_count) 
+                    VALUES (:id, :project_id, :name, :description, :created_at, :updated_at, :priority, :status, :metadata, :task_count, :completed_task_count)
+                    ON CONFLICT (id) DO UPDATE SET
+                        name = EXCLUDED.name,
+                        description = EXCLUDED.description,
+                        updated_at = EXCLUDED.updated_at
+                """), {
+                    'id': main_branch_id,
+                    'project_id': 'default_project',
+                    'name': 'main',
+                    'description': 'Main branch for testing',
+                    'created_at': datetime.utcnow(),
+                    'updated_at': datetime.utcnow(),
+                    'priority': 'medium',
+                    'status': 'todo',
+                    'metadata': '{}',
+                    'task_count': 0,
+                    'completed_task_count': 0
+                })
+                
+                session.commit()
+                print(f"📦 Initialized PostgreSQL test database with basic test data (branch_id: {main_branch_id})")
+                
+            except Exception as e:
+                print(f"⚠️ Error initializing test data: {e}")
+                session.rollback()
+                # Don't fail - let individual tests handle missing data
+                
+    except Exception as e:
+        print(f"⚠️ Could not initialize test data: {e}")
+        # Don't fail - let individual tests handle missing data
 
 # =============================================
 # MCP_DB_PATH TEST DATABASE FIXTURE
@@ -289,8 +323,8 @@ def _initialize_test_database(db_path: Path):
 @pytest.fixture(scope="function", autouse=True)
 def set_mcp_db_path_for_tests(request):
     """
-    Function-scoped fixture to set MCP_DB_PATH to a fresh test database for each test.
-    This guarantees test isolation.
+    Function-scoped fixture to set up PostgreSQL test database for each test.
+    This guarantees test isolation with PostgreSQL.
     
     Skips database initialization for unit tests marked with @pytest.mark.unit
     """
@@ -302,35 +336,181 @@ def set_mcp_db_path_for_tests(request):
     
     from fastmcp.task_management.infrastructure.database.database_initializer import reset_initialization_cache
     from fastmcp.task_management.infrastructure.database.database_source_manager import DatabaseSourceManager
+    from fastmcp.task_management.infrastructure.database.test_database_config import (
+        TestDatabaseConfig,
+        install_missing_dependencies
+    )
+    
+    # Install missing dependencies if needed
+    try:
+        install_missing_dependencies()
+    except Exception as e:
+        print(f"⚠️ Could not install dependencies: {e}")
     
     # Clear the initializer's cache to ensure schemas are re-run
     reset_initialization_cache()
     
     # Clear the database source manager singleton to ensure fresh database path detection
     DatabaseSourceManager.clear_instance()
+    
+    # Clear the global database configuration to force re-initialization
+    from fastmcp.task_management.infrastructure.database.database_config import close_db
+    close_db()
 
-    test_db_path = Path(__file__).parent.parent / "database" / "data" / "dhafnck_mcp_test.db"
+    # Save original environment variables
+    original_db_type = os.environ.get("DATABASE_TYPE")
+    original_db_url = os.environ.get("DATABASE_URL")
+    original_test_db_url = os.environ.get("TEST_DATABASE_URL")
     
-    # Ensure a clean slate before each test by deleting the old DB file
-    if test_db_path.exists():
-        try:
-            test_db_path.unlink()
-        except OSError as e:
-            print(f"Error removing existing test database: {e}")
+    try:
+        # Set up TestDatabaseConfig for PostgreSQL testing
+        test_config = TestDatabaseConfig()
+        
+        # If TEST_DATABASE_URL is not set, use the production database with test schema
+        if not os.environ.get("TEST_DATABASE_URL"):
+            # Fix the production DATABASE_URL and use it with a test schema
+            prod_url = os.environ.get("DATABASE_URL", "")
+            if prod_url and "postgres:" in prod_url and "@" in prod_url:
+                # Parse and fix the malformed URL properly
+                # The URL has format: postgresql://user:password@@@@host:port/database
+                # We need to fix the multiple @ symbols in the password
+                try:
+                    # Split by :// to get scheme and rest
+                    parts = prod_url.split("://", 1)
+                    if len(parts) == 2:
+                        scheme, rest = parts
+                        # Find the last @ which separates auth from host
+                        auth_host = rest.rsplit('@', 1)
+                        if len(auth_host) == 2:
+                            auth, host = auth_host
+                            # Fix the password with multiple @
+                            if ":" in auth:
+                                user, password = auth.split(':', 1)
+                                # Remove extra @ symbols from password
+                                password = password.replace("@@@@", "@")
+                                # URL encode the @ symbol
+                                import urllib.parse
+                                encoded_password = urllib.parse.quote(password, safe='')
+                                # Reconstruct the URL
+                                fixed_prod_url = f"{scheme}://{user}:{encoded_password}@{host}"
+                                os.environ["TEST_DATABASE_URL"] = fixed_prod_url
+                                print(f"📝 Fixed TEST_DATABASE_URL for Supabase")
+                except Exception as e:
+                    print(f"⚠️ Could not fix DATABASE_URL: {e}")
+        
+        # Setup PostgreSQL test environment and get the fixed URL
+        test_db_url = test_config.setup_postgresql_test_database()
+        
+        # Set environment variables for PostgreSQL
+        os.environ['DATABASE_TYPE'] = 'postgresql'
+        os.environ['DATABASE_URL'] = test_db_url  # Use the fixed URL
+        os.environ['DISABLE_AUTH'] = 'true'
+        os.environ['DHAFNCK_ENABLE_VISION'] = 'true'
+        
+        print(f"\n🐘 Using PostgreSQL test database")
+        print(f"📊 DATABASE_TYPE: {os.environ.get('DATABASE_TYPE', 'not set')}")
+        print(f"🔗 DATABASE_URL: [fixed and configured for test database]")
+        
+        # Initialize the test database with schema and basic test data
+        # Note: For PostgreSQL, we don't need to pass a file path
+        from fastmcp.task_management.infrastructure.database.database_initializer import initialize_database
+        initialize_database(None)  # Will use DATABASE_URL from environment
+        
+        # Add basic test data
+        _initialize_test_database_with_basic_data()
+        
+        yield
+        
+    except Exception as e:
+        print(f"❌ PostgreSQL test setup failed: {e}")
+        pytest.fail(f"PostgreSQL test setup failed: {e}")
+        
+    finally:
+        # Restore original environment
+        test_config.restore_environment()
+        
+        # Additional restoration for safety
+        if original_db_type is not None:
+            os.environ["DATABASE_TYPE"] = original_db_type
+        elif "DATABASE_TYPE" in os.environ:
+            del os.environ["DATABASE_TYPE"]
+            
+        if original_db_url is not None:
+            os.environ["DATABASE_URL"] = original_db_url
+        elif "DATABASE_URL" in os.environ:
+            del os.environ["DATABASE_URL"]
+            
+        if original_test_db_url is not None:
+            os.environ["TEST_DATABASE_URL"] = original_test_db_url
+        elif "TEST_DATABASE_URL" in os.environ:
+            del os.environ["TEST_DATABASE_URL"]
 
-    os.environ["MCP_DB_PATH"] = str(test_db_path)
-    print(f"\n🔒 MCP_DB_PATH set to fresh test database: {test_db_path}")
+
+# =============================================
+# POSTGRESQL TEST DATABASE FIXTURES
+# =============================================
+
+@pytest.fixture(scope="function")
+def postgresql_test_db():
+    """
+    Function-scoped fixture for PostgreSQL testing.
     
-    # Initialize the test database with schema and basic test data
-    _initialize_test_database(test_db_path)
-    
-    yield
-    # Optionally, cleanup test DB after tests as a fallback
-    if test_db_path.exists():
-        try:
-            test_db_path.unlink()
-        except OSError as e:
-            print(f"Error removing test database post-test: {e}")
+    This fixture respects the user requirement for separate PostgreSQL
+    test database and handles URL parsing issues with special characters.
+    """
+    # Import here to avoid circular dependencies
+    try:
+        from fastmcp.task_management.infrastructure.database.test_database_config import (
+            get_test_database_config,
+            install_missing_dependencies
+        )
+        
+        # Install missing dependencies
+        install_missing_dependencies()
+        
+        # Configure PostgreSQL test environment
+        test_config = get_test_database_config()
+        
+        yield test_config
+        
+        # Restore environment
+        test_config.restore_environment()
+        
+    except ImportError as e:
+        pytest.skip(f"PostgreSQL test configuration not available: {e}")
+    except Exception as e:
+        pytest.fail(f"PostgreSQL test setup failed: {e}")
+
+
+@pytest.fixture(scope="session")
+def postgresql_session_db():
+    """
+    Session-scoped fixture for PostgreSQL integration tests.
+    Creates database once per test session for read-only tests.
+    """
+    try:
+        from fastmcp.task_management.infrastructure.database.test_database_config import (
+            get_test_database_config,
+            install_missing_dependencies
+        )
+        
+        # Install missing dependencies
+        install_missing_dependencies()
+        
+        # Configure PostgreSQL test environment
+        test_config = get_test_database_config()
+        
+        print(f"\n🚀 Creating PostgreSQL test database session")
+        
+        yield test_config
+        
+        print(f"\n🧹 Cleaning up PostgreSQL test database session")
+        test_config.restore_environment()
+        
+    except ImportError as e:
+        pytest.skip(f"PostgreSQL test configuration not available: {e}")
+    except Exception as e:
+        pytest.fail(f"PostgreSQL session test setup failed: {e}")
 
 
 # =============================================

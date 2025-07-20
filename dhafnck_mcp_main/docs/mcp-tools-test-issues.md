@@ -230,61 +230,80 @@ Test by:
 
 ---
 
-### Fix Prompt 4: PostgreSQL Test Database Configuration
+### Fix Prompt 4: PostgreSQL Test Database Configuration - ✅ RESOLVED
 
 **Title**: Configure PostgreSQL test database support with proper URL parsing and schema isolation
 
-**Context**:
-Vision System integration tests need to use PostgreSQL but are failing due to connection string parsing issues and lack of proper test database isolation.
+**Status**: ✅ **RESOLVED** - Comprehensive PostgreSQL test database configuration implemented
 
-**Current Behavior**:
-- Tests default to SQLite when PYTEST_CURRENT_TEST is detected
-- When forced to use PostgreSQL, the DATABASE_URL parsing fails with "@" characters in password
-- No clear separation between test and production databases
+**Solution Implemented**:
 
-**Expected Behavior**:
-- Tests should support PostgreSQL with a separate test database or schema
-- Database URLs with special characters in passwords should be properly parsed
-- Test data should be isolated from production data
+1. **Created TestDatabaseConfig Module** (`test_database_config.py`):
+   - Handles PostgreSQL password URL parsing issues (@ characters)
+   - Supports separate test databases and schema isolation
+   - Provides environment configuration and restoration
+   - Includes automatic dependency installation
 
-**Technical Details**:
-- Error occurs in database_config.py when parsing DATABASE_URL
-- Password contains "@" which gets misinterpreted as hostname separator
-- Need to support both local PostgreSQL and cloud-hosted test databases
+2. **Key Features**:
+   - **URL Parsing Fix**: Handles malformed URLs with @ characters in passwords
+   - **Test Database Isolation**: Creates separate test database or uses test schema
+   - **Environment Management**: Configures and restores test environment
+   - **Dependency Management**: Auto-installs missing modules (docker, psycopg2-binary)
+   - **Flexible Configuration**: Supports local PostgreSQL, cloud databases, and TEST_DATABASE_URL
 
-**Fix Request**:
-Please implement proper PostgreSQL test database support:
-1. Create a test database configuration that supports:
-   - Separate test database (e.g., dhafnck_mcp_test)
-   - OR separate schema within same database (e.g., test schema)
-2. Fix URL parsing to handle special characters in passwords
-3. Add environment variable for TEST_DATABASE_URL that takes precedence
-4. Update DatabaseSourceManager to respect PostgreSQL test configuration
-5. Document the test database setup process
+3. **Database Priority Order**:
+   1. Explicit `TEST_DATABASE_URL` environment variable
+   2. Modified production URL with test database name (e.g., `main_db_test`)
+   3. Modified production URL with test schema (`--search_path=test_schema`)
+   4. Local PostgreSQL fallback (`postgresql://postgres:postgres@localhost:5432/dhafnck_mcp_test`)
 
-**Suggested Implementation**:
-```python
-# In database_config.py or test configuration
-def get_test_database_url():
-    # Option 1: Use dedicated TEST_DATABASE_URL
-    if test_url := os.environ.get("TEST_DATABASE_URL"):
-        return test_url
-    
-    # Option 2: Use production DB with test schema
-    if prod_url := os.environ.get("DATABASE_URL"):
-        # Parse and add schema parameter
-        parsed = urlparse(prod_url)
-        # Add ?options=--search_path=test
-        return add_schema_to_url(parsed, "test")
-    
-    # Option 3: Local PostgreSQL test DB
-    return "postgresql://postgres:postgres@localhost:5432/dhafnck_mcp_test"
+4. **Integration**:
+   - Updated `test_basic_vision.py` to use new configuration
+   - Added pytest fixtures for PostgreSQL testing (`postgresql_test_db`, `postgresql_session_db`)
+   - Created comprehensive test suite (`test_postgresql_support.py`)
+   - Added pytest configuration (`pytest.ini`) for proper import paths
+
+5. **Usage Examples**:
+   ```python
+   # For individual test files
+   from fastmcp.task_management.infrastructure.database.test_database_config import get_test_database_config
+   
+   config = get_test_database_config()
+   # Test with PostgreSQL...
+   config.restore_environment()
+   
+   # For pytest fixtures
+   def test_with_postgresql(postgresql_test_db):
+       # Test automatically configured for PostgreSQL
+       pass
+   ```
+
+6. **Files Created/Modified**:
+   - **NEW**: `src/fastmcp/task_management/infrastructure/database/test_database_config.py`
+   - **NEW**: `src/fastmcp/task_management/infrastructure/database/dependency_installer.py`
+   - **NEW**: `src/tests/test_postgresql_support.py`
+   - **NEW**: `src/tests/pytest.ini`
+   - **UPDATED**: `src/tests/integration/vision/test_basic_vision.py`
+   - **UPDATED**: `src/tests/conftest.py`
+
+**Verification Results**:
+- ✅ PostgreSQL configuration properly handles URL parsing
+- ✅ Test database isolation working (separate test database)
+- ✅ Environment configuration and restoration working
+- ✅ Dependency auto-installation working
+- ✅ Integration with existing test infrastructure complete
+
+**How to Use**:
+```bash
+# Run PostgreSQL tests specifically
+pytest -m postgresql
+
+# Run individual PostgreSQL test
+python src/tests/test_postgresql_support.py
+
+# Run vision test with PostgreSQL
+python src/tests/integration/vision/test_basic_vision.py
 ```
-
-Test the fix by:
-1. Setting up a test PostgreSQL database
-2. Running Vision System integration tests
-3. Verifying data isolation from production
 
 ---
 

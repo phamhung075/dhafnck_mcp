@@ -78,7 +78,7 @@ class MVPCoreFunctionalityTests:
         finally:
             self.print_test_summary()
     
-    async def test_mcp_server_creation(self):
+    def test_mcp_server_creation(self):
         """Test 1: MCP Server Creation and Health"""
         print("\n🏗️ Test 1: MCP Server Creation and Health")
         print("-" * 40)
@@ -93,14 +93,14 @@ class MVPCoreFunctionalityTests:
             
             # Test health check
             print("Testing health check...")
-            result = await self.server_instance._call_tool("health_check", {"random_string": "test"})
+            result = self.server_instance._call_tool("health_check", {"random_string": "test"})
             health_data = json.loads(result[0].text)
             assert health_data.get("status") == "healthy"
             print(f"✅ Health check passed: {health_data['status']}")
             
             # Test server capabilities
             print("Testing server capabilities...")
-            result = await self.server_instance._call_tool("get_server_capabilities", {"random_string": "test"})
+            result = self.server_instance._call_tool("get_server_capabilities", {"random_string": "test"})
             capabilities = json.loads(result[0].text)
             assert "core_features" in capabilities
             print(f"✅ Server capabilities: {len(capabilities['core_features'])} features")
@@ -112,14 +112,14 @@ class MVPCoreFunctionalityTests:
             self.test_results.append({"test": "server_creation", "status": False, "error": str(e)})
             raise
     
-    async def test_core_tools_availability(self):
+    def test_core_tools_availability(self):
         """Test 2: Core Tools Availability"""
         print("\n🛠️ Test 2: Core Tools Availability")
         print("-" * 40)
         
         try:
             # Get all available tools
-            tools = await self.server_instance.get_tools()
+            tools = self.server_instance.get_tools()
             available_tools = list(tools.keys())
             print(f"Available tools: {len(available_tools)}")
             
@@ -155,7 +155,7 @@ class MVPCoreFunctionalityTests:
             self.test_results.append({"test": "tools_availability", "status": False, "error": str(e)})
             raise
     
-    async def test_authentication_system(self):
+    def test_authentication_system(self):
         """Test 3: Authentication System (MVP Mode)"""
         print("\n🔐 Test 3: Authentication System (MVP Mode)")
         print("-" * 40)
@@ -179,7 +179,7 @@ class MVPCoreFunctionalityTests:
             # Test token validation in MVP mode
             print("Testing token validation...")
             validator = TokenValidator()
-            token_info = await validator.validate_token(token, {"test": "client"})
+            token_info = validator.validate_token(token, {"test": "client"})
             assert token_info.user_id == "mvp_user"
             print(f"✅ Token validated: user_id={token_info.user_id}")
             
@@ -197,7 +197,7 @@ class MVPCoreFunctionalityTests:
             self.test_results.append({"test": "authentication", "status": False, "error": str(e)})
             # Don't raise - auth is optional for core functionality
     
-    async def test_project_management(self):
+    def test_project_management(self):
         """Test 4: Project Management Operations"""
         print("\n📁 Test 4: Project Management Operations")
         print("-" * 40)
@@ -205,7 +205,7 @@ class MVPCoreFunctionalityTests:
         try:
             # Test project creation
             print("Testing project creation...")
-            result = await self.server_instance._call_tool("manage_project", {
+            result = self.server_instance._call_tool("manage_project", {
                 "action": "create",
                 "project_id": "mvp_test_project",
                 "name": "MVP Test Project",
@@ -217,7 +217,7 @@ class MVPCoreFunctionalityTests:
             
             # Test project listing
             print("Testing project listing...")
-            result = await self.server_instance._call_tool("manage_project", {
+            result = self.server_instance._call_tool("manage_project", {
                 "action": "list"
             })
             list_result = json.loads(result[0].text)
@@ -229,7 +229,7 @@ class MVPCoreFunctionalityTests:
             
             # Test project retrieval
             print("Testing project retrieval...")
-            result = await self.server_instance._call_tool("manage_project", {
+            result = self.server_instance._call_tool("manage_project", {
                 "action": "get",
                 "project_id": "mvp_test_project"
             })
@@ -244,7 +244,7 @@ class MVPCoreFunctionalityTests:
             self.test_results.append({"test": "project_management", "status": False, "error": str(e)})
             raise
     
-    async def test_task_management(self):
+    def test_task_management(self):
         """Test 5: Task Management Operations"""
         print("\n📋 Test 5: Task Management Operations")
         print("-" * 40)
@@ -252,7 +252,7 @@ class MVPCoreFunctionalityTests:
         try:
             # Test task creation
             print("Testing task creation...")
-            result = await self.server_instance._call_tool("manage_task", {
+            result = self.server_instance._call_tool("manage_task", {
                 "action": "create",
                 "project_id": "mvp_test_project",
                 "title": "MVP Test Task",
@@ -269,7 +269,7 @@ class MVPCoreFunctionalityTests:
             
             # Test task listing
             print("Testing task listing...")
-            result = await self.server_instance._call_tool("manage_task", {
+            result = self.server_instance._call_tool("manage_task", {
                 "action": "list",
                 "project_id": "mvp_test_project"
             })
@@ -281,7 +281,7 @@ class MVPCoreFunctionalityTests:
             
             # Test task update
             print("Testing task update...")
-            result = await self.server_instance._call_tool("manage_task", {
+            result = self.server_instance._call_tool("manage_task", {
                 "action": "update",
                 "project_id": "mvp_test_project",
                 "task_id": task_id,
@@ -302,7 +302,7 @@ class MVPCoreFunctionalityTests:
             self.test_results.append({"test": "task_management", "status": False, "error": str(e)})
             raise
     
-    async def test_agent_management(self):
+    def test_agent_management(self):
         """Test 6: Agent Management Operations"""
         print("\n🤖 Test 6: Agent Management Operations")
         print("-" * 40)
@@ -310,7 +310,7 @@ class MVPCoreFunctionalityTests:
         try:
             # Test agent registration
             print("Testing agent registration...")
-            result = await self.server_instance._call_tool("manage_agent", {
+            result = self.server_instance._call_tool("manage_agent", {
                 "action": "register",
                 "project_id": "mvp_test_project",
                 "agent_id": "test_coding_agent",
@@ -322,7 +322,7 @@ class MVPCoreFunctionalityTests:
             
             # Test agent listing
             print("Testing agent listing...")
-            result = await self.server_instance._call_tool("manage_agent", {
+            result = self.server_instance._call_tool("manage_agent", {
                 "action": "list",
                 "project_id": "mvp_test_project"
             })
@@ -334,7 +334,7 @@ class MVPCoreFunctionalityTests:
             
             # Test call_agent functionality
             print("Testing call_agent...")
-            result = await self.server_instance._call_tool("call_agent", {
+            result = self.server_instance._call_tool("call_agent", {
                 "name_agent": "coding_agent"
             })
             call_result = json.loads(result[0].text)
@@ -348,7 +348,7 @@ class MVPCoreFunctionalityTests:
             self.test_results.append({"test": "agent_management", "status": False, "error": str(e)})
             # Don't raise - agent management is not critical for core functionality
     
-    async def test_performance(self):
+    def test_performance(self):
         """Test 7: Performance Under Load"""
         print("\n⚡ Test 7: Performance Under Load")
         print("-" * 40)
@@ -367,7 +367,7 @@ class MVPCoreFunctionalityTests:
                 tasks.append(task)
             
             # Wait for all tasks to complete
-            results = await asyncio.gather(*tasks, return_exceptions=True)
+            results = asyncio.gather(*tasks, return_exceptions=True)
             end_time = time.time()
             
             # Analyze results
@@ -395,7 +395,7 @@ class MVPCoreFunctionalityTests:
             self.test_results.append({"test": "performance", "status": False, "error": str(e)})
             # Don't raise - performance issues are not critical for basic functionality
     
-    async def test_error_recovery(self):
+    def test_error_recovery(self):
         """Test 8: Error Recovery"""
         print("\n🛡️ Test 8: Error Recovery")
         print("-" * 40)
@@ -414,7 +414,7 @@ class MVPCoreFunctionalityTests:
             
             for scenario_name, tool_name, params in error_scenarios:
                 try:
-                    await self.server_instance._call_tool(tool_name, params)
+                    self.server_instance._call_tool(tool_name, params)
                     print(f"⚠️  {scenario_name}: Expected error but got success")
                 except Exception as e:
                     print(f"✅ {scenario_name}: Error handled correctly - {type(e).__name__}")
@@ -422,7 +422,7 @@ class MVPCoreFunctionalityTests:
             
             # Test that server still works after errors
             print("Testing server recovery...")
-            result = await self.server_instance._call_tool("health_check", {"random_string": "recovery_test"})
+            result = self.server_instance._call_tool("health_check", {"random_string": "recovery_test"})
             health_data = json.loads(result[0].text)
             server_healthy = health_data.get("status") == "healthy"
             

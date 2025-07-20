@@ -16,7 +16,7 @@ def test_context_via_mcp_tools():
     
     # Import after setting env vars
     try:
-        from src.fastmcp.server.server import create_server
+        from fastmcp.server.server import create_server
     except ImportError:
         # Fallback - skip this test
         print("❌ Server module not available - skipping test")

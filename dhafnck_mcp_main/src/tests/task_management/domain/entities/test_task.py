@@ -4,16 +4,32 @@ import pytest
 from datetime import datetime, timezone, timedelta
 from unittest.mock import Mock, patch
 
-from src.fastmcp.task_management.domain.entities.task import Task
-from src.fastmcp.task_management.domain.value_objects.task_id import TaskId
-from src.fastmcp.task_management.domain.value_objects.task_status import TaskStatus, TaskStatusEnum
-from src.fastmcp.task_management.domain.value_objects.priority import Priority, PriorityLevel
-from src.fastmcp.task_management.domain.events.task_events import (
+from fastmcp.task_management.domain.entities.task import Task
+from fastmcp.task_management.domain.value_objects.task_id import TaskId
+from fastmcp.task_management.domain.value_objects.task_status import TaskStatus, TaskStatusEnum
+from fastmcp.task_management.domain.value_objects.priority import Priority, PriorityLevel
+from fastmcp.task_management.domain.events.task_events import (
     TaskCreated, TaskUpdated, TaskDeleted
 )
 
 
 class TestTaskCreation:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test Task entity creation."""
     
     def test_create_task_with_required_fields(self):
@@ -127,6 +143,22 @@ class TestTaskCreation:
 
 
 class TestTaskValidation:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test Task entity validation."""
     
     def test_task_title_required(self):
@@ -170,6 +202,22 @@ class TestTaskValidation:
 
 
 class TestTaskProperties:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test Task entity properties."""
     
     def test_is_blocked_property(self):
@@ -204,6 +252,22 @@ class TestTaskProperties:
 
 
 class TestTaskStatusUpdates:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test Task status update operations."""
     
     def test_update_status_valid_transition(self):
@@ -260,6 +324,22 @@ class TestTaskStatusUpdates:
 
 
 class TestTaskFieldUpdates:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test Task field update operations."""
     
     def test_update_priority(self):
@@ -327,6 +407,22 @@ class TestTaskFieldUpdates:
 
 
 class TestTaskAssignees:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test Task assignee management."""
     
     def test_add_assignee(self):
@@ -378,6 +474,22 @@ class TestTaskAssignees:
 
 
 class TestTaskLabels:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test Task label management."""
     
     def test_add_label(self):
@@ -427,6 +539,22 @@ class TestTaskLabels:
 
 
 class TestTaskDependencies:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test Task dependency management."""
     
     def test_add_dependency(self):
@@ -493,6 +621,22 @@ class TestTaskDependencies:
 
 
 class TestTaskProgress:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test Task progress tracking."""
     
     def test_update_progress(self):
@@ -500,7 +644,7 @@ class TestTaskProgress:
         task = Task(title="Test", description="Test")
         
         # The update_progress method requires ProgressType
-        from src.fastmcp.task_management.domain.value_objects.progress import ProgressType
+        from fastmcp.task_management.domain.value_objects.progress import ProgressType
         task.update_progress(ProgressType.IMPLEMENTATION, 50.0)
         
         assert task.overall_progress == 50.0
@@ -512,7 +656,7 @@ class TestTaskProgress:
         task = Task(title="Test", description="Test")
         
         # Progress must be 0-100
-        from src.fastmcp.task_management.domain.value_objects.progress import ProgressType
+        from fastmcp.task_management.domain.value_objects.progress import ProgressType
         with pytest.raises(ValueError, match="percentage must be between 0 and 100"):
             task.update_progress(ProgressType.IMPLEMENTATION, -10)
         
@@ -543,7 +687,7 @@ class TestTaskProgress:
         task.add_progress_milestone("Quarter Complete", 25.0)
         
         # Update progress to reach milestone
-        from src.fastmcp.task_management.domain.value_objects.progress import ProgressType
+        from fastmcp.task_management.domain.value_objects.progress import ProgressType
         task.update_progress(ProgressType.IMPLEMENTATION, 25.0)
         
         # Check if milestone event was triggered
@@ -552,6 +696,22 @@ class TestTaskProgress:
 
 
 class TestTaskCompletion:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test Task completion operations."""
     
     def test_complete_task(self):
@@ -601,6 +761,22 @@ class TestTaskCompletion:
 
 
 class TestTaskEquality:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test Task equality and hashing."""
     
     def test_task_equality(self):
@@ -636,6 +812,22 @@ class TestTaskEquality:
 
 
 class TestTaskTimezoneHandling:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test Task timezone handling."""
     
     def test_timezone_aware_timestamps(self):
@@ -664,6 +856,22 @@ class TestTaskTimezoneHandling:
 
 
 class TestTaskDomainEvents:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test Task domain event generation."""
     
     def test_get_events(self):

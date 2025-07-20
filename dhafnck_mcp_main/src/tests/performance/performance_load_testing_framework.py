@@ -30,10 +30,10 @@ import os
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
 try:
-    from src.fastmcp.task_management.infrastructure.services.performance_monitor import (
+    from fastmcp.task_management.infrastructure.services.performance_monitor import (
         PerformanceMonitor, BenchmarkConfig, BenchmarkResult, PerformanceSnapshot
     )
-    from src.fastmcp.task_management.infrastructure.services.performance_cache_manager import (
+    from fastmcp.task_management.infrastructure.services.performance_cache_manager import (
         PerformanceMetrics
     )
 except ImportError:

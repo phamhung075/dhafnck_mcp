@@ -23,9 +23,26 @@ from fastmcp.server.server import FastMCP
 from fastmcp.server.context import Context
 from fastmcp.task_management.infrastructure.utilities.path_resolver import PathResolver
 from fastmcp.exceptions import ToolError
+from datetime import datetime
 
 
 class TestToolIssuesVerification:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test suite to verify and fix specific tool action issues"""
     
     @pytest.fixture(scope="function")
@@ -83,49 +100,54 @@ class TestToolIssuesVerification:
     def test_context(self):
         """Provide test context data with proper Clean Relationship Chain setup"""
         # Set up Clean Relationship Chain: user -> project -> git_branch
-        import sqlite3
         import uuid
-        import os
-        
-        # Get test database path
-        db_path = os.getenv("MCP_DB_PATH")
-        if not db_path:
-            db_path = "/tmp/test_tool_issues.db"
+        from datetime import datetime
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from fastmcp.task_management.infrastructure.database.models import Project, ProjectGitBranch
         
         # Create test data following Clean Relationship Chain
-        project_id = "default_project"
+        project_id = f"test-project-{uuid.uuid4().hex[:8]}"
         git_branch_name = "main"
         user_id = "default_id"
         git_branch_id = str(uuid.uuid4())
         
         try:
-            # Ensure database is initialized
-            from fastmcp.task_management.infrastructure.database.database_initializer import initialize_database
-            initialize_database(db_path)
+            # Use database-agnostic approach with SQLAlchemy
+            db_config = get_db_config()
             
-            with sqlite3.connect(db_path) as conn:
-                # Create project record
-                conn.execute(
-                    'INSERT OR REPLACE INTO projects (id, name, description, user_id) VALUES (?, ?, ?, ?)',
-                    (project_id, "Default Project", "Default project for testing", user_id)
-                )
+            with db_config.get_session() as session:
+                # Check if default project exists, if not create it
+                project = session.query(Project).filter_by(id="default_project").first()
+                if not project:
+                    project = Project(
+                        id="default_project",
+                        name="Default Project",
+                        description="Default project for testing",
+                        user_id=user_id,
+                        created_at=datetime.utcnow(),
+                        updated_at=datetime.utcnow()
+                    )
+                    session.add(project)
+                    session.flush()
                 
                 # Create git branch (task tree) record
-                conn.execute(
-                    'INSERT OR REPLACE INTO project_git_branchs (id, project_id, name, description) VALUES (?, ?, ?, ?)',
-                    (git_branch_id, project_id, git_branch_name, "Main branch for testing")
+                git_branch = ProjectGitBranch(
+                    id=git_branch_id,
+                    project_id="default_project",
+                    name=git_branch_name,
+                    description="Main branch for testing",
+                    created_at=datetime.utcnow(),
+                    updated_at=datetime.utcnow()
                 )
+                session.add(git_branch)
+                session.commit()
                 
-                conn.commit()
-                print(f"DEBUG: Created git_branch_id: {git_branch_id} in database: {db_path}")
+                print(f"DEBUG: Created git_branch_id: {git_branch_id}")
                 
                 # Verify the branch was created
-                result = conn.execute(
-                    'SELECT id FROM project_git_branchs WHERE id = ?',
-                    (git_branch_id,)
-                ).fetchone()
-                if result:
-                    print(f"DEBUG: Verified git_branch_id exists: {result[0]}")
+                verify_branch = session.query(ProjectGitBranch).filter_by(id=git_branch_id).first()
+                if verify_branch:
+                    print(f"DEBUG: Verified git_branch_id exists: {verify_branch.id}")
                 else:
                     print(f"ERROR: git_branch_id {git_branch_id} was not found after creation!")
                     
@@ -133,13 +155,13 @@ class TestToolIssuesVerification:
             print(f"Warning: Could not set up test context: {e}")
             # Try to use an existing branch from the database
             try:
-                with sqlite3.connect(db_path) as conn:
-                    result = conn.execute(
-                        'SELECT id FROM project_git_branchs WHERE project_id = ? LIMIT 1',
-                        (project_id,)
-                    ).fetchone()
-                    if result:
-                        git_branch_id = result[0]
+                db_config = get_db_config()
+                with db_config.get_session() as session:
+                    existing_branch = session.query(ProjectGitBranch).filter_by(
+                        project_id="default_project"
+                    ).first()
+                    if existing_branch:
+                        git_branch_id = existing_branch.id
                         print(f"DEBUG: Using existing git_branch_id: {git_branch_id}")
             except Exception as e2:
                 print(f"ERROR: Could not find existing git branch: {e2}")
@@ -147,7 +169,7 @@ class TestToolIssuesVerification:
         
         return {
             "git_branch_id": git_branch_id,
-            "project_id": project_id,
+            "project_id": "default_project",
             "git_branch_name": git_branch_name,
             "user_id": user_id
         }

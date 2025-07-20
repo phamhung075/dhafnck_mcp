@@ -1212,8 +1212,7 @@ class UnifiedContextService:
                 context_data = self._build_default_context_data(
                     level=level,
                     context_id=context_id,
-                    base_data={},
-                    user_id=user_id,
+                    data={},
                     project_id=project_id,
                     git_branch_id=git_branch_id
                 )

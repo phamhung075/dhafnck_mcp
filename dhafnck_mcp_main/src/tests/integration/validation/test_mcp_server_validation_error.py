@@ -12,7 +12,7 @@ import json
 
 # Try to import FastMCP server components
 try:
-    from src.fastmcp.server.server import FastMCP
+    from fastmcp.server.server import FastMCP
     HAS_FASTMCP = True
 except ImportError:
     HAS_FASTMCP = False
@@ -20,12 +20,28 @@ except ImportError:
 
 @pytest.mark.skipif(not HAS_FASTMCP, reason="FastMCP not available")
 class TestMCPServerValidation:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test MCP server level validation."""
     
     def test_mcp_tool_registration_with_limit_parameter(self):
         """Test how the manage_task tool is registered with limit parameter."""
-        from src.fastmcp.task_management.interface.controllers.task_mcp_controller import TaskMCPController
-        from src.fastmcp.task_management.application.factories.task_facade_factory import TaskFacadeFactory
+        from fastmcp.task_management.interface.controllers.task_mcp_controller import TaskMCPController
+        from fastmcp.task_management.application.factories.task_facade_factory import TaskFacadeFactory
         
         # Create mock dependencies
         mock_facade_factory = Mock(spec=TaskFacadeFactory)
@@ -71,11 +87,27 @@ class TestMCPServerValidation:
 
 
 class TestDirectParameterValidation:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test parameter validation at different levels."""
     
     def test_dto_creation_with_string_limit(self):
         """Test creating ListTasksRequest with string limit."""
-        from src.fastmcp.task_management.application.dtos.task.list_tasks_request import ListTasksRequest
+        from fastmcp.task_management.application.dtos.task.list_tasks_request import ListTasksRequest
         
         # Try to create DTO with string limit
         try:

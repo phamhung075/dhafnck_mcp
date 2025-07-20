@@ -1,7 +1,8 @@
 tdd:
   description: "Complete test-driven development workflow for verifiable changes"
   prompt: |
-    I want to implement a feature using Test-Driven Development (TDD). Follow this exact workflow:
+    I want to implement a feature using Test-Driven Development (TDD). 
+    Call task_planning_agent to make task and subtask follow this exact workflow:
 
     **Phase 1: Write Tests First**
     - Write comprehensive tests based on the expected input/output pairs I'll provide

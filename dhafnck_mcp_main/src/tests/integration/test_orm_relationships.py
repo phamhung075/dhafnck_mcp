@@ -342,8 +342,7 @@ class TestORMRelationships:
             branch_standards={},
             agent_assignments={},
             local_overrides={},
-            delegation_rules={}
-        )
+            delegation_rules={})
         
         task_context = TaskContext(
             task_id=task.id,
@@ -352,7 +351,7 @@ class TestORMRelationships:
             task_data={"task_setting": "value"},
             local_overrides={},
             implementation_notes={},
-            delegation_triggers={}
+            delegation_triggers={},
         )
         
         self.session.add_all([global_context, project_context, branch_context, task_context])

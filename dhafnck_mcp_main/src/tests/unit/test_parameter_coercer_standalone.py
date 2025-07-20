@@ -12,6 +12,22 @@ from fastmcp.task_management.interface.utils.parameter_validation_fix import Par
 
 
 class TestParameterTypeCoercerStandalone:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Standalone tests for the ParameterTypeCoercer boolean parameter fix."""
     
     def test_context_boolean_parameters_included(self):

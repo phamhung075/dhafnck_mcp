@@ -125,7 +125,7 @@ class ComprehensiveE2ETestSuite:
             await self.cleanup_test_environment()
             self.print_comprehensive_test_summary()
     
-    async def test_phase_1_docker_infrastructure(self):
+    def test_phase_1_docker_infrastructure(self):
         """Phase 1: Test Docker Infrastructure"""
         print("\n🐳 Phase 1: Docker Infrastructure Testing")
         print("-" * 50)
@@ -133,7 +133,7 @@ class ComprehensiveE2ETestSuite:
         try:
             # Test 1.1: Docker Image Build
             print("🏗️ Test 1.1: Building Docker Image")
-            build_result, build_time = await self.performance_monitor.measure_response_time(
+            build_result, build_time = self.performance_monitor.measure_response_time(
                 self.docker_manager.build_test_image, force_rebuild=False
             )
             
@@ -145,7 +145,7 @@ class ComprehensiveE2ETestSuite:
             
             # Test 1.2: Container Deployment
             print("🚀 Test 1.2: Container Deployment")
-            deploy_result, deploy_time = await self.performance_monitor.measure_response_time(
+            deploy_result, deploy_time = self.performance_monitor.measure_response_time(
                 self.docker_manager.start_test_container,
                 container_name=self.container_name,
                 ports=None,  # Let docker manager find a free port
@@ -171,7 +171,7 @@ class ComprehensiveE2ETestSuite:
             
             # Test 1.3: Container Health Check
             print("🩺 Test 1.3: Container Health Verification")
-            health_result, health_time = await self.performance_monitor.measure_response_time(
+            health_result, health_time = self.performance_monitor.measure_response_time(
                 self.docker_manager.test_container_health,
                 self.container_name
             )
@@ -202,7 +202,7 @@ class ComprehensiveE2ETestSuite:
             })
             raise
     
-    async def test_phase_2_mcp_server_functionality(self):
+    def test_phase_2_mcp_server_functionality(self):
         """Phase 2: Test MCP Server Core Functionality"""
         print("\n🖥️ Phase 2: MCP Server Functionality Testing")
         print("-" * 50)
@@ -210,7 +210,7 @@ class ComprehensiveE2ETestSuite:
         try:
             # Test 2.1: MCP Endpoint Accessibility
             print("🔗 Test 2.1: MCP Endpoint Accessibility")
-            mcp_result, mcp_time = await self.performance_monitor.measure_response_time(
+            mcp_result, mcp_time = self.performance_monitor.measure_response_time(
                 self.docker_manager.test_mcp_functionality
             )
             
@@ -267,7 +267,7 @@ class ComprehensiveE2ETestSuite:
             headers_with_session["mcp-session-id"] = session_id
             
             # Give the server a moment to complete initialization
-            await asyncio.sleep(0.1)
+            asyncio.sleep(0.1)
             
             # Now make the tool discovery call
             tools_response = requests.post(
@@ -325,7 +325,7 @@ class ComprehensiveE2ETestSuite:
             })
             raise
     
-    async def test_phase_3_user_authentication(self):
+    def test_phase_3_user_authentication(self):
         """Phase 3: Test User Authentication Flow (Simulated)"""
         print("\n🔐 Phase 3: User Authentication Flow Testing")
         print("-" * 50)
@@ -381,7 +381,7 @@ class ComprehensiveE2ETestSuite:
             })
             # Don't raise here since this is simulated
     
-    async def test_phase_4_token_management(self):
+    def test_phase_4_token_management(self):
         """Phase 4: Test Token Management"""
         print("\n🎫 Phase 4: Token Management Testing")
         print("-" * 50)
@@ -447,7 +447,7 @@ class ComprehensiveE2ETestSuite:
                 "error": str(e)
             })
     
-    async def test_phase_5_cursor_integration(self):
+    def test_phase_5_cursor_integration(self):
         """Phase 5: Test Cursor MCP Integration"""
         print("\n📝 Phase 5: Cursor MCP Integration Testing")
         print("-" * 50)
@@ -562,7 +562,7 @@ class ComprehensiveE2ETestSuite:
                 "error": str(e)
             })
     
-    async def test_phase_6_performance_validation(self):
+    def test_phase_6_performance_validation(self):
         """Phase 6: Test Performance Validation"""
         print("\n⚡ Phase 6: Performance Validation Testing")
         print("-" * 50)
@@ -675,7 +675,7 @@ class ComprehensiveE2ETestSuite:
                 "error": str(e)
             })
     
-    async def test_phase_7_security_testing(self):
+    def test_phase_7_security_testing(self):
         """Phase 7: Test Security Measures"""
         print("\n🛡️ Phase 7: Security Testing")
         print("-" * 50)
@@ -747,7 +747,7 @@ class ComprehensiveE2ETestSuite:
                 "error": str(e)
             })
     
-    async def test_phase_8_error_handling(self):
+    def test_phase_8_error_handling(self):
         """Phase 8: Test Error Handling & Edge Cases"""
         print("\n🚨 Phase 8: Error Handling & Edge Cases")
         print("-" * 50)
@@ -849,7 +849,7 @@ class ComprehensiveE2ETestSuite:
                 "error": str(e)
             })
     
-    async def test_phase_9_data_persistence(self):
+    def test_phase_9_data_persistence(self):
         """Phase 9: Test Data Persistence"""
         print("\n💾 Phase 9: Data Persistence Testing")
         print("-" * 50)
@@ -889,7 +889,7 @@ class ComprehensiveE2ETestSuite:
             # Test 9.2: Container Restart
             print("🔄 Test 9.2: Container Restart Testing")
             
-            restart_result, restart_time = await self.performance_monitor.measure_response_time(
+            restart_result, restart_time = self.performance_monitor.measure_response_time(
                 self.docker_manager.restart_test_container,
                 self.container_name
             )
@@ -903,7 +903,7 @@ class ComprehensiveE2ETestSuite:
             print("🔍 Test 9.3: Data Persistence Verification")
             
             # Wait a moment for the container to be fully ready
-            await asyncio.sleep(5)
+            asyncio.sleep(5)
             
             list_projects_response = requests.post(
                 f"{self.get_base_url()}/mcp/call",

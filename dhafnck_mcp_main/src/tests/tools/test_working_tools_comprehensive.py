@@ -27,10 +27,10 @@ class ToolTester:
         self.client = client
         self.results = {}
         
-    async def test_tool(self, tool_name: str, test_name: str, arguments: Dict[str, Any]) -> Tuple[bool, str]:
+    def test_tool(self, tool_name: str, test_name: str, arguments: Dict[str, Any]) -> Tuple[bool, str]:
         """Test a single tool call and return success status and details"""
         try:
-            response = await self.client.post(
+            response = self.client.post(
                 self.base_url,
                 json={
                     "jsonrpc": "2.0",
@@ -100,7 +100,7 @@ class ToolTester:
         # Print summary
         self.print_summary()
     
-    async def test_task_management(self):
+    def test_task_management(self):
         """Test manage_task tool with various actions"""
         print("\n=== Testing Task Management ===")
         
@@ -153,12 +153,12 @@ class ToolTester:
         ]
         
         for test_name, args in tests:
-            success, details = await self.test_tool("manage_task", test_name, args)
+            success, details = self.test_tool("manage_task", test_name, args)
             self.results[f"manage_task_{test_name}"] = (success, details)
             status = "✅" if success else "❌"
             print(f"{status} {test_name}: {details[:100]}...")
     
-    async def test_subtask_management(self):
+    def test_subtask_management(self):
         """Test manage_subtask tool"""
         print("\n=== Testing Subtask Management ===")
         
@@ -195,12 +195,12 @@ class ToolTester:
         ]
         
         for test_name, args in tests:
-            success, details = await self.test_tool("manage_subtask", test_name, args)
+            success, details = self.test_tool("manage_subtask", test_name, args)
             self.results[f"manage_subtask_{test_name}"] = (success, details)
             status = "✅" if success else "❌"
             print(f"{status} {test_name}: {details[:100]}...")
     
-    async def test_context_management(self):
+    def test_context_management(self):
         """Test manage_context tool"""
         print("\n=== Testing Context Management ===")
         
@@ -244,12 +244,12 @@ class ToolTester:
         ]
         
         for test_name, args in tests:
-            success, details = await self.test_tool("manage_context", test_name, args)
+            success, details = self.test_tool("manage_context", test_name, args)
             self.results[f"manage_context_{test_name}"] = (success, details)
             status = "✅" if success else "❌"
             print(f"{status} {test_name}: {details[:100]}...")
     
-    async def test_project_management(self):
+    def test_project_management(self):
         """Test manage_project tool"""
         print("\n=== Testing Project Management ===")
         
@@ -281,12 +281,12 @@ class ToolTester:
         ]
         
         for test_name, args in tests:
-            success, details = await self.test_tool("manage_project", test_name, args)
+            success, details = self.test_tool("manage_project", test_name, args)
             self.results[f"manage_project_{test_name}"] = (success, details)
             status = "✅" if success else "❌"
             print(f"{status} {test_name}: {details[:100]}...")
     
-    async def test_agent_management(self):
+    def test_agent_management(self):
         """Test manage_agent tool"""
         print("\n=== Testing Agent Management ===")
         
@@ -315,12 +315,12 @@ class ToolTester:
         ]
         
         for test_name, args in tests:
-            success, details = await self.test_tool("manage_agent", test_name, args)
+            success, details = self.test_tool("manage_agent", test_name, args)
             self.results[f"manage_agent_{test_name}"] = (success, details)
             status = "✅" if success else "❌"
             print(f"{status} {test_name}: {details[:100]}...")
     
-    async def test_connection_management(self):
+    def test_connection_management(self):
         """Test manage_connection tool"""
         print("\n=== Testing Connection Management ===")
         
@@ -347,12 +347,12 @@ class ToolTester:
         ]
         
         for test_name, args in tests:
-            success, details = await self.test_tool("manage_connection", test_name, args)
+            success, details = self.test_tool("manage_connection", test_name, args)
             self.results[f"manage_connection_{test_name}"] = (success, details)
             status = "✅" if success else "❌"
             print(f"{status} {test_name}: {details[:100]}...")
     
-    async def test_compliance_management(self):
+    def test_compliance_management(self):
         """Test manage_compliance tool"""
         print("\n=== Testing Compliance Management ===")
         
@@ -377,7 +377,7 @@ class ToolTester:
         ]
         
         for test_name, args in tests:
-            success, details = await self.test_tool("manage_compliance", test_name, args)
+            success, details = self.test_tool("manage_compliance", test_name, args)
             self.results[f"manage_compliance_{test_name}"] = (success, details)
             status = "✅" if success else "❌"
             print(f"{status} {test_name}: {details[:100]}...")

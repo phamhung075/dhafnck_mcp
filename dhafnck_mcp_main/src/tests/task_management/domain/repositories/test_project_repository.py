@@ -6,13 +6,13 @@ import asyncio
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
 
-from src.fastmcp.task_management.domain.repositories.project_repository import ProjectRepository
-from src.fastmcp.task_management.domain.entities.project import Project
-from src.fastmcp.task_management.domain.entities.agent import Agent, AgentCapability, AgentStatus
-from src.fastmcp.task_management.domain.entities.task import Task
-from src.fastmcp.task_management.domain.value_objects.task_id import TaskId
-from src.fastmcp.task_management.domain.value_objects.task_status import TaskStatus
-from src.fastmcp.task_management.domain.value_objects.priority import Priority
+from fastmcp.task_management.domain.repositories.project_repository import ProjectRepository
+from fastmcp.task_management.domain.entities.project import Project
+from fastmcp.task_management.domain.entities.agent import Agent, AgentCapability, AgentStatus
+from fastmcp.task_management.domain.entities.task import Task
+from fastmcp.task_management.domain.value_objects.task_id import TaskId
+from fastmcp.task_management.domain.value_objects.task_status import TaskStatus
+from fastmcp.task_management.domain.value_objects.priority import Priority
 
 
 class MockProjectRepository(ProjectRepository):
@@ -113,6 +113,22 @@ class MockProjectRepository(ProjectRepository):
 
 
 class TestProjectRepositoryInterface:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test the ProjectRepository interface contract."""
     
     def test_repository_implements_all_abstract_methods(self):
@@ -140,6 +156,22 @@ class TestProjectRepositoryInterface:
 
 
 class TestProjectRepositorySaveOperation:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test repository save operations."""
     
     @pytest.mark.asyncio
@@ -175,6 +207,22 @@ class TestProjectRepositorySaveOperation:
 
 
 class TestProjectRepositoryFindOperations:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test repository find operations."""
     
     @pytest_asyncio.fixture
@@ -333,6 +381,22 @@ class TestProjectRepositoryFindOperations:
 
 
 class TestProjectRepositoryUpdateDeleteOperations:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test repository update and delete operations."""
     
     @pytest.mark.asyncio
@@ -392,6 +456,22 @@ class TestProjectRepositoryUpdateDeleteOperations:
 
 
 class TestProjectRepositoryUtilityOperations:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test repository utility operations."""
     
     @pytest.mark.asyncio
@@ -504,6 +584,22 @@ class TestProjectRepositoryUtilityOperations:
 
 
 class TestProjectRepositoryIntegration:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test repository integration scenarios."""
     
     @pytest.mark.asyncio

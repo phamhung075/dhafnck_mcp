@@ -25,6 +25,37 @@ from fastmcp.task_management.infrastructure.database.database_config import get_
 
 
 class TestContextResolutionDifferentiation:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                # Clean up in dependency order to avoid foreign key errors
+                session.execute(text("DELETE FROM task_contexts WHERE task_id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("""
+                    DELETE FROM branch_contexts 
+                    WHERE branch_id IN (
+                        SELECT id FROM project_git_branchs 
+                        WHERE project_id LIKE 'test-%' OR id LIKE 'test-%'
+                    )
+                """))
+                session.execute(text("DELETE FROM project_git_branchs WHERE project_id LIKE 'test-%' OR id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM project_contexts WHERE project_id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                
+                # Clean up any test global contexts (but preserve global_singleton)
+                session.execute(text("DELETE FROM global_contexts WHERE id LIKE 'test-%'"))
+                session.commit()
+            except Exception as e:
+                print(f"Cleanup error: {e}")
+                session.rollback()
+
     """Test suite for verifying correct context resolution by level."""
     
     def _get_manage_context_tool(self, controller):
@@ -65,9 +96,9 @@ class TestContextResolutionDifferentiation:
         
         # Create branch
         branch = ProjectGitBranch(
-            id="d4f91ee3-1f97-4768-b4ff-1e734180f874",  # The problematic ID from the issue
+            id=str(uuid.uuid4()),  # Use dynamic UUID instead of hardcoded
             project_id=project.id,
-            name="feature/auth-system",
+            name=f"test-feature-{uuid.uuid4().hex[:8]}",
             description="Authentication system feature branch",
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
@@ -89,18 +120,23 @@ class TestContextResolutionDifferentiation:
         
         # Create contexts at different levels
         # Global context
-        global_context = GlobalContext(
-            id="global_singleton",
-            organization_id="DhafnckMCP Corp",
-            autonomous_rules={},
-            security_policies={},
-            coding_standards={},
-            workflow_templates={},
-            delegation_rules={},
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
-        )
-        db_session.add(global_context)
+        # Check if global_singleton exists first
+        existing_global = db_session.query(GlobalContext).filter_by(id="global_singleton").first()
+        if existing_global:
+            global_context = existing_global
+        else:
+            global_context = GlobalContext(
+                id="global_singleton",
+                organization_id="DhafnckMCP Corp",
+                autonomous_rules={},
+                security_policies={},
+                coding_standards={},
+                workflow_templates={},
+                delegation_rules={},
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
+            )
+            db_session.add(global_context)
         
         # Project context
         project_context = ProjectContext(
@@ -112,6 +148,7 @@ class TestContextResolutionDifferentiation:
             global_overrides={},
             delegation_rules={},
             created_at=datetime.utcnow(),
+            version=1,
             updated_at=datetime.utcnow()
         )
         db_session.add(project_context)
@@ -126,8 +163,9 @@ class TestContextResolutionDifferentiation:
             agent_assignments={},
             local_overrides={},
             delegation_rules={},
+            updated_at=datetime.utcnow(),
             created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            version=1
         )
         db_session.add(branch_context)
         
@@ -141,6 +179,7 @@ class TestContextResolutionDifferentiation:
             implementation_notes={},
             delegation_triggers={},
             created_at=datetime.utcnow(),
+            version=1,
             updated_at=datetime.utcnow()
         )
         db_session.add(task_context)
@@ -183,7 +222,7 @@ class TestContextResolutionDifferentiation:
         resolved_context = result["data"]["resolved_context"]
         assert resolved_context["id"] == branch_id
         assert "branch_settings" in resolved_context
-        assert resolved_context["branch_settings"]["branch_standards"]["branch_name"] == "feature/auth-system"
+        assert resolved_context["branch_settings"]["branch_standards"]["branch_name"] == setup_test_data["branch"].name
     
     def test_resolve_task_context_with_task_level(self, setup_test_data, unified_context_controller):
         """Test that task ID is correctly resolved when level is 'task'."""

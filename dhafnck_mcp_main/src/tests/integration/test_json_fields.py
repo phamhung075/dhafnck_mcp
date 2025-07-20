@@ -178,8 +178,7 @@ class TestJSONFieldCompatibility:
             branch_standards={},
             agent_assignments={},
             local_overrides={},
-            delegation_rules={}
-        )
+            delegation_rules={})
         self.session.add(branch_context)
         self.session.commit()
         
@@ -228,9 +227,7 @@ class TestJSONFieldCompatibility:
             parent_branch_id=branch.id,
             parent_branch_context_id=branch.id,
             task_data=task_metadata,
-            local_overrides={},
-            implementation_notes={},
-            delegation_triggers={}
+
         )
         
         self.session.add(task_context)

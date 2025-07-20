@@ -9,6 +9,7 @@ Part of Fix for Issue #3: Automatic Context Updates for Task State Changes
 """
 
 import pytest
+import uuid
 import asyncio
 from unittest.mock import Mock, patch, MagicMock, AsyncMock
 from datetime import datetime

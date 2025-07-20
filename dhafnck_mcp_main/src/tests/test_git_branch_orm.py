@@ -11,12 +11,12 @@ from datetime import datetime, timezone
 from unittest.mock import Mock, patch
 from typing import Dict, Any, List
 
-from src.fastmcp.task_management.infrastructure.repositories.orm.git_branch_repository import ORMGitBranchRepository
-from src.fastmcp.task_management.infrastructure.database.models import ProjectGitBranch, Project
-from src.fastmcp.task_management.domain.entities.git_branch import GitBranch
-from src.fastmcp.task_management.domain.value_objects.task_status import TaskStatus
-from src.fastmcp.task_management.domain.value_objects.priority import Priority
-from src.fastmcp.task_management.domain.exceptions.base_exceptions import (
+from fastmcp.task_management.infrastructure.repositories.orm.git_branch_repository import ORMGitBranchRepository
+from fastmcp.task_management.infrastructure.database.models import ProjectGitBranch, Project
+from fastmcp.task_management.domain.entities.git_branch import GitBranch
+from fastmcp.task_management.domain.value_objects.task_status import TaskStatus
+from fastmcp.task_management.domain.value_objects.priority import Priority
+from fastmcp.task_management.domain.exceptions.base_exceptions import (
     DatabaseException,
     ResourceNotFoundException,
     ValidationException
@@ -74,6 +74,22 @@ def sample_model():
 
 
 class TestORMGitBranchRepository:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test cases for ORM Git Branch Repository"""
     
     def test_init(self):
@@ -501,6 +517,22 @@ class TestORMGitBranchRepository:
 
 
 class TestErrorHandling:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Test error handling in ORM Git Branch Repository"""
     
     @pytest.mark.asyncio
@@ -535,6 +567,22 @@ class TestErrorHandling:
 
 
 class TestIntegrationScenarios:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
     """Integration test scenarios for common workflows"""
     
     @pytest.mark.asyncio

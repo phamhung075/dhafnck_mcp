@@ -66,7 +66,7 @@ class WorkingToolsTester:
         except json.JSONDecodeError as e:
             return None, f"JSON decode error: {e}"
     
-    async def test_manage_connection(self):
+    def test_manage_connection(self):
         """Test manage_connection tool thoroughly"""
         print("\n=== Testing manage_connection (should work) ===")
         
@@ -81,18 +81,18 @@ class WorkingToolsTester:
         ]
         
         for test_name, args in tests:
-            result, error = await self.call_tool("manage_connection", args)
+            result, error = self.call_tool("manage_connection", args)
             success = result is not None
             self.results[f"manage_connection.{test_name}"] = (success, error or "Success")
             status = "✅" if success else "❌"
             print(f"  {status} {test_name}: {error or 'Success'}")
     
-    async def test_manage_project(self):
+    def test_manage_project(self):
         """Test manage_project tool thoroughly"""
         print("\n=== Testing manage_project ===")
         
         # Test list first
-        result, error = await self.call_tool("manage_project", {"action": "list"})
+        result, error = self.call_tool("manage_project", {"action": "list"})
         success = result is not None
         self.results["manage_project.list"] = (success, error or "Success")
         print(f"  {'✅' if success else '❌'} list: {error or 'Success'}")
@@ -100,7 +100,7 @@ class WorkingToolsTester:
         if success:
             # Create a test project
             project_id = f"test-project-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-            result, error = await self.call_tool("manage_project", {
+            result, error = self.call_tool("manage_project", {
                 "action": "create",
                 "project_id": project_id,
                 "name": "Test Project",
@@ -114,7 +114,7 @@ class WorkingToolsTester:
                 self.created_resources.append(("project", project_id))
                 
                 # Test get project
-                result, error = await self.call_tool("manage_project", {
+                result, error = self.call_tool("manage_project", {
                     "action": "get",
                     "project_id": project_id
                 })
@@ -123,7 +123,7 @@ class WorkingToolsTester:
                 print(f"  {'✅' if success else '❌'} get: {error or 'Success'}")
                 
                 # Test update project
-                result, error = await self.call_tool("manage_project", {
+                result, error = self.call_tool("manage_project", {
                     "action": "update",
                     "project_id": project_id,
                     "name": "Updated Test Project",
@@ -133,7 +133,7 @@ class WorkingToolsTester:
                 self.results["manage_project.update"] = (success, error or "Success")
                 print(f"  {'✅' if success else '❌'} update: {error or 'Success'}")
     
-    async def test_manage_task(self):
+    def test_manage_task(self):
         """Test manage_task tool thoroughly"""
         print("\n=== Testing manage_task ===")
         
@@ -145,14 +145,14 @@ class WorkingToolsTester:
         ]
         
         for test_name, args in basic_tests:
-            result, error = await self.call_tool("manage_task", args)
+            result, error = self.call_tool("manage_task", args)
             success = result is not None
             self.results[f"manage_task.{test_name}"] = (success, error or "Success")
             print(f"  {'✅' if success else '❌'} {test_name}: {error or 'Success'}")
         
         # Create a test task
         task_title = f"Test Task {datetime.now().strftime('%Y%m%d%H%M%S')}"
-        result, error = await self.call_tool("manage_task", {
+        result, error = self.call_tool("manage_task", {
             "action": "create",
             "title": task_title,
             "description": "Created by test suite",
@@ -168,7 +168,7 @@ class WorkingToolsTester:
             self.created_resources.append(("task", task_id))
             
             # Test get task
-            result, error = await self.call_tool("manage_task", {
+            result, error = self.call_tool("manage_task", {
                 "action": "get",
                 "task_id": task_id
             })
@@ -177,7 +177,7 @@ class WorkingToolsTester:
             print(f"  {'✅' if success else '❌'} get: {error or 'Success'}")
             
             # Test update task
-            result, error = await self.call_tool("manage_task", {
+            result, error = self.call_tool("manage_task", {
                 "action": "update",
                 "task_id": task_id,
                 "title": f"Updated {task_title}",
@@ -188,7 +188,7 @@ class WorkingToolsTester:
             print(f"  {'✅' if success else '❌'} update: {error or 'Success'}")
             
             # Test complete task
-            result, error = await self.call_tool("manage_task", {
+            result, error = self.call_tool("manage_task", {
                 "action": "complete",
                 "task_id": task_id
             })
@@ -196,12 +196,12 @@ class WorkingToolsTester:
             self.results["manage_task.complete"] = (success, error or "Success")
             print(f"  {'✅' if success else '❌'} complete: {error or 'Success'}")
     
-    async def test_manage_context(self):
+    def test_manage_context(self):
         """Test manage_context tool thoroughly"""
         print("\n=== Testing manage_context ===")
         
         # Test list first
-        result, error = await self.call_tool("manage_context", {
+        result, error = self.call_tool("manage_context", {
             "action": "list",
             "user_id": "test-user"
         })
@@ -211,7 +211,7 @@ class WorkingToolsTester:
         
         # Create a test context
         test_task_id = f"test-task-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-        result, error = await self.call_tool("manage_context", {
+        result, error = self.call_tool("manage_context", {
             "action": "create",
             "task_id": test_task_id,
             "user_id": "test-user",
@@ -228,7 +228,7 @@ class WorkingToolsTester:
             self.created_resources.append(("context", test_task_id))
             
             # Test get context
-            result, error = await self.call_tool("manage_context", {
+            result, error = self.call_tool("manage_context", {
                 "action": "get",
                 "task_id": test_task_id,
                 "user_id": "test-user"
@@ -238,7 +238,7 @@ class WorkingToolsTester:
             print(f"  {'✅' if success else '❌'} get: {error or 'Success'}")
             
             # Test update context
-            result, error = await self.call_tool("manage_context", {
+            result, error = self.call_tool("manage_context", {
                 "action": "update",
                 "task_id": test_task_id,
                 "user_id": "test-user",
@@ -252,7 +252,7 @@ class WorkingToolsTester:
             print(f"  {'✅' if success else '❌'} update: {error or 'Success'}")
             
             # Test update_property with simple value
-            result, error = await self.call_tool("manage_context", {
+            result, error = self.call_tool("manage_context", {
                 "action": "update_property",
                 "task_id": test_task_id,
                 "user_id": "test-user",
@@ -263,7 +263,7 @@ class WorkingToolsTester:
             self.results["manage_context.update_property"] = (success, error or "Success")
             print(f"  {'✅' if success else '❌'} update_property: {error or 'Success'}")
     
-    async def test_manage_compliance(self):
+    def test_manage_compliance(self):
         """Test manage_compliance tool thoroughly"""
         print("\n=== Testing manage_compliance ===")
         
@@ -284,7 +284,7 @@ class WorkingToolsTester:
         ]
         
         for test_name, args in tests:
-            result, error = await self.call_tool("manage_compliance", args)
+            result, error = self.call_tool("manage_compliance", args)
             success = result is not None
             self.results[f"manage_compliance.{test_name}"] = (success, error or "Success")
             print(f"  {'✅' if success else '❌'} {test_name}: {error or 'Success'}")
