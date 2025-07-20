@@ -13,6 +13,9 @@ TEST_DIR="$(dirname "$0")"
 FAILED_TESTS=0
 TOTAL_TESTS=0
 
+# Source test framework for cleanup functions
+source "$TEST_DIR/test_framework.sh" 2>/dev/null || true
+
 echo -e "${BLUE}================================${NC}"
 echo -e "${BLUE}Docker CLI System Test Suite${NC}"
 echo -e "${BLUE}================================${NC}"
@@ -47,6 +50,14 @@ echo -e "${BLUE}================================${NC}"
 echo "Total test suites: $TOTAL_TESTS"
 echo -e "Passed: ${GREEN}$((TOTAL_TESTS - FAILED_TESTS))${NC}"
 echo -e "Failed: ${RED}$FAILED_TESTS${NC}"
+
+# Cleanup test artifacts unless skipped
+if [[ "${SKIP_TEST_CLEANUP:-}" != "true" ]]; then
+    echo -e "\n${BLUE}Cleaning up test artifacts...${NC}"
+    cleanup_test_artifacts 2>/dev/null || true
+    cleanup_docker_logs 2>/dev/null || true
+    cleanup_test_env 2>/dev/null || true
+fi
 
 # Exit with appropriate code
 if [[ $FAILED_TESTS -gt 0 ]]; then

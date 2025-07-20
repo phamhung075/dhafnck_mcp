@@ -32,6 +32,7 @@ help:
 test: permissions
 	@echo -e "$(BLUE)Running all tests...$(NC)"
 	@bash $(TEST_DIR)/run_all_tests.sh
+	@$(MAKE) clean-test-artifacts
 
 ## test-unit: Run unit tests only
 test-unit: permissions
@@ -98,13 +99,25 @@ permissions:
 	@chmod +x $(LIB_DIR)/*.sh 2>/dev/null || true
 	@echo -e "$(GREEN)Permissions updated$(NC)"
 
-## clean: Clean test artifacts
-clean:
-	@echo -e "$(BLUE)Cleaning test artifacts...$(NC)"
-	@rm -rf /tmp/docker-cli-test-mocks
+## clean: Clean all test artifacts and temporary files
+clean: clean-test-artifacts
+	@echo -e "$(BLUE)Cleaning additional artifacts...$(NC)"
 	@rm -f $(TEST_DIR)/*.log
 	@rm -f .coverage
-	@echo -e "$(GREEN)Cleaned$(NC)"
+	@rm -rf test-temp test-dir concurrent-test test-perf test-artifacts
+	@rm -f test-output.log test-file.txt .test-config
+	@echo -e "$(GREEN)All cleaned$(NC)"
+
+## clean-test-artifacts: Clean test-generated files
+clean-test-artifacts:
+	@echo -e "$(BLUE)Cleaning test artifacts...$(NC)"
+	@rm -rf /tmp/docker-cli-test-mocks
+	@rm -rf test-temp test-dir concurrent-test test-perf test-artifacts 2>/dev/null || true
+	@rm -f test-output.log test-file.txt .test-config 2>/dev/null || true
+	@rm -rf backups 2>/dev/null || true
+	@rm -rf test-restricted 2>/dev/null || true
+	@find . -name "*.calls" -delete 2>/dev/null || true
+	@echo -e "$(GREEN)Test artifacts cleaned$(NC)"
 
 ## install: Install test dependencies
 install:

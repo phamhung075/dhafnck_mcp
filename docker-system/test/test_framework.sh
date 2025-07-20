@@ -31,8 +31,120 @@ init_test_env() {
 
 # Cleanup test environment
 cleanup_test_env() {
+    # Skip cleanup if configured
+    if [[ "${SKIP_TEST_CLEANUP:-}" == "true" ]]; then
+        return 0
+    fi
+    
     rm -rf "$MOCK_DIR"
     unset DOCKER_CLI_TEST_MODE
+}
+
+# Cleanup test artifacts
+cleanup_test_artifacts() {
+    # Skip cleanup if configured
+    if [[ "${SKIP_TEST_CLEANUP:-}" == "true" ]]; then
+        return 0
+    fi
+    
+    # Remove test-related directories and files
+    rm -rf test-temp test-dir concurrent-test test-perf test-artifacts 2>/dev/null || true
+    rm -f test-output.log test-file.txt .test-config 2>/dev/null || true
+    
+    # Remove test backups directory if it exists
+    if [[ -d "backups" ]] && [[ -z "$(ls -A backups 2>/dev/null)" ]]; then
+        rmdir backups 2>/dev/null || true
+    elif [[ -d "backups" ]]; then
+        # Only remove test backup files
+        rm -f backups/test-*.tar.gz backups/backup_*.tar.gz 2>/dev/null || true
+        # Remove directory if now empty
+        rmdir backups 2>/dev/null || true
+    fi
+    
+    # Handle permission errors gracefully
+    if [[ -d "test-restricted" ]]; then
+        if ! chmod -R 755 "test-restricted" 2>/dev/null; then
+            echo "Warning: Could not change permissions on test-restricted" >&2
+            echo "Warning: Could not change permissions on test-restricted"
+        fi
+        if ! rm -rf "test-restricted" 2>/dev/null; then
+            echo "Warning: Could not remove test-restricted" >&2
+            echo "Warning: Could not remove test-restricted"
+        fi
+    fi
+    
+    return 0
+}
+
+# Cleanup docker logs
+cleanup_docker_logs() {
+    # Skip cleanup if configured
+    if [[ "${SKIP_TEST_CLEANUP:-}" == "true" ]]; then
+        return 0
+    fi
+    
+    if [[ -d "$MOCK_DIR" ]]; then
+        rm -f "$MOCK_DIR"/*.calls 2>/dev/null || true
+    fi
+    
+    return 0
+}
+
+# Cleanup with summary
+cleanup_with_summary() {
+    local items_cleaned=0
+    
+    echo "Cleanup Summary"
+    echo "==============="
+    
+    # Clean mock directory
+    if [[ -d "$MOCK_DIR" ]]; then
+        cleanup_test_env
+        echo "Mock directory: removed"
+        ((items_cleaned++))
+    fi
+    
+    # Clean test artifacts
+    local artifact_count=0
+    for item in test-temp test-dir test-output.log test-file.txt backups; do
+        if [[ -e "$item" ]]; then
+            ((artifact_count++))
+        fi
+    done
+    
+    if [[ $artifact_count -gt 0 ]]; then
+        cleanup_test_artifacts
+        echo "Test artifacts: removed ($artifact_count items)"
+        ((items_cleaned += artifact_count))
+    fi
+    
+    # Clean docker logs
+    if [[ -d "$MOCK_DIR" ]] && ls "$MOCK_DIR"/*.calls &>/dev/null; then
+        cleanup_docker_logs
+        echo "Docker logs: removed"
+        ((items_cleaned++))
+    fi
+    
+    echo "Total items cleaned: $items_cleaned"
+}
+
+# Cleanup hook management
+declare -a CLEANUP_HOOKS=()
+
+add_cleanup_hook() {
+    local hook_name="$1"
+    CLEANUP_HOOKS+=("$hook_name")
+}
+
+execute_cleanup_hooks() {
+    for hook in "${CLEANUP_HOOKS[@]}"; do
+        if declare -f "$hook" >/dev/null; then
+            "$hook"
+        fi
+    done
+    
+    # Clear hooks after execution
+    CLEANUP_HOOKS=()
 }
 
 # Test suite functions
@@ -104,6 +216,40 @@ assert_file_exists() {
         pass_test
     else
         fail_test "$message\n    File not found: '$file'"
+    fi
+}
+
+assert_exists() {
+    local path="$1"
+    local message="${2:-Path should exist}"
+    
+    if [[ -e "$path" ]]; then
+        pass_test
+    else
+        fail_test "$message\n    Path: '$path'"
+    fi
+}
+
+assert_not_exists() {
+    local path="$1"
+    local message="${2:-Path should not exist}"
+    
+    if [[ ! -e "$path" ]]; then
+        pass_test
+    else
+        fail_test "$message\n    Path: '$path'"
+    fi
+}
+
+assert_less_than() {
+    local actual="$1"
+    local expected="$2"
+    local message="${3:-Value should be less than expected}"
+    
+    if [[ "$actual" -lt "$expected" ]]; then
+        pass_test
+    else
+        fail_test "$message\n    Actual: '$actual'\n    Should be less than: '$expected'"
     fi
 }
 
@@ -362,17 +508,36 @@ run_tests() {
     
     # Run all test functions
     for func in $(declare -F | grep "^declare -f test_" | awk '{print $3}'); do
-        # Clear mock calls
-        rm -f "$MOCK_DIR"/*.calls
+        # Clear mock calls before test
+        rm -f "$MOCK_DIR"/*.calls 2>/dev/null || true
         
         # Run test
         $func
+        
+        # Cleanup after each test
+        cleanup_test_artifacts
+        cleanup_docker_logs
     done
     
+    # Final cleanup
     cleanup_test_env
+    cleanup_test_artifacts
+    
+    # Execute any registered cleanup hooks
+    execute_cleanup_hooks
     
     # Show summary
     show_test_summary
+}
+
+# Run tests with cleanup option
+run_tests_with_cleanup() {
+    run_tests
+    
+    # Additional cleanup if requested
+    if [[ "${THOROUGH_CLEANUP:-}" == "true" ]]; then
+        cleanup_with_summary
+    fi
 }
 
 show_test_summary() {
