@@ -57,7 +57,17 @@ show_monitoring_snapshot() {
     echo "-----------------"
     local services=("postgres" "redis" "backend" "frontend")
     for service in "${services[@]}"; do
-        local container="dhafnck-$service"
+        # Map service names to actual container names
+        local container
+        case "$service" in
+            backend)
+                container="dhafnck-mcp-server"
+                ;;
+            *)
+                container="dhafnck-$service"
+                ;;
+        esac
+        
         if docker ps --format '{{.Names}}' | grep -q "^$container$"; then
             local status=$(docker inspect "$container" 2>/dev/null | jq -r '.[0].State.Status' || echo "unknown")
             local health=$(docker inspect "$container" 2>/dev/null | jq -r '.[0].State.Health.Status // "none"' || echo "none")
@@ -137,7 +147,7 @@ show_monitoring_snapshot() {
     # Recent Logs
     echo "📜 RECENT LOGS (last 5 entries)"
     echo "-------------------------------"
-    docker logs dhafnck-backend --tail 5 2>&1 | sed 's/^/[Backend] /' || echo "No backend logs"
+    docker logs dhafnck-mcp-server --tail 5 2>&1 | sed 's/^/[Backend] /' || echo "No backend logs"
     echo ""
     
     # Disk Usage
@@ -149,7 +159,13 @@ show_monitoring_snapshot() {
     # Network
     echo "🌐 NETWORK STATUS"
     echo "-----------------"
-    local network_count=$(docker network inspect dhafnck-network -f '{{len .Containers}}' 2>/dev/null || echo "0")
+    # Try dhafnck-network first, then fall back to docker_default
+    local network_count="0"
+    if docker network inspect dhafnck-network -f '{{len .Containers}}' >/dev/null 2>&1; then
+        network_count=$(docker network inspect dhafnck-network -f '{{len .Containers}}' 2>/dev/null)
+    elif docker network inspect docker_default -f '{{len .Containers}}' >/dev/null 2>&1; then
+        network_count=$(docker network inspect docker_default -f '{{len .Containers}}' 2>/dev/null)
+    fi
     echo "Connected containers: $network_count"
 }
 
