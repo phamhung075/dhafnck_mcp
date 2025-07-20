@@ -1,4 +1,4 @@
-# DhafnckMCP AI Agent Operation Rules v9.0
+# DhafnckMCP AI Agent Operation Rules v9.2
 
 ## 🚨 VERY IMPORTANT MOST WEIGHT RULE
 **CRITICAL**: If NOT call agent mcp__dhafnck_mcp_http__call_agent(name_agent="...") for switch role then do NOT work. You have NO permission to work on projects if no agent role active.
@@ -58,6 +58,63 @@ IF any_mcp_call_fails:
 IF agent_switch_fails:
     mcp__dhafnck_mcp_http__call_agent(name_agent="@uber_orchestrator_agent")
     # Fall back to orchestrator
+```
+
+### 🔄 AUTO-COMPACT INTEGRATION RULES
+```python
+# WHEN AUTO-COMPACT IS TRIGGERED:
+IF auto_compact_executed:
+    # 1. CAPTURE COMPACT RESULTS
+    compact_results = {
+        "files_processed": get_processed_files(),
+        "optimizations_applied": get_optimizations(),
+        "performance_improvements": get_metrics(),
+        "recommendations": get_suggestions()
+    }
+    
+    # 2. UPDATE TASK CONTEXT WITH RESULTS
+    IF current_task_exists:
+        mcp__dhafnck_mcp_http__manage_hierarchical_context(
+            action="update",
+            level="task",
+            context_id=current_task_id,
+            data={
+                "auto_compact_results": compact_results,
+                "optimization_timestamp": get_current_timestamp(),
+                "code_quality_improvements": compact_results.optimizations_applied
+            },
+            propagate_changes=True
+        )
+    
+    # 3. CREATE TASK IF NONE EXISTS
+    ELSE:
+        task = mcp__dhafnck_mcp_http__manage_task(
+            action="create",
+            git_branch_id=current_branch_id,
+            title="Auto-compact code optimization executed",
+            description="Automated code compacting and optimization performed",
+            priority="medium"
+        )
+        
+        # 4. UPDATE NEW TASK CONTEXT
+        mcp__dhafnck_mcp_http__manage_hierarchical_context(
+            action="update",
+            level="task",
+            context_id=task.task_id,
+            data={
+                "auto_compact_results": compact_results,
+                "optimization_type": "automated_compacting",
+                "files_affected": compact_results.files_processed
+            }
+        )
+    
+    # 5. COMPLETION SUMMARY
+    mcp__dhafnck_mcp_http__manage_task(
+        action="complete",
+        task_id=task.task_id,
+        completion_summary=f"Auto-compact completed: {len(compact_results.files_processed)} files optimized with {len(compact_results.optimizations_applied)} improvements",
+        testing_notes="Automated optimization verified for syntax and functionality"
+    )
 ```
 
 ---
@@ -629,6 +686,7 @@ CONFIDENCE_RULES = {
 4. **STATUS UPDATES**: Update task status and progress regularly
 5. **COMPLETION DOCUMENTATION**: Provide detailed summaries and testing notes
 6. **PATTERN DELEGATION**: Share reusable insights for organizational learning
+7. **AUTO-COMPACT INTEGRATION**: When auto-compact is executed, MUST update related task context with results and create task if none exists
 
 ### PROHIBITED ACTIONS  
 1. Working without active appropriate agent role
@@ -644,8 +702,9 @@ CONFIDENCE_RULES = {
 2. CONTEXT: resolve_hierarchical_context
 3. WORK: get_next_task + switch_agent + update_status
 4. EXECUTE: work_with_progress_updates + context_updates
-5. COMPLETE: detailed_summary + testing_notes + delegate_patterns
-6. REPEAT: next_priority_task
+5. AUTO-COMPACT: if_triggered_update_context + create_task_if_needed
+6. COMPLETE: detailed_summary + testing_notes + delegate_patterns
+7. REPEAT: next_priority_task
 ```
 
 ## 📋 OPERATION TEMPLATES
@@ -835,7 +894,7 @@ def handle_operation_error(error, operation_context):
 
 ---
 
-**VERSION**: 9.1 - Enhanced AI Operation Rules with Templates & Recovery  
+**VERSION**: 9.2 - Enhanced AI Operation Rules with Auto-Compact Integration  
 **TARGET**: All AI agents (Claude, Cursor, Gemini, etc.)  
 **SYSTEM**: DhafnckMCP Multi-Project AI Orchestration Platform  
 **OPTIMIZATION**: Structured for maximum AI comprehension and execution
@@ -843,10 +902,17 @@ def handle_operation_error(error, operation_context):
 ## 🧠 MENTAL MODEL REINFORCEMENT
 
 Remember the 4-tier hierarchy: **GLOBAL → PROJECT → BRANCH → TASK**  
-Follow the pattern: **CONTEXT → AGENT → STATUS → WORK → UPDATE → VALIDATE → DELEGATE**  
+Follow the pattern: **CONTEXT → AGENT → STATUS → WORK → AUTO-COMPACT → UPDATE → VALIDATE → DELEGATE**  
 Think systematically: **Autonomous AI agent in enterprise orchestration platform**
 
-### 🔑 KEY UPDATES v9.1
+### 🔑 KEY UPDATES v9.2
+- **Auto-Compact Integration**: Mandatory context updates when auto-compact is executed
+- **Automated Task Creation**: Create tasks for auto-compact operations when none exist
+- **Result Tracking**: Capture and document optimization results in task context
+- **Performance Monitoring**: Track code quality improvements from auto-compact
+- **Context Propagation**: Share optimization insights across task hierarchy
+
+### 🔑 PREVIOUS UPDATES v9.1
 - **4-Tier Context Hierarchy**: Now includes BRANCH level between PROJECT and TASK
 - **Backward Compatibility**: `manage_context` internally uses hierarchical system
 - **Enhanced Delegation**: Share patterns from task → branch → project → global

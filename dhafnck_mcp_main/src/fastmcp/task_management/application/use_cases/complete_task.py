@@ -307,15 +307,25 @@ class CompleteTaskUseCase:
                         git_branch_id=git_branch_id
                     )
                     
-                    # Update context with completion summary
+                    # Update context with completion summary using correct ContextProgress schema
+                    # ContextProgress fields: current_session_summary, completion_percentage, next_steps, completed_actions, time_spent_minutes
                     context_update = {
                         "progress": {
-                            "completion_summary": completion_summary,
-                            "testing_notes": testing_notes,
-                            "next_recommendations": next_recommendations,
-                            "completion_percentage": 100.0
+                            "current_session_summary": completion_summary,
+                            "completion_percentage": 100.0,
+                            "next_steps": next_recommendations if next_recommendations else [],
+                            "completed_actions": []  # Could be populated with task completion action
+                        },
+                        "metadata": {
+                            "status": "done"  # Synchronize context status with task status
                         }
                     }
+                    
+                    # Add testing notes to next_steps if provided
+                    if testing_notes:
+                        if "next_steps" not in context_update["progress"]:
+                            context_update["progress"]["next_steps"] = []
+                        context_update["progress"]["next_steps"].append(f"Testing completed: {testing_notes}")
                     
                     # Update task context with completion summary
                     unified_facade.update_context(
