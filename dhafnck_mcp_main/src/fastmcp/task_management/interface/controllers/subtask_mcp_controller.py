@@ -671,6 +671,10 @@ class SubtaskMCPController:
                 }
             )
             
+            if result.get("success"):
+                # IMPORTANT: Preserve the original "complete" action in the response
+                result["action"] = "complete"
+                
             if result.get("success") and self._context_facade:
                 # Build comprehensive completion context
                 completion_context = self._build_completion_context(
