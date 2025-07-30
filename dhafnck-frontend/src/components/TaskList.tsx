@@ -286,10 +286,27 @@ const TaskList: React.FC<TaskListProps> = ({ projectId, taskTreeId }) => {
     
     try {
       const context = await getTaskContext(task.id);
-      setTaskContext(context);
+      if (!context) {
+        // If context doesn't exist, show a message
+        setTaskContext({
+          message: "No context available for this task",
+          info: "This task may have been created before context tracking was enabled, or the context has not been created yet.",
+          task_id: task.id,
+          suggestions: [
+            "Complete the task with a summary to create context",
+            "Update the task to trigger context creation"
+          ]
+        });
+      } else {
+        setTaskContext(context);
+      }
     } catch (e) {
       console.error('Error fetching task context:', e);
-      setTaskContext(null);
+      setTaskContext({
+        error: true,
+        message: "Failed to load context",
+        details: e instanceof Error ? e.message : String(e)
+      });
     } finally {
       setLoadingContext(false);
     }

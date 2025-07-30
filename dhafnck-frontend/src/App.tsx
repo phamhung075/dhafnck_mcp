@@ -2,15 +2,13 @@ import { useState, useEffect } from 'react';
 import './App.css';
 import ProjectList from './components/ProjectList';
 import TaskList from './components/TaskList';
-import ContextStructureTest from './components/ContextStructureTest';
 import { Button } from './components/ui/button';
-import { Menu, X, TestTube } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 
 function App() {
   const [selection, setSelection] = useState<{ projectId: string, branchId: string } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isLargeScreen, setIsLargeScreen] = useState(false);
-  const [showContextTest, setShowContextTest] = useState(false);
 
   // Initialize sidebar state based on screen size
   useEffect(() => {
@@ -36,18 +34,7 @@ function App() {
       {/* Header */}
       <header className="border-b bg-white dark:bg-gray-900 px-4 py-3 shadow-sm">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">DhafnckMCP</h1>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowContextTest(!showContextTest)}
-              className="flex items-center gap-2"
-            >
-              <TestTube className="h-4 w-4" />
-              {showContextTest ? 'Task Manager' : 'Context Test'}
-            </Button>
-          </div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">DhafnckMCP</h1>
           <span className="text-sm text-gray-500 dark:text-gray-400">Multi-Project AI Orchestration Platform</span>
         </div>
       </header>
@@ -102,9 +89,7 @@ function App() {
         <main className="flex-1 flex flex-col p-4 w-full">
           {/* Add padding top on mobile to account for menu button */}
           <div className="flex-1 overflow-y-auto pt-12 lg:pt-0">
-            {showContextTest ? (
-              <ContextStructureTest />
-            ) : selection ? (
+            {selection ? (
               <TaskList key={`${selection.projectId}-${selection.branchId}`} projectId={selection.projectId} taskTreeId={selection.branchId} />
             ) : (
               <div className="text-center text-muted-foreground mt-10">Select a project and branch to see tasks.</div>

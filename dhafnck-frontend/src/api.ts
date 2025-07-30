@@ -673,6 +673,11 @@ export async function getTaskContext(task_id: string): Promise<any> {
   if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
     try {
       const toolResult = JSON.parse(data.result.content[0].text);
+      // Check if the response indicates an error
+      if (toolResult.success === false || toolResult.status === 'failure') {
+        console.error('Context not found:', toolResult.error?.message || 'Unknown error');
+        return null;
+      }
       return toolResult;
     } catch (e) {
       console.error('Error parsing task context:', e);

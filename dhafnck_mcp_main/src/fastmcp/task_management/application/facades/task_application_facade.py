@@ -670,19 +670,21 @@ class TaskApplicationFacade:
             if not dependency_task:
                 raise TaskNotFoundError(f"Dependency task with ID {dependency_id} not found")
             
-            # Assuming Task entity has an `add_dependency` method or similar logic
-            if not hasattr(task, 'depends_on'):
-                task.depends_on = []
-
-            dependency_task_id = dependency_task.id
-            if dependency_task_id not in task.depends_on:
-                task.depends_on.append(dependency_task_id)
+            # Use the Task entity's add_dependency method
+            try:
+                task.add_dependency(dependency_task.id)
                 self._task_repository.save(task)
                 message = f"Dependency {dependency_id} added to task {task_id}"
-            else:
-                message = f"Dependency {dependency_id} already exists for task {task_id}"
+                logger.info(f"Adding dependency {dependency_id} to task {task_id}")
+            except ValueError as ve:
+                # Handle case where dependency already exists or other validation errors
+                if "cannot depend on itself" in str(ve).lower():
+                    return {"success": False, "error": str(ve)}
+                else:
+                    # Dependency might already exist
+                    message = f"Dependency {dependency_id} already exists for task {task_id}"
+                    logger.info(f"Dependency {dependency_id} already exists for task {task_id}")
 
-            logger.info(f"Adding dependency {dependency_id} to task {task_id}")
             return {
                 "success": True,
                 "message": message,
@@ -713,14 +715,17 @@ class TaskApplicationFacade:
 
             dependency_task_id = TaskId(dependency_id)
             
-            if hasattr(task, 'depends_on') and dependency_task_id in task.depends_on:
-                task.depends_on.remove(dependency_task_id)
+            # Use the Task entity's remove_dependency method
+            try:
+                task.remove_dependency(dependency_task_id)
                 self._task_repository.save(task)
                 message = f"Dependency {dependency_id} removed from task {task_id}"
-            else:
+                logger.info(f"Removing dependency {dependency_id} from task {task_id}")
+            except Exception:
+                # Dependency might not exist
                 message = f"Dependency {dependency_id} not found on task {task_id}"
+                logger.info(f"Dependency {dependency_id} not found on task {task_id}")
 
-            logger.info(f"Removing dependency {dependency_id} from task {task_id}")
             return {
                 "success": True,
                 "message": message,

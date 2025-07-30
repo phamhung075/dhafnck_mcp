@@ -6,7 +6,7 @@ Uses external description files for clean documentation separation.
 """
 
 import logging
-from typing import Dict, Any, Optional, TYPE_CHECKING, Annotated
+from typing import Dict, Any, Optional, TYPE_CHECKING, Annotated, Union
 from pydantic import Field
 
 if TYPE_CHECKING:
@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
 from .desc import connection_description_loader
 from ...application.facades.connection_application_facade import ConnectionApplicationFacade
+from ....task_management.interface.utils.json_parameter_parser import JSONParameterParser
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,7 @@ class ConnectionMCPController:
             include_details: Annotated[bool, Field(description=manage_connection_desc.get("parameters", {}).get("include_details", "Whether to include detailed information"))] = True,
             connection_id: Annotated[Optional[str], Field(description=manage_connection_desc.get("parameters", {}).get("connection_id", "Specific connection identifier"))] = None,
             session_id: Annotated[Optional[str], Field(description=manage_connection_desc.get("parameters", {}).get("session_id", "Client session identifier"))] = None,
-            client_info: Annotated[Optional[Dict[str, Any]], Field(description=manage_connection_desc.get("parameters", {}).get("client_info", "Optional client metadata"))] = None
+            client_info: Annotated[Optional[Union[str, Dict[str, Any]]], Field(description=manage_connection_desc.get("parameters", {}).get("client_info", "Optional client metadata (dictionary or JSON string)"))] = None
         ) -> Dict[str, Any]:
             return self.manage_connection(
                 action=action,
@@ -62,7 +63,7 @@ class ConnectionMCPController:
     def manage_connection(self, action: str, include_details: bool = True, 
                          connection_id: Optional[str] = None, 
                          session_id: Optional[str] = None,
-                         client_info: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+                         client_info: Optional[Union[str, Dict[str, Any]]] = None) -> Dict[str, Any]:
         """
         Unified connection management method that routes to appropriate handlers.
         
@@ -77,6 +78,23 @@ class ConnectionMCPController:
             Formatted response dictionary for the requested action
         """
         try:
+            # Parse JSON strings for dictionary parameters
+            if client_info is not None:
+                try:
+                    client_info = JSONParameterParser.parse_dict_parameter(
+                        client_info, "client_info"
+                    )
+                except ValueError as e:
+                    return {
+                        "success": False,
+                        "error": str(e),
+                        "error_code": "INVALID_PARAMETER_FORMAT",
+                        "action": action,
+                        **JSONParameterParser.create_error_response(
+                            "client_info", str(e), "manage_connection"
+                        )
+                    }
+            
             # Route to appropriate handler method based on action
             if action == "health_check":
                 return self.handle_health_check(include_details)

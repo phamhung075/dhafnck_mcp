@@ -20,6 +20,7 @@ from .desc import description_loader
 from ..utils.error_handler import UserFriendlyErrorHandler
 from ..utils.response_formatter import StandardResponseFormatter, ResponseStatus
 from ..utils.parameter_validation_fix import ParameterTypeCoercer
+from ..utils.json_parameter_parser import JSONParameterParser
 
 from ...application.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
 from ...application.facades.unified_context_facade import UnifiedContextFacade
@@ -175,13 +176,13 @@ class UnifiedContextMCPController:
             include_inherited: Annotated[Optional[Union[bool, str]], Field(description=self._get_param_description(context_desc, "include_inherited", "Include inherited (boolean or string)"))] = False,
             propagate_changes: Annotated[Optional[Union[bool, str]], Field(description=self._get_param_description(context_desc, "propagate_changes", "Propagate changes (boolean or string)"))] = True,
             delegate_to: Annotated[Optional[str], Field(description=self._get_param_description(context_desc, "delegate_to", "Delegation target"))] = None,
-            delegate_data: Annotated[Optional[Dict[str, Any]], Field(description=self._get_param_description(context_desc, "delegate_data", "Delegation data"))] = None,
+            delegate_data: Annotated[Optional[Union[str, Dict[str, Any]]], Field(description=self._get_param_description(context_desc, "delegate_data", "Delegation data (dictionary or JSON string)"))] = None,
             delegation_reason: Annotated[Optional[str], Field(description=self._get_param_description(context_desc, "delegation_reason", "Delegation reason"))] = None,
             content: Annotated[Optional[str], Field(description=self._get_param_description(context_desc, "content", "Content for insights/progress"))] = None,
             category: Annotated[Optional[str], Field(description=self._get_param_description(context_desc, "category", "Insight category"))] = None,
             importance: Annotated[Optional[str], Field(description=self._get_param_description(context_desc, "importance", "Importance level"))] = None,
             agent: Annotated[Optional[str], Field(description=self._get_param_description(context_desc, "agent", "Agent identifier"))] = None,
-            filters: Annotated[Optional[Dict[str, Any]], Field(description=self._get_param_description(context_desc, "filters", "List filters"))] = None,
+            filters: Annotated[Optional[Union[str, Dict[str, Any]]], Field(description=self._get_param_description(context_desc, "filters", "List filters (dictionary or JSON string)"))] = None,
             # Legacy parameters for backward compatibility
             task_id: Annotated[Optional[str], Field(description="Legacy: Task ID (use context_id instead)")] = None,
             data_title: Annotated[Optional[str], Field(description="Legacy: Context title")] = None,
@@ -244,6 +245,32 @@ class UnifiedContextMCPController:
                                 "legacy_format": "manage_context(action='create', level='task', context_id='task-123', data_title='My Task', data_description='Task description')"
                             }
                         }
+                    )
+                
+                # Parse JSON strings for dictionary parameters
+                try:
+                    # Parse delegate_data if it's a JSON string
+                    if delegate_data is not None:
+                        delegate_data = JSONParameterParser.parse_dict_parameter(
+                            delegate_data, "delegate_data"
+                        )
+                    
+                    # Parse filters if it's a JSON string
+                    if filters is not None:
+                        filters = JSONParameterParser.parse_dict_parameter(
+                            filters, "filters"
+                        )
+                except ValueError as e:
+                    # Return user-friendly error with examples
+                    return StandardResponseFormatter.create_error_response(
+                        operation=f"manage_context.{action}",
+                        error=str(e),
+                        error_code="INVALID_PARAMETER_FORMAT",
+                        metadata=JSONParameterParser.create_error_response(
+                            param_name=str(e).split("'")[1] if "'" in str(e) else "parameter",
+                            error_message=str(e),
+                            tool_name="manage_context"
+                        )
                     )
                 
                 # Handle special case for delegation

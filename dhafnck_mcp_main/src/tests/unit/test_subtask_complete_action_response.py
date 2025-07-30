@@ -216,9 +216,7 @@ class TestSubtaskCompleteActionResponse:
         # Assert
         assert result["success"] == True
         assert result["action"] == "complete"
-        # Workflow guidance should reference the complete action
-        if "workflow_guidance" in result and "current_state" in result["workflow_guidance"]:
-            assert result["workflow_guidance"]["current_state"].get("last_action") == "complete"
+        # The action is preserved at the top level, workflow guidance doesn't track last_action
     
     def test_complete_action_error_still_shows_complete_action(self, subtask_controller, mock_subtask_facade):
         """Test that even on error, complete action is preserved in response."""

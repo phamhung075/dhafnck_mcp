@@ -44,8 +44,40 @@ export const TaskContextDialog: React.FC<TaskContextDialogProps> = ({
             </div>
           )}
 
+          {/* Special Message State (No context available) */}
+          {!loading && context && context.message && !context.error && (
+            <div className="space-y-4">
+              <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                <h4 className="font-medium text-yellow-800 mb-2">{context.message}</h4>
+                {context.info && (
+                  <p className="text-sm text-yellow-700 mb-3">{context.info}</p>
+                )}
+                {context.suggestions && context.suggestions.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-sm font-medium text-yellow-800 mb-1">Suggestions:</p>
+                    <ul className="list-disc list-inside text-sm text-yellow-700 space-y-1">
+                      {context.suggestions.map((suggestion: string, index: number) => (
+                        <li key={index}>{suggestion}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Error State */}
+          {!loading && context && context.error && (
+            <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 className="font-medium text-red-800 mb-2">{context.message}</h4>
+              {context.details && (
+                <p className="text-sm text-red-700">{context.details}</p>
+              )}
+            </div>
+          )}
+
           {/* Context Content */}
-          {!loading && context && (
+          {!loading && context && !context.error && !context.message && (
             <div className="space-y-4">
               {/* Context Summary */}
               {context.metadata && (
@@ -174,7 +206,10 @@ export const TaskContextDialog: React.FC<TaskContextDialogProps> = ({
           {/* No Context */}
           {!loading && !context && (
             <div className="flex items-center justify-center py-8">
-              <div className="text-sm text-muted-foreground">No context data available</div>
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground mb-2">No context data available</p>
+                <p className="text-xs text-muted-foreground">Complete the task or update it to create context</p>
+              </div>
             </div>
           )}
         </div>
