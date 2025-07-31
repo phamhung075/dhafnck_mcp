@@ -94,11 +94,13 @@ class ContextHierarchyValidator:
         if not project_id:
             return False, "Branch context requires project_id", {
                 "error": "Missing required field: project_id",
-                "explanation": "Branch contexts must be associated with a project",
+                "explanation": "Branch contexts must be associated with a project. If the branch already exists, project_id will be auto-detected.",
                 "required_fields": {
-                    "project_id": "The ID of the parent project"
+                    "project_id": "The ID of the parent project (auto-detected if branch exists)"
                 },
-                "example": f'manage_context(action="create", level="branch", context_id="{branch_id}", data={{"project_id": "your-project-id", "git_branch_name": "feature/branch"}})'
+                "auto_detection": "If you're creating a context for an existing branch, the system will attempt to auto-detect the project_id from the branch entity.",
+                "example": f'manage_context(action="create", level="branch", context_id="{branch_id}", data={{"git_branch_name": "feature/branch"}})',
+                "example_with_project": f'manage_context(action="create", level="branch", context_id="{branch_id}", data={{"project_id": "your-project-id", "git_branch_name": "feature/branch"}})'
             }
         
         # Check if project context exists

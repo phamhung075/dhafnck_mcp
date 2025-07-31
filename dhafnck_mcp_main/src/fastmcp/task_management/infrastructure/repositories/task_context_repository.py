@@ -55,6 +55,11 @@ class TaskContextRepository(BaseORMRepository):
             # since task_data is a flexible JSON field
             task_data = entity.task_data or {}
             
+            # Store insights, progress, and next_steps within task_data
+            task_data['progress'] = entity.progress
+            task_data['insights'] = entity.insights
+            task_data['next_steps'] = entity.next_steps
+            
             # Create new task context with unified schema
             db_model = TaskContextModel(
                 task_id=entity.id,
@@ -90,6 +95,11 @@ class TaskContextRepository(BaseORMRepository):
             
             # Task data already supports any JSON
             task_data = entity.task_data or {}
+            
+            # Store insights, progress, and next_steps within task_data
+            task_data['progress'] = entity.progress
+            task_data['insights'] = entity.insights
+            task_data['next_steps'] = entity.next_steps
             
             # Update fields with unified schema
             db_model.parent_branch_id = entity.branch_id
@@ -135,13 +145,24 @@ class TaskContextRepository(BaseORMRepository):
     
     def _to_entity(self, db_model: TaskContextModel) -> TaskContext:
         """Convert database model to domain entity."""
+        task_data = db_model.task_data or {}
+        
+        # Extract insights, progress, and next_steps from task_data
+        progress = task_data.get('progress', 0)
+        insights = task_data.get('insights', [])
+        next_steps = task_data.get('next_steps', [])
+        
+        # Remove these fields from task_data to avoid duplication
+        clean_task_data = {k: v for k, v in task_data.items() 
+                          if k not in ['progress', 'insights', 'next_steps']}
+        
         return TaskContext(
             id=db_model.task_id,
             branch_id=db_model.parent_branch_id,
-            task_data=db_model.task_data or {},
-            progress=0,  # Progress not in unified schema - could derive from task_data
-            insights=[],  # Insights not in unified schema - could derive from task_data
-            next_steps=[],  # Next steps not in unified schema - could derive from task_data
+            task_data=clean_task_data,
+            progress=progress,
+            insights=insights,
+            next_steps=next_steps,
             metadata={
                 'local_overrides': db_model.local_overrides or {},
                 'implementation_notes': db_model.implementation_notes or {},

@@ -6,24 +6,24 @@ supporting both SQLite and PostgreSQL databases.
 """
 
 import logging
-from typing import List, Optional, Dict, Any
 from datetime import datetime
-from sqlalchemy import and_, or_, desc, asc
+from typing import Any
+
+from sqlalchemy import and_, desc, or_
 from sqlalchemy.orm import joinedload
 
-from ..base_orm_repository import BaseORMRepository
-from ...database.models import Task, TaskSubtask, TaskAssignee, TaskLabel, TaskDependency
-from ....domain.repositories.task_repository import TaskRepository
 from ....domain.entities.task import Task as TaskEntity
+from ....domain.exceptions.task_exceptions import (
+    TaskCreationError,
+    TaskNotFoundError,
+    TaskUpdateError,
+)
+from ....domain.repositories.task_repository import TaskRepository
+from ....domain.value_objects.priority import Priority
 from ....domain.value_objects.task_id import TaskId
 from ....domain.value_objects.task_status import TaskStatus
-from ....domain.value_objects.priority import Priority
-from ....domain.exceptions.task_exceptions import (
-    TaskNotFoundError,
-    TaskCreationError,
-    TaskUpdateError,
-    DuplicateTaskError
-)
+from ...database.models import Task, TaskAssignee, TaskDependency, TaskLabel
+from ..base_orm_repository import BaseORMRepository
 
 logger = logging.getLogger(__name__)
 
@@ -36,8 +36,8 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
     using SQLAlchemy, supporting both SQLite and PostgreSQL.
     """
     
-    def __init__(self, git_branch_id: Optional[str] = None, project_id: Optional[str] = None,
-                 git_branch_name: Optional[str] = None, user_id: Optional[str] = None):
+    def __init__(self, git_branch_id: str | None = None, project_id: str | None = None,
+                 git_branch_name: str | None = None, user_id: str | None = None):
         """
         Initialize ORM task repository.
         
@@ -104,7 +104,7 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
         return entity
     
     def create_task(self, title: str, description: str, priority: str = "medium",
-                   assignee_ids: Optional[List[str]] = None, label_names: Optional[List[str]] = None,
+                   assignee_ids: list[str] | None = None, label_names: list[str] | None = None,
                    **kwargs) -> TaskEntity:
         """Create a new task"""
         try:
@@ -140,8 +140,31 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
                             )
                             session.add(assignee)
                 
-                # Note: Label handling would require label creation/lookup
-                # which is not implemented in this example
+                # Handle labels if provided
+                if label_names:
+                    from ...database.models import Label
+                    with self.get_db_session() as session:
+                        for label_name in label_names:
+                            # Get or create label
+                            label = session.query(Label).filter(Label.name == label_name).first()
+                            if not label:
+                                # Create new label with a unique ID
+                                import uuid
+                                label = Label(
+                                    id=str(uuid.uuid4()),
+                                    name=label_name,
+                                    color="#0066cc",
+                                    description=""
+                                )
+                                session.add(label)
+                                session.flush()  # Ensure label is saved before creating relationship
+                            
+                            # Create task-label relationship
+                            task_label = TaskLabel(
+                                task_id=task_id,
+                                label_id=label.id
+                            )
+                            session.add(task_label)
                 
                 # Reload with relationships
                 with self.get_db_session() as session:
@@ -158,7 +181,7 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
             logger.error(f"Failed to create task: {e}")
             raise TaskCreationError(f"Failed to create task: {str(e)}")
     
-    def get_task(self, task_id: str) -> Optional[TaskEntity]:
+    def get_task(self, task_id: str) -> TaskEntity | None:
         """Get a task by ID"""
         with self.get_db_session() as session:
             task = session.query(Task).options(
@@ -203,6 +226,39 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
                             )
                             session.add(assignee)
                 
+                # Update labels if provided
+                if 'label_names' in updates or 'labels' in updates:
+                    label_names = updates.get('label_names') or updates.get('labels', [])
+                    from ...database.models import Label
+                    with self.get_db_session() as session:
+                        # Remove existing labels
+                        session.query(TaskLabel).filter(
+                            TaskLabel.task_id == task_id
+                        ).delete()
+                        
+                        # Add new labels
+                        for label_name in label_names:
+                            # Get or create label
+                            label = session.query(Label).filter(Label.name == label_name).first()
+                            if not label:
+                                # Create new label with a unique ID
+                                import uuid
+                                label = Label(
+                                    id=str(uuid.uuid4()),
+                                    name=label_name,
+                                    color="#0066cc",
+                                    description=""
+                                )
+                                session.add(label)
+                                session.flush()  # Ensure label is saved before creating relationship
+                            
+                            # Create task-label relationship
+                            task_label = TaskLabel(
+                                task_id=task_id,
+                                label_id=label.id
+                            )
+                            session.add(task_label)
+                
                 # Reload with relationships
                 with self.get_db_session() as session:
                     task = session.query(Task).options(
@@ -221,9 +277,9 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
         """Delete a task"""
         return super().delete(task_id)
     
-    def list_tasks(self, status: Optional[str] = None, priority: Optional[str] = None,
-                  assignee_id: Optional[str] = None, limit: int = 100,
-                  offset: int = 0) -> List[TaskEntity]:
+    def list_tasks(self, status: str | None = None, priority: str | None = None,
+                  assignee_id: str | None = None, limit: int = 100,
+                  offset: int = 0) -> list[TaskEntity]:
         """List tasks with filters"""
         with self.get_db_session() as session:
             query = session.query(Task).options(
@@ -258,7 +314,7 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
             tasks = query.all()
             return [self._model_to_entity(task) for task in tasks]
     
-    def get_task_count(self, status: Optional[str] = None) -> int:
+    def get_task_count(self, status: str | None = None) -> int:
         """Get count of tasks"""
         filters = {}
         if self.git_branch_id:
@@ -268,7 +324,7 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
         
         return self.count(**filters)
     
-    def search_tasks(self, query: str, limit: int = 50) -> List[TaskEntity]:
+    def search_tasks(self, query: str, limit: int = 50) -> list[TaskEntity]:
         """Search tasks by title or description"""
         with self.get_db_session() as session:
             search_pattern = f"%{query}%"
@@ -289,11 +345,11 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
             
             return [self._model_to_entity(task) for task in tasks]
     
-    def get_tasks_by_assignee(self, assignee_id: str) -> List[TaskEntity]:
+    def get_tasks_by_assignee(self, assignee_id: str) -> list[TaskEntity]:
         """Get all tasks assigned to a specific user"""
         return self.list_tasks(assignee_id=assignee_id)
     
-    def get_overdue_tasks(self) -> List[TaskEntity]:
+    def get_overdue_tasks(self) -> list[TaskEntity]:
         """Get tasks that are overdue"""
         with self.get_db_session() as session:
             now = datetime.now().isoformat()
@@ -312,7 +368,7 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
             
             return [self._model_to_entity(task) for task in tasks]
     
-    def batch_update_status(self, task_ids: List[str], status: str) -> int:
+    def batch_update_status(self, task_ids: list[str], status: str) -> int:
         """Update status for multiple tasks"""
         with self.get_db_session() as session:
             updated = session.query(Task).filter(
@@ -361,6 +417,34 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
                             dependency_type="blocks"
                         )
                         session.add(new_dependency)
+                    
+                    # Update labels
+                    # First, remove all existing labels
+                    session.query(TaskLabel).filter(TaskLabel.task_id == str(task.id)).delete()
+                    
+                    # Then add new labels
+                    from ...database.models import Label
+                    for label_name in task.labels:
+                        # Get or create label
+                        label = session.query(Label).filter(Label.name == label_name).first()
+                        if not label:
+                            # Create new label with a unique ID
+                            import uuid
+                            label = Label(
+                                id=str(uuid.uuid4()),
+                                name=label_name,
+                                color="#0066cc",
+                                description=""
+                            )
+                            session.add(label)
+                            session.flush()  # Ensure label is saved before creating relationship
+                        
+                        # Create task-label relationship
+                        task_label = TaskLabel(
+                            task_id=str(task.id),
+                            label_id=label.id
+                        )
+                        session.add(task_label)
                 else:
                     # Create new task
                     new_task = Task(
@@ -387,6 +471,30 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
                             dependency_type="blocks"
                         )
                         session.add(new_dependency)
+                    
+                    # Add labels for new task
+                    from ...database.models import Label
+                    for label_name in task.labels:
+                        # Get or create label
+                        label = session.query(Label).filter(Label.name == label_name).first()
+                        if not label:
+                            # Create new label with a unique ID
+                            import uuid
+                            label = Label(
+                                id=str(uuid.uuid4()),
+                                name=label_name,
+                                color="#0066cc",
+                                description=""
+                            )
+                            session.add(label)
+                            session.flush()  # Ensure label is saved before creating relationship
+                        
+                        # Create task-label relationship
+                        task_label = TaskLabel(
+                            task_id=str(task.id),
+                            label_id=label.id
+                        )
+                        session.add(task_label)
                 
                 session.commit()
                 return True
@@ -394,32 +502,32 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
             logger.error(f"Failed to save task: {e}")
             return False
     
-    def find_by_id(self, task_id) -> Optional[TaskEntity]:
+    def find_by_id(self, task_id) -> TaskEntity | None:
         """Find task by ID"""
         return self.get_task(str(task_id))
     
-    def find_all(self) -> List[TaskEntity]:
+    def find_all(self) -> list[TaskEntity]:
         """Find all tasks"""
         return self.list_tasks()
     
-    def find_by_status(self, status) -> List[TaskEntity]:
+    def find_by_status(self, status) -> list[TaskEntity]:
         """Find tasks by status"""
         return self.list_tasks(status=str(status))
     
-    def find_by_priority(self, priority) -> List[TaskEntity]:
+    def find_by_priority(self, priority) -> list[TaskEntity]:
         """Find tasks by priority"""
         return self.list_tasks(priority=str(priority))
     
-    def find_by_assignee(self, assignee: str) -> List[TaskEntity]:
+    def find_by_assignee(self, assignee: str) -> list[TaskEntity]:
         """Find tasks by assignee"""
         return self.get_tasks_by_assignee(assignee)
     
-    def find_by_labels(self, labels: List[str]) -> List[TaskEntity]:
+    def find_by_labels(self, labels: list[str]) -> list[TaskEntity]:
         """Find tasks containing any of the specified labels"""
         # This would need to be implemented based on your label system
         return []
     
-    def search(self, query: str, limit: int = 10) -> List[TaskEntity]:
+    def search(self, query: str, limit: int = 10) -> list[TaskEntity]:
         """Search tasks by query string"""
         return self.search_tasks(query, limit)
     
@@ -441,7 +549,7 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
         """Get total number of tasks"""
         return self.get_task_count()
     
-    def find_by_criteria(self, filters: Dict[str, Any], limit: Optional[int] = None) -> List[TaskEntity]:
+    def find_by_criteria(self, filters: dict[str, Any], limit: int | None = None) -> list[TaskEntity]:
         """Find tasks by multiple criteria"""
         with self.get_db_session() as session:
             query = session.query(Task).options(
@@ -497,7 +605,7 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
             tasks = query.all()
             return [self._model_to_entity(task) for task in tasks]
     
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get task statistics"""
         return {
             "total_tasks": self.get_task_count(),
@@ -506,7 +614,7 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
             "todo_tasks": self.get_task_count(status="todo")
         }
     
-    def find_by_id_all_states(self, task_id) -> Optional[TaskEntity]:
+    def find_by_id_all_states(self, task_id) -> TaskEntity | None:
         """Find task by ID across all states (active, completed, archived)"""
         with self.get_db_session() as session:
             # Search across all statuses without any git_branch_id filter

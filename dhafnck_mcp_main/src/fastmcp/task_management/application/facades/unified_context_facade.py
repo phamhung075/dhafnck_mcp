@@ -88,8 +88,12 @@ class UnifiedContextFacade:
             # Add scope to data
             data = self._add_scope_to_data(data or {})
             
-            # Call sync service
-            result = self._service.create_context(level, context_id, data)
+            # Call sync service with project_id
+            result = self._service.create_context(
+                level, context_id, data, 
+                user_id=self._user_id,
+                project_id=self._project_id
+            )
             
             return result
             

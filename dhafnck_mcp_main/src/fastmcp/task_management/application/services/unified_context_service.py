@@ -74,6 +74,31 @@ class UnifiedContextService:
             # Validate level
             context_level = ContextLevel(level)
             
+            # Auto-detect project_id for branch contexts if not provided
+            if context_level == ContextLevel.BRANCH and not data.get("project_id"):
+                # Try to get project_id from the git branch entity
+                try:
+                    from fastmcp.task_management.infrastructure.repositories.git_branch_repository_factory import GitBranchRepositoryFactory
+                    git_branch_factory = GitBranchRepositoryFactory()
+                    git_branch_repo = git_branch_factory.create()
+                    
+                    # Use sync method if available, otherwise handle async
+                    if hasattr(git_branch_repo, 'get'):
+                        branch = git_branch_repo.get(context_id)
+                    else:
+                        # For async repos, we need to handle differently
+                        import asyncio
+                        loop = asyncio.new_event_loop()
+                        branch = loop.run_until_complete(git_branch_repo.find_by_id(None, context_id))
+                        loop.close()
+                    
+                    if branch and hasattr(branch, 'project_id'):
+                        data['project_id'] = branch.project_id
+                        logger.info(f"Auto-detected project_id '{branch.project_id}' for branch context '{context_id}'")
+                except Exception as e:
+                    logger.debug(f"Could not auto-detect project_id from branch: {e}")
+                    # Continue without auto-detection, will fail validation if project_id is required
+            
             # Validate hierarchy requirements first
             is_valid, error_msg, guidance = self.hierarchy_validator.validate_hierarchy_requirements(
                 level=context_level,
@@ -591,15 +616,18 @@ class UnifiedContextService:
         """Merge new data with existing context data."""
         merged = existing_data.copy()
         
+        # Special fields that should be replaced, not extended
+        replace_list_fields = {'insights', 'next_steps'}
+        
         for key, value in new_data.items():
             if isinstance(value, dict) and key in merged and isinstance(merged[key], dict):
                 # Deep merge for nested dicts
                 merged[key] = {**merged[key], **value}
-            elif isinstance(value, list) and key in merged and isinstance(merged[key], list):
-                # Extend lists
+            elif isinstance(value, list) and key in merged and isinstance(merged[key], list) and key not in replace_list_fields:
+                # Extend lists (except for special fields)
                 merged[key].extend(value)
             else:
-                # Replace value
+                # Replace value (including lists in replace_list_fields)
                 merged[key] = value
         
         # Update timestamp
