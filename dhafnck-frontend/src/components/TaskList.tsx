@@ -1,11 +1,12 @@
 import { Check, Eye, FileText, Link, Minus, Pencil, Plus, Trash2, Users } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { listTasks, Task, Subtask, updateTask, getTaskContext, listAgents, getAvailableAgents, getTask, callAgent, createTask, completeTask } from "../api";
+import { listTasks, Task, Subtask, updateTask, getTaskContext, listAgents, getAvailableAgents, getTask, callAgent, createTask, completeTask, deleteTask } from "../api";
 import { SubtaskList } from "./SubtaskList";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { RefreshButton } from "./ui/refresh-button";
+import TaskSearch from "./TaskSearch";
 
 // Import all the new modular components
 import ClickableAssignees from "./ClickableAssignees";
@@ -15,6 +16,7 @@ import TaskEditDialog from "./TaskEditDialog";
 import AgentAssignmentDialog from "./AgentAssignmentDialog";
 import TaskContextDialog from "./TaskContextDialog";
 import TaskCompleteDialog from "./TaskCompleteDialog";
+import DeleteConfirmDialog from "./DeleteConfirmDialog";
 
 interface TaskListProps {
   projectId: string;
@@ -46,6 +48,8 @@ const TaskList: React.FC<TaskListProps> = ({ projectId, taskTreeId }) => {
   const [showAgentResponse, setShowAgentResponse] = useState(false);
   const [showTaskContext, setShowTaskContext] = useState(false);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Dialog-specific state
   const [currentAgentResponse, setCurrentAgentResponse] = useState<{
@@ -339,28 +343,92 @@ const TaskList: React.FC<TaskListProps> = ({ projectId, taskTreeId }) => {
     await refreshTasks();
   };
 
+  // Delete handlers
+  const openDeleteDialog = (task: Task) => {
+    setSelectedTask(task);
+    setShowDeleteDialog(true);
+  };
+
+  const closeDeleteDialog = () => {
+    setShowDeleteDialog(false);
+    setSelectedTask(null);
+  };
+
+  const handleTaskDelete = async () => {
+    if (!selectedTask) return;
+    
+    setDeleting(true);
+    setError(null);
+    try {
+      const success = await deleteTask(selectedTask.id);
+      
+      if (success) {
+        closeDeleteDialog();
+        // Refresh tasks list
+        await refreshTasks();
+      } else {
+        setError("Failed to delete task");
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to delete task");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // Search handlers
+  const handleTaskSelectFromSearch = (task: Task) => {
+    // Expand the task if it has subtasks
+    if (task.subtasks && task.subtasks.length > 0) {
+      setExpandedTasks(prev => ({ ...prev, [task.id]: true }));
+    }
+    // Scroll to the task - this would require adding refs to task rows
+    // For now, just open the task details
+    openTaskDetailsDialog(task);
+  };
+
+  const handleSubtaskSelectFromSearch = (subtask: Subtask, parentTask: Task) => {
+    // Expand the parent task to show subtasks
+    setExpandedTasks(prev => ({ ...prev, [parentTask.id]: true }));
+    // For now, open parent task details
+    openTaskDetailsDialog(parentTask);
+  };
+
   if (loading) return <div>Loading tasks...</div>;
   if (error) return <div>Error: {error}</div>;
 
   return (
     <>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold">Tasks</h2>
-        <div className="flex gap-2">
-          <Button
-            onClick={openCreateDialog}
-            size="sm"
-            variant="default"
-            className="flex items-center gap-1"
-          >
-            <Plus className="w-4 h-4" />
-            New Task
-          </Button>
-          <RefreshButton 
-            onClick={refreshTasks} 
-            loading={loading}
-            size="sm"
+      <div className="space-y-4">
+        {/* Search Bar */}
+        <div className="w-full">
+          <TaskSearch
+            projectId={projectId}
+            taskTreeId={taskTreeId}
+            onTaskSelect={handleTaskSelectFromSearch}
+            onSubtaskSelect={handleSubtaskSelectFromSearch}
           />
+        </div>
+        
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <h2 className="text-lg font-semibold">Tasks</h2>
+          <div className="flex gap-2">
+            <Button
+              onClick={openCreateDialog}
+              size="sm"
+              variant="default"
+              className="flex items-center gap-1"
+            >
+              <Plus className="w-4 h-4" />
+              New Task
+            </Button>
+            <RefreshButton 
+              onClick={refreshTasks} 
+              loading={loading}
+              size="sm"
+            />
+          </div>
         </div>
       </div>
       {/* Desktop Table View */}
@@ -480,7 +548,12 @@ const TaskList: React.FC<TaskListProps> = ({ projectId, taskTreeId }) => {
                       <Check />
                     </Button>
                   )}
-                  <Button variant="ghost" size="icon" title="Delete task">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    title="Delete task"
+                    onClick={() => openDeleteDialog(task)}
+                  >
                     <Trash2 />
                   </Button>
                 </TableCell>
@@ -675,6 +748,16 @@ const TaskList: React.FC<TaskListProps> = ({ projectId, taskTreeId }) => {
         task={selectedTask}
         onClose={closeCompleteDialog}
         onComplete={handleTaskComplete}
+      />
+
+      <DeleteConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        onConfirm={handleTaskDelete}
+        title="Delete Task"
+        description="Are you sure you want to delete this task? This action cannot be undone."
+        itemName={selectedTask?.title}
+        isDeleting={deleting}
       />
     </>
   );

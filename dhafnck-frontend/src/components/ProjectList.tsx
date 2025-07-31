@@ -158,11 +158,15 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect }) => {
     if (!showDelete) return;
     setSaving(true);
     try {
-      await deleteProject(showDelete.id);
-      setShowDelete(null);
-      fetchProjects();
+      const success = await deleteProject(showDelete.id);
+      if (success) {
+        setShowDelete(null);
+        fetchProjects();
+      } else {
+        setError("Project deletion is not supported by the backend yet");
+      }
     } catch (e: any) {
-      setError(e.message);
+      setError(e.message || "Project deletion is not supported by the backend yet");
     } finally {
       setSaving(false);
     }

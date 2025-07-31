@@ -48,7 +48,8 @@ services:
         - ENV=${ENV:-dev}
     container_name: dhafnck-backend
     environment:
-      - DATABASE_URL=postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT}/${DATABASE_NAME}
+      - DATABASE_TYPE=postgresql
+      - DATABASE_URL=postgresql://dhafnck_user:dev_password@postgres:5432/dhafnck_mcp
       - REDIS_URL=${REDIS_URL}
       - SECRET_KEY=${SECRET_KEY}
       - JWT_SECRET=${JWT_SECRET}
@@ -56,6 +57,9 @@ services:
       - APP_DEBUG=${APP_DEBUG}
       - APP_LOG_LEVEL=${APP_LOG_LEVEL}
       - CORS_ORIGINS=${CORS_ORIGINS}
+      - FASTMCP_TRANSPORT=streamable-http
+      - FASTMCP_HOST=0.0.0.0
+      - FASTMCP_PORT=8000
     volumes:
       - backend-data:/app/data
     ports:
@@ -89,7 +93,7 @@ services:
     volumes:
       - frontend-static:/app/dist
     ports:
-      - "${FRONTEND_PORT:-3000}:80"
+      - "${FRONTEND_PORT:-3800}:80"
     depends_on:
       - backend
     networks:

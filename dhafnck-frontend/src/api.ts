@@ -647,6 +647,44 @@ export async function removeDependency(task_id: string, dependency_id: string): 
   return false;
 }
 
+export async function searchTasks(query: string, git_branch_id?: string, limit: number = 50): Promise<Task[]> {
+  const body = {
+    jsonrpc: "2.0",
+    method: "tools/call",
+    params: {
+      name: "manage_task",
+      arguments: { 
+        action: "search", 
+        query,
+        ...(git_branch_id && { git_branch_id }),
+        limit
+      }
+    },
+    id: getRpcId(),
+  };
+  const res = await fetch(`${API_BASE}`, {
+    method: "POST",
+    headers: withMcpHeaders(),
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  
+  if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
+    try {
+      const toolResult = JSON.parse(data.result.content[0].text);
+      if (toolResult.success) {
+        const responseData = extractResponseData(toolResult);
+        if (Array.isArray(responseData.tasks)) {
+          return responseData.tasks.map(sanitizeTask);
+        } else if (Array.isArray(toolResult.tasks)) {
+          return toolResult.tasks.map(sanitizeTask);
+        }
+      }
+    } catch {}
+  }
+  return [];
+}
+
 // --- Context Management - Updated to use unified manage_context ---
 export async function getTaskContext(task_id: string): Promise<any> {
   const body = {
