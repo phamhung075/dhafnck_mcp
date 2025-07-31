@@ -1,0 +1,1 @@
+│ give me prompt per issue with detail for fix on new chat

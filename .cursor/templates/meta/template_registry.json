@@ -1,0 +1,318 @@
+{
+  "template_registry": {
+    "version": "1.0.0",
+    "last_updated": "2025-01-27T10:30:00Z",
+    "templates": {
+      "general_document_v1": {
+        "id": "general_document_v1",
+        "name": "General Document Template",
+        "path": ".cursor/document.md",
+        "category": "general",
+        "type": "document",
+        "version": "1.0.0",
+        "description": "General-purpose document template for various documentation needs",
+        "usage_scenarios": [
+          "Task documentation",
+          "Technical specs",
+          "User guides",
+          "Project documentation"
+        ],
+        "required_variables": ["title", "author", "project_id"],
+        "optional_variables": ["task_id", "version", "reviewers", "related_documents", "tags"],
+        "output_format": "markdown",
+        "validation_rules": ["title_required", "author_required", "content_not_empty"],
+        "created_by": "system_architect_agent",
+        "created_at": "2025-01-27T10:30:00Z",
+        "compatible_agents": ["*"],
+        "examples": [
+          {
+            "name": "Basic Task Documentation",
+            "context": {
+              "title": "User Authentication Implementation",
+              "author": "coding_agent",
+              "project_id": "dhafnck_mcp",
+              "task_id": "20250127001"
+            }
+          }
+        ]
+      },
+      "technical_spec_v1": {
+        "id": "technical_spec_v1",
+        "name": "Technical Specification Template",
+        "path": ".cursor/templates/documents/technical_spec.md.template",
+        "category": "technical",
+        "type": "document",
+        "version": "1.0.0",
+        "description": "Comprehensive technical specification template for detailed system documentation",
+        "usage_scenarios": [
+          "API documentation",
+          "System design",
+          "Technical requirements",
+          "Architecture specs"
+        ],
+        "required_variables": ["title", "author", "project_id", "task_id"],
+        "optional_variables": ["version", "reviewers", "api_endpoints", "data_models"],
+        "output_format": "markdown",
+        "validation_rules": ["title_required", "author_required", "technical_requirements_not_empty"],
+        "created_by": "system_architect_agent",
+        "created_at": "2025-01-27T10:30:00Z",
+        "compatible_agents": ["system_architect_agent", "tech_spec_agent", "coding_agent"],
+        "examples": [
+          {
+            "name": "API Specification",
+            "context": {
+              "title": "User Management API",
+              "author": "system_architect_agent",
+              "project_id": "dhafnck_mcp",
+              "task_id": "20250127002",
+              "api_endpoints": [
+                {
+                  "method": "POST",
+                  "path": "/api/users",
+                  "description": "Create a new user"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "auto_rule_v1": {
+        "id": "auto_rule_v1",
+        "name": "Auto Rule Template",
+        "path": ".cursor/templates/rules/auto_rule.mdc.template",
+        "category": "rules",
+        "type": "rule",
+        "version": "1.0.0",
+        "description": "Template for auto-generated Cursor rules based on task context",
+        "usage_scenarios": [
+          "Task-specific rules",
+          "Agent context rules",
+          "Project guidelines"
+        ],
+        "required_variables": ["task_id", "agent_name", "project_id"],
+        "optional_variables": ["role_context", "coding_standards", "project_patterns"],
+        "output_format": "markdown",
+        "validation_rules": ["task_id_required", "agent_name_required"],
+        "created_by": "system_architect_agent",
+        "created_at": "2025-01-27T10:30:00Z",
+        "compatible_agents": ["*"],
+        "auto_generated": true
+      },
+      "task_context_v1": {
+        "id": "task_context_v1",
+        "name": "Task Context Template",
+        "path": ".cursor/templates/documents/task_context.md.template",
+        "category": "context",
+        "type": "document",
+        "version": "1.0.0",
+        "description": "Template for task-specific context documentation",
+        "usage_scenarios": [
+          "Task briefing",
+          "Agent handoff",
+          "Context preservation"
+        ],
+        "required_variables": ["task_id", "title", "assignee"],
+        "optional_variables": ["dependencies", "blockers", "notes", "globs"],
+        "output_format": "markdown",
+        "validation_rules": ["task_id_required", "title_required"],
+        "created_by": "system_architect_agent",
+        "created_at": "2025-01-27T10:30:00Z",
+        "compatible_agents": ["task_planning_agent", "task_deep_manager_agent"],
+        "default_globs": "**/*"
+      },
+      "api_documentation_v1": {
+        "id": "api_documentation_v1",
+        "name": "API Documentation Template",
+        "path": ".cursor/templates/documents/api_documentation.md.template",
+        "category": "api",
+        "type": "document",
+        "version": "1.0.0",
+        "description": "Comprehensive API documentation template for REST, GraphQL, and WebSocket APIs",
+        "usage_scenarios": [
+          "REST API docs",
+          "GraphQL API docs", 
+          "WebSocket API docs",
+          "SDK documentation"
+        ],
+        "required_variables": ["title", "author", "project_id", "api_base_url"],
+        "optional_variables": ["task_id", "version", "authentication_type", "rate_limits", "globs"],
+        "output_format": "markdown",
+        "validation_rules": ["title_required", "author_required", "api_base_url_required"],
+        "created_by": "system_architect_agent",
+        "created_at": "2025-01-27T10:30:00Z",
+        "compatible_agents": ["system_architect_agent", "tech_spec_agent", "coding_agent"],
+        "default_globs": "src/api/**/*,src/routes/**/*,src/controllers/**/*,src/handlers/**/*"
+      },
+      "component_documentation_v1": {
+        "id": "component_documentation_v1",
+        "name": "Component Documentation Template",
+        "path": ".cursor/templates/documents/component_documentation.md.template",
+        "category": "frontend",
+        "type": "document",
+        "version": "1.0.0",
+        "description": "Detailed component documentation template for frontend frameworks",
+        "usage_scenarios": [
+          "React components",
+          "Vue components",
+          "Angular components",
+          "Web components"
+        ],
+        "required_variables": ["title", "author", "project_id", "component_name"],
+        "optional_variables": ["task_id", "version", "component_type", "props", "globs"],
+        "output_format": "markdown",
+        "validation_rules": ["title_required", "author_required", "component_name_required"],
+        "created_by": "system_architect_agent",
+        "created_at": "2025-01-27T10:30:00Z",
+        "compatible_agents": ["ui_designer_agent", "coding_agent", "prototyping_agent"],
+        "default_globs": "src/components/**/*,src/ui/**/*,src/views/**/*,src/pages/**/*"
+      }
+    },
+    "categories": {
+      "general": {
+        "description": "General-purpose templates for various documentation needs",
+        "templates": ["general_document_v1"],
+        "default_globs": "**/*"
+      },
+      "technical": {
+        "description": "Technical documentation templates for specifications and architecture",
+        "templates": ["technical_spec_v1"],
+        "default_globs": "src/**/*,docs/**/*"
+      },
+      "api": {
+        "description": "API documentation templates for REST, GraphQL, and WebSocket APIs",
+        "templates": ["api_documentation_v1"],
+        "default_globs": "src/api/**/*,src/routes/**/*,src/controllers/**/*,src/handlers/**/*"
+      },
+      "frontend": {
+        "description": "Frontend component and UI documentation templates",
+        "templates": ["component_documentation_v1"],
+        "default_globs": "src/components/**/*,src/ui/**/*,src/views/**/*,src/pages/**/*"
+      },
+      "rules": {
+        "description": "Rule templates for Cursor IDE integration",
+        "templates": ["auto_rule_v1"],
+        "default_globs": ".cursor/**/*"
+      },
+      "context": {
+        "description": "Context-specific templates for task management",
+        "templates": ["task_context_v1"],
+        "default_globs": "**/*"
+      }
+    },
+    "agents": {
+      "system_architect_agent": {
+        "preferred_templates": ["technical_spec_v1", "general_document_v1"],
+        "can_create_templates": true
+      },
+      "task_planning_agent": {
+        "preferred_templates": ["task_context_v1", "general_document_v1"],
+        "can_create_templates": false
+      },
+      "coding_agent": {
+        "preferred_templates": ["technical_spec_v1", "general_document_v1"],
+        "can_create_templates": false
+      },
+      "*": {
+        "preferred_templates": ["general_document_v1"],
+        "can_create_templates": false
+      }
+    },
+    "usage_stats": {
+      "total_templates": 6,
+      "most_used": "general_document_v1",
+      "last_generated": null,
+      "generation_count": 0
+    },
+    "checklist_integration": {
+      "description": "Integration between templates and checklist validation system",
+      "version": "1.0.0",
+      "features": [
+        "Automatic checklist generation from template requirements",
+        "Template compliance validation for documentation",
+        "Glob pattern-based checklist updates",
+        "Quality gates enforcement",
+        "Agent-specific checklist assignments",
+        "Cross-agent validation workflows"
+      ],
+      "checklist_types": {
+        "completion": {
+          "description": "Verify all deliverables are created",
+          "priority": "critical",
+          "validation_methods": ["manual", "automatic", "agent_verified"]
+        },
+        "quality": {
+          "description": "Validate work quality and standards",
+          "priority": "high",
+          "validation_methods": ["automatic", "agent_verified", "external_tool"]
+        },
+        "documentation": {
+          "description": "Ensure proper documentation using templates",
+          "priority": "high",
+          "validation_methods": ["template_compliance", "agent_verified"]
+        },
+        "testing": {
+          "description": "Verify testing requirements",
+          "priority": "high",
+          "validation_methods": ["automatic", "agent_verified"]
+        },
+        "review": {
+          "description": "Code review and approval processes",
+          "priority": "medium",
+          "validation_methods": ["manual", "agent_verified"]
+        },
+        "compliance": {
+          "description": "Security, accessibility, regulatory compliance",
+          "priority": "critical",
+          "validation_methods": ["automatic", "agent_verified", "external_tool"]
+        }
+      },
+      "validation_types": {
+        "manual": "Human verification required",
+        "automatic": "Automated testing and verification",
+        "agent_verified": "Specialized agent validation",
+        "template_compliance": "Validation against template requirements",
+        "external_tool": "Third-party tool validation"
+      },
+      "template_checklist_mapping": {
+        "api_documentation_v1": {
+          "generates_checklists": ["documentation", "testing"],
+          "required_validations": ["template_compliance", "automatic"],
+          "quality_gates": {
+            "critical_items_required": true,
+            "minimum_completion_percentage": 80
+          }
+        },
+        "component_documentation_v1": {
+          "generates_checklists": ["documentation", "testing", "compliance"],
+          "required_validations": ["template_compliance", "automatic"],
+          "quality_gates": {
+            "critical_items_required": true,
+            "minimum_completion_percentage": 85
+          }
+        },
+        "technical_spec_v1": {
+          "generates_checklists": ["documentation", "review"],
+          "required_validations": ["template_compliance", "agent_verified"],
+          "quality_gates": {
+            "critical_items_required": true,
+            "minimum_completion_percentage": 90
+          }
+        }
+      }
+    },
+    "glob_patterns": {
+      "description": "Common glob patterns used across templates",
+      "patterns": {
+        "api_files": "src/api/**/*,src/routes/**/*,src/controllers/**/*,src/handlers/**/*",
+        "component_files": "src/components/**/*,src/ui/**/*,src/views/**/*,src/pages/**/*",
+        "backend_files": "src/services/**/*,src/models/**/*,src/utils/**/*,src/middleware/**/*",
+        "frontend_files": "src/components/**/*,src/pages/**/*,src/hooks/**/*,src/utils/**/*",
+        "test_files": "tests/**/*,__tests__/**/*,*.test.*,*.spec.*",
+        "config_files": "*.config.*,*.json,*.yaml,*.yml,.env*",
+        "docs_files": "docs/**/*,README.md,*.md",
+        "all_source": "src/**/*",
+        "all_files": "**/*"
+      }
+    }
+  }
+} 
