@@ -76,7 +76,7 @@ from fastmcp.task_management.infrastructure.database import get_session
 async def test_db():
     """Test database with isolated transactions"""
     engine = create_async_engine(
-        "sqlite+aiosqlite:///test_dhafnck_mcp.db",
+        "postgresql+asyncpg://postgres:password@localhost:5432/dhafnck_mcp_test",
         echo=False
     )
     async with engine.begin() as conn:

@@ -142,7 +142,7 @@ The ORM repository uses the existing `agents` table with the following key field
 
 ## Related Documentation
 
-- [Agent Repository Interface](../../../domain/repositories/agent_repository.py)
-- [Agent Domain Entity](../../../domain/entities/agent.py)
-- [Database Models](../../database/models.py)
-- [Repository Factory](../agent_repository_factory.py)
+- [Agent Repository Interface](../src/fastmcp/task_management/domain/repositories/agent_repository.py)
+- [Agent Domain Entity](../src/fastmcp/task_management/domain/entities/agent.py)
+- [Database Models](../src/fastmcp/task_management/infrastructure/database/models.py)
+- [Repository Factory](../src/fastmcp/task_management/infrastructure/repositories/agent_repository_factory.py)

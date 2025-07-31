@@ -1,6 +1,6 @@
-# 🐳 DhafnckMCP Docker System Guide
+# 🐳 DhafnckMCP Multi-Project AI Orchestration Platform - Docker Guide
 
-Complete guide for using the DhafnckMCP Docker system for development and deployment.
+Complete guide for deploying the DhafnckMCP platform with Docker, featuring PostgreSQL database, 4-tier hierarchical context system, Vision System integration, and 60+ specialized AI agents.
 
 ## 📋 Table of Contents
 
@@ -23,7 +23,7 @@ Complete guide for using the DhafnckMCP Docker system for development and deploy
 # Navigate to project root
 cd dhafnck_mcp_main
 
-# Start the server (creates container if needed)
+# Start the server with PostgreSQL (creates containers if needed)
 ./scripts/manage-docker.sh start
 ```
 
@@ -34,35 +34,45 @@ cd dhafnck_mcp_main
 
 # View server status
 ./scripts/manage-docker.sh status
+
+# Test database connection
+docker exec dhafnck-mcp-server psql -U postgres -d dhafnck_mcp -c "SELECT 1;"
 ```
 
 ### 3. Connect Your MCP Client
 - **MCP Server URL**: `http://localhost:8000/mcp/`
-- **Authentication**: Disabled (local development)
-- **Available Tools**: 6 MCP tools for task management
+- **Authentication**: Token-based (configurable)
+- **Available Tools**: 15+ MCP tool categories with 60+ specialized agents
+- **Context System**: 4-tier hierarchy (Global→Project→Branch→Task)
+- **Vision System**: Strategic AI orchestration with <5ms overhead
 
 ## 🏗️ System Overview
 
 The DhafnckMCP Docker system provides:
 
-- **🔧 Easy Management**: Simple scripts for all Docker operations
-- **📦 Containerized MCP Server**: Full MCP server with task management tools
-- **🔄 Development Mode**: Local development without authentication
-- **📊 Health Monitoring**: Built-in health checks and status monitoring
-- **💾 Data Persistence**: Persistent volumes for tasks, projects, and logs
+- **🐘 PostgreSQL Database**: Production-ready database with JSONB support
+- **🏗️ 4-Tier Context System**: Hierarchical context management with inheritance
+- **👁️ Vision System Integration**: Strategic AI orchestration for all operations
+- **🤖 60+ AI Agents**: Specialized agents for every development task
+- **📦 Multi-Container Architecture**: PostgreSQL + MCP Server + Redis (optional)
+- **🔄 Development Mode**: Full-featured local development environment
+- **📊 Performance Monitoring**: Built-in metrics and health checks
+- **💾 Data Persistence**: PostgreSQL volumes for all project data
 
 ## 📋 Prerequisites
 
 ### Required Software
 - **Docker Desktop** or **Docker Engine** (20.10+)
 - **Docker Compose** (v2.0+)
+- **PostgreSQL Client** (for database management)
 - **bash** shell (for management scripts)
 - **curl** and **netcat** (for health checks)
 
 ### System Requirements
 - **OS**: Linux (WSL2), macOS, or Windows with Docker Desktop
-- **RAM**: Minimum 1GB available for Docker
-- **Storage**: 2GB free space for images and volumes
+- **RAM**: Minimum 2GB available for Docker (PostgreSQL + MCP Server)
+- **Storage**: 5GB free space for images, volumes, and database
+- **CPU**: 2+ cores recommended for optimal performance
 
 ### Verify Prerequisites
 ```bash
@@ -72,6 +82,9 @@ docker-compose --version
 
 # Test Docker is running
 docker ps
+
+# Check PostgreSQL client (optional but recommended)
+psql --version
 ```
 
 ## 🛠️ Installation & Setup
@@ -94,9 +107,22 @@ mkdir -p docker/data/{tasks,projects,rules}
 mkdir -p docker/logs
 ```
 
-### 4. Start the System
+### 4. Configure Environment
 ```bash
+# Copy environment template
+cp docker/.env.example docker/.env
+
+# Edit configuration for PostgreSQL and other settings
+nano docker/.env
+```
+
+### 5. Start the System
+```bash
+# Start all containers (PostgreSQL + MCP Server)
 ./scripts/manage-docker.sh start
+
+# Or use docker-compose directly
+docker-compose -f docker/docker-compose.yml up -d
 ```
 
 ## 🎮 Usage Commands
@@ -161,6 +187,12 @@ docker volume ls | grep dhafnck
 The system uses these key environment variables:
 
 ```bash
+# PostgreSQL Database Configuration
+DATABASE_URL=postgresql://postgres:password@postgres:5432/dhafnck_mcp
+DATABASE_MODE=container
+DB_POOL_SIZE=20
+DB_MAX_OVERFLOW=40
+
 # Core MCP Configuration
 PYTHONPATH=/app/src
 FASTMCP_LOG_LEVEL=INFO
@@ -168,18 +200,29 @@ FASTMCP_TRANSPORT=streamable-http
 FASTMCP_HOST=0.0.0.0
 FASTMCP_PORT=8000
 
-# Authentication (disabled in local mode)
-DHAFNCK_AUTH_ENABLED=false
-DHAFNCK_MVP_MODE=false
+# 4-Tier Context System
+CONTEXT_CACHE_TTL=3600
+CONTEXT_INHERITANCE_ENABLED=true
+CONTEXT_DELEGATION_ENABLED=true
+CONTEXT_AUTO_CREATE=true
 
-# Data Paths
-TASKS_JSON_PATH=/data/tasks
-PROJECTS_FILE_PATH=/data/projects/projects.json
-CURSOR_RULES_DIR=/data/rules
+# Vision System Configuration
+VISION_SYSTEM_ENABLED=true
+VISION_PERFORMANCE_TARGET=5
+VISION_CACHE_ENABLED=true
+VISION_WORKFLOW_HINTS=true
+
+# Redis Cache (Optional)
+REDIS_URL=redis://redis:6379/0
+CACHE_ENABLED=true
+
+# Authentication
+DHAFNCK_AUTH_ENABLED=true
+AUTH_TOKEN_TTL=3600
 
 # Development Settings
-DHAFNCK_DISABLE_CURSOR_TOOLS=true
 DEV_MODE=1
+MCP_DEBUG=true
 ```
 
 ### Configuration Files
@@ -187,23 +230,39 @@ DEV_MODE=1
 | File | Purpose | Location |
 |------|---------|----------|
 | `docker-compose.yml` | Main container configuration | `docker/docker-compose.yml` |
+| `docker-compose.postgres.yml` | PostgreSQL container config | `docker/docker-compose.postgres.yml` |
+| `docker-compose.redis.yml` | Redis container config | `docker/docker-compose.redis.yml` |
 | `docker-compose.local.yml` | Local development overrides | `docker/docker-compose.local.yml` |
 | `docker-compose.dev.yml` | Development-specific settings | `docker/docker-compose.dev.yml` |
-| `Dockerfile` | Container build instructions | `docker/Dockerfile` |
+| `docker-compose.prod.yml` | Production optimizations | `docker/docker-compose.prod.yml` |
+| `Dockerfile` | MCP server build instructions | `docker/Dockerfile` |
 
 ### Customizing Configuration
 
 1. **For local development**: Modify `docker-compose.local.yml`
-2. **For production**: Modify `docker-compose.yml`
+2. **For production**: Use `docker-compose.prod.yml`
 3. **Environment variables**: Create `.env` file in `docker/` directory
 
 Example `.env` file:
 ```bash
 # docker/.env
-FASTMCP_LOG_LEVEL=DEBUG
+# PostgreSQL Configuration
+POSTGRES_USER=dhafnck_user
+POSTGRES_PASSWORD=secure_password
+POSTGRES_DB=dhafnck_mcp
+DATABASE_URL=postgresql://dhafnck_user:secure_password@postgres:5432/dhafnck_mcp
+
+# Application Configuration
+FASTMCP_LOG_LEVEL=INFO
+VISION_SYSTEM_ENABLED=true
+CONTEXT_AUTO_CREATE=true
+
+# Redis Configuration (Optional)
+REDIS_PASSWORD=redis_password
+
+# Authentication
 DHAFNCK_AUTH_ENABLED=true
-SUPABASE_URL=your-supabase-url
-SUPABASE_ANON_KEY=your-anon-key
+AUTH_SECRET_KEY=your-secret-key
 ```
 
 ## 💾 Data Storage
@@ -299,45 +358,55 @@ docker-compose -f docker-compose.yml up -d
 
 ### Data Directory Structure
 
+With PostgreSQL, most data is stored in the database, but some files remain:
+
 ```
-data/
-├── tasks/                   # Task management data
-│   ├── default_id/         # User-specific tasks
-│   └── shared/             # Shared tasks
-├── projects/               # Project configurations
-│   └── projects.json       # Main projects file
-├── contexts/               # Task contexts
-│   └── default_id/         # User-specific contexts
-└── rules/                  # Cursor rules and auto-generated content
-    ├── brain/              # System brain data
-    ├── tasks/              # Task-specific rules
-    └── contexts/           # Context-specific rules
+postgres-data/               # PostgreSQL database files
+├── pg_data/                # Database cluster data
+├── pg_wal/                 # Write-ahead logs
+└── pg_stat/                # Statistics
+
+app-data/
+├── agent-library/          # 60+ agent YAML definitions
+├── vision-cache/           # Vision System cache
+├── temp/                   # Temporary files
+└── uploads/                # User uploads
 
 logs/
 ├── fastmcp.log            # Main application log
-├── error.log              # Error logs
+├── postgres.log           # PostgreSQL logs
+├── vision.log             # Vision System logs
+├── agent.log              # Agent execution logs
 └── access.log             # HTTP access logs
 ```
 
 ### Environment Variables for Data Storage
 
 ```bash
-# Storage mode configuration
-DATA_STORAGE_MODE=internal          # or 'external'
+# Database Storage
+DATABASE_URL=postgresql://postgres:password@postgres:5432/dhafnck_mcp
+POSTGRES_DATA=/var/lib/postgresql/data
 
-# Data path configuration (used with both modes)
-TASKS_JSON_PATH=/data/tasks
-PROJECTS_FILE_PATH=/data/projects/projects.json
-CURSOR_RULES_DIR=/data/rules
+# Application Data Paths
+AGENT_LIBRARY_PATH=/app/agent-library
+VISION_CACHE_PATH=/data/vision-cache
+TEMP_PATH=/data/temp
+UPLOAD_PATH=/data/uploads
+
+# Log Paths
+LOG_PATH=/app/logs
+POSTGRES_LOG_PATH=/var/log/postgresql
 ```
 
 ## 🔧 Development Mode
 
 ### Features
-- **No Authentication**: Direct access without tokens
-- **Live Logs**: Verbose logging for debugging
-- **Debug Port**: Additional port 8001 available
-- **Cursor Tools Disabled**: Simplified tool set for development
+- **Full Feature Set**: All 60+ agents and tools available
+- **PostgreSQL with Sample Data**: Pre-populated database for testing
+- **Live Logs**: Verbose logging for all components
+- **Debug Ports**: Additional ports for database and debugging
+- **Vision System Tracing**: Detailed Vision System performance metrics
+- **Hot Reload**: Code changes reflected without restart (Python files)
 
 ### Switching Modes
 
@@ -477,39 +546,58 @@ docker logs dhafnck-mcp-server 2>&1 | grep -i error
 
 ## 🏛️ Architecture
 
-### Container Structure
+### Multi-Container Architecture
 ```
-dhafnck-mcp-server/
-├── /app/                    # Application code
-│   ├── src/                 # Source code
-│   ├── .venv/               # Python virtual environment
-│   └── logs/                # Application logs
-├── /data/                   # Persistent data
-│   ├── tasks/               # Task management data
-│   ├── projects/            # Project configurations
-│   └── rules/               # Cursor rules and contexts
-└── /app/config/             # Configuration files
+DhafnckMCP Platform/
+├── postgres/                # PostgreSQL Database Container
+│   ├── Data Volume         # Persistent database storage
+│   ├── Config              # PostgreSQL configuration
+│   └── Port: 5432          # Database port
+├── dhafnck-mcp-server/     # Main Application Container
+│   ├── /app/src/           # DDD-structured source code
+│   ├── /app/agent-library/ # 60+ agent definitions
+│   ├── /data/              # Application data
+│   └── Port: 8000          # MCP server port
+└── redis/ (optional)        # Redis Cache Container
+    ├── Data Volume         # Cache persistence
+    └── Port: 6379          # Redis port
 ```
 
 ### Network Configuration
-- **Container Name**: `dhafnck-mcp-server`
-- **Internal Port**: 8000
-- **External Port**: 8000 (mapped to localhost:8000)
-- **Additional Port**: 8001 (development mode only)
-- **Network**: `docker_default` bridge network
+- **Network Name**: `dhafnck_network`
+- **Network Type**: Bridge network with DNS
+- **Service Discovery**: Container names as hostnames
+- **Ports Exposed**:
+  - `8000`: MCP Server (HTTP)
+  - `5432`: PostgreSQL (mapped to 54320 on host)
+  - `6379`: Redis (optional, mapped to 63790 on host)
 
 ### Volume Mapping
-| Volume | Purpose | Mount Point |
-|--------|---------|-------------|
-| `docker_dhafnck_data` | Task and project data | `/data` |
-| `docker_dhafnck_logs` | Application logs | `/app/logs` |
-| `./config` | Configuration files | `/app/config` (read-only) |
+| Volume | Purpose | Container | Mount Point |
+|--------|---------|-----------|-------------|
+| `postgres_data` | Database files | postgres | `/var/lib/postgresql/data` |
+| `dhafnck_data` | Application data | mcp-server | `/data` |
+| `dhafnck_logs` | Application logs | mcp-server | `/app/logs` |
+| `agent_library` | Agent definitions | mcp-server | `/app/agent-library` |
+| `redis_data` | Cache data | redis | `/data` |
 
-### Resource Limits
+### Resource Allocation
+#### PostgreSQL Container
+- **Memory Limit**: 1GB
+- **Memory Reservation**: 512MB
+- **CPU Limit**: 1.0 cores
+- **Shared Memory**: 256MB
+
+#### MCP Server Container
+- **Memory Limit**: 2GB
+- **Memory Reservation**: 1GB
+- **CPU Limit**: 2.0 cores
+- **CPU Reservation**: 0.5 cores
+
+#### Redis Container (Optional)
 - **Memory Limit**: 512MB
 - **Memory Reservation**: 256MB
 - **CPU Limit**: 0.5 cores
-- **CPU Reservation**: 0.1 cores
 
 ## 🚀 Advanced Usage
 
@@ -524,67 +612,100 @@ docker-compose -f docker-compose.yml up -d
 
 ### Multiple Environments
 ```bash
-# Production environment
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# Production environment with all services
+docker-compose -f docker-compose.yml -f docker-compose.postgres.yml -f docker-compose.redis.yml -f docker-compose.prod.yml up -d
 
 # Staging environment
-docker-compose -f docker-compose.yml -f docker-compose.staging.yml up -d
+docker-compose -f docker-compose.yml -f docker-compose.postgres.yml -f docker-compose.staging.yml up -d
 
-# Testing environment
-docker-compose -f docker-compose.yml -f docker-compose.test.yml up -d
+# Testing environment with test database
+docker-compose -f docker-compose.yml -f docker-compose.postgres.yml -f docker-compose.test.yml up -d
 ```
 
-### Scaling (Future)
+### Scaling Strategies
 ```bash
-# Scale to multiple instances
+# Horizontal scaling with multiple MCP servers
 docker-compose up -d --scale dhafnck-mcp=3
 
-# Load balancer configuration needed for multiple instances
+# Database read replicas (PostgreSQL streaming replication)
+docker-compose -f docker-compose.yml -f docker-compose.postgres-replica.yml up -d
+
+# Redis cluster for distributed caching
+docker-compose -f docker-compose.yml -f docker-compose.redis-cluster.yml up -d
 ```
 
 ### Backup and Restore
-```bash
-# Backup data volumes
-docker run --rm -v docker_dhafnck_data:/data -v $(pwd):/backup alpine tar czf /backup/dhafnck-data-backup.tar.gz -C /data .
 
-# Restore data volumes
-docker run --rm -v docker_dhafnck_data:/data -v $(pwd):/backup alpine tar xzf /backup/dhafnck-data-backup.tar.gz -C /data
+#### PostgreSQL Database Backup
+```bash
+# Backup PostgreSQL database
+docker exec postgres pg_dump -U postgres dhafnck_mcp > backup_$(date +%Y%m%d_%H%M%S).sql
+
+# Backup with compression
+docker exec postgres pg_dump -U postgres -Fc dhafnck_mcp > backup_$(date +%Y%m%d_%H%M%S).dump
+
+# Restore PostgreSQL database
+docker exec -i postgres psql -U postgres dhafnck_mcp < backup.sql
+
+# Restore compressed backup
+docker exec -i postgres pg_restore -U postgres -d dhafnck_mcp < backup.dump
+```
+
+#### Application Data Backup
+```bash
+# Backup all volumes
+docker run --rm -v dhafnck_data:/data -v $(pwd):/backup alpine tar czf /backup/app-data-backup.tar.gz -C /data .
+
+# Restore application data
+docker run --rm -v dhafnck_data:/data -v $(pwd):/backup alpine tar xzf /backup/app-data-backup.tar.gz -C /data
 ```
 
 ### Monitoring
 ```bash
-# Resource monitoring
-docker stats dhafnck-mcp-server
+# Resource monitoring for all containers
+docker stats dhafnck-mcp-server postgres redis
+
+# Database monitoring
+docker exec postgres psql -U postgres -d dhafnck_mcp -c "SELECT * FROM pg_stat_activity;"
 
 # Health monitoring
 watch -n 5 './scripts/manage-docker.sh health'
 
 # Log monitoring
 tail -f docker/logs/*.log
+
+# Vision System performance monitoring
+docker exec dhafnck-mcp-server tail -f /app/logs/vision.log | grep "performance"
 ```
 
 ## 📚 Additional Resources
 
 ### Related Documentation
-- [Project Architecture](../.cursor/rules/technical_architect/index.mdc)
-- [Task Management Workflow](../.cursor/rules/02_AI-DOCS/TaskManagement/task_management_workflow.mdc)
-- [Multi-Agent Orchestration](../.cursor/rules/02_AI-DOCS/MultiAgentOrchestration/README.mdc)
+- [Architecture Overview](../docs/architecture.md)
+- [Domain-Driven Design](../docs/domain-driven-design.md)
+- [Vision System Guide](../docs/vision/README.md)
+- [API Reference](../docs/api-reference.md)
+- [Database Setup](../DATABASE_SETUP.md)
 
 ### External Links
 - [Docker Documentation](https://docs.docker.com/)
 - [Docker Compose Reference](https://docs.docker.com/compose/)
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
 - [MCP Protocol Specification](https://modelcontextprotocol.io/)
 
 ### Support
 - **Issues**: Check container logs with `./scripts/manage-docker.sh logs`
+- **Database**: Access PostgreSQL with `docker exec -it postgres psql -U postgres`
 - **Debugging**: Use `./scripts/manage-docker.sh shell` for container access
 - **Health**: Monitor with `./scripts/manage-docker.sh health`
+- **Performance**: Check Vision System metrics in logs
 
 ---
 
-**Last Updated**: 2025-06-28  
-**Version**: 2.0.0  
-**Compatibility**: Docker 20.10+, Docker Compose v2.0+ 
+**Last Updated**: 2025-01-31  
+**Version**: 2.1.0  
+**Platform**: DhafnckMCP Multi-Project AI Orchestration Platform
+**Compatibility**: Docker 20.10+, Docker Compose v2.0+, PostgreSQL 14+ 
 
 
 ### quickstart

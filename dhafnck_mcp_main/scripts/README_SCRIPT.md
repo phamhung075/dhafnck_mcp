@@ -1,102 +1,118 @@
-# DhafnckMCP Scripts Documentation
+# DhafnckMCP Multi-Project AI Orchestration Platform - Scripts Documentation
 
 ## 📋 Index
 
-This directory contains various scripts for managing, deploying, and debugging the DhafnckMCP server. Below is an index of all available scripts organized by category:
+This directory contains various scripts for managing, deploying, and debugging the DhafnckMCP Multi-Project AI Orchestration Platform. Scripts support PostgreSQL database, 4-tier hierarchical context system, Vision System integration, and 60+ specialized AI agents. Below is an index of all available scripts organized by category:
 
 ### 🐳 Docker Management Scripts
-- [dev-docker.sh](#dev-dockersh) - Development Docker container management with live reload
-- [manage-docker.sh](#manage-dockersh) - Production Docker container management
-- [manage_container.sh](#manage_containersh) - Container lifecycle management
-- [docker-entrypoint.sh](#docker-entrypointsh) - Docker container entry point script
-- [run-docker-local.sh](#run-docker-localsh) - Local Docker development environment
+- [dev-docker.sh](#dev-dockersh) - Development Docker orchestration with PostgreSQL and Redis
+- [manage-docker.sh](#manage-dockersh) - Production multi-container management (PostgreSQL + MCP + Redis)
+- [manage_container.sh](#manage_containersh) - Advanced container lifecycle with database management
+- [docker-entrypoint.sh](#docker-entrypointsh) - Docker container initialization with Vision System
+- [run-docker-local.sh](#run-docker-localsh) - Local development environment with full stack
 
 ### 🚀 Deployment Scripts
-- [deploy-mvp.sh](#deploy-mvpsh) - Complete MVP deployment pipeline
-- [deploy-frontend.sh](#deploy-frontendsh) - Frontend deployment to Vercel
-- [publish-docker.sh](#publish-dockersh) - Docker image publishing to registry
+- [deploy-mvp.sh](#deploy-mvpsh) - Complete platform deployment with PostgreSQL and agents
+- [deploy-frontend.sh](#deploy-frontendsh) - Frontend deployment with API integration
+- [publish-docker.sh](#publish-dockersh) - Multi-architecture image publishing
 
 ### 🔧 MCP Server Management
-- [run_mcp_server.sh](#run_mcp_serversh) - Basic MCP server startup
-- [run_mcp_server_with_logging.sh](#run_mcp_server_with_loggingsh) - MCP server with enhanced logging
-- [restart_mcp.sh](#restart_mcpsh) - Quick MCP server restart
-- [wsl_mcp_bridge.sh](#wsl_mcp_bridgesh) - WSL-specific MCP bridge
+- [run_mcp_server.sh](#run_mcp_serversh) - MCP server with PostgreSQL and context system
+- [run_mcp_server_with_logging.sh](#run_mcp_server_with_loggingsh) - Enhanced logging with Vision System metrics
+- [restart_mcp.sh](#restart_mcpsh) - Quick server restart with database health checks
+- [wsl_mcp_bridge.sh](#wsl_mcp_bridgesh) - WSL bridge with PostgreSQL compatibility
 
 ### 🔍 Debugging & Diagnostics
-- [diagnostic_connect.sh](#diagnostic_connectsh) - Comprehensive MCP connection diagnostics
-- [diagnose_mcp_connection.sh](#diagnose_mcp_connectionsh) - Quick MCP connection troubleshooting
-- [check_cursor_logs.sh](#check_cursor_logssh) - Cursor IDE log analysis
-- [start_inspector.sh](#start_inspectorsh) - MCP Inspector startup
+- [diagnostic_connect.sh](#diagnostic_connectsh) - Comprehensive diagnostics including database and agents
+- [diagnose_mcp_connection.sh](#diagnose_mcp_connectionsh) - Connection troubleshooting with context validation
+- [check_cursor_logs.sh](#check_cursor_logssh) - Cursor IDE log analysis with Vision System errors
+- [start_inspector.sh](#start_inspectorsh) - MCP Inspector with agent library integration
 
 ---
 
 ## 📖 Detailed Script Documentation
 
 ### dev-docker.sh
-**Purpose**: Development Docker container management with live code reloading
+**Purpose**: Development Docker orchestration with PostgreSQL, Redis, and live code reloading
 
 **Features**:
-- Start/stop/restart development containers
+- Multi-container startup (PostgreSQL + MCP Server + Redis)
 - Live code reloading for development
+- Database migration and seeding
+- Vision System debugging and metrics
+- 4-tier context system testing
+- Agent library hot-reloading
 - Container health monitoring
-- Interactive shell access
-- Development test runner
-- Volume and container cleanup
+- Interactive shell access with database tools
 
 **Usage**:
 ```bash
 ./dev-docker.sh [COMMAND]
 
 Commands:
-  start     - Start development container with live reload
-  stop      - Stop development container
-  restart   - Restart development container
-  logs      - Show container logs
-  shell     - Open shell in development container
-  test      - Run tests in development container
-  status    - Show container status
-  clean     - Clean up development containers and volumes
+  start     - Start all containers (PostgreSQL, MCP Server, Redis) with live reload
+  stop      - Stop all development containers
+  restart   - Restart all containers with database health check
+  logs      - Show aggregated logs from all containers
+  shell     - Open shell in MCP server container with database access
+  db        - Open PostgreSQL shell for database management
+  test      - Run comprehensive tests including database and agent tests
+  status    - Show status of all containers and services
+  migrate   - Run database migrations
+  seed      - Seed database with sample data
+  clean     - Clean up all containers, volumes, and database data
 ```
 
 **Key Features**:
-- Uses `docker-compose.yml` and `docker-compose.dev.yml`
-- Provides live reload for development
-- Includes health checks and status monitoring
-- Supports interactive debugging
+- Uses `docker-compose.yml`, `docker-compose.postgres.yml`, `docker-compose.dev.yml`
+- Multi-container orchestration with service dependencies
+- Live reload for Python code and agent configurations
+- Database migration and seeding capabilities
+- Vision System performance monitoring
+- Agent library hot-reloading for development
+- Comprehensive health checks for all services
 
 ---
 
 ### manage-docker.sh
-**Purpose**: Production Docker container management and lifecycle control
+**Purpose**: Production multi-container management for the complete DhafnckMCP platform
 
 **Features**:
-- Container lifecycle management (start/stop/restart)
-- Health monitoring and status checks
-- Log viewing and debugging
-- Resource usage monitoring
-- Container cleanup and rebuilding
+- Multi-service lifecycle management (PostgreSQL + MCP Server + Redis)
+- Database health monitoring and backup automation
+- Vision System performance tracking
+- Agent registry health checks
+- Log aggregation from all services
+- Resource usage monitoring across containers
+- Container cleanup with data preservation
+- Production deployment orchestration
 
 **Usage**:
 ```bash
 ./manage-docker.sh <command>
 
 Commands:
-  start     - Start the container (or create if doesn't exist)
-  stop      - Stop the running container
-  restart   - Restart the container
-  logs      - Show container logs (follow mode)
-  status    - Show container status
-  health    - Check server health
-  shell     - Open shell inside container
-  remove    - Stop and remove container (preserves volumes)
-  cleanup   - Remove container and rebuild from scratch
+  start     - Start all services (PostgreSQL, MCP Server, Redis)
+  stop      - Stop all running containers gracefully
+  restart   - Restart all services with health validation
+  logs      - Show aggregated logs from all services (follow mode)
+  status    - Show comprehensive status of all containers and services
+  health    - Check health of database, MCP server, and Vision System
+  backup    - Create database backup with timestamp
+  restore   - Restore database from backup file
+  shell     - Open shell inside MCP server container
+  db-shell  - Open PostgreSQL shell for database operations
+  remove    - Stop and remove all containers (preserves data volumes)
+  cleanup   - Complete cleanup and rebuild with fresh database
 ```
 
 **Key Features**:
-- Comprehensive container status reporting
-- Resource usage monitoring
-- Health check endpoints
-- Volume preservation during cleanup
+- Multi-service orchestration with dependency management
+- PostgreSQL backup and restore capabilities
+- Vision System performance monitoring
+- Agent health and registry validation
+- Resource usage tracking across all containers
+- Database volume preservation during maintenance
 
 ---
 
@@ -184,12 +200,14 @@ Commands:
 ```
 
 **Environment Variables Set**:
+- `DATABASE_URL`: PostgreSQL connection string
+- `DATABASE_MODE`: Database mode (local, container, mcp_stdin, test)
 - `PYTHONPATH`: Python module search path
-- `TASKS_JSON_PATH`: Task storage location
-- `TASK_JSON_BACKUP_PATH`: Backup storage location
-- `MCP_TOOL_CONFIG`: Tool configuration file
-- `AGENTS_OUTPUT_DIR`: Agent output directory
-- Various other project-specific paths
+- `CONTEXT_CACHE_TTL`: 4-tier context system cache settings
+- `VISION_SYSTEM_ENABLED`: Vision System activation
+- `AGENT_LIBRARY_PATH`: 60+ agent definitions directory
+- `REDIS_URL`: Redis cache connection (optional)
+- Various PostgreSQL and performance-related settings
 
 **Key Features**:
 - Proper working directory setup
@@ -471,15 +489,19 @@ Automatically executed when Docker container starts
 ## 📋 Prerequisites
 
 ### System Requirements
-- Docker and Docker Compose
-- Python 3.8+
-- Node.js 16+ (for frontend deployment)
+- Docker and Docker Compose (v2.0+)
+- PostgreSQL 14+ (for local development)
+- Python 3.12+ (for direct server execution)
+- Node.js 18+ (for frontend deployment)
+- Redis 7+ (optional, for caching)
 - WSL2 (for Windows users)
 
 ### Environment Setup
 - Virtual environment: `dhafnck_mcp_main/.venv`
 - Project root: `/home/daihungpham/agentic-project`
-- Configuration files in `.cursor/` directory
+- Database: PostgreSQL with JSONB support
+- Agent library: 60+ specialized agents in YAML format
+- Configuration files in `.cursor/` and `docker/` directories
 
 ### Required Permissions
 - All scripts should be executable: `chmod +x *.sh`
@@ -492,15 +514,22 @@ Automatically executed when Docker container starts
 
 ### Environment Variables
 Key environment variables used across scripts:
+- `DATABASE_URL`: PostgreSQL connection string
+- `DATABASE_MODE`: Database operation mode
 - `PYTHONPATH`: Python module search path
-- `TASKS_JSON_PATH`: Task storage location
-- `PROJECT_ROOT_PATH`: Project root directory
-- `AGENT_LIBRARY_DIR_PATH`: Agent configuration directory
+- `CONTEXT_CACHE_TTL`: 4-tier context system settings
+- `VISION_SYSTEM_ENABLED`: Vision System control
+- `AGENT_LIBRARY_PATH`: 60+ agent definitions path
+- `REDIS_URL`: Redis cache connection
+- `PERFORMANCE_TARGET_RPS`: Performance targets
 
 ### Configuration Files
-- `.cursor/mcp.json`: MCP server configuration
-- `docker-compose.yml`: Docker service definitions
+- `.cursor/mcp.json`: MCP server configuration with PostgreSQL
+- `docker-compose.yml`: Main service definitions
+- `docker-compose.postgres.yml`: PostgreSQL service configuration
+- `docker-compose.redis.yml`: Redis service configuration
 - `pyproject.toml`: Python project configuration
+- `docker/.env`: Environment variables for containers
 - `frontend/.env.local`: Frontend environment variables
 
 ---
@@ -508,24 +537,33 @@ Key environment variables used across scripts:
 ## 🚨 Troubleshooting
 
 ### Common Issues
-1. **Container won't start**: Check Docker service and permissions
-2. **MCP connection failed**: Run diagnostic scripts
-3. **Port conflicts**: Check for other services on required ports
-4. **Permission denied**: Ensure scripts are executable
+1. **Container won't start**: Check Docker service, PostgreSQL availability, and permissions
+2. **Database connection failed**: Verify PostgreSQL is running and credentials are correct
+3. **MCP connection failed**: Run diagnostic scripts to check database and agent health
+4. **Port conflicts**: Check for services on ports 8000 (MCP), 5432 (PostgreSQL), 6379 (Redis)
+5. **Vision System errors**: Check agent library path and permissions
+6. **Context system failures**: Verify database schema and migrations
+7. **Permission denied**: Ensure scripts are executable and database access is configured
 
 ### Debug Commands
 ```bash
-# Check container status
+# Check all service status
 ./manage-docker.sh status
 
-# View detailed diagnostics
+# Test database connection
+./manage-docker.sh db-shell
+
+# View detailed diagnostics including database and agents
 ./diagnostic_connect.sh
 
-# Check Cursor logs
+# Check Cursor logs for Vision System errors
 ./check_cursor_logs.sh
 
-# Test server startup
+# Test server startup with enhanced logging
 ./run_mcp_server_with_logging.sh
+
+# Check database health
+./manage-docker.sh health
 ```
 
 ---
@@ -533,19 +571,28 @@ Key environment variables used across scripts:
 ## 📚 Additional Resources
 
 ### Related Documentation
+- [Architecture Overview](../docs/architecture.md)
+- [Vision System Guide](../docs/vision/README.md)
+- [API Reference](../docs/api-reference.md)
+- [Docker Deployment](../docs/docker-deployment.md)
+- [Database Setup](../DATABASE_SETUP.md)
 - [MCP Protocol Documentation](https://modelcontextprotocol.io/)
 - [Docker Documentation](https://docs.docker.com/)
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
 - [Cursor IDE Documentation](https://cursor.sh/)
 
 ### Support
 For issues and questions:
-1. Check the diagnostic scripts output
-2. Review the troubleshooting section
-3. Examine container and application logs
-4. Consult the project documentation
+1. Check the diagnostic scripts output for comprehensive analysis
+2. Review the troubleshooting section for common solutions
+3. Examine database and application logs for specific errors
+4. Test individual components (database, agents, Vision System)
+5. Consult the complete project documentation
+6. Check agent library and context system health
 
 ---
 
-*Last updated: 2024-12-29*
-*Version: 2.0*
+*Last updated: 2025-01-31*
+*Version: 2.1.0*
+*Platform: DhafnckMCP Multi-Project AI Orchestration Platform*
 *Maintainer: DhafnckMCP Team* 

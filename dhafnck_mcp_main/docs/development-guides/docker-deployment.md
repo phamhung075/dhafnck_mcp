@@ -66,15 +66,24 @@ volumes:
 
 ## Database Configuration
 
-### SQLite (Development)
+### PostgreSQL (Primary Database)
 ```yaml
 # docker-compose.yml
 services:
   dhafnck-mcp:
     environment:
-      - DATABASE_URL=sqlite:////data/dhafnck_mcp.db
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/dhafnck_mcp
+    depends_on:
+      - postgres
+  
+  postgres:
+    image: postgres:14-alpine
+    environment:
+      - POSTGRES_DB=dhafnck_mcp
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
     volumes:
-      - ./data:/data
+      - postgres_data:/var/lib/postgresql/data
 ```
 
 ### PostgreSQL (Production)
@@ -94,7 +103,7 @@ services:
 ```bash
 # .env file
 # Database
-DATABASE_URL=sqlite:////data/dhafnck_mcp.db
+DATABASE_URL=postgresql://postgres:${DB_PASSWORD}@postgres:5432/dhafnck_mcp
 DB_PASSWORD=secure_password_here
 
 # Server
@@ -118,7 +127,7 @@ POOL_SIZE=20
 ### Development Environment
 ```bash
 # .env.development
-DATABASE_URL=sqlite:////data/dhafnck_mcp.db
+DATABASE_URL=postgresql://postgres:password@postgres:5432/dhafnck_mcp_dev
 LOG_LEVEL=DEBUG
 ENABLE_DEBUG_ROUTES=true
 CORS_ORIGINS=http://localhost:3000,http://localhost:8080
@@ -240,7 +249,7 @@ services:
       - .:/app
       - dhafnck_data:/data
     environment:
-      - DATABASE_URL=sqlite:////data/dhafnck_mcp.db
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/dhafnck_mcp_dev
       - LOG_LEVEL=DEBUG
       - PYTHONPATH=/app/src
     env_file:
@@ -358,8 +367,8 @@ docker-compose exec dhafnck-mcp python -m alembic downgrade -1
 
 ### Database Backup and Restore
 ```bash
-# Backup SQLite database
-docker-compose exec dhafnck-mcp cp /data/dhafnck_mcp.db /data/backup_$(date +%Y%m%d_%H%M%S).db
+# Backup PostgreSQL database (recommended)
+docker-compose exec postgres pg_dump -U postgres dhafnck_mcp > backup_$(date +%Y%m%d_%H%M%S).sql
 
 # Backup PostgreSQL database
 docker-compose exec dhafnck-db pg_dump -U dhafnck dhafnck_mcp > backup_$(date +%Y%m%d_%H%M%S).sql

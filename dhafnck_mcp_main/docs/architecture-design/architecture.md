@@ -75,7 +75,7 @@ TASK (Specific work unit context)
 
 #### Persistence
 - **SQLAlchemy ORM**: Object-relational mapping
-- **Database Adapters**: SQLite (development), PostgreSQL (production)
+- **Database Adapters**: PostgreSQL (primary), SQLite (legacy/test only)
 - **Migration Management**: Alembic for schema versioning
 
 #### Caching
@@ -181,9 +181,9 @@ Task Context Request → Branch Context → Project Context → Global Context
 - **Health Checks**: Container health monitoring
 
 ### Database Configuration
-- **Development**: SQLite for simplicity
-- **Production**: PostgreSQL with JSONB for performance
-- **Testing**: Isolated test databases
+- **Primary**: PostgreSQL with JSONB for all environments (development, production)
+- **Legacy**: SQLite support maintained for backward compatibility
+- **Testing**: Isolated PostgreSQL test databases
 
 ### Monitoring & Observability
 - **Health Endpoints**: System health monitoring

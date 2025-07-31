@@ -30,14 +30,14 @@ config/
 
 ### Database Configuration
 
-#### SQLite (Development)
+#### PostgreSQL (Primary Database)
 ```bash
-# Basic SQLite setup
-DATABASE_URL=sqlite:///./dhafnck_mcp.db
+# Primary PostgreSQL setup
+DATABASE_URL=postgresql://user:password@localhost:5432/dhafnck_mcp
 DATABASE_MODE=local
 
-# SQLite with full path
-DATABASE_URL=sqlite:////data/dhafnck_mcp.db
+# PostgreSQL with Docker
+DATABASE_URL=postgresql://postgres:password@postgres:5432/dhafnck_mcp
 
 # Connection settings
 DB_ECHO=false
@@ -324,7 +324,7 @@ LOG_CONSOLE_ENABLED=true
 LOG_REQUEST_DETAILS=true
 
 # Database
-DATABASE_URL=sqlite:///./dhafnck_mcp_dev.db
+DATABASE_URL=postgresql://postgres:password@localhost:5432/dhafnck_mcp_dev
 DB_ECHO=true
 
 # Cache
@@ -385,7 +385,7 @@ LOG_LEVEL=ERROR
 LOG_CONSOLE_ENABLED=false
 
 # Test database
-DATABASE_URL=sqlite:///./dhafnck_mcp_test.db
+DATABASE_URL=postgresql://postgres:password@localhost:5432/dhafnck_mcp_test
 DB_ECHO=false
 
 # Disable external services
@@ -517,8 +517,8 @@ class Settings(BaseSettings):
     
     @validator('database_url')
     def validate_database_url(cls, v):
-        if not v.startswith(('sqlite:', 'postgresql:')):
-            raise ValueError('Invalid database URL scheme')
+        if not v.startswith(('postgresql:', 'sqlite:')):
+            raise ValueError('Invalid database URL scheme. PostgreSQL recommended, SQLite legacy support only.')
         return v
     
     @validator('jwt_secret_key')
