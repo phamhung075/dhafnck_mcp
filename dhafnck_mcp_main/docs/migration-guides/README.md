@@ -28,7 +28,7 @@ All migration guides follow a standardized process:
 ## 🎯 Migration Types
 
 - **Context System Upgrades** - Hierarchical and unified context implementations
-- **Database Schema Changes** - PostgreSQL and SQLite migrations  
+- **Database Schema Changes** - Database migrations (PostgreSQL primary database)  
 - **API Version Updates** - MCP tool compatibility updates
 - **Feature Enhancements** - New functionality integration
 

@@ -19,7 +19,7 @@ We have a complete Vision System design (see /dhafnck_mcp_main/docs/vision/) tha
 
 - MCP server (FastMCP) with task management
 - Domain-driven design with clean architecture
-- SQLite database for persistence
+- PostgreSQL database for persistence with JSONB support
 - Existing controllers: task_mcp_controller.py, subtask_mcp_controller.py
 - Context management already exists but not enforced
 

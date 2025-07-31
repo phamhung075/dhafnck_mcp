@@ -3,6 +3,8 @@
 ## Overview
 Successfully migrated the DhafnckMCP test suite from SQLite to PostgreSQL as requested. The test suite now runs exclusively with PostgreSQL, using a Docker-based test database for isolation.
 
+**Note**: This document records the historical migration from SQLite to PostgreSQL. References to SQLite describe the previous state before migration. PostgreSQL is now the primary database for all environments including testing.
+
 ## Initial State
 - **Problem**: All tests were failing with PostgreSQL connection errors
 - **Root Cause**: Malformed DATABASE_URL with triple @ symbols (`@@@db.dmuqoeppsoesqcijrwhw.supabase.co`)

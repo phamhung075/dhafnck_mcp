@@ -402,7 +402,7 @@ mcp__dhafnck_mcp_http__manage_context(
 # Any context operation should work without import errors
 ```
 
-**Complete Fix Documentation**: See [Unified Context System Fixes - January 19, 2025](fixes/unified_context_system_fixes_2025_01_19.md) for comprehensive technical details.
+**Complete Fix Documentation**: See [Unified Context System Fixes - January 19, 2025](../fixes/unified_context_system_fixes_2025_01_19.md) for comprehensive technical details.
 
 **Regression Testing**: See [Testing Guide - Recent Fixes and Validation Testing](testing.md#recent-fixes-and-validation-testing-january-2025) for test patterns to validate fixes.
 
@@ -550,7 +550,7 @@ When reporting issues, include:
 4. Steps to reproduce
 5. Environment details (OS, Python version, etc.)
 
-**Important**: If you encounter any of the resolved errors (UnboundLocalError, ModuleNotFoundError, foreign key constraints, async/await issues), these may indicate regressions that need immediate attention. Please reference the [January 2025 fixes documentation](fixes/unified_context_system_fixes_2025_01_19.md) for context.
+**Important**: If you encounter any of the resolved errors (UnboundLocalError, ModuleNotFoundError, foreign key constraints, async/await issues), these may indicate regressions that need immediate attention. Please reference the [January 2025 fixes documentation](../fixes/unified_context_system_fixes_2025_01_19.md) for context.
 
 ---
 

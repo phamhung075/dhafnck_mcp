@@ -71,7 +71,7 @@ This document provides a comprehensive design for integrating the Vision System 
 │  │ • TaskRepository (with vision data)                      │   │
 │  │ • NEW: VisionRepository                                  │   │
 │  │ • NEW: ProgressEventStore                               │   │
-│  │ • Enhanced SQLite Schema                                 │   │
+│  │ • Enhanced PostgreSQL Schema with JSONB                 │   │
 │  └─────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -422,8 +422,10 @@ src/fastmcp/
    ```python
    # infrastructure/migrations/migration_runner.py
    def apply_vision_migration():
-       with sqlite3.connect('task_management.db') as conn:
-           conn.executescript(migration_sql)
+       from sqlalchemy import create_engine
+       engine = create_engine('postgresql://user:pass@localhost/dhafnck_mcp')
+       with engine.begin() as conn:
+           conn.execute(migration_sql)
    ```
 
 ### Code Migration

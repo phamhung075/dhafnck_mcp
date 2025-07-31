@@ -205,5 +205,5 @@ Comprehensive unit tests are provided in `test_json_parameter_parser.py` coverin
 ## Related Documentation
 
 - [Parameter Type Validation](parameter-type-validation.md) - Boolean and integer parameter coercion
-- [API Reference](../api-reference.md) - Complete MCP tool documentation
-- [Error Handling](../error-handling-and-logging.md) - Error handling patterns
+- [API Reference](../api-integration/api-reference.md) - Complete MCP tool documentation
+- [Error Handling](../development-guides/error-handling-and-logging.md) - Error handling patterns

@@ -13,7 +13,7 @@ DhafnckMCP - AI Agent Orchestration Platform
 2.1.0
 
 ### Product_Description
-A sophisticated enterprise-grade AI agent orchestration platform built on Domain-Driven Design (DDD) principles, providing advanced multi-agent coordination, hierarchical context management, and autonomous workflow execution. Features 60+ specialized AI agents, 15+ MCP tool categories, Vision System with 6-phase enhancement, and enterprise-grade architecture supporting real-time collaboration, SQLite database integration, and comprehensive agent orchestration capabilities through the MCP (Model Context Protocol) framework.
+A sophisticated enterprise-grade AI agent orchestration platform built on Domain-Driven Design (DDD) principles, providing advanced multi-agent coordination, hierarchical context management, and autonomous workflow execution. Features 60+ specialized AI agents, 15+ MCP tool categories, Vision System with 6-phase enhancement, and enterprise-grade architecture supporting real-time collaboration, PostgreSQL database integration, and comprehensive agent orchestration capabilities through the MCP (Model Context Protocol) framework.
 
 ### Target_Users
 - Enterprise Development Teams requiring multi-agent AI coordination
@@ -50,7 +50,7 @@ Comprehensive AI agent orchestration platform providing:
 3. **60+ Specialized AI Agents** - Categorized agents with dynamic loading and execution capabilities
 4. **15+ MCP Tool Categories** - Comprehensive tool ecosystem for task management, agent coordination, and workflow automation
 5. **Vision System** - 6-phase AI enhancement with hierarchical context inheritance (Global → Project → Task)
-6. **SQLite Database Integration** - Robust data persistence with atomic operations and real-time synchronization
+6. **PostgreSQL Database Integration** - Robust data persistence with atomic operations and real-time synchronization
 7. **Enterprise Security & Compliance** - Audit trails, policy validation, and comprehensive governance features
 8. **Autonomous Multi-Agent Coordination** - Self-managing agents with intelligent work distribution and load balancing
 
@@ -71,7 +71,7 @@ Comprehensive AI agent orchestration platform providing:
 - Components:
   - **Domain Layer**: Rich entities (Task, Agent, Project, Context), value objects, and business logic
   - **Application Layer**: Use cases, facades, DTOs, and event handlers
-  - **Infrastructure Layer**: SQLite repositories, caching, database management
+  - **Infrastructure Layer**: PostgreSQL repositories, caching, database management
   - **Interface Layer**: MCP controllers and tool registration
   - **Frontend Layer**: React + TypeScript + Tailwind UI with basic task management
   - **Agent Library**: 60+ specialized agents with YAML configurations and dynamic loading
@@ -167,7 +167,7 @@ Comprehensive AI agent orchestration platform providing:
 ### Technology_Stack
 - **Frontend**: React 19.1.0 + TypeScript + Tailwind CSS + Radix UI
 - **Backend**: Python 3.10+ + FastMCP 2.0 + Domain-Driven Design Architecture
-- **Database**: SQLite with atomic operations + Redis caching for session persistence
+- **Database**: PostgreSQL with atomic operations + Redis caching for session persistence
 - **Agent System**: YAML-based configuration with 60+ agents and dynamic loading
 - **Vision System**: 6-phase AI enhancement with hierarchical context inheritance
 - **Authentication**: Authlib with multi-provider support (OAuth, JWT)
@@ -176,7 +176,7 @@ Comprehensive AI agent orchestration platform providing:
 
 ### Architecture_Components
 - **Frontend Layer**: dhafnck-frontend/ (React + TypeScript + Tailwind + basic task management)
-- **Core MCP Server**: dhafnck_mcp_main/ (Python + FastMCP + DDD + SQLite)
+- **Core MCP Server**: dhafnck_mcp_main/ (Python + FastMCP + DDD + PostgreSQL)
 - **Domain Layer**: src/fastmcp/task_management/domain/ (Entities, value objects, domain services)
 - **Application Layer**: src/fastmcp/task_management/application/ (Use cases, facades, DTOs)
 - **Infrastructure Layer**: src/fastmcp/task_management/infrastructure/ (Repositories, external services)
@@ -202,7 +202,7 @@ Comprehensive AI agent orchestration platform providing:
 ### Performance_Metrics
 - **Task Operations**: < 100ms for complex multi-agent operations
 - **Agent Coordination**: < 500ms for multi-agent workflow orchestration
-- **Database Operations**: < 200ms for SQLite atomic operations
+- **Database Operations**: < 200ms for PostgreSQL atomic operations
 - **Health Monitoring**: < 50ms for connection health checks
 - **Vision Analytics**: < 1 second for AI insight generation and context enhancement
 
@@ -221,7 +221,7 @@ Comprehensive AI agent orchestration platform providing:
 - **Vision System**: COMPLETE (6-phase AI enhancement with hierarchical context inheritance)
 - **Enterprise Compliance**: COMPLETE (Audit trails, policy validation, security monitoring)
 - **Real-Time Monitoring**: COMPLETE (Health checks, diagnostics, performance metrics)
-- **Database Integration**: COMPLETE (SQLite with atomic operations, Redis caching)
+- **Database Integration**: COMPLETE (PostgreSQL with atomic operations, Redis caching)
 - **Autonomous Operation**: COMPLETE (Self-managing agents with intelligent coordination)
 
 ### Active_Development
@@ -246,7 +246,7 @@ Comprehensive AI agent orchestration platform providing:
 - Release Date: 2025-01-12
 - Deployment Type: Domain-driven design architecture with MCP protocol integration
 - Infrastructure: On-premise deployment with enterprise-grade capabilities
-- Database: SQLite with atomic operations and Redis caching
+- Database: PostgreSQL with atomic operations and Redis caching
 - Agent System: Dynamic loading of 60+ specialized agents
 - Frontend: Basic React application with task management capabilities
 
@@ -255,5 +255,5 @@ Comprehensive AI agent orchestration platform providing:
 - **Frontend**: /home/daihungpham/agentic-project/dhafnck-frontend/ (React + TypeScript + Tailwind)
 - **Core Server**: /home/daihungpham/agentic-project/dhafnck_mcp_main/ (Python + FastMCP + DDD)
 - **Agent Library**: /home/daihungpham/agentic-project/dhafnck_mcp_main/agent-library/ (60+ agents)
-- **Database**: SQLite databases with atomic operations and Redis caching
+- **Database**: PostgreSQL databases with atomic operations and Redis caching
 - **Documentation**: /home/daihungpham/agentic-project/.cursor/rules/ (Platform rules and configuration)

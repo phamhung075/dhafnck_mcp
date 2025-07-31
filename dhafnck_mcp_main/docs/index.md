@@ -9,7 +9,7 @@ Welcome to the DhafnckMCP Multi-Project AI Orchestration Platform documentation.
 - [Database Setup](../DATABASE_SETUP.md) - Database configuration guide
 - [Environment Setup](../ENV_SETUP_README.md) - Environment setup instructions
 - [Docker Quick Start](../docker/README_DOCKER.md) - Docker deployment guide
-- [Configuration Guide](configuration.md) - Environment variables and settings
+- [Configuration Guide](api-integration/configuration.md) - Environment variables and settings
 
 ### 🏗️ Architecture & Design
 Foundational design principles, architectural patterns, and technical decisions for the DhafnckMCP platform.
@@ -128,7 +128,7 @@ System status reports, documentation health checks, and implementation status up
 
 ### 🐳 Deployment & Operations
 - [Docker Deployment](development-guides/docker-deployment.md) - Production Docker deployment
-- [Docker Configuration](docker/config/README.md) - Docker configuration details
+- [Docker Configuration](../docker/config/README.md) - Docker configuration details
 - [Scripts Documentation](../scripts/README_SCRIPT.md) - Utility scripts guide
 
 ### 📂 Examples & Templates

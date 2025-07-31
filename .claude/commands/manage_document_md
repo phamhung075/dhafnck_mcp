@@ -85,6 +85,24 @@ get_last_git_update() {
     git log -1 --format="%ai" -- "$(basename "$file")" 2>/dev/null || echo "Unknown"
 }
 
+# Function to properly escape strings for JSON
+json_escape() {
+    local string="$1"
+    # Escape backslashes first
+    string="${string//\\/\\\\}"
+    # Escape quotes
+    string="${string//\"/\\\"}"
+    # Escape newlines
+    string="${string//$'\n'/\\n}"
+    # Escape carriage returns
+    string="${string//$'\r'/\\r}"
+    # Escape tabs
+    string="${string//$'\t'/\\t}"
+    # Remove any control characters
+    string=$(echo "$string" | tr -d '\000-\037')
+    echo "$string"
+}
+
 # Function to extract document metadata
 extract_doc_metadata() {
     local file="$1"
@@ -102,6 +120,9 @@ extract_doc_metadata() {
     
     # Count sections
     local section_count=$(echo "$content" | grep -c "^##[[:space:]]" || echo 0)
+    # Ensure section_count is a clean number
+    section_count=$(echo "$section_count" | tr -d '\n' | tr -cd '0-9')
+    [ -z "$section_count" ] && section_count=0
     
     # Detect document type
     local doc_type="general"
@@ -117,9 +138,10 @@ extract_doc_metadata() {
         */CHANGELOG*|*/changelog*) doc_type="changelog" ;;
     esac
     
-    # Escape quotes in title and description for JSON
-    title=$(echo "$title" | sed 's/"/\\"/g')
-    description=$(echo "$description" | sed 's/"/\\"/g')
+    # Escape all fields for JSON
+    title=$(json_escape "$title")
+    description=$(json_escape "$description")
+    tags=$(json_escape "$tags")
     echo "{\"title\": \"$title\", \"description\": \"$description\", \"type\": \"$doc_type\", \"sections\": $section_count, \"tags\": \"$tags\"}"
 }
 
@@ -291,8 +313,13 @@ analyze_doc_health() {
     local current=$(jq -r '.documents[] | select(.status == "current") | .path' "$DOC_INDEX_DB" | wc -l)
     
     echo "Total Documents: $total"
-    echo "Current: $current ($(( current * 100 / total ))%)"
-    echo "Outdated: $outdated ($(( outdated * 100 / total ))%)"
+    if [ $total -gt 0 ]; then
+        echo "Current: $current ($(( current * 100 / total ))%)"
+        echo "Outdated: $outdated ($(( outdated * 100 / total ))%)"
+    else
+        echo "Current: $current"
+        echo "Outdated: $outdated"
+    fi
     echo ""
     
     # Show outdated documents

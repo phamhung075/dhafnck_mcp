@@ -6,7 +6,7 @@ Welcome to the task management system documentation for dhafnck_mcp. This direct
 
 ## Documentation Structure
 
-### 📋 [Task Completion Business Rules](task_completion_business_rules.md)
+### 📋 Task Completion Business Rules
 **Complete implementation guide for task completion validation**
 
 - **Business Rules**: Context validation, subtask completion, automatic resets
@@ -16,7 +16,7 @@ Welcome to the task management system documentation for dhafnck_mcp. This direct
 - **Usage Examples**: Real-world scenarios and code samples
 - **Integration Points**: MCP tools and application facade integration
 
-### 🧪 [Testing Guide](testing_guide.md)
+### 🧪 [Testing Guide](../testing-qa/testing.md)
 **Comprehensive testing strategy and implementation details**
 
 - **Test Architecture**: Unit, component, and integration test organization
@@ -71,7 +71,7 @@ else:
 - **Error Handling**: User-friendly error messages and detailed diagnostics
 
 ### 🔄 Partial Implementation
-- **Repository Layer**: Interface defined, SQLite implementation exists but needs integration
+- **Repository Layer**: Interface defined, PostgreSQL implementation exists but needs integration
 - **Infrastructure**: Factory pattern implemented but not fully connected
 - **MCP Integration**: Tools defined but may need additional error handling
 
@@ -326,10 +326,10 @@ python -m pytest --cov=module.path --cov-report=html tests/path/
 ## Resources
 
 ### Related Documentation
-- [DDD Architecture Guide](../DDD_Connection_Management_Architecture.md)
-- [Development Guide](../DEVELOPMENT_GUIDE.md)
-- [Test Isolation Implementation](../TEST_ISOLATION_IMPLEMENTATION.md)
-- [API Reference](../API_REFERENCE.md)
+- [DDD Architecture Guide](../architecture-design/domain-driven-design.md)
+- [Development Guide](../../README.md)
+- [Test Isolation Implementation](../testing-qa/test-results-and-issues.md)
+- [API Reference](../api-integration/api-reference.md)
 
 ### External References
 - [Domain-Driven Design Principles](https://martinfowler.com/tags/domain%20driven%20design.html)

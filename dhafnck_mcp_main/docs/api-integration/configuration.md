@@ -517,8 +517,8 @@ class Settings(BaseSettings):
     
     @validator('database_url')
     def validate_database_url(cls, v):
-        if not v.startswith(('postgresql:', 'sqlite:')):
-            raise ValueError('Invalid database URL scheme. PostgreSQL recommended, SQLite legacy support only.')
+        if not v.startswith('postgresql:'):
+            raise ValueError('Invalid database URL scheme. PostgreSQL is required for all environments.')
         return v
     
     @validator('jwt_secret_key')

@@ -676,4 +676,4 @@ Include in support requests:
 - Correlation ID (if available)
 
 ### Common Issues
-See [Comprehensive Troubleshooting Guide](COMPREHENSIVE_TROUBLESHOOTING_GUIDE.md) for detailed solutions to common problems.
+See [Comprehensive Troubleshooting Guide](../troubleshooting-guides/COMPREHENSIVE_TROUBLESHOOTING_GUIDE.md) for detailed solutions to common problems.

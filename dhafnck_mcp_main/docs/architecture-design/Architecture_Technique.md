@@ -15,7 +15,7 @@ Sophisticated enterprise-grade architecture implementing Domain-Driven Design pr
 ### Architecture_Layers
 1. **Domain Layer** - Rich entities, value objects, and business logic
 2. **Application Layer** - Use cases, facades, DTOs, and event handlers
-3. **Infrastructure Layer** - SQLite repositories, caching, database management
+3. **Infrastructure Layer** - PostgreSQL repositories, caching, database management
 4. **Interface Layer** - MCP controllers and tool registration
 5. **Frontend Layer** - React + TypeScript + Tailwind CSS application
 
@@ -80,7 +80,7 @@ Sophisticated enterprise-grade architecture implementing Domain-Driven Design pr
 
 #### Repositories
 - **JsonTaskRepository**: JSON-based task storage with atomic operations
-- **SqliteTaskRepository**: SQLite integration with performance optimization
+- **PostgreSQLTaskRepository**: PostgreSQL integration with JSONB support and performance optimization
 - **FileSystemRepository**: File-based storage for configurations and caching
 - **CacheRepository**: Redis-based caching for session persistence
 
@@ -91,7 +91,7 @@ Sophisticated enterprise-grade architecture implementing Domain-Driven Design pr
 - **NotificationService**: Real-time status broadcasting and updates
 
 #### Database_Integration
-- **SQLite**: Primary database with atomic operations and performance optimization
+- **PostgreSQL**: Primary database with JSONB support, atomic operations, and advanced query optimization
 - **Redis**: Session persistence and caching layer
 - **Database Management**: Automated migrations, backups, and health monitoring
 
@@ -273,86 +273,114 @@ TASK CONTEXT (ID: task_id)
 ## DATABASE_ARCHITECTURE
 
 ### Database_Technology
-- **Primary Database**: SQLite with atomic operations
+- **Primary Database**: PostgreSQL with JSONB support and atomic operations
 - **Caching Layer**: Redis for session persistence
-- **Performance Optimization**: Indexing strategy and query optimization
+- **Performance Optimization**: Advanced indexing strategy, partitioning, and query optimization
 
 ### Database_Schema
 
 #### Task_Storage_Structure
 ```sql
 CREATE TABLE tasks (
-    id TEXT PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL,
     description TEXT,
     status TEXT NOT NULL,
     priority TEXT NOT NULL,
-    git_branch_id TEXT NOT NULL,
-    context_id TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    details TEXT,
+    git_branch_id UUID NOT NULL,
+    context_id UUID,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    details JSONB,
     estimated_effort TEXT,
-    assignees TEXT,
-    labels TEXT,
-    dependencies TEXT,
-    due_date TEXT
+    assignees JSONB,
+    labels JSONB,
+    dependencies JSONB,
+    due_date TIMESTAMP WITH TIME ZONE,
+    FOREIGN KEY (git_branch_id) REFERENCES project_git_branchs(id) ON DELETE CASCADE
 );
+
+-- PostgreSQL indexes for performance
+CREATE INDEX idx_tasks_status ON tasks(status);
+CREATE INDEX idx_tasks_git_branch_id ON tasks(git_branch_id);
+CREATE INDEX idx_tasks_context_id ON tasks(context_id);
+CREATE INDEX idx_tasks_assignees ON tasks USING GIN(assignees);
 ```
 
 #### Subtask_Storage_Structure
 ```sql
 CREATE TABLE subtasks (
-    id TEXT PRIMARY KEY,
-    parent_task_id TEXT NOT NULL,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    parent_task_id UUID NOT NULL,
     title TEXT NOT NULL,
     description TEXT,
     status TEXT NOT NULL,
     priority TEXT NOT NULL,
-    assignees TEXT,
+    assignees JSONB,
     progress_percentage INTEGER DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (parent_task_id) REFERENCES tasks(id)
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (parent_task_id) REFERENCES tasks(id) ON DELETE CASCADE
 );
+
+-- PostgreSQL indexes
+CREATE INDEX idx_subtasks_parent_task_id ON subtasks(parent_task_id);
+CREATE INDEX idx_subtasks_status ON subtasks(status);
 ```
 
 #### Project_Storage_Structure
 ```sql
 CREATE TABLE projects (
-    id TEXT PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL UNIQUE,
     description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- PostgreSQL unique constraint
+CREATE UNIQUE INDEX idx_projects_name ON projects(LOWER(name));
 ```
 
 #### Agent_Storage_Structure
 ```sql
 CREATE TABLE agents (
-    id TEXT PRIMARY KEY,
-    project_id TEXT NOT NULL,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    project_id UUID NOT NULL,
     name TEXT NOT NULL,
-    call_agent TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (project_id) REFERENCES projects(id)
+    call_agent JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
+
+-- PostgreSQL indexes
+CREATE INDEX idx_agents_project_id ON agents(project_id);
+CREATE INDEX idx_agents_name ON agents(name);
 ```
 
 #### Context_Storage_Structure
 ```sql
-CREATE TABLE contexts (
-    id TEXT PRIMARY KEY,
+CREATE TABLE unified_contexts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL,
-    project_id TEXT NOT NULL,
-    git_branch_name TEXT NOT NULL,
-    data TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    version INTEGER DEFAULT 1
+    project_id UUID NOT NULL,
+    git_branch_id UUID NOT NULL,
+    level TEXT NOT NULL,
+    context_id TEXT NOT NULL,
+    data JSONB NOT NULL,
+    metadata JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    version INTEGER DEFAULT 1,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    FOREIGN KEY (git_branch_id) REFERENCES project_git_branchs(id) ON DELETE CASCADE
 );
+
+-- PostgreSQL indexes for hierarchical context
+CREATE INDEX idx_unified_contexts_level ON unified_contexts(level);
+CREATE INDEX idx_unified_contexts_context_id ON unified_contexts(context_id);
+CREATE INDEX idx_unified_contexts_data ON unified_contexts USING GIN(data);
 ```
 
 ## PERFORMANCE_ARCHITECTURE
@@ -372,7 +400,7 @@ CREATE TABLE contexts (
 ### Performance_Targets
 - **Task Operations**: < 100ms for complex operations
 - **Agent Coordination**: < 500ms for multi-agent workflows
-- **Database Operations**: < 200ms for SQLite transactions
+- **Database Operations**: < 200ms for PostgreSQL transactions
 - **Health Monitoring**: < 50ms for connection checks
 - **Vision Analytics**: < 1 second for AI insight generation
 
@@ -420,7 +448,7 @@ CREATE TABLE contexts (
 ### Production_Configuration
 - **Environment**: Production-ready deployment
 - **Server**: FastMCP 2.0 with Python 3.10+
-- **Database**: SQLite with Redis caching
+- **Database**: PostgreSQL with Redis caching
 - **Frontend**: React build with static hosting
 - **Agent System**: 60+ agents with dynamic loading
 
@@ -456,7 +484,7 @@ CREATE TABLE contexts (
 - **Domain-Driven Design**: Complete implementation with clean architecture
 - **MCP Protocol Integration**: 15+ tool categories with comprehensive functionality
 - **Agent Orchestration**: 60+ specialized agents with dynamic loading
-- **Database Integration**: SQLite with Redis caching and performance optimization
+- **Database Integration**: PostgreSQL with JSONB support, Redis caching, and performance optimization
 - **Vision System**: 6-phase AI enhancement with hierarchical context inheritance
 - **Security & Compliance**: Comprehensive audit trails and policy validation
 

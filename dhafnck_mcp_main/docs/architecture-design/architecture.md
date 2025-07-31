@@ -75,7 +75,7 @@ TASK (Specific work unit context)
 
 #### Persistence
 - **SQLAlchemy ORM**: Object-relational mapping
-- **Database Adapters**: PostgreSQL (primary), SQLite (legacy/test only)
+- **Database Adapters**: PostgreSQL (primary for all environments)
 - **Migration Management**: Alembic for schema versioning
 
 #### Caching
@@ -147,9 +147,10 @@ Task Context Request → Branch Context → Project Context → Global Context
 - **Workflow Guidance Cache**: Cached decision trees
 
 ### Database Optimization
-- **Connection Pooling**: Efficient database connection management
-- **Query Optimization**: Selective loading with SQLAlchemy relationships
-- **Index Strategy**: Optimized indexes for common query patterns
+- **Connection Pooling**: PostgreSQL connection pooling with automatic scaling
+- **Query Optimization**: Selective loading with SQLAlchemy relationships and PostgreSQL query plans
+- **Index Strategy**: B-tree and GIN indexes for JSONB fields and search performance
+- **PostgreSQL Features**: JSONB operators, UUID generation, partial indexes, and parallel queries
 
 ### Async Processing
 - **Non-blocking Operations**: Async/await throughout the stack
@@ -182,8 +183,8 @@ Task Context Request → Branch Context → Project Context → Global Context
 
 ### Database Configuration
 - **Primary**: PostgreSQL with JSONB for all environments (development, production)
-- **Legacy**: SQLite support maintained for backward compatibility
-- **Testing**: Isolated PostgreSQL test databases
+- **Testing**: Isolated PostgreSQL test databases with automatic cleanup
+- **Features**: Advanced indexing, partitioning, and query optimization
 
 ### Monitoring & Observability
 - **Health Endpoints**: System health monitoring

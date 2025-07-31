@@ -1,6 +1,8 @@
 # PostgreSQL Test Failure Fixes
 
-This document provides solutions for common test failures when using PostgreSQL.
+This document provides solutions for common test failures when using PostgreSQL. 
+
+**Note**: This document describes the migration process from SQLite to PostgreSQL. References to SQLite are historical and explain differences between the two systems. PostgreSQL is the primary database for all environments.
 
 ## Common Issues and Solutions
 

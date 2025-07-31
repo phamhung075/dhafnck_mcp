@@ -162,6 +162,6 @@ The DhafnckMCP system now includes intelligent parameter type handling that auto
 
 ## References
 
-- [API Reference](/docs/api-reference.md) - Complete parameter type documentation
-- [Error Handling Guide](/docs/error-handling-and-logging.md) - How validation errors are handled
-- [Testing Guide](/docs/testing.md) - How to test parameter validation
+- [API Reference](../api-integration/api-reference.md) - Complete parameter type documentation
+- [Error Handling Guide](../development-guides/error-handling-and-logging.md) - How validation errors are handled
+- [Testing Guide](../testing-qa/testing.md) - How to test parameter validation
