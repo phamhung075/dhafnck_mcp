@@ -305,13 +305,13 @@ The system now provides more helpful error messages with actionable suggestions:
   "success": false,
   "error": "Task completion requires context to be created first",
   "suggestions": [
-    "Update context using manage_hierarchical_context",
+    "Update context using manage_context",
     "Ensure context exists before completing task",
     "Check context inheritance chain is complete"
   ],
   "suggested_actions": [
     {
-      "action": "manage_hierarchical_context",
+      "action": "manage_context",
       "parameters": {
         "action": "update",
         "level": "task",
@@ -334,7 +334,7 @@ The system now provides more helpful error messages with actionable suggestions:
 
 **Task Completion Errors**
 - ✅ **NEW**: Clear guidance on context requirements
-- Update context before completion using `manage_hierarchical_context`
+- Update context before completion using `manage_context`
 - Verify all subtasks are completed
 - Check task status allows completion
 

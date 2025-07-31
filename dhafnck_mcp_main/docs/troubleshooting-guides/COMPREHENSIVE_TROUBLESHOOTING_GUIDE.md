@@ -49,6 +49,8 @@ mcp__dhafnck_mcp_http__manage_agent(action="list", project_id="your-project-id")
 > **✅ RESOLVED**: The following issues have been fixed and are no longer problems. This section is maintained for historical reference and to help diagnose similar issues in the future.
 > 
 > **📋 Complete Fix Documentation**: For detailed technical information about these fixes, see [Unified Context System Fixes - January 19, 2025](fixes/unified_context_system_fixes_2025_01_19.md)
+>
+> **🔄 Context System Update**: As of January 2025, `manage_hierarchical_context` has been deprecated. Use `manage_context` for all context operations. All examples in this guide have been updated to reflect this change.
 
 #### ✅ TaskId Import Scoping Error (FIXED)
 
@@ -170,7 +172,7 @@ from .hierarchical_context_service import UnifiedContextService
 **Solution**:
 ```bash
 # ALWAYS update context before completing task
-mcp__dhafnck_mcp_http__manage_hierarchical_context(
+mcp__dhafnck_mcp_http__manage_context(
     action="update",
     level="task",
     context_id="your-task-id",
@@ -286,7 +288,7 @@ mcp__dhafnck_mcp_http__call_agent(name_agent="@coding_agent")
 **Diagnosis**:
 ```bash
 # Check cache status
-mcp__dhafnck_mcp_http__manage_hierarchical_context(
+mcp__dhafnck_mcp_http__manage_context(
     action="get_health"
 )
 
@@ -300,12 +302,12 @@ mcp__dhafnck_mcp_http__validate_context_inheritance(
 **Solutions**:
 ```bash
 # Clear cache if hit ratio is low
-mcp__dhafnck_mcp_http__manage_hierarchical_context(
+mcp__dhafnck_mcp_http__manage_context(
     action="cleanup_cache"
 )
 
 # Force refresh for specific context
-mcp__dhafnck_mcp_http__manage_hierarchical_context(
+mcp__dhafnck_mcp_http__manage_context(
     action="resolve",
     level="task",
     context_id="your-task-id",
@@ -371,7 +373,7 @@ validation = mcp__dhafnck_mcp_http__validate_context_inheritance(
 # 2. Check for missing contexts
 if validation.errors:
     # Create missing contexts
-    mcp__dhafnck_mcp_http__manage_hierarchical_context(
+    mcp__dhafnck_mcp_http__manage_context(
         action="create",
         level="project",
         context_id="project-id",
@@ -403,7 +405,7 @@ tasks = mcp__dhafnck_mcp_http__manage_task(
 ### Step 4: Performance Analysis
 ```bash
 # 1. Check cache performance
-cache_status = mcp__dhafnck_mcp_http__manage_hierarchical_context(
+cache_status = mcp__dhafnck_mcp_http__manage_context(
     action="get_health"
 )
 
@@ -532,7 +534,7 @@ cache_metrics = get_cache_metrics()
 
 # Actions:
 if cache_metrics.hit_ratio < 0.5:
-    mcp__dhafnck_mcp_http__manage_hierarchical_context(
+    mcp__dhafnck_mcp_http__manage_context(
         action="cleanup_cache"
     )
 ```
@@ -605,7 +607,7 @@ for task_id in active_tasks:
 # Re-establish inheritance chains
 
 # 3. Clear and rebuild cache
-mcp__dhafnck_mcp_http__manage_hierarchical_context(
+mcp__dhafnck_mcp_http__manage_context(
     action="cleanup_cache"
 )
 ```
@@ -636,7 +638,7 @@ mcp__dhafnck_mcp_http__manage_project(
 )
 
 # 2. Cache optimization
-mcp__dhafnck_mcp_http__manage_hierarchical_context(
+mcp__dhafnck_mcp_http__manage_context(
     action="cleanup_cache"
 )
 
@@ -743,7 +745,7 @@ task_result = mcp__dhafnck_mcp_http__manage_task(
 
 # 4. Test import path resolution (should not show ModuleNotFoundError)
 # Any context operation should work without import errors
-mcp__dhafnck_mcp_http__manage_hierarchical_context(
+mcp__dhafnck_mcp_http__manage_context(
     action="resolve",
     level="task",
     context_id="test-task-uuid"

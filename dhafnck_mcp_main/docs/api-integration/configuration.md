@@ -30,24 +30,38 @@ config/
 
 ### Database Configuration
 
-#### PostgreSQL (Primary Database)
+The system supports both SQLite and PostgreSQL databases. The database type is determined by the `DATABASE_TYPE` environment variable.
+
+#### Database Type Selection
 ```bash
-# Primary PostgreSQL setup
-DATABASE_URL=postgresql://user:password@localhost:5432/dhafnck_mcp
-DATABASE_MODE=local
+# Choose database type
+DATABASE_TYPE=sqlite         # Default - uses SQLite
+DATABASE_TYPE=postgresql     # Uses PostgreSQL
 
-# PostgreSQL with Docker
-DATABASE_URL=postgresql://postgres:password@postgres:5432/dhafnck_mcp
-
-# Connection settings
-DB_ECHO=false
-DB_POOL_SIZE=20
-DB_MAX_OVERFLOW=30
-DB_POOL_TIMEOUT=30
-DB_POOL_RECYCLE=3600
+# Database Mode (for SQLite)
+DATABASE_MODE=local          # Local development
+DATABASE_MODE=container      # Docker container
+DATABASE_MODE=mcp_stdin     # MCP STDIN mode
+DATABASE_MODE=test          # Test mode
 ```
 
-#### PostgreSQL (Production)
+#### SQLite Configuration
+```bash
+# SQLite is the default when DATABASE_TYPE is not set or set to 'sqlite'
+DATABASE_TYPE=sqlite
+
+# Database paths vary by mode:
+# - Docker Container/Local Mode: /data/dhafnck_mcp.db
+# - MCP STDIN Mode: ./dhafnck_mcp.db  
+# - Test Mode: ./dhafnck_mcp_test.db
+
+# Connection settings for SQLite
+DB_ECHO=false
+DB_POOL_SIZE=5              # Limited for SQLite
+DB_TIMEOUT=30               # Connection timeout
+```
+
+#### PostgreSQL Configuration
 ```bash
 # PostgreSQL connection
 DATABASE_URL=postgresql+asyncpg://username:password@host:port/database

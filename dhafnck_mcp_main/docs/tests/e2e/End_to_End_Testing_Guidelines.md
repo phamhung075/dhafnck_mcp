@@ -1,7 +1,7 @@
 # End-to-End Testing Guidelines
 
 ## 1. Overview
-Describe E2E testing strategies, tools, and workflows for DafnckMachine v3.1.
+Describe E2E testing strategies, tools, and workflows for DhafnckMCP.
 
 **Example:**
 - "E2E tests simulate real user flows using Cypress."
@@ -75,5 +75,29 @@ This applies to all tool endpoints. See E2E test code for working examples.
 
 > **Note:** The `MCP-Protocol-Version` header must be set to a supported version (e.g., `2025-06-18`) in all client and test requests. Using an unsupported version (such as `1.0`) will result in a 400 error. In frontend code, set this header in your API helper (e.g., `api.ts`). In tests, set it in your test header helper.
 
+## 8. Updated Context System (January 2025)
+
+The context system has been unified under the `manage_context` tool:
+- **Deprecated**: `manage_hierarchical_context` is no longer used
+- **Use**: `manage_context` for all context operations (create, update, resolve, delegate)
+- **Auto-creation**: Contexts are automatically created when creating projects, branches, and tasks
+- **Parameter flexibility**: Boolean parameters accept string values ("true", "false", "yes", "no")
+- **Array parameters**: Accept JSON strings, comma-separated values, or arrays
+
+**Example Context Test:**
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "manage_context",
+  "params": {
+    "action": "create",
+    "level": "task",
+    "context_id": "task-123",
+    "data": {"title": "Test Task", "status": "in_progress"}
+  },
+  "id": "test-context-create"
+}
+```
+
 ---
-*This document follows the DafnckMachine v3.1 PRD template. Update as E2E testing practices evolve.* 
+*This document follows the DhafnckMCP PRD template. Update as E2E testing practices evolve.* 

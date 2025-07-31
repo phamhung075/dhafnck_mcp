@@ -314,6 +314,16 @@ mcp__dhafnck_mcp_http__manage_hierarchical_context(
   - **Usage**: Now task updates automatically trigger context sync: `manage_task(action="update", task_id="...", status="in_progress")` - no additional context calls needed
   - **Future Enhancements**: Foundation laid for real-time notifications, batch optimization, and conflict resolution features
 
+### 2025-01-31
+- **Documentation Update Q1 2025**: Comprehensive documentation refresh initiative
+  - Created proper CHANGELOG.md file following Keep a Changelog format
+  - Extracted and organized all changelog entries from CLAUDE.local.md into structured format
+  - Added semantic versioning and proper release links
+  - Documented all changes from v2.0.0 through v2.1.0 with detailed descriptions
+  - Created task tracking for documentation updates across the project
+  - **Files Created**: CHANGELOG.md (new - following industry standards)
+  - **Impact**: Improved project documentation structure and change tracking visibility
+
 ## DOCUMENTATION ARCHITECTURE & BEST PRACTICES
 
 ### Documentation Structure (Current)

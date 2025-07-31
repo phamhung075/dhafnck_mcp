@@ -15,8 +15,8 @@ This document provides comprehensive reference for all MCP tools available in th
 - [manage_git_branch](#manage_git_branch) - Branch operations and task trees
 
 ### Context Management
-- [manage_context](#manage_context) - Unified context system (recommended) 
-- [manage_hierarchical_context](#manage_hierarchical_context) - Advanced 4-tier context system
+- [manage_context](#manage_context) - Unified 4-tier hierarchical context system
+- [manage_hierarchical_context](#manage_hierarchical_context) - (Deprecated - use manage_context)
 - [validate_context_inheritance](#validate_context_inheritance) - Debug inheritance chains
 - [manage_delegation_queue](#manage_delegation_queue) - Manual delegation review
 
@@ -264,6 +264,13 @@ mcp__dhafnck_mcp_http__manage_git_branch(
 Unified context management system providing a single interface for all context operations across the 4-tier hierarchy (Global → Project → Branch → Task).
 
 > **🚀 NEW in v9.1**: The `data` parameter now accepts JSON strings in addition to dictionary objects! JSON strings are automatically parsed, making it easier to work with serialized data.
+> 
+> **📋 January 2025 Updates**:
+> - manage_hierarchical_context is now deprecated - use manage_context for all operations
+> - Fixed boolean parameter validation - accepts "true", "false", "yes", "no", etc.
+> - Enhanced array parameter handling for assignees, labels, dependencies
+> - Automatic context synchronization on task updates
+> - Context auto-creation when creating projects, branches, and tasks
 
 #### Parameters
 
@@ -386,7 +393,9 @@ mcp__dhafnck_mcp_http__manage_context(
 
 ### manage_hierarchical_context
 
-Advanced 4-tier context system with inheritance and delegation.
+> **⚠️ DEPRECATED**: This tool is deprecated as of January 2025. Use [manage_context](#manage_context) instead, which provides the same functionality with a simpler interface and better performance.
+
+Legacy 4-tier context system with inheritance and delegation. All functionality has been integrated into `manage_context`.
 
 #### Parameters
 
@@ -403,16 +412,20 @@ Advanced 4-tier context system with inheritance and delegation.
 #### Examples
 
 ```bash
-# Resolve context with inheritance
-mcp__dhafnck_mcp_http__manage_hierarchical_context(
+# DEPRECATED - Use manage_context instead
+# OLD: mcp__dhafnck_mcp_http__manage_hierarchical_context(...)
+# NEW: mcp__dhafnck_mcp_http__manage_context(...)
+
+# Example - Resolve context with inheritance
+mcp__dhafnck_mcp_http__manage_context(
     action="resolve",
     level="task",
     context_id="task-uuid-123",
     force_refresh=false
 )
 
-# Delegate pattern to project level
-mcp__dhafnck_mcp_http__manage_hierarchical_context(
+# Example - Delegate pattern to project level
+mcp__dhafnck_mcp_http__manage_context(
     action="delegate",
     level="task",
     context_id="task-uuid-123",
@@ -592,7 +605,7 @@ mcp__dhafnck_mcp_http__manage_connection(
   "success": false,
   "error": "Task completion requires context to be created first",
   "suggestions": [
-    "Update context using manage_hierarchical_context",
+    "Update context using manage_context",
     "Then retry task completion"
   ]
 }

@@ -477,6 +477,182 @@ queue_status = await get_delegation_queue_status()
 - **Monitor cache hit ratios** and adjust cache size
 - **Profile resolution times** for optimization opportunities
 
+## MCP Tool Usage
+
+### Using manage_context Tool
+
+The `manage_context` tool provides a unified interface for all hierarchical context operations. 
+
+> **Note**: The system previously used `manage_hierarchical_context` which is now deprecated. The current `manage_context` tool internally uses the hierarchical system and provides full backward compatibility while offering a simpler interface.
+
+```python
+# Create context at any level
+mcp__dhafnck_mcp_http__manage_context(
+    action="create",
+    level="task",  # or "project", "branch", "global"
+    context_id="task-123",
+    data={
+        "title": "Implement authentication",
+        "status": "in_progress",
+        "priority": "high"
+    }
+)
+
+# Get context with inheritance
+mcp__dhafnck_mcp_http__manage_context(
+    action="get",
+    level="task",
+    context_id="task-123",
+    include_inherited=True  # Include data from parent contexts
+)
+
+# Update context
+mcp__dhafnck_mcp_http__manage_context(
+    action="update",
+    level="task",
+    context_id="task-123",
+    data={
+        "status": "completed",
+        "progress": 100,
+        "completion_summary": "JWT authentication implemented with refresh tokens"
+    },
+    propagate_changes=True  # Update dependent contexts
+)
+
+# Resolve full inheritance chain
+mcp__dhafnck_mcp_http__manage_context(
+    action="resolve",
+    level="task",
+    context_id="task-123",
+    force_refresh=False  # Use cache if available
+)
+
+# Delegate pattern to higher level
+mcp__dhafnck_mcp_http__manage_context(
+    action="delegate",
+    level="task",
+    context_id="task-123",
+    delegate_to="project",  # Target level: "global", "project", or "branch"
+    delegate_data={
+        "jwt_auth_pattern": {
+            "implementation": "auth_code_template",
+            "usage": "Reusable JWT authentication pattern"
+        }
+    },
+    delegation_reason="Reusable authentication pattern for all project features"
+)
+
+# Add insight to context
+mcp__dhafnck_mcp_http__manage_context(
+    action="add_insight",
+    level="task",
+    context_id="task-123",
+    content="Redis session caching improved response time by 40%",
+    category="performance",
+    importance="high"
+)
+
+# Add progress update
+mcp__dhafnck_mcp_http__manage_context(
+    action="add_progress",
+    level="task",
+    context_id="task-123",
+    content="Completed JWT token generation and validation",
+    agent="@coding_agent"
+)
+
+# List contexts at a level
+mcp__dhafnck_mcp_http__manage_context(
+    action="list",
+    level="task",
+    filters={
+        "status": "in_progress",
+        "priority": "high"
+    }
+)
+
+# Delete context
+mcp__dhafnck_mcp_http__manage_context(
+    action="delete",
+    level="task",
+    context_id="task-123"
+)
+```
+
+### Common Usage Patterns
+
+#### 1. Task Work with Context Updates
+```python
+# Start work on task
+mcp__dhafnck_mcp_http__manage_task(
+    action="update",
+    task_id="task-123",
+    status="in_progress"
+)
+
+# Update context with progress
+mcp__dhafnck_mcp_http__manage_context(
+    action="add_progress",
+    level="task",
+    context_id="task-123",
+    content="Implementing JWT token generation logic"
+)
+
+# Add discoveries as insights
+mcp__dhafnck_mcp_http__manage_context(
+    action="add_insight",
+    level="task",
+    context_id="task-123",
+    content="Found existing auth utility that can be reused",
+    category="discovery"
+)
+
+# Complete task with context update
+mcp__dhafnck_mcp_http__manage_task(
+    action="complete",
+    task_id="task-123",
+    completion_summary="JWT authentication fully implemented"
+)
+```
+
+#### 2. Pattern Delegation Flow
+```python
+# After implementing reusable pattern
+mcp__dhafnck_mcp_http__manage_context(
+    action="delegate",
+    level="task",
+    context_id="task-123",
+    delegate_to="project",
+    delegate_data={
+        "error_handling_pattern": {
+            "code": error_handler_template,
+            "usage": "Standard error handling for all API endpoints",
+            "example": "See auth/errors.py for implementation"
+        }
+    },
+    delegation_reason="Standardized error handling pattern for consistency"
+)
+```
+
+#### 3. Multi-Level Context Resolution
+```python
+# Get complete context for decision making
+context = mcp__dhafnck_mcp_http__manage_context(
+    action="resolve",
+    level="task",
+    context_id="task-123"
+)
+
+# Access inherited coding standards from global level
+coding_standards = context["data"]["metadata"]["coding_standards"]
+
+# Access project-specific architecture from project level
+architecture = context["data"]["metadata"]["project_architecture"]
+
+# Access branch-specific feature requirements
+feature_reqs = context["data"]["metadata"]["feature_requirements"]
+```
+
 ## Integration Examples
 
 ### Task Management Integration
