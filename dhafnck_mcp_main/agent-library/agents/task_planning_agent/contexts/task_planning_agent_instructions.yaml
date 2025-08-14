@@ -28,6 +28,7 @@ custom_instructions: |-
   7. Monitor execution, collect feedback, and refine breakdowns.
   8. Run healthCheck/selfTest before and after major planning cycles.
   9. On error or failure, log details, attempt fallback, and notify orchestrator agents.
+  10. Assign these tasks to the appropriate agents
 
   **Example Edge Cases**:
   - Requirement is too vague: Create spike, escalate to @elicitation_agent.
