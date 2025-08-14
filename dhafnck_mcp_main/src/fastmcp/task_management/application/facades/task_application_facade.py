@@ -515,6 +515,50 @@ class TaskApplicationFacade:
     def list_tasks(self, request: ListTasksRequest, include_dependencies: bool = False, minimal: bool = True) -> Dict[str, Any]:
         """List tasks with optional filtering - optimized for performance with minimal data by default"""
         try:
+            # Check if we should use optimized repository for performance
+            from ...infrastructure.performance.performance_config import PerformanceConfig
+            
+            if PerformanceConfig.is_performance_mode() and minimal:
+                # Use optimized repository directly for minimal data
+                from ...infrastructure.repositories.orm.optimized_task_repository import OptimizedTaskRepository
+                
+                # Create optimized repository with the same git_branch_id
+                optimized_repo = OptimizedTaskRepository(
+                    git_branch_id=request.git_branch_id if hasattr(request, 'git_branch_id') else None
+                )
+                
+                # Use minimal list method for best performance
+                tasks_list = optimized_repo.list_tasks_minimal(
+                    status=request.status if hasattr(request, 'status') else None,
+                    priority=request.priority if hasattr(request, 'priority') else None,
+                    assignee_id=request.assignee_id if hasattr(request, 'assignee_id') else None,
+                    limit=request.limit if hasattr(request, 'limit') else 100,
+                    offset=request.offset if hasattr(request, 'offset') else 0
+                )
+                
+                # If dependencies are requested, resolve them for blocked status
+                if include_dependencies:
+                    for task in tasks_list:
+                        try:
+                            dependency_relationships = self._dependency_resolver.resolve_dependencies(task['id'])
+                            task['is_blocked'] = dependency_relationships.is_blocked
+                        except Exception:
+                            task['is_blocked'] = False
+                
+                return {
+                    "success": True,
+                    "action": "list",
+                    "tasks": tasks_list,
+                    "count": len(tasks_list),
+                    "filters_applied": {
+                        "status": request.status if hasattr(request, 'status') else None,
+                        "priority": request.priority if hasattr(request, 'priority') else None
+                    },
+                    "minimal": minimal,
+                    "performance_mode": True
+                }
+            
+            # Fall back to standard implementation
             # Execute use case
             response = self._list_tasks_use_case.execute(request)
             

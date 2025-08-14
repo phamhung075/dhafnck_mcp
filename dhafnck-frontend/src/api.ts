@@ -143,11 +143,15 @@ export async function listTasks(params: any = {}): Promise<Task[]> {
   if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
     try {
       const toolResult = JSON.parse(data.result.content[0].text);
+      console.log('Raw listTasks response:', toolResult);
       if (toolResult.success) {
         const data = extractResponseData(toolResult);
         if (Array.isArray(data.tasks)) {
+          console.log('Tasks before sanitization:', data.tasks);
           // Sanitize each task to remove non-serializable properties
-          return data.tasks.map(sanitizeTask);
+          const sanitizedTasks = data.tasks.map(sanitizeTask);
+          console.log('Tasks after sanitization:', sanitizedTasks);
+          return sanitizedTasks;
         } else if (Array.isArray(toolResult.tasks)) {
           // Fallback for older format
           return toolResult.tasks.map(sanitizeTask);
@@ -370,6 +374,63 @@ function extractResponseData(toolResult: any): any {
 function sanitizeTask(task: any): Task {
   const { _events, _eventsCount, _maxListeners, ...cleanTask } = task;
   
+  // Debug logging for assignees
+  if (cleanTask.assignees !== undefined) {
+    console.log('Sanitizing task assignees:', {
+      taskId: cleanTask.id,
+      taskTitle: cleanTask.title,
+      assignees: cleanTask.assignees,
+      assigneesType: typeof cleanTask.assignees,
+      isArray: Array.isArray(cleanTask.assignees)
+    });
+  }
+  
+  // Ensure assignees is properly handled as an array of strings
+  if (cleanTask.assignees) {
+    if (Array.isArray(cleanTask.assignees)) {
+      // Filter out any invalid entries and ensure all are strings
+      cleanTask.assignees = cleanTask.assignees
+        .map((assignee: any) => {
+          // If it's already a string, keep it
+          if (typeof assignee === 'string' && assignee.trim().length > 0) {
+            return assignee.trim();
+          }
+          // If it's an object with 'id' or 'name', extract it
+          if (assignee && typeof assignee === 'object') {
+            if (assignee.id && typeof assignee.id === 'string') {
+              return assignee.id;
+            }
+            if (assignee.name && typeof assignee.name === 'string') {
+              return assignee.name;
+            }
+            if (assignee.assignee_id && typeof assignee.assignee_id === 'string') {
+              return assignee.assignee_id;
+            }
+          }
+          return null;
+        })
+        .filter((assignee: string | null) => assignee !== null && assignee !== '[' && assignee !== ']');
+    } else if (typeof cleanTask.assignees === 'string') {
+      // If it's a string, try to parse it or use as single assignee
+      try {
+        const parsed = JSON.parse(cleanTask.assignees);
+        if (Array.isArray(parsed)) {
+          cleanTask.assignees = parsed.filter((a: any) => typeof a === 'string' && a.trim().length > 0);
+        } else {
+          cleanTask.assignees = [cleanTask.assignees];
+        }
+      } catch {
+        // Not JSON, treat as single assignee
+        cleanTask.assignees = cleanTask.assignees.trim() ? [cleanTask.assignees.trim()] : [];
+      }
+    } else {
+      // Convert to empty array if not valid
+      cleanTask.assignees = [];
+    }
+  } else {
+    // Ensure assignees is always an array
+    cleanTask.assignees = [];
+  }
   
   // Ensure subtasks is an array of IDs, not objects
   if (cleanTask.subtasks && Array.isArray(cleanTask.subtasks)) {

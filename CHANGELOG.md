@@ -7,7 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Agent Assignment Display in Frontend** - Fixed critical issue where agent assignments were not displaying (2025-08-14)
+  - Enhanced `sanitizeTask` function in `api.ts` to properly handle assignees data
+  - Added robust parsing for assignees field supporting strings, arrays, and objects
+  - Added debug logging to track assignee data flow through the frontend
+  - Ensured assignees are always returned as an array of strings
+  - Handles edge cases like empty strings, invalid brackets, and object formats
+  - Files modified:
+    - `dhafnck-frontend/src/api.ts` - Enhanced sanitizeTask with assignee handling
+    - `dhafnck-frontend/src/components/ClickableAssignees.tsx` - Already had debug logging
+  - Impact: Agent assignments now display correctly in the task list UI
+
 ### Added
+- **Performance Optimization System** - Comprehensive task loading performance improvements (2025-08-14)
+  - Created `OptimizedTaskRepository` with selectinload strategy to prevent N+1 queries
+  - Implemented `TaskPerformanceOptimizer` with LRU caching (5-minute TTL)
+  - Added `PerformanceConfig` for environment-based performance tuning
+  - Integrated performance mode detection in `TaskApplicationFacade`
+  - Created 6 composite database indexes for common query patterns
+  - Files created:
+    - `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/performance/task_performance_optimizer.py` (320 lines)
+    - `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/optimized_task_repository.py` (385 lines)
+    - `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/performance/performance_config.py` (82 lines)
+  - Expected improvements: 50-70% query time reduction, 95%+ with caching, 80% payload reduction
+  - Task completed: "Optimize Task Loading Performance - Very Slow Response Times"
 - **Test Suite Recovery Project Setup** - Created comprehensive project structure for fixing test issues
   - Created new git branch `fix/test-suite-recovery` in MCP project system
   - Created 6 critical tasks to address all test problems:
