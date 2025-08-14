@@ -10,17 +10,17 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 import uuid
 
-from ...domain.repositories.project_repository import ProjectRepository
-from ...domain.repositories.git_branch_repository import GitBranchRepository
-from ...domain.repositories.task_repository import TaskRepository
-from ...domain.repositories.subtask_repository import SubtaskRepository
-from ...domain.entities.project import Project
-from ...domain.entities.git_branch import GitBranch
-from ...domain.entities.task import Task
-from ...domain.entities.subtask import Subtask
-from ...domain.value_objects import TaskId, TaskStatus, Priority
-from ...domain.value_objects.subtask_id import SubtaskId
-from ...domain.exceptions.base_exceptions import (
+from fastmcp.task_management.domain.repositories.project_repository import ProjectRepository
+from fastmcp.task_management.domain.repositories.git_branch_repository import GitBranchRepository
+from fastmcp.task_management.domain.repositories.task_repository import TaskRepository
+from fastmcp.task_management.domain.repositories.subtask_repository import SubtaskRepository
+from fastmcp.task_management.domain.entities.project import Project
+from fastmcp.task_management.domain.entities.git_branch import GitBranch
+from fastmcp.task_management.domain.entities.task import Task
+from fastmcp.task_management.domain.entities.subtask import Subtask
+from fastmcp.task_management.domain.value_objects import TaskId, TaskStatus, Priority
+from fastmcp.task_management.domain.value_objects.subtask_id import SubtaskId
+from fastmcp.task_management.domain.exceptions.base_exceptions import (
     ResourceNotFoundException,
     ValidationException,
     DatabaseException

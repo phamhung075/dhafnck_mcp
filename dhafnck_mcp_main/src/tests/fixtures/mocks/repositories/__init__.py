@@ -4,9 +4,7 @@ from .mock_repository_factory import (
     MockProjectRepository,
     MockGitBranchRepository,
     MockTaskRepository,
-    MockSubtaskRepository,
-    MockAgentRepository,
-    create_mock_repositories
+    MockSubtaskRepository
 )
 
 from .mock_task_context_repository import MockTaskContextRepository
@@ -16,7 +14,5 @@ __all__ = [
     'MockGitBranchRepository',
     'MockTaskRepository',
     'MockSubtaskRepository',
-    'MockAgentRepository',
-    'MockTaskContextRepository',
-    'create_mock_repositories'
+    'MockTaskContextRepository'
 ]

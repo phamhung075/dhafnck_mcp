@@ -10,7 +10,7 @@ from .test_layer_by_layer_diagnostic import (
     test_infrastructure_repositories,
     test_application_facades,
     test_interface_controllers,
-    test_ddd_tools_init,
+    test_ddd_compliant_tools_init,
     run_diagnostic
 )
 
@@ -20,6 +20,6 @@ __all__ = [
     'test_infrastructure_repositories',
     'test_application_facades',
     'test_interface_controllers',
-    'test_ddd_tools_init',
+    'test_ddd_compliant_tools_init',
     'run_diagnostic'
 ]

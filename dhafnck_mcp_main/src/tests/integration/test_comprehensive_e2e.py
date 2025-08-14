@@ -27,10 +27,7 @@ import docker
 from unittest.mock import patch
 
 # Import our test utilities
-import sys
-sys.path.append(str(Path(__file__).parent.parent))
-
-from utilities.docker_test_utils import DockerTestManager, PerformanceMonitor
+from tests.utilities.docker_test_utils import DockerTestManager, PerformanceMonitor
 
 logger = logging.getLogger(__name__)
 

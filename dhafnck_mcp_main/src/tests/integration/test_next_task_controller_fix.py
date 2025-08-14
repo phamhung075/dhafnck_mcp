@@ -8,12 +8,12 @@ os.environ["USE_TEST_DB"] = "true"
 os.environ["DATABASE_PROVIDER"] = "sqlite"
 
 from fastmcp.task_management.interface.controllers.task_mcp_controller import TaskMCPController
-from fastmcp.task_management.application.factories.task_application_facade_factory import TaskApplicationFacadeFactory
+from fastmcp.task_management.application.factories.task_facade_factory import TaskFacadeFactory
 
 def test_next_task_no_type_error():
     """Test that next task doesn't throw TypeError after fix"""
     # Create facade factory
-    facade_factory = TaskApplicationFacadeFactory()
+    facade_factory = TaskFacadeFactory()
     
     # Create controller
     controller = TaskMCPController(task_facade_factory=facade_factory)
