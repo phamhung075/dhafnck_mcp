@@ -3,7 +3,6 @@
 [![Architecture Status](https://img.shields.io/badge/Architecture-Production%20NOT%20Ready-brightgreen)](https://github.com/dhafnck/dhafnck_mcp)
 [![MCP Version](https://img.shields.io/badge/MCP-2.1.0-blue)](https://github.com/dhafnck/dhafnck_mcp)
 [![Docker Support](https://img.shields.io/badge/Docker-Multi%20Mode-orange)](https://github.com/dhafnck/dhafnck_mcp)
-[![Scale Target](https://img.shields.io/badge/Scale-1M%2B%20RPS-red)](https://github.com/dhafnck/dhafnck_mcp)
 
 ## 🎯 **Project Overview**
 
