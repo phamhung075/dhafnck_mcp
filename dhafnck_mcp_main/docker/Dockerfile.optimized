@@ -1,0 +1,115 @@
+# Optimized Multi-stage Dockerfile for DhafnckMCP Server
+# Target: Minimal size and resource usage
+
+# Stage 1: Dependencies builder
+FROM python:3.11-alpine AS deps-builder
+
+# Install build dependencies (minimal set)
+RUN apk add --no-cache --virtual .build-deps \
+    gcc \
+    musl-dev \
+    libffi-dev \
+    postgresql-dev \
+    && apk add --no-cache \
+    libpq
+
+WORKDIR /deps
+
+# Copy only dependency files
+COPY dhafnck_mcp_main/pyproject.toml dhafnck_mcp_main/uv.lock* ./
+
+# Install uv and create optimized wheel cache
+RUN pip install --no-cache-dir uv && \
+    uv venv .venv && \
+    source .venv/bin/activate && \
+    uv pip install --no-cache-dir \
+        sqlalchemy==2.0.35 \
+        psycopg2-binary==2.9.10 \
+        pydantic==2.10.3 \
+        pydantic-settings==2.7.0 \
+        fastapi \
+        uvicorn[standard] \
+        redis \
+        httpx && \
+    find .venv -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true && \
+    find .venv -type f -name "*.pyc" -delete && \
+    find .venv -type f -name "*.pyo" -delete
+
+# Stage 2: Source builder
+FROM python:3.11-alpine AS source-builder
+
+WORKDIR /app
+
+# Copy virtual environment from deps builder
+COPY --from=deps-builder /deps/.venv /app/.venv
+
+# Copy minimal source files
+COPY dhafnck_mcp_main/src/ src/
+COPY dhafnck_mcp_main/pyproject.toml dhafnck_mcp_main/README.md ./
+
+# Install the package
+RUN source /app/.venv/bin/activate && \
+    /app/.venv/bin/pip install --no-cache-dir -e . && \
+    python -O -m compileall -b src/ && \
+    find src/ -name "*.py" ! -name "__init__.py" -delete && \
+    find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+
+# Stage 3: Minimal runtime
+FROM python:3.11-alpine AS runtime
+
+# Install only runtime dependencies
+RUN apk add --no-cache \
+    libpq \
+    curl \
+    && rm -rf /var/cache/apk/*
+
+# Create non-root user
+RUN addgroup -g 1000 -S dhafnck && \
+    adduser -u 1000 -S dhafnck -G dhafnck
+
+# Set up directories
+WORKDIR /app
+RUN mkdir -p /data /data/logs && \
+    chown -R dhafnck:dhafnck /app /data
+
+# Copy optimized Python environment and compiled bytecode
+COPY --from=source-builder --chown=dhafnck:dhafnck /app/.venv /app/.venv
+COPY --from=source-builder --chown=dhafnck:dhafnck /app/src /app/src
+COPY --from=source-builder --chown=dhafnck:dhafnck /app/pyproject.toml /app/README.md ./
+
+# Copy minimal required files
+COPY --chown=dhafnck:dhafnck dhafnck_mcp_main/database/schema /app/database/schema
+COPY --chown=dhafnck:dhafnck dhafnck_mcp_main/agent-library /app/agent-library
+
+# Copy optimized entrypoint
+COPY --chown=dhafnck:dhafnck dhafnck_mcp_main/scripts/docker-entrypoint-optimized.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Switch to non-root user
+USER dhafnck
+
+# Environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONOPTIMIZE=2 \
+    PYTHONPATH=/app/src:/app \
+    PATH="/app/.venv/bin:$PATH" \
+    VIRTUAL_ENV="/app/.venv" \
+    FASTMCP_LOG_LEVEL=WARNING \
+    FASTMCP_ENABLE_RICH_TRACEBACKS=0 \
+    DATABASE_TYPE=postgresql \
+    DOCKER_CONTAINER=1
+
+# Expose port
+EXPOSE 8000
+
+# Optimized health check
+HEALTHCHECK --interval=60s --timeout=5s --start-period=30s --retries=2 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Run with optimized settings
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["python", "-O", "-m", "uvicorn", "fastmcp.server.main:app", \
+     "--host", "0.0.0.0", "--port", "8000", \
+     "--workers", "1", "--loop", "uvloop", \
+     "--no-access-log", "--log-level", "warning"]

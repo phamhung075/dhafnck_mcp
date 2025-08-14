@@ -1,0 +1,149 @@
+services:
+  dhafnck-mcp:
+    build:
+      context: ../..
+      dockerfile: dhafnck_mcp_main/docker/Dockerfile
+      target: runtime
+    image: dhafnck/mcp-server:latest
+    container_name: dhafnck-mcp-server
+    restart: unless-stopped
+    
+    # Port mapping for HTTP MCP server
+    ports:
+      - "8000:8000"
+    
+    # Environment variables
+    environment:
+      PYTHONPATH: ${PYTHONPATH:-/app/src}
+      DHAFNCK_DATA_PATH: ${DHAFNCK_DATA_PATH:-/data}
+      FASTMCP_LOG_LEVEL: ${APP_LOG_LEVEL:-INFO}
+      FASTMCP_ENABLE_RICH_TRACEBACKS: 0
+      DATA_STORAGE_MODE: ${DATA_STORAGE_MODE:-internal}
+      
+      # Database Configuration (Supabase)
+      DATABASE_TYPE: supabase
+      DATABASE_URL: ${SUPABASE_DATABASE_URL}
+      
+      # Supabase Configuration
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      SUPABASE_PROJECT_REF: ${SUPABASE_PROJECT_REF}
+      SUPABASE_DB_HOST: ${SUPABASE_DB_HOST}
+      SUPABASE_DB_PORT: ${SUPABASE_DB_PORT:-5432}
+      SUPABASE_DB_NAME: ${SUPABASE_DB_NAME:-postgres}
+      SUPABASE_DB_USER: ${SUPABASE_DB_USER:-postgres}
+      SUPABASE_DB_PASSWORD: ${SUPABASE_DB_PASSWORD}
+      
+      # Application settings
+      DHAFNCK_AUTH_ENABLED: ${DHAFNCK_AUTH_ENABLED:-false}
+      DHAFNCK_MVP_MODE: ${DHAFNCK_MVP_MODE:-true}
+      DHAFNCK_TOKEN: ${DHAFNCK_TOKEN:-}
+      FASTMCP_TRANSPORT: streamable-http
+      FASTMCP_HOST: 0.0.0.0
+      FASTMCP_PORT: 8000
+      
+      # Legacy paths (backward compatibility for file storage)
+      # MCP_DB_PATH REMOVED - SQLite permanently disabled!
+      TASKS_JSON_PATH: /data/tasks
+      PROJECTS_FILE_PATH: /data/projects/projects.json
+      CURSOR_RULES_DIR: /data/rules
+      AGENT_LIBRARY_DIR_PATH: /app/agent-library
+    
+    # Volume mounts for data persistence
+    volumes:
+      # Data persistence
+      - dhafnck_data:/data
+      - dhafnck_logs:/app/logs
+      
+      # Configuration files (optional - for advanced users)
+      - ./config:/app/config:ro
+      
+      # Development mode: mount source code (comment out for production)
+      - ../src:/app/src:ro  # Mount source code for development
+    
+    # Health check for HTTP mode
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.1'
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    
+    # Enable IPv6 for Supabase connectivity
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
+
+  dhafnck-frontend:
+    build:
+      context: ../../dhafnck-frontend
+      dockerfile: docker/Dockerfile
+    image: dhafnck/frontend:latest
+    container_name: dhafnck-frontend
+    restart: unless-stopped
+    ports:
+      - "3800:80"
+    depends_on:
+      - dhafnck-mcp
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.2'
+        reservations:
+          memory: 64M
+          cpus: '0.1'
+
+# Named volumes for data persistence
+volumes:
+  dhafnck_data:
+    driver: local
+  
+  dhafnck_logs:
+    driver: local
+
+# Network configuration with IPv6 support for Supabase  
+networks:
+  default:
+    enable_ipv6: true
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
+        - subnet: 2001:db8::/64
