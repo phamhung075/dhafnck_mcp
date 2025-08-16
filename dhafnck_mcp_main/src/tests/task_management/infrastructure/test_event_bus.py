@@ -21,8 +21,8 @@ class SampleEvent:
         self.data = data
 
 
-class AnotherTestEventClass:
-    """Another test event class."""
+class AnotherSampleEvent:
+    """Another sample event class for testing."""
     def __init__(self, value: int):
         self.value = value
 
@@ -47,13 +47,13 @@ class TestEventBus:
         """Test subscribing a handler."""
         handler = create_named_mock("test_handler")
         
-        event_bus.subscribe(TestEventClass, handler)
+        event_bus.subscribe(SampleEvent, handler)
         
-        assert TestEventClass in event_bus._subscriptions
-        assert len(event_bus._subscriptions[TestEventClass]) == 1
-        subscription = event_bus._subscriptions[TestEventClass][0]
+        assert SampleEvent in event_bus._subscriptions
+        assert len(event_bus._subscriptions[SampleEvent]) == 1
+        subscription = event_bus._subscriptions[SampleEvent][0]
         assert subscription.handler == handler
-        assert subscription.event_type == TestEventClass
+        assert subscription.event_type == SampleEvent
         assert subscription.priority == 0
         assert subscription.is_async is False
     
@@ -63,11 +63,11 @@ class TestEventBus:
         handler2 = create_named_mock("handler2")
         handler3 = create_named_mock("handler3")
         
-        event_bus.subscribe(TestEventClass, handler1, priority=5)
-        event_bus.subscribe(TestEventClass, handler2, priority=10)
-        event_bus.subscribe(TestEventClass, handler3, priority=1)
+        event_bus.subscribe(SampleEvent, handler1, priority=5)
+        event_bus.subscribe(SampleEvent, handler2, priority=10)
+        event_bus.subscribe(SampleEvent, handler3, priority=1)
         
-        subscriptions = event_bus._subscriptions[TestEventClass]
+        subscriptions = event_bus._subscriptions[SampleEvent]
         assert len(subscriptions) == 3
         
         # Should be sorted by priority (descending)
@@ -80,44 +80,44 @@ class TestEventBus:
         async def async_handler(event):
             pass
         
-        event_bus.subscribe(TestEventClass, async_handler)
+        event_bus.subscribe(SampleEvent, async_handler)
         
-        subscription = event_bus._subscriptions[TestEventClass][0]
+        subscription = event_bus._subscriptions[SampleEvent][0]
         assert subscription.is_async is True
     
     def test_unsubscribe_handler(self, event_bus):
         """Test unsubscribing a handler."""
         handler = create_named_mock("handler")
         
-        event_bus.subscribe(TestEventClass, handler)
-        result = event_bus.unsubscribe(TestEventClass, handler)
+        event_bus.subscribe(SampleEvent, handler)
+        result = event_bus.unsubscribe(SampleEvent, handler)
         
         assert result is True
-        assert TestEventClass not in event_bus._subscriptions
+        assert SampleEvent not in event_bus._subscriptions
     
     def test_unsubscribe_nonexistent_handler(self, event_bus):
         """Test unsubscribing a handler that wasn't subscribed."""
         handler = create_named_mock("handler")
         
-        result = event_bus.unsubscribe(TestEventClass, handler)
+        result = event_bus.unsubscribe(SampleEvent, handler)
         
         assert result is False
-        assert TestEventClass not in event_bus._subscriptions
+        assert SampleEvent not in event_bus._subscriptions
     
     def test_unsubscribe_partial(self, event_bus):
         """Test unsubscribing one of multiple handlers."""
         handler1 = create_named_mock("handler1")
         handler2 = create_named_mock("handler2")
         
-        event_bus.subscribe(TestEventClass, handler1)
-        event_bus.subscribe(TestEventClass, handler2)
+        event_bus.subscribe(SampleEvent, handler1)
+        event_bus.subscribe(SampleEvent, handler2)
         
-        result = event_bus.unsubscribe(TestEventClass, handler1)
+        result = event_bus.unsubscribe(SampleEvent, handler1)
         
         assert result is True
-        assert TestEventClass in event_bus._subscriptions
-        assert len(event_bus._subscriptions[TestEventClass]) == 1
-        assert event_bus._subscriptions[TestEventClass][0].handler == handler2
+        assert SampleEvent in event_bus._subscriptions
+        assert len(event_bus._subscriptions[SampleEvent]) == 1
+        assert event_bus._subscriptions[SampleEvent][0].handler == handler2
     
     @pytest.mark.asyncio
     async def test_publish_to_sync_handler(self, event_bus):
@@ -125,7 +125,7 @@ class TestEventBus:
         handler = create_named_mock("handler")
         event = SampleEvent("test_data")
         
-        event_bus.subscribe(TestEventClass, handler)
+        event_bus.subscribe(SampleEvent, handler)
         await event_bus.publish(event)
         
         handler.assert_called_once_with(event)
@@ -136,7 +136,7 @@ class TestEventBus:
         handler = AsyncMock()
         event = SampleEvent("test_data")
         
-        event_bus.subscribe(TestEventClass, handler)
+        event_bus.subscribe(SampleEvent, handler)
         await event_bus.publish(event)
         
         handler.assert_awaited_once_with(event)
@@ -150,9 +150,9 @@ class TestEventBus:
         handler3 = create_named_mock("handler3")
         event = SampleEvent("test_data")
         
-        event_bus.subscribe(TestEventClass, handler1)
-        event_bus.subscribe(TestEventClass, handler2)
-        event_bus.subscribe(TestEventClass, handler3)
+        event_bus.subscribe(SampleEvent, handler1)
+        event_bus.subscribe(SampleEvent, handler2)
+        event_bus.subscribe(SampleEvent, handler3)
         
         await event_bus.publish(event)
         
@@ -174,9 +174,9 @@ class TestEventBus:
         handler2 = make_handler("handler2")
         handler3 = make_handler("handler3")
         
-        event_bus.subscribe(TestEventClass, handler1, priority=5)
-        event_bus.subscribe(TestEventClass, handler2, priority=10)  # Highest priority
-        event_bus.subscribe(TestEventClass, handler3, priority=1)
+        event_bus.subscribe(SampleEvent, handler1, priority=5)
+        event_bus.subscribe(SampleEvent, handler2, priority=10)  # Highest priority
+        event_bus.subscribe(SampleEvent, handler3, priority=1)
         
         event = SampleEvent("test_data")
         await event_bus.publish(event)
@@ -200,9 +200,9 @@ class TestEventBus:
         handler2 = create_named_mock("handler2")
         handler3 = create_named_mock("handler3")
         
-        event_bus.subscribe(TestEventClass, handler1)
-        event_bus.subscribe(TestEventClass, handler2)
-        event_bus.subscribe(TestEventClass, handler3)
+        event_bus.subscribe(SampleEvent, handler1)
+        event_bus.subscribe(SampleEvent, handler2)
+        event_bus.subscribe(SampleEvent, handler3)
         
         event = SampleEvent("test_data")
         
@@ -220,8 +220,8 @@ class TestEventBus:
         handler1 = create_named_mock("handler1")
         handler2 = create_named_mock("handler2")
         
-        event_bus.subscribe(TestEventClass, handler1)
-        event_bus.subscribe(AnotherTestEventClass, handler2)
+        event_bus.subscribe(SampleEvent, handler1)
+        event_bus.subscribe(AnotherSampleEvent, handler2)
         
         event1 = SampleEvent("test")
         event2 = AnotherSampleEvent(42)
@@ -237,10 +237,10 @@ class TestEventBus:
         handler1 = create_named_mock("handler1")
         handler2 = create_named_mock("handler2")
         
-        event_bus.subscribe(TestEventClass, handler1)
-        event_bus.subscribe(TestEventClass, handler2)
+        event_bus.subscribe(SampleEvent, handler1)
+        event_bus.subscribe(SampleEvent, handler2)
         
-        subscriptions = event_bus._subscriptions.get(TestEventClass, [])
+        subscriptions = event_bus._subscriptions.get(SampleEvent, [])
         handlers = [sub.handler for sub in subscriptions]
         
         assert handler1 in handlers
@@ -248,7 +248,7 @@ class TestEventBus:
     
     def test_get_handlers_empty(self, event_bus):
         """Test getting handlers when none are subscribed."""
-        subscriptions = event_bus._subscriptions.get(TestEventClass, [])
+        subscriptions = event_bus._subscriptions.get(SampleEvent, [])
         assert subscriptions == []
     
     @pytest.mark.asyncio
@@ -273,7 +273,7 @@ class TestEventBus:
     async def test_concurrent_publish(self, event_bus):
         """Test concurrent event publishing."""
         handler = create_named_mock("handler")
-        event_bus.subscribe(TestEventClass, handler)
+        event_bus.subscribe(SampleEvent, handler)
         
         events = [SampleEvent(f"event_{i}") for i in range(10)]
         
@@ -287,11 +287,11 @@ class TestEventBus:
         """Test subscribing the same handler multiple times."""
         handler = create_named_mock("handler")
         
-        event_bus.subscribe(TestEventClass, handler)
-        event_bus.subscribe(TestEventClass, handler)  # Subscribe again
+        event_bus.subscribe(SampleEvent, handler)
+        event_bus.subscribe(SampleEvent, handler)  # Subscribe again
         
         # Handler should be in the list twice
-        subscriptions = event_bus._subscriptions[TestEventClass]
+        subscriptions = event_bus._subscriptions[SampleEvent]
         handlers = [sub.handler for sub in subscriptions]
         assert handlers.count(handler) == 2
     
@@ -299,13 +299,13 @@ class TestEventBus:
         """Test EventSubscription dataclass."""
         handler = create_named_mock("handler")
         subscription = EventSubscription(
-            event_type=TestEventClass,
+            event_type=SampleEvent,
             handler=handler,
             priority=5,
             is_async=False
         )
         
-        assert subscription.event_type == TestEventClass
+        assert subscription.event_type == SampleEvent
         assert subscription.handler == handler
         assert subscription.priority == 5
         assert subscription.is_async is False
@@ -331,10 +331,10 @@ class TestEventBusSingleton:
         
         bus1 = get_event_bus()
         handler = create_named_mock("handler")
-        bus1.subscribe(TestEventClass, handler)
+        bus1.subscribe(SampleEvent, handler)
         
         reset_event_bus()
         
         bus2 = get_event_bus()
         assert bus1 is not bus2
-        assert TestEventClass not in bus2._subscriptions
+        assert SampleEvent not in bus2._subscriptions

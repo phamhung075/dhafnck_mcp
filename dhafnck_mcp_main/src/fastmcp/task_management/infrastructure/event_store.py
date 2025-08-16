@@ -428,10 +428,17 @@ class EventStore:
     
     def clear(self) -> None:
         """Clear all events from the store (use with caution)."""
-        with self._get_connection() as conn:
-            conn.execute("DELETE FROM events")
-            conn.commit()
-        logger.warning("All events cleared from event store")
+        try:
+            with self._get_connection() as conn:
+                conn.execute("DELETE FROM events")
+                conn.commit()
+            logger.warning("All events cleared from event store")
+        except sqlite3.OperationalError as e:
+            if "no such table: events" in str(e):
+                # Table doesn't exist, nothing to clear
+                logger.debug("Events table doesn't exist, nothing to clear")
+            else:
+                raise
     
     def __repr__(self) -> str:
         """String representation of the event store."""

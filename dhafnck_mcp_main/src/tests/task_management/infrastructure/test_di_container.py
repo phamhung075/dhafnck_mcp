@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch, AsyncMock, MagicMock
 
 from fastmcp.task_management.infrastructure.di_container import DIContainer
 from fastmcp.task_management.infrastructure.event_bus import EventBus
-from fastmcp.task_management.infrastructure.event_store import EventStore
+from fastmcp.task_management.infrastructure.event_store import EventStore, reset_event_store
 from fastmcp.task_management.infrastructure.notification_service import NotificationService
 
 
@@ -274,6 +274,9 @@ class TestDIContainerIntegration:
     @pytest.mark.asyncio
     async def test_full_infrastructure_setup(self):
         """Test setting up full infrastructure."""
+        # Reset global event store to ensure fresh instance with correct path
+        reset_event_store()
+        
         container = DIContainer()
         
         with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
@@ -289,7 +292,7 @@ class TestDIContainerIntegration:
             notification_service = container.get_notification_service()
             
             # Test interaction between services
-            class TestEvent:
+            class SampleEvent:
                 def __init__(self, data):
                     self.data = data
                     self.aggregate_id = "test_agg"
@@ -305,10 +308,10 @@ class TestDIContainerIntegration:
                 nonlocal handler_called
                 handler_called = True
             
-            event_bus.subscribe(TestEvent, handler)
+            event_bus.subscribe(SampleEvent, handler)
             
             # Publish event
-            event = TestEvent("test_data")
+            event = SampleEvent("test_data")
             await event_bus.publish(event)
             
             # Check handler was called
@@ -334,6 +337,7 @@ class TestDIContainerIntegration:
             
         finally:
             # Cleanup
+            reset_event_store()  # Reset global state
             if os.path.exists(db_path):
                 os.unlink(db_path)
     

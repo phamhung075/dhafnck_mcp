@@ -6,7 +6,7 @@ enabling event-driven architectures and maintaining audit trails.
 
 from __future__ import annotations
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List, Union
 from uuid import uuid4
 
@@ -19,7 +19,7 @@ class ProgressEvent:
     """Base class for all progress-related events."""
     event_id: str = field(default_factory=lambda: str(uuid4()))
     task_id: Union[str, TaskId] = ""
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     agent_id: Optional[str] = None
     
     def to_dict(self) -> Dict[str, Any]:
@@ -86,7 +86,7 @@ class ProgressMilestoneReached(ProgressEvent):
 @dataclass(frozen=True)
 class ProgressStalled(ProgressEvent):
     """Event emitted when progress has not changed for a significant period."""
-    last_update_timestamp: datetime = field(default_factory=datetime.utcnow)
+    last_update_timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     stall_duration_hours: float = 0.0
     current_percentage: float = 0.0
     blockers: List[str] = field(default_factory=list)
@@ -145,7 +145,7 @@ class ProgressSnapshotCreated(ProgressEvent):
 class ProgressTypeCompleted(ProgressEvent):
     """Event emitted when a specific progress type reaches 100%."""
     progress_type: ProgressType = ProgressType.GENERAL
-    completion_timestamp: datetime = field(default_factory=datetime.utcnow)
+    completion_timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert event to dictionary representation."""

@@ -10,7 +10,6 @@ This module provides value objects for tracking task progress with support for:
 from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from datetime import datetime
 from enum import Enum
 from typing import Optional, List, Dict, Any
 from uuid import uuid4
@@ -74,7 +73,7 @@ class ProgressSnapshot:
     """Immutable snapshot of progress at a point in time."""
     id: str = field(default_factory=lambda: str(uuid4()))
     task_id: str = ""
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     progress_type: ProgressType = ProgressType.GENERAL
     percentage: float = 0.0  # 0-100
     status: ProgressStatus = ProgressStatus.NOT_STARTED

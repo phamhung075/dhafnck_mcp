@@ -73,7 +73,7 @@ class TestEventStore:
         assert stored_event is not None
         assert stored_event.event_id == event_id
         assert stored_event.aggregate_id == "agg_123"
-        assert stored_event.event_type == "TestEventClass"
+        assert stored_event.event_type == "SampleEvent"
         assert stored_event.event_data["data"] == "test_data"
     
     @pytest.mark.asyncio
@@ -135,12 +135,12 @@ class TestEventStore:
         await event_store.append(event3)
         
         # Get events by type using get_events method
-        test_events = await event_store.get_events(event_type="TestEventClass")
+        test_events = await event_store.get_events(event_type="SampleEvent")
         other_events = await event_store.get_events(event_type="OtherEventClass")
         
         assert len(test_events) == 2
         assert len(other_events) == 1
-        assert all(e.event_type == "TestEventClass" for e in test_events)
+        assert all(e.event_type == "SampleEvent" for e in test_events)
         assert other_events[0].event_type == "OtherEventClass"
     
     @pytest.mark.asyncio
@@ -202,15 +202,15 @@ class TestEventStore:
         await event_store.append(event1)
         await event_store.append(event2)
         
-        # Get only TestEventClass events in range using get_events method
+        # Get only SampleEvent events in range using get_events method
         events = await event_store.get_events(
-            event_type="TestEventClass",
+            event_type="SampleEvent",
             from_timestamp=now - timedelta(hours=1),
             to_timestamp=now + timedelta(hours=1)
         )
         
         assert len(events) == 1
-        assert events[0].event_type == "TestEventClass"
+        assert events[0].event_type == "SampleEvent"
     
     @pytest.mark.asyncio
     async def test_create_snapshot(self, event_store):

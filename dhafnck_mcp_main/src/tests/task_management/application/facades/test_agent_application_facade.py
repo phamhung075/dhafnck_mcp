@@ -14,7 +14,7 @@ from fastmcp.task_management.application.dtos.agent.assign_agent_request import 
 from fastmcp.task_management.application.dtos.agent.update_agent_request import UpdateAgentRequest
 from fastmcp.task_management.domain.entities.agent import Agent as AgentEntity
 # AgentId is not needed - Agent entity uses string id
-from fastmcp.task_management.domain.exceptions.agent_exceptions import AgentNotFoundError
+from fastmcp.task_management.domain.exceptions.task_exceptions import AgentNotFoundError
 
 
 @pytest.fixture
@@ -36,12 +36,10 @@ def mock_git_branch_repository():
 
 
 @pytest.fixture
-def agent_facade(mock_agent_repository, mock_project_repository, mock_git_branch_repository):
+def agent_facade(mock_agent_repository):
     """Create an AgentApplicationFacade with mocked dependencies"""
     facade = AgentApplicationFacade(
-        agent_repository=mock_agent_repository,
-        project_repository=mock_project_repository,
-        git_branch_repository=mock_git_branch_repository
+        agent_repository=mock_agent_repository
     )
     return facade
 
