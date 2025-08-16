@@ -24,19 +24,10 @@ from fastmcp.task_management.domain.exceptions.base_exceptions import (
 class TestORMAgentRepository:
     
     def setup_method(self, method):
-        """Clean up before each test"""
-        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
-        from sqlalchemy import text
-        
-        db_config = get_db_config()
-        with db_config.get_session() as session:
-            # Clean test data but preserve defaults
-            try:
-                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
-                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
-                session.commit()
-            except:
-                session.rollback()
+        """Set up test fixtures"""
+        # Unit tests should not access the database
+        # All database interactions will be mocked
+        pass
 
     """Test suite for ORM Agent Repository"""
     
@@ -62,7 +53,10 @@ class TestORMAgentRepository:
     @pytest.fixture
     def agent_repository(self):
         """Create an ORM agent repository instance"""
-        return ORMAgentRepository(project_id="test_project", user_id="test_user")
+        # Mock the database configuration to prevent actual database access
+        with patch('fastmcp.task_management.infrastructure.database.database_config.get_db_config'):
+            with patch('fastmcp.task_management.infrastructure.repositories.base_orm_repository.get_session'):
+                return ORMAgentRepository(project_id="test_project", user_id="test_user")
     
     def test_init(self, agent_repository):
         """Test repository initialization"""
@@ -102,8 +96,8 @@ class TestORMAgentRepository:
         assert "testing" in model_dict["capabilities"]
         assert model_dict["availability_score"] == 1.0
     
-    @patch('fastmcp.task_management.infrastructure.repositories.orm.agent_repository.ORMAgentRepository.exists')
-    @patch('fastmcp.task_management.infrastructure.repositories.orm.agent_repository.ORMAgentRepository.create')
+    @patch('fastmcp.task_management.infrastructure.repositories.base_orm_repository.BaseORMRepository.exists')
+    @patch('fastmcp.task_management.infrastructure.repositories.base_orm_repository.BaseORMRepository.create')
     def test_register_agent_success(self, mock_create, mock_exists, agent_repository, mock_agent_model):
         """Test successful agent registration"""
         mock_exists.return_value = False
@@ -122,7 +116,7 @@ class TestORMAgentRepository:
         mock_exists.assert_called_once_with(id="test_agent_1")
         mock_create.assert_called_once()
     
-    @patch('fastmcp.task_management.infrastructure.repositories.orm.agent_repository.ORMAgentRepository.exists')
+    @patch('fastmcp.task_management.infrastructure.repositories.base_orm_repository.BaseORMRepository.exists')
     def test_register_agent_already_exists(self, mock_exists, agent_repository):
         """Test agent registration when agent already exists"""
         mock_exists.return_value = True
