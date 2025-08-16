@@ -1,15 +1,14 @@
 import { Check, Eye, FileText, Link, Minus, Pencil, Plus, Trash2, Users, ChevronDown, ChevronRight } from "lucide-react";
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback, useMemo, lazy, Suspense } from "react";
 import { listTasks, Task, Subtask, updateTask, getTaskContext, listAgents, getAvailableAgents, callAgent, createTask, completeTask, deleteTask } from "../api";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { RefreshButton } from "./ui/refresh-button";
 import TaskSearch from "./TaskSearch";
+import ClickableAssignees from "./ClickableAssignees";
 
 // Lazy-loaded components
-import { lazy, Suspense } from "react";
-
 const LazySubtaskList = lazy(() => import("./LazySubtaskList"));
 const TaskDetailsDialog = lazy(() => import("./TaskDetailsDialog"));
 const TaskEditDialog = lazy(() => import("./TaskEditDialog"));
@@ -18,9 +17,6 @@ const TaskContextDialog = lazy(() => import("./TaskContextDialog"));
 const TaskCompleteDialog = lazy(() => import("./TaskCompleteDialog"));
 const DeleteConfirmDialog = lazy(() => import("./DeleteConfirmDialog"));
 const AgentResponseDialog = lazy(() => import("./AgentResponseDialog"));
-
-// Lightweight components
-import ClickableAssignees from "./ClickableAssignees";
 
 interface LazyTaskListProps {
   projectId: string;

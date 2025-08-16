@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import './App.css';
 import ProjectList from './components/ProjectList';
-import TaskList from './components/TaskList';
 import { Button } from './components/ui/button';
 import { Menu, X } from 'lucide-react';
+
+// Use lazy loading for TaskList component for better performance
+const LazyTaskList = lazy(() => import('./components/LazyTaskList'));
 
 function App() {
   const [selection, setSelection] = useState<{ projectId: string, branchId: string } | null>(null);
@@ -93,15 +95,24 @@ function App() {
           {/* Add padding top on mobile to account for menu button */}
           <div className="flex-1 overflow-y-auto pt-12 lg:pt-0">
             {selection ? (
-              <TaskList 
-              key={`${selection.projectId}-${selection.branchId}`} 
-              projectId={selection.projectId} 
-              taskTreeId={selection.branchId} 
-              onTasksChanged={() => {
+              <Suspense fallback={
+                <div className="flex items-center justify-center h-64">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading tasks...</p>
+                  </div>
+                </div>
+              }>
+                <LazyTaskList 
+                key={`${selection.projectId}-${selection.branchId}`} 
+                projectId={selection.projectId} 
+                taskTreeId={selection.branchId} 
+                onTasksChanged={() => {
                 console.log('App: onTasksChanged called, incrementing refreshKey');
                 setProjectListRefreshKey(prev => prev + 1);
               }}
             />
+              </Suspense>
             ) : (
               <div className="text-center text-muted-foreground mt-10">Select a project and branch to see tasks.</div>
             )}

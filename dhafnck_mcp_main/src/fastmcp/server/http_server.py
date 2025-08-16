@@ -245,6 +245,14 @@ def create_sse_app(
 
     # Add server's additional HTTP routes
     server_routes.extend(server._additional_http_routes)
+    
+    # Add task summary routes for lazy loading optimization
+    try:
+        from .routes.task_summary_routes import task_summary_routes
+        server_routes.extend(task_summary_routes)
+        logger.info("Task summary routes registered for lazy loading optimization")
+    except ImportError as e:
+        logger.warning(f"Could not import task summary routes: {e}")
 
     # Set up SSE transport
     sse = SseServerTransport(message_path)

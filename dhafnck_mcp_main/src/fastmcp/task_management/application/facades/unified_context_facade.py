@@ -137,6 +137,56 @@ class UnifiedContextFacade:
                 "error": str(e)
             }
     
+    def get_context_summary(self, context_id: str) -> Dict[str, Any]:
+        """
+        Get lightweight context summary for a task.
+        
+        Checks if a context exists without loading full data.
+        Used for performance optimization in lazy loading.
+        
+        Args:
+            context_id: Context identifier (usually task ID)
+            
+        Returns:
+            Response dict with summary info
+        """
+        try:
+            # First try to get task-level context without full data
+            result = self._service.get_context(
+                level="task",
+                context_id=context_id,
+                include_inherited=False,
+                force_refresh=False
+            )
+            
+            if result.get("success") and result.get("context"):
+                context_data = result.get("context", {})
+                # Calculate approximate size
+                import json
+                context_size = len(json.dumps(context_data))
+                
+                return {
+                    "success": True,
+                    "has_context": True,
+                    "context_size": context_size,
+                    "last_updated": context_data.get("updated_at") or context_data.get("created_at")
+                }
+            else:
+                return {
+                    "success": True,
+                    "has_context": False,
+                    "context_size": 0,
+                    "last_updated": None
+                }
+                
+        except Exception as e:
+            logger.warning(f"Failed to get context summary for {context_id}: {e}")
+            return {
+                "success": False,
+                "has_context": False,
+                "error": str(e)
+            }
+    
     def update_context(
         self,
         level: str,

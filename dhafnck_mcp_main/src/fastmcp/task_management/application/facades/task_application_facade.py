@@ -769,6 +769,155 @@ class TaskApplicationFacade:
         if request.description and len(request.description) > 1000:
             raise ValueError("Task description cannot exceed 1000 characters")
     
+    def count_tasks(self, filters: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Count tasks with given filters.
+        Used for pagination and performance optimization.
+        """
+        try:
+            # Use the list_tasks method with limit=0 to just get count
+            request = ListTasksRequest(
+                status=filters.get("status"),
+                priority=filters.get("priority"),
+                assignees=filters.get("assignees", []),
+                labels=filters.get("labels", []),
+                limit=0,  # We only need the count
+                git_branch_id=filters.get("git_branch_id")
+            )
+            
+            response = self._list_tasks_use_case.execute(request)
+            
+            return {
+                "success": True,
+                "count": response.count
+            }
+            
+        except Exception as e:
+            logger.error(f"Error counting tasks: {e}")
+            return {"success": False, "error": str(e), "count": 0}
+    
+    def list_tasks_summary(self, filters: Dict[str, Any], offset: int = 0, 
+                          limit: int = 20, include_counts: bool = True) -> Dict[str, Any]:
+        """
+        Get lightweight task summaries for list views.
+        Returns minimal task data for performance optimization.
+        
+        Note: Since ListTasksRequest doesn't support offset, we get all tasks
+        up to offset+limit and then slice. This is less efficient but maintains
+        compatibility with the existing DTO structure.
+        """
+        try:
+            # Get tasks up to offset + limit
+            request = ListTasksRequest(
+                status=filters.get("status"),
+                priority=filters.get("priority"),
+                assignees=filters.get("assignees", []),
+                labels=filters.get("labels", []),
+                limit=offset + limit if offset > 0 else limit,  # Get enough tasks to handle offset
+                git_branch_id=filters.get("git_branch_id")
+            )
+            
+            response = self._list_tasks_use_case.execute(request)
+            
+            # Slice tasks based on offset
+            tasks_to_process = response.tasks[offset:offset+limit] if offset > 0 else response.tasks[:limit]
+            
+            # Convert to lightweight summaries
+            task_summaries = []
+            for task in tasks_to_process:
+                summary = {
+                    "id": task.id,
+                    "title": task.title,
+                    "status": task.status,
+                    "priority": task.priority,
+                    "created_at": task.created_at.isoformat() if hasattr(task.created_at, 'isoformat') else str(task.created_at),
+                    "updated_at": task.updated_at.isoformat() if hasattr(task.updated_at, 'isoformat') else str(task.updated_at)
+                }
+                
+                if include_counts:
+                    # Add counts for related data
+                    summary["subtasks"] = task.subtasks if hasattr(task, 'subtasks') else []
+                    summary["assignees"] = task.assignees if hasattr(task, 'assignees') else []
+                    summary["dependencies"] = task.dependencies if hasattr(task, 'dependencies') else []
+                
+                task_summaries.append(summary)
+            
+            return {
+                "success": True,
+                "tasks": task_summaries,
+                "count": response.count  # Total count, not just the slice
+            }
+            
+        except Exception as e:
+            logger.error(f"Error fetching task summaries: {e}")
+            return {"success": False, "error": str(e), "tasks": []}
+    
+    def list_subtasks_summary(self, parent_task_id: str, include_counts: bool = True) -> Dict[str, Any]:
+        """
+        Get lightweight subtask summaries for a parent task.
+        Returns minimal subtask data for performance optimization.
+        """
+        try:
+            if not self._subtask_repository:
+                return {"success": False, "error": "Subtask repository not configured", "subtasks": []}
+            
+            # Get subtasks for the parent task
+            from ...domain.value_objects.task_id import TaskId
+            parent_id = TaskId(parent_task_id)
+            
+            # Use the subtask repository to find subtasks
+            subtasks = self._subtask_repository.find_by_parent_task_id(parent_id)
+            
+            # Convert to lightweight summaries
+            subtask_summaries = []
+            for subtask in subtasks:
+                summary = {
+                    "id": subtask.id,
+                    "title": subtask.title,
+                    "status": subtask.status,
+                    "priority": subtask.priority if hasattr(subtask, 'priority') else "medium",
+                    "progress_percentage": subtask.progress_percentage if hasattr(subtask, 'progress_percentage') else 0
+                }
+                
+                if include_counts:
+                    # Add assignees count
+                    summary["assignees"] = subtask.assignees if hasattr(subtask, 'assignees') else []
+                
+                subtask_summaries.append(summary)
+            
+            return {
+                "success": True,
+                "subtasks": subtask_summaries
+            }
+            
+        except Exception as e:
+            logger.error(f"Error fetching subtask summaries: {e}")
+            return {"success": False, "error": str(e), "subtasks": []}
+    
+    def get_task(self, task_id: str, include_full_data: bool = False) -> Dict[str, Any]:
+        """
+        Get task by ID with optional full data loading.
+        
+        Args:
+            task_id: The task ID
+            include_full_data: Whether to include all related data (subtasks, context, etc.)
+        """
+        try:
+            # Use existing get_task method
+            result = self.get_task_by_id(task_id, include_context=include_full_data)
+            
+            if result.get("success"):
+                return {
+                    "success": True,
+                    "task": result.get("task")
+                }
+            else:
+                return result
+                
+        except Exception as e:
+            logger.error(f"Error fetching task {task_id}: {e}")
+            return {"success": False, "error": str(e)}
+    
     def add_dependency(self, task_id: str, dependency_id: str) -> Dict[str, Any]:
         """Add a dependency to a task"""
         try:
