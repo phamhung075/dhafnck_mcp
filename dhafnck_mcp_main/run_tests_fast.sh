@@ -15,22 +15,22 @@ time_it() {
 case "$1" in
     "unit")
         echo "Running unit tests (ultra-fast, no database)..."
-        time_it pytest -m unit -q --tb=short --no-cov
+        time_it pytest -m unit -q --tb=short
         ;;
     
     "unit-parallel")
         echo "Running unit tests in parallel..."
-        time_it pytest -m unit -n auto --tb=short --no-cov
+        time_it pytest -m unit -n auto --tb=short
         ;;
     
     "value-objects")
         echo "Running value object tests (fastest)..."
-        time_it pytest src/tests/**/value_objects/ -q --tb=short --no-cov
+        time_it pytest src/tests/**/value_objects/ -q --tb=short
         ;;
     
     "entities")
         echo "Running entity tests..."
-        time_it pytest src/tests/**/entities/ -q --tb=short --no-cov
+        time_it pytest src/tests/**/entities/ -q --tb=short
         ;;
     
     "integration")

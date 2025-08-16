@@ -1,4 +1,5 @@
 tdd:
+  call agent to find then fix origin cause of this probleme
   description: "Complete test-driven development workflow for verifiable changes"
   prompt: |
     I want to implement a feature using Test-Driven Development (TDD). 
@@ -35,6 +36,15 @@ tdd:
     **Phase 6: Commit Implementation**
     - Commit the implementation code with a descriptive message
     - The commit should only contain the implementation, not test changes
+
+    **Phase 7: Create of update existe documentation**
+    - Call agent to find existe document for update content, create if not exist
+
+    **Phase 8: Update existe CHANGELOG.md**
+    - Call agent to find existe CHANGELOG.md for update content, create on root project directory if not exist
+
+    **Phase 9: Complete task on MCP**
+    - Mark task complete then update context and status 
 
     Start with Phase 1. What feature would you like me to implement using TDD?
 

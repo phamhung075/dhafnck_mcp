@@ -66,7 +66,8 @@ class DbTestAdapter:
     def get_session(self) -> Session:
         """Get a database session"""
         session = self.SessionLocal()
-        session.is_active = True
+        # Note: is_active is a read-only property in SQLAlchemy
+        # It automatically reflects the session's actual state
         return session
     
     def insert_test_data(self, data: Dict[str, List[Dict[str, Any]]]):
@@ -130,12 +131,14 @@ def setup_test_database(db_name: Optional[str] = None) -> DbTestAdapter:
     os.environ["USE_TEST_DB"] = "true"
     os.environ["DATABASE_PROVIDER"] = "sqlite"
     
-    # Create temporary database if no name provided
+    # Create unique temporary database for each test
     if db_name is None:
         temp_dir = tempfile.mkdtemp(prefix="dhafnck_test_")
         db_path = os.path.join(temp_dir, "test.db")
     else:
-        db_path = db_name
+        # Create unique path even when name provided to ensure isolation
+        temp_dir = tempfile.mkdtemp(prefix=f"dhafnck_{db_name}_")
+        db_path = os.path.join(temp_dir, f"{db_name}.db")
     
     # Set the test database path
     os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
@@ -203,7 +206,7 @@ def create_isolated_session(db_name: str) -> Session:
     """
     adapter = setup_test_database(db_name)
     session = adapter.get_session()
-    session.is_active = True
+    # Note: is_active is a read-only property that reflects actual state
     return session
 
 
