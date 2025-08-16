@@ -23,7 +23,7 @@ class ContextResponseFactory:
             return None
             
         try:
-            # Handle different context data formats and extract the core template_context
+            # Handle different context data formats and extract the core context
             unified_context = None
             
             # Case 1: Direct template_context (from create action)
@@ -39,28 +39,85 @@ class ContextResponseFactory:
                 nested_context = context_data["context"]
                 if "template_context" in nested_context:
                     unified_context = nested_context["template_context"]
+                elif "task_data" in nested_context:
+                    # Handle unified context format with task_data
+                    unified_context = ContextResponseFactory._convert_task_data_to_template(nested_context)
                     
             # Case 3: Context data is already the template_context
             elif "metadata" in context_data and "task_id" in context_data.get("metadata", {}):
                 unified_context = context_data
                 
-            # Case 4: Look for any nested structure with template_context
+            # Case 4: Handle task_data structure from unified context system
+            elif "task_data" in context_data:
+                # Convert task_data structure to template_context format
+                unified_context = ContextResponseFactory._convert_task_data_to_template(context_data)
+                
+            # Case 5: Look for any nested structure with template_context
             else:
                 for key, value in context_data.items():
-                    if isinstance(value, dict) and "template_context" in value:
-                        unified_context = value["template_context"]
-                        break
+                    if isinstance(value, dict):
+                        if "template_context" in value:
+                            unified_context = value["template_context"]
+                            break
+                        elif "task_data" in value:
+                            unified_context = ContextResponseFactory._convert_task_data_to_template(value)
+                            break
                         
             if unified_context:
                 # Ensure required structure exists
                 return ContextResponseFactory._ensure_complete_structure(unified_context)
                 
-            logger.warning("No valid template_context found in context_data")
+            logger.warning("No valid context found in context_data")
             return None
             
         except Exception as e:
             logger.error(f"Error creating unified context: {e}")
             return None
+    
+    @staticmethod
+    def _convert_task_data_to_template(context_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Convert task_data structure from unified context to template_context format.
+        
+        Args:
+            context_data: Context with task_data structure
+            
+        Returns:
+            Template context format
+        """
+        # Extract task_data
+        task_data = context_data.get("task_data", {})
+        
+        # Build template_context structure from task_data
+        template_context = {
+            "metadata": {
+                "task_id": context_data.get("id", ""),
+                "status": task_data.get("status", "todo"),
+                "priority": task_data.get("priority", "medium"),
+                "assignees": task_data.get("assignees", []),
+                "labels": task_data.get("labels", []),
+                "created_at": task_data.get("created_at"),
+                "updated_at": task_data.get("updated_at"),
+                "version": 1
+            },
+            "objective": {
+                "title": task_data.get("title", ""),
+                "description": task_data.get("description", ""),
+                "estimated_effort": task_data.get("estimated_effort", ""),
+                "due_date": task_data.get("due_date")
+            },
+            "progress": context_data.get("progress", {}) if isinstance(context_data.get("progress"), dict) else {
+                "completion_percentage": context_data.get("progress", 0) if isinstance(context_data.get("progress"), (int, float)) else 0
+            }
+        }
+        
+        # Add other fields from context_data
+        if "insights" in context_data:
+            template_context["notes"] = {"agent_insights": context_data["insights"]}
+        if "next_steps" in context_data:
+            template_context["progress"]["next_steps"] = context_data["next_steps"]
+            
+        return template_context
     
     @staticmethod
     def _ensure_complete_structure(context: Dict[str, Any]) -> Dict[str, Any]:
@@ -140,10 +197,37 @@ class ContextResponseFactory:
         Returns:
             Task response with standardized context_data
         """
-        if "context_data" in task_data:
+        task_id = task_data.get("id", "")
+        
+        # If context_data is missing or null, try to fetch it directly
+        if not task_data.get("context_data") and task_id:
+            try:
+                from ..factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+                factory = UnifiedContextFacadeFactory()
+                unified_facade = factory.create_facade()
+                
+                # Try to get context directly
+                context_response = unified_facade.get_context(
+                    level="task",
+                    context_id=task_id,
+                    include_inherited=True
+                )
+                
+                if context_response.get("success") and context_response.get("context"):
+                    task_data["context_data"] = context_response["context"]
+                    logger.info(f"Manually fetched context for task {task_id}")
+                else:
+                    logger.debug(f"No context found for task {task_id} via manual fetch")
+            except Exception as e:
+                logger.warning(f"Failed to manually fetch context for task {task_id}: {e}")
+        
+        if "context_data" in task_data and task_data["context_data"]:
             unified_context = ContextResponseFactory.create_unified_context(task_data["context_data"])
             task_data["context_data"] = unified_context
             task_data["context_available"] = unified_context is not None
+        else:
+            # Ensure context_available field is always present
+            task_data["context_available"] = False
             
         return task_data
     

@@ -698,10 +698,10 @@ class TaskMCPController:
         try:
             if action == "list":
                 return self._handle_list_tasks(
-                    facade, status, priority, assignees, labels, limit, git_branch_id
+                    facade, status, priority, assignees, labels, limit, git_branch_id, include_context
                 )
             elif action == "search":
-                return self._handle_search_tasks(facade, query, limit, git_branch_id)
+                return self._handle_search_tasks(facade, query, limit, git_branch_id, include_context)
             elif action == "next":
                 # Always load context for next to provide better AI assistance
                 result = self._handle_next_task(facade, git_branch_id, True)  # Force include_context=True
@@ -1056,7 +1056,8 @@ class TaskMCPController:
     
     def _handle_list_tasks(self, facade: TaskApplicationFacade, status: Optional[str], priority: Optional[str], 
                           assignees: Optional[List[str]], labels: Optional[List[str]], 
-                          limit: Optional[int], git_branch_id: Optional[str] = None) -> Dict[str, Any]:
+                          limit: Optional[int], git_branch_id: Optional[str] = None, 
+                          include_context: bool = False) -> Dict[str, Any]:
         """Convert MCP list parameters to DTO and delegate to facade."""
 
         # git_branch_id is optional – when omitted we list tasks across all branches for the user/project.
@@ -1070,8 +1071,9 @@ class TaskMCPController:
             limit=limit
         )
         
-        # Use minimal=True for optimized performance (only essential fields)
-        result = facade.list_tasks(request, include_dependencies=True, minimal=True)
+        # Use minimal=True for optimized performance (only essential fields) unless context is requested
+        minimal = not include_context  # If context is requested, don't use minimal mode
+        result = facade.list_tasks(request, include_dependencies=True, minimal=minimal, include_context=include_context)
         
         # Ensure result is a dictionary before accessing it
         if not isinstance(result, dict):
@@ -1129,7 +1131,8 @@ class TaskMCPController:
         return result
     
     def _handle_search_tasks(self, facade: TaskApplicationFacade, query: Optional[str], 
-                            limit: Optional[int], git_branch_id: Optional[str] = None) -> Dict[str, Any]:
+                            limit: Optional[int], git_branch_id: Optional[str] = None, 
+                            include_context: bool = False) -> Dict[str, Any]:
         """Convert MCP search parameters to DTO and delegate to facade."""
         if not query:
             return {
@@ -1147,7 +1150,7 @@ class TaskMCPController:
             limit=limit
         )
         
-        result = facade.search_tasks(request)
+        result = facade.search_tasks(request, include_context=include_context)
         
         # Ensure result is a dictionary before accessing it
         if not isinstance(result, dict):

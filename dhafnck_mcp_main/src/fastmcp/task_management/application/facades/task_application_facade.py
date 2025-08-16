@@ -61,7 +61,11 @@ class TaskApplicationFacade:
         # Initialize use cases
         self._create_task_use_case = CreateTaskUseCase(task_repository)
         self._update_task_use_case = UpdateTaskUseCase(task_repository)
-        self._get_task_use_case = GetTaskUseCase(task_repository, context_service)
+        print(f"DEBUG FACADE INIT: context_service type: {type(context_service)}")
+        print(f"DEBUG FACADE INIT: hierarchical_context_service type: {type(self._hierarchical_context_service)}")
+        # Use the hierarchical context service instead of the passed context service
+        # The passed context service might not be configured correctly for the unified context system
+        self._get_task_use_case = GetTaskUseCase(task_repository, self._hierarchical_context_service)
         self._delete_task_use_case = DeleteTaskUseCase(task_repository)
         
         # Initialize task context repository for unified context system
@@ -260,6 +264,7 @@ class TaskApplicationFacade:
     
     def get_task(self, task_id: str, include_context: bool = True, include_dependencies: bool = True) -> Dict[str, Any]:
         """Get a task by ID with optional context data (sync-friendly)."""
+        print(f"DEBUG FACADE: get_task called with task_id={task_id}, include_context={include_context}")
         import asyncio
         try:
             # Validate input at application boundary
@@ -298,7 +303,8 @@ class TaskApplicationFacade:
                         logger.warning(f"Failed to resolve dependencies for task {task_id}: {e}")
                 
                 # Convert to dict and include dependency relationships
-                task_dict = asdict(task_response)
+                # Use custom to_dict() method instead of asdict() to properly handle context_data
+                task_dict = task_response.to_dict()
                 if dependency_relationships:
                     task_dict["dependency_relationships"] = {
                         "task_id": dependency_relationships.task_id,
@@ -405,7 +411,8 @@ class TaskApplicationFacade:
                 task_response = None
 
             if task_response:
-                task_dict = asdict(task_response)
+                # Use custom to_dict() method instead of asdict() to properly handle context_data
+                task_dict = task_response.to_dict()
                 # Apply unified context format
                 task_dict = ContextResponseFactory.apply_to_task_response(task_dict)
                 return {
@@ -512,7 +519,26 @@ class TaskApplicationFacade:
                 logging.getLogger(__name__).error(f"Unexpected error in complete_task (logger failed): {e}")
             return {"success": False, "action": "complete", "error": f"Unexpected error: {str(e)}"}
     
-    def list_tasks(self, request: ListTasksRequest, include_dependencies: bool = False, minimal: bool = True) -> Dict[str, Any]:
+    def _add_context_to_task(self, task_dict: Dict[str, Any], task_id: str) -> Dict[str, Any]:
+        """Add context data to a task dictionary"""
+        try:
+            # Get context data for the task using existing get_task logic
+            task_response = self.get_task(task_id, include_context=True)
+            if task_response.get("success") and task_response.get("task"):
+                task_data = task_response["task"]
+                task_dict["context_data"] = task_data.get("context_data")
+                task_dict["context_available"] = task_data.get("context_available", False)
+            else:
+                task_dict["context_data"] = None
+                task_dict["context_available"] = False
+        except Exception as e:
+            logger.warning(f"Failed to fetch context for task {task_id}: {e}")
+            task_dict["context_data"] = None
+            task_dict["context_available"] = False
+        
+        return task_dict
+    
+    def list_tasks(self, request: ListTasksRequest, include_dependencies: bool = False, minimal: bool = True, include_context: bool = False) -> Dict[str, Any]:
         """List tasks with optional filtering - optimized for performance with minimal data by default"""
         try:
             # Check if we should use optimized repository for performance
@@ -578,7 +604,12 @@ class TaskApplicationFacade:
                         except Exception:
                             minimal_task.is_blocked = False
                     
-                    tasks_list.append(minimal_task.to_dict())
+                    # Add context data if requested
+                    task_dict = minimal_task.to_dict()
+                    if include_context:
+                        task_dict = self._add_context_to_task(task_dict, task.id)
+                    
+                    tasks_list.append(task_dict)
             else:
                 # Full task data (legacy behavior)
                 for task in response.tasks:
@@ -611,6 +642,10 @@ class TaskApplicationFacade:
                                 "blocking_reasons": []
                             }
                     
+                    # Add context data if requested
+                    if include_context:
+                        task_dict = self._add_context_to_task(task_dict, task.id)
+                    
                     tasks_list.append(task_dict)
             
             return {
@@ -626,7 +661,7 @@ class TaskApplicationFacade:
             logger.error(f"Unexpected error in list_tasks: {e}")
             return {"success": False, "action": "list", "error": f"Unexpected error: {str(e)}"}
     
-    def search_tasks(self, request: SearchTasksRequest) -> Dict[str, Any]:
+    def search_tasks(self, request: SearchTasksRequest, include_context: bool = False) -> Dict[str, Any]:
         """Search tasks by query"""
         try:
             # Validate request at application boundary
@@ -636,10 +671,18 @@ class TaskApplicationFacade:
             # Execute use case
             response = self._search_tasks_use_case.execute(request)
             
+            # Process tasks with context if requested
+            tasks_list = []
+            for task in response.tasks:
+                task_dict = task.to_dict()
+                if include_context:
+                    task_dict = self._add_context_to_task(task_dict, task.id)
+                tasks_list.append(task_dict)
+            
             return {
                 "success": True,
                 "action": "search",
-                "tasks": [task.to_dict() for task in response.tasks],
+                "tasks": tasks_list,
                 "count": response.count,
                 "query": response.query
             }

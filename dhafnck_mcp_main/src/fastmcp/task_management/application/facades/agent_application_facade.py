@@ -40,7 +40,7 @@ class AgentApplicationFacade:
         self._get_agent_use_case = GetAgentUseCase(agent_repository)
         self._list_agents_use_case = ListAgentsUseCase(agent_repository)
     
-    def register_agent(self, project_id: str, agent_id: str, name: str, call_agent: str = None) -> Dict[str, Any]:
+    def register_agent(self, project_id: str, agent_id: str = None, name: str = None, call_agent: str = None) -> Dict[str, Any]:
         """Register a new agent to a project"""
         try:
             # Create request DTO

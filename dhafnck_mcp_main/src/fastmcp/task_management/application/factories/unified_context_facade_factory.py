@@ -18,6 +18,7 @@ from ..services.context_inheritance_service import ContextInheritanceService
 from ..services.context_delegation_service import ContextDelegationService
 from ..services.context_validation_service import ContextValidationService
 from ...infrastructure.database.database_config import get_db_config
+from ...infrastructure.database.models import GLOBAL_SINGLETON_UUID
 
 logger = logging.getLogger(__name__)
 
@@ -144,7 +145,7 @@ class UnifiedContextFacadeFactory:
         try:
             # Check if global context already exists
             try:
-                existing_context = self.global_repo.get("global_singleton")
+                existing_context = self.global_repo.get(GLOBAL_SINGLETON_UUID)
                 if existing_context:
                     logger.info("Global context already exists")
                     return True
@@ -168,7 +169,7 @@ class UnifiedContextFacadeFactory:
             facade = self.create_facade()
             result = facade.create_context(
                 level="global",
-                context_id="global_singleton",
+                context_id=GLOBAL_SINGLETON_UUID,
                 data=default_global_data
             )
             

@@ -15,6 +15,7 @@ from .context_inheritance_service import ContextInheritanceService
 from .context_delegation_service import ContextDelegationService
 from .context_validation_service import ContextValidationService
 from .context_hierarchy_validator import ContextHierarchyValidator
+from ...infrastructure.database.models import GLOBAL_SINGLETON_UUID
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +62,15 @@ class UnifiedContextService:
             task_repo=task_context_repository
         )
         
+    def _normalize_context_id(self, level: str, context_id: str) -> str:
+        """
+        Normalize context IDs for backward compatibility.
+        Converts 'global_singleton' string to the proper UUID for global contexts.
+        """
+        if level == "global" and context_id == "global_singleton":
+            return GLOBAL_SINGLETON_UUID
+        return context_id
+        
     def create_context(
         self, 
         level: str, 
@@ -71,6 +81,9 @@ class UnifiedContextService:
     ) -> Dict[str, Any]:
         """Create context at specified level with validation."""
         try:
+            # Normalize context_id for backward compatibility
+            context_id = self._normalize_context_id(level, context_id)
+            
             # Validate level
             context_level = ContextLevel(level)
             
@@ -261,6 +274,9 @@ class UnifiedContextService:
     ) -> Dict[str, Any]:
         """Get context with optional inheritance resolution."""
         try:
+            # Normalize context_id for backward compatibility
+            context_id = self._normalize_context_id(level, context_id)
+            
             # Validate level
             context_level = ContextLevel(level)
             
@@ -315,6 +331,9 @@ class UnifiedContextService:
     ) -> Dict[str, Any]:
         """Update context with inheritance propagation."""
         try:
+            # Normalize context_id for backward compatibility
+            context_id = self._normalize_context_id(level, context_id)
+            
             # Validate level
             context_level = ContextLevel(level)
             
@@ -385,6 +404,9 @@ class UnifiedContextService:
     ) -> Dict[str, Any]:
         """Delete context with cleanup."""
         try:
+            # Normalize context_id for backward compatibility
+            context_id = self._normalize_context_id(level, context_id)
+            
             # Validate level
             context_level = ContextLevel(level)
             
@@ -434,6 +456,9 @@ class UnifiedContextService:
     ) -> Dict[str, Any]:
         """Resolve full inheritance chain with caching."""
         try:
+            # Normalize context_id for backward compatibility
+            context_id = self._normalize_context_id(level, context_id)
+            
             # Always resolve with inheritance for this method
             result = self.get_context(
                 level=level,
@@ -466,6 +491,9 @@ class UnifiedContextService:
     ) -> Dict[str, Any]:
         """Delegate context data to higher level."""
         try:
+            # Normalize context_id for backward compatibility
+            context_id = self._normalize_context_id(level, context_id)
+            
             # Validate levels
             source_level = ContextLevel(level)
             target_level = ContextLevel(delegate_to)
@@ -535,6 +563,9 @@ class UnifiedContextService:
     ) -> Dict[str, Any]:
         """Add an insight to context."""
         try:
+            # Normalize context_id for backward compatibility
+            context_id = self._normalize_context_id(level, context_id)
+            
             # Get existing context
             context_result = self.get_context(level, context_id)
             if not context_result["success"]:
@@ -576,6 +607,9 @@ class UnifiedContextService:
     ) -> Dict[str, Any]:
         """Add progress update to context."""
         try:
+            # Normalize context_id for backward compatibility
+            context_id = self._normalize_context_id(level, context_id)
+            
             # Get existing context
             context_result = self.get_context(level, context_id)
             if not context_result["success"]:

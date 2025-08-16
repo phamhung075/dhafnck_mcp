@@ -24,6 +24,15 @@ class GlobalContextRepository(BaseORMRepository):
         super().__init__(GlobalContextModel)
         self.session_factory = session_factory
     
+    def _normalize_context_id(self, context_id: str) -> str:
+        """
+        Normalize context IDs for backward compatibility.
+        Converts 'global_singleton' string to the proper UUID for global contexts.
+        """
+        if context_id == "global_singleton":
+            return GLOBAL_SINGLETON_UUID
+        return context_id
+    
     @contextmanager
     def get_db_session(self):
         """Override to use custom session factory for testing."""
@@ -95,14 +104,21 @@ class GlobalContextRepository(BaseORMRepository):
     
     def get(self, context_id: str) -> Optional[GlobalContext]:
         """Get global context by ID."""
+        original_id = context_id
+        context_id = self._normalize_context_id(context_id)
         with self.get_db_session() as session:
-            db_model = session.get(GlobalContextModel, context_id)
+            # Use query instead of session.get for UUID fields to avoid casting issues
+            db_model = session.query(GlobalContextModel).filter(GlobalContextModel.id == context_id).first()
+            if not db_model:
+                logger.debug(f"Global context not found for ID: {original_id} (normalized to: {context_id})")
             return self._to_entity(db_model) if db_model else None
     
     def update(self, context_id: str, entity: GlobalContext) -> GlobalContext:
         """Update global context."""
+        context_id = self._normalize_context_id(context_id)
         with self.get_db_session() as session:
-            db_model = session.get(GlobalContextModel, context_id)
+            # Use query instead of session.get for UUID fields to avoid casting issues
+            db_model = session.query(GlobalContextModel).filter(GlobalContextModel.id == context_id).first()
             if not db_model:
                 raise ValueError(f"Global context not found: {context_id}")
             
@@ -144,8 +160,10 @@ class GlobalContextRepository(BaseORMRepository):
     
     def delete(self, context_id: str) -> bool:
         """Delete global context."""
+        context_id = self._normalize_context_id(context_id)
         with self.get_db_session() as session:
-            db_model = session.get(GlobalContextModel, context_id)
+            # Use query instead of session.get for UUID fields to avoid casting issues
+            db_model = session.query(GlobalContextModel).filter(GlobalContextModel.id == context_id).first()
             if not db_model:
                 return False
             
