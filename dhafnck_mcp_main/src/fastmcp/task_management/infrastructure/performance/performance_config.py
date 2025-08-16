@@ -79,4 +79,7 @@ class PerformanceConfig:
         Returns:
             True if performance mode is enabled
         """
-        return cls.CACHE_ENABLED and cls.MINIMAL_RESPONSE_MODE
+        # FORCE PERFORMANCE MODE FOR IMMEDIATE FIX
+        # This addresses the 5-second delay issue with Supabase
+        return True  # Always use performance optimizations
+        # Original: return cls.CACHE_ENABLED and cls.MINIMAL_RESPONSE_MODE

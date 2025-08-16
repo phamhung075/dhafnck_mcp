@@ -543,15 +543,26 @@ class TaskApplicationFacade:
         try:
             # Check if we should use optimized repository for performance
             from ...infrastructure.performance.performance_config import PerformanceConfig
+            import os
             
             if PerformanceConfig.is_performance_mode() and minimal:
-                # Use optimized repository directly for minimal data
-                from ...infrastructure.repositories.orm.optimized_task_repository import OptimizedTaskRepository
+                # Check if using Supabase - use special optimization
+                database_type = os.getenv("DATABASE_TYPE", "").lower()
                 
-                # Create optimized repository with the same git_branch_id
-                optimized_repo = OptimizedTaskRepository(
-                    git_branch_id=request.git_branch_id if hasattr(request, 'git_branch_id') else None
-                )
+                if database_type == "supabase":
+                    # Use Supabase-specific optimizations for cloud latency
+                    from ...infrastructure.repositories.orm.supabase_optimized_repository import SupabaseOptimizedRepository
+                    
+                    optimized_repo = SupabaseOptimizedRepository(
+                        git_branch_id=request.git_branch_id if hasattr(request, 'git_branch_id') else None
+                    )
+                else:
+                    # Use standard optimized repository for local databases
+                    from ...infrastructure.repositories.orm.optimized_task_repository import OptimizedTaskRepository
+                    
+                    optimized_repo = OptimizedTaskRepository(
+                        git_branch_id=request.git_branch_id if hasattr(request, 'git_branch_id') else None
+                    )
                 
                 # Use minimal list method for best performance
                 tasks_list = optimized_repo.list_tasks_minimal(

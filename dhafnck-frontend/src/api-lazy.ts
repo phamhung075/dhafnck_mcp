@@ -2,7 +2,7 @@
 // Provides lightweight endpoints for improved performance
 
 const API_BASE = "http://localhost:8000/api";
-const MCP_BASE = "http://localhost:8000/mcp";
+const MCP_BASE = "http://localhost:8000/mcp/";
 
 // --- Lazy Loading Interfaces ---
 

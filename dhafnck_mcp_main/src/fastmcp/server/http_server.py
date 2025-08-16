@@ -443,6 +443,14 @@ def create_streamable_http_app(
     if routes:
         server_routes.extend(routes)
     server_routes.extend(server._additional_http_routes)
+    
+    # Add task summary routes for lazy loading optimization
+    try:
+        from .routes.task_summary_routes import task_summary_routes
+        server_routes.extend(task_summary_routes)
+        logger.info("Task summary routes registered for streamable HTTP optimization")
+    except ImportError as e:
+        logger.warning(f"Could not import task summary routes: {e}")
 
     if middleware:
         server_middleware.extend(middleware)

@@ -15,6 +15,9 @@ import json
 from fastmcp.task_management.application.facades.task_application_facade import TaskApplicationFacade
 from fastmcp.task_management.application.facades.unified_context_facade import UnifiedContextFacade
 from fastmcp.task_management.application.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+from fastmcp.task_management.application.factories.task_facade_factory import TaskFacadeFactory
+from fastmcp.task_management.infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
+from fastmcp.task_management.infrastructure.repositories.subtask_repository_factory import SubtaskRepositoryFactory
 
 # Import Redis caching decorator
 try:
@@ -62,8 +65,14 @@ async def get_task_summaries(request: Request) -> JSONResponse:
         
         logger.info(f"Loading task summaries for branch {git_branch_id}, page {page}")
         
-        # Initialize facades
-        task_facade = TaskApplicationFacade(None)  # Will use default repositories
+        # Initialize repository factories
+        task_repository_factory = TaskRepositoryFactory()
+        subtask_repository_factory = SubtaskRepositoryFactory()
+        
+        # Initialize facades using proper factory pattern
+        task_facade_factory = TaskFacadeFactory(task_repository_factory, subtask_repository_factory)
+        task_facade = task_facade_factory.create_task_facade("default_project", git_branch_id, "default_user")
+        
         context_factory = UnifiedContextFacadeFactory()
         context_facade = context_factory.create_facade()
         
@@ -163,8 +172,12 @@ async def get_full_task(request: Request) -> JSONResponse:
         
         logger.info(f"Loading full task data for task {task_id}")
         
-        # Initialize facade
-        task_facade = TaskApplicationFacade(None)
+        # Initialize repository factories and facade
+        task_repository_factory = TaskRepositoryFactory()
+        subtask_repository_factory = SubtaskRepositoryFactory()
+        
+        task_facade_factory = TaskFacadeFactory(task_repository_factory, subtask_repository_factory)
+        task_facade = task_facade_factory.create_task_facade("default_project", None, "default_user")
         
         result = task_facade.get_task(task_id, include_full_data=True)
         
@@ -222,8 +235,12 @@ async def get_subtask_summaries(request: Request) -> JSONResponse:
         
         logger.info(f"Loading subtask summaries for parent task {parent_task_id}")
         
-        # Initialize facade
-        task_facade = TaskApplicationFacade(None)
+        # Initialize repository factories and facade
+        task_repository_factory = TaskRepositoryFactory()
+        subtask_repository_factory = SubtaskRepositoryFactory()
+        
+        task_facade_factory = TaskFacadeFactory(task_repository_factory, subtask_repository_factory)
+        task_facade = task_facade_factory.create_task_facade("default_project", None, "default_user")
         
         # Get subtasks for the parent task
         result = task_facade.list_subtasks_summary(

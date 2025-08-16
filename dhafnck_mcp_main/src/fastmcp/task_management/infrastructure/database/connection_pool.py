@@ -1,7 +1,7 @@
 """Connection Pool Management
 
 This module provides connection pooling functionality.
-The system uses PostgreSQL with SQLAlchemy's built-in connection 
+The system supports both SQLite and PostgreSQL/Supabase with optimized 
 pooling for superior performance, concurrent access, and production reliability.
 """
 
@@ -10,10 +10,20 @@ import threading
 import queue
 import logging
 import time
-from typing import Optional, Dict, Any
+import os
+from typing import Optional, Dict, Any, Union
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+
+# PostgreSQL/Supabase support
+try:
+    from sqlalchemy import create_engine, pool
+    from sqlalchemy.orm import sessionmaker, Session
+    from sqlalchemy.pool import QueuePool, NullPool
+    HAS_SQLALCHEMY = True
+except ImportError:
+    HAS_SQLALCHEMY = False
 
 logger = logging.getLogger(__name__)
 
@@ -310,3 +320,119 @@ def close_connection_pool():
             _pool_instance.close_all()
             _pool_instance = None
             logger.info("Connection pool closed")
+
+
+# ===== Supabase/PostgreSQL Connection Pool =====
+
+class SupabaseConnectionPool:
+    """Optimized connection pool for Supabase cloud database"""
+    
+    def __init__(self, database_url: str, **pool_config):
+        """
+        Initialize connection pool with optimized settings for Supabase.
+        
+        Args:
+            database_url: Supabase connection string
+            **pool_config: Additional pool configuration
+        """
+        if not HAS_SQLALCHEMY:
+            raise ImportError("SQLAlchemy required for Supabase connection pooling")
+        
+        self.database_url = database_url
+        
+        # Optimal pool settings for Supabase cloud
+        default_config = {
+            'poolclass': QueuePool,
+            'pool_size': 3,           # Small pool for cloud database
+            'max_overflow': 7,        # Allow some bursts
+            'pool_pre_ping': True,    # Test connections before use
+            'pool_recycle': 300,      # Recycle after 5 minutes
+            'pool_timeout': 10,       # Wait up to 10 seconds
+            'connect_args': {
+                'connect_timeout': 5,  # Fast timeout for cloud
+                'options': '-c statement_timeout=15000'  # 15 second statement timeout
+            }
+        }
+        
+        # Merge with user config
+        for key, value in pool_config.items():
+            if key == 'connect_args':
+                default_config['connect_args'].update(value)
+            else:
+                default_config[key] = value
+        
+        # Create engine with connection pooling
+        self.engine = create_engine(
+            database_url,
+            **default_config
+        )
+        
+        # Create session factory
+        self.SessionLocal = sessionmaker(
+            autocommit=False,
+            autoflush=False,
+            bind=self.engine
+        )
+        
+        logger.info(f"Initialized Supabase connection pool (size={default_config['pool_size']}, overflow={default_config['max_overflow']})")
+    
+    @contextmanager
+    def get_session(self) -> Session:
+        """Get a database session from the pool"""
+        session = self.SessionLocal()
+        try:
+            yield session
+        finally:
+            session.close()
+    
+    def get_pool_status(self) -> Dict[str, Any]:
+        """Get current pool statistics"""
+        pool_impl = self.engine.pool
+        return {
+            'size': pool_impl.size() if hasattr(pool_impl, 'size') else 'N/A',
+            'checked_in': pool_impl.checkedin() if hasattr(pool_impl, 'checkedin') else 'N/A',
+            'checked_out': pool_impl.checkedout() if hasattr(pool_impl, 'checkedout') else 'N/A',
+            'overflow': pool_impl.overflow() if hasattr(pool_impl, 'overflow') else 'N/A',
+            'total': pool_impl.total() if hasattr(pool_impl, 'total') else 'N/A',
+            'class': pool_impl.__class__.__name__
+        }
+    
+    def close(self):
+        """Close all connections in the pool"""
+        self.engine.dispose()
+        logger.info("Supabase connection pool closed")
+
+
+# Singleton Supabase pool
+_supabase_pool: Optional[SupabaseConnectionPool] = None
+_supabase_lock = threading.Lock()
+
+
+def get_supabase_pool(database_url: Optional[str] = None) -> Optional[SupabaseConnectionPool]:
+    """Get or create the Supabase connection pool"""
+    global _supabase_pool
+    
+    if not HAS_SQLALCHEMY:
+        return None
+    
+    with _supabase_lock:
+        if _supabase_pool is None:
+            # Get URL from environment if not provided
+            if database_url is None:
+                database_url = os.getenv("SUPABASE_DATABASE_URL") or os.getenv("DATABASE_URL")
+            
+            if database_url and "supabase" in database_url.lower():
+                _supabase_pool = SupabaseConnectionPool(database_url)
+                logger.info("Created Supabase connection pool")
+        
+        return _supabase_pool
+
+
+def close_supabase_pool():
+    """Close the Supabase connection pool"""
+    global _supabase_pool
+    
+    with _supabase_lock:
+        if _supabase_pool:
+            _supabase_pool.close()
+            _supabase_pool = None

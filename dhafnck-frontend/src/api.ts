@@ -1,7 +1,7 @@
 // API service for MCP Task Management
 // Handles CRUD for tasks, subtasks, and dependencies
 
-const API_BASE = "http://localhost:8000/mcp";
+const API_BASE = "http://localhost:8000/mcp/";
 
 // --- Interfaces for Type Safety ---
 export interface Task {
