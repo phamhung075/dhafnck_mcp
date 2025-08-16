@@ -30,8 +30,7 @@ try:
         MockGitBranchRepository,
         MockTaskRepository,
         MockSubtaskRepository,
-        MockAgentRepository,
-        create_mock_repositories
+        MockRepositoryFactory
     )
     logger.debug("Mock repositories successfully imported from test fixtures")
     
@@ -49,8 +48,7 @@ except ImportError as e:
         MockGitBranchRepository = mock_module.MockGitBranchRepository
         MockTaskRepository = mock_module.MockTaskRepository
         MockSubtaskRepository = mock_module.MockSubtaskRepository
-        MockAgentRepository = mock_module.MockAgentRepository
-        create_mock_repositories = mock_module.create_mock_repositories
+        MockRepositoryFactory = mock_module.MockRepositoryFactory
         
     except ImportError:
         # Last resort: Define minimal mock implementations inline
@@ -438,6 +436,33 @@ except ImportError as e:
                 'agent': MockAgentRepository()
             }
 
+# Define MockAgentRepository and create_mock_repositories if not imported
+try:
+    # Try to access MockAgentRepository to see if it was defined
+    _ = MockAgentRepository
+except NameError:
+    # MockAgentRepository was not imported or defined, create it
+    class MockAgentRepository:
+        """Minimal mock agent repository"""
+        def __init__(self):
+            self._agents = {}
+            logger.warning("Using minimal MockAgentRepository")
+
+try:
+    # Try to access create_mock_repositories to see if it was defined
+    _ = create_mock_repositories
+except NameError:
+    # create_mock_repositories was not defined, create it
+    def create_mock_repositories():
+        """Create a set of mock repositories for testing"""
+        return {
+            'project': MockProjectRepository(),
+            'git_branch': MockGitBranchRepository(),
+            'task': lambda p, b, u: MockTaskRepository(),
+            'subtask': lambda p, b, u: MockSubtaskRepository(),
+            'agent': MockAgentRepository()
+        }
+
 # Export all mock classes
 __all__ = [
     'MockProjectRepository',
@@ -445,5 +470,6 @@ __all__ = [
     'MockTaskRepository',
     'MockSubtaskRepository',
     'MockAgentRepository',
-    'create_mock_repositories'
+    'create_mock_repositories',
+    'MockRepositoryFactory'
 ]

@@ -30,11 +30,7 @@ try:
         instructions="Test server for debugging",
         version="1.0.0",
         enable_task_management=False,
-        on_duplicate_tools="ignore",
-        json_response=True,
-        debug=True,
-        log_level="DEBUG",
-        stateless_http=True
+        on_duplicate_tools="ignore"
     )
     print(f"✅ Server created: {server.name}")
     
