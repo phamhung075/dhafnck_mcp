@@ -160,7 +160,8 @@ class TestDatabaseConfig:
     
     def configure_test_environment(self) -> None:
         """
-        Configure environment variables for PostgreSQL testing.
+        Configure environment variables for testing.
+        Supports both PostgreSQL/Supabase (preferred) and SQLite (fallback).
         """
         # Save original environment
         self.original_env = {
@@ -170,21 +171,66 @@ class TestDatabaseConfig:
             'DHAFNCK_ENABLE_VISION': os.environ.get('DHAFNCK_ENABLE_VISION'),
         }
         
-        # Setup test database URL
-        test_url = self.setup_postgresql_test_database()
+        # Check what database type is configured
+        configured_db_type = os.environ.get('DATABASE_TYPE', 'postgresql').lower()
         
-        # Configure environment for testing
-        os.environ['DATABASE_TYPE'] = 'postgresql'
-        os.environ['DATABASE_URL'] = test_url
+        # Priority order: Supabase > PostgreSQL > SQLite
+        if configured_db_type in ['supabase', 'postgresql']:
+            # Check if PostgreSQL/Supabase is actually available
+            try:
+                # Setup test database URL for PostgreSQL/Supabase
+                test_url = self.setup_postgresql_test_database()
+                
+                # Try to connect to verify it's available
+                import psycopg2
+                from urllib.parse import urlparse
+                parsed = urlparse(test_url)
+                conn = psycopg2.connect(
+                    host=parsed.hostname,
+                    port=parsed.port or 5432,
+                    database=parsed.path.lstrip('/'),
+                    user=parsed.username,
+                    password=parsed.password,
+                    connect_timeout=3
+                )
+                conn.close()
+                
+                # PostgreSQL/Supabase is available, use it
+                os.environ['DATABASE_TYPE'] = configured_db_type
+                os.environ['DATABASE_URL'] = test_url
+                logger.info(f"✅ Test environment configured for {configured_db_type.upper()}")
+                logger.info(f"Test database URL: {test_url[:50]}...")
+                
+            except Exception as e:
+                # PostgreSQL/Supabase not available, fall back to SQLite for tests
+                logger.warning(f"⚠️ {configured_db_type.upper()} not available for testing: {e}")
+                logger.info("📦 Falling back to SQLite for test execution")
+                os.environ['DATABASE_TYPE'] = 'sqlite'
+                # SQLite will use the path from DatabaseSourceManager
+                if 'DATABASE_URL' in os.environ:
+                    del os.environ['DATABASE_URL']
+                    
+        elif configured_db_type == 'sqlite':
+            # SQLite explicitly requested, use it
+            logger.info("📦 Using SQLite for test execution (as configured)")
+            os.environ['DATABASE_TYPE'] = 'sqlite'
+            # Remove DATABASE_URL to let SQLite use file path
+            if 'DATABASE_URL' in os.environ:
+                del os.environ['DATABASE_URL']
+        else:
+            # Unknown database type, default to SQLite for safety
+            logger.warning(f"⚠️ Unknown DATABASE_TYPE: {configured_db_type}, using SQLite for tests")
+            os.environ['DATABASE_TYPE'] = 'sqlite'
+            if 'DATABASE_URL' in os.environ:
+                del os.environ['DATABASE_URL']
+        
+        # Configure common test environment settings
         os.environ['DISABLE_AUTH'] = 'true'
         os.environ['DHAFNCK_ENABLE_VISION'] = 'true'
         
-        # Remove pytest detection to allow PostgreSQL usage
-        if 'PYTEST_CURRENT_TEST' in os.environ:
-            del os.environ['PYTEST_CURRENT_TEST']
-        
-        logger.info("Test environment configured for PostgreSQL")
-        logger.info(f"Test database URL: {test_url}")
+        # Keep pytest detection for test mode
+        # This is needed for DatabaseSourceManager to use test database
+        logger.info(f"Test environment configured with {os.environ['DATABASE_TYPE'].upper()}")
     
     def restore_environment(self) -> None:
         """

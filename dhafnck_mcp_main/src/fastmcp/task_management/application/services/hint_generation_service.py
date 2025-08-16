@@ -31,7 +31,7 @@ from ...domain.entities.task import Task
 from ...domain.entities.context import TaskContext
 from ...domain.repositories.task_repository import TaskRepository
 from ...domain.repositories.context_repository import ContextRepository
-# from ...infrastructure.event_store import EventStore  # TODO: EventStore not implemented yet
+from ...infrastructure.event_store import EventStore, get_event_store
 
 
 logger = logging.getLogger(__name__)

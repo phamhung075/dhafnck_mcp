@@ -27,8 +27,7 @@ from ...domain.events.progress_events import (
 )
 from ...domain.repositories.task_repository import TaskRepository
 from ...domain.repositories.context_repository import ContextRepository
-# from ...infrastructure.event_bus import EventBus  # TODO: EventBus not implemented yet
-# from ..event_handlers.event_handler import EventHandler  # TODO: EventHandler not implemented yet
+from ...infrastructure.event_bus import EventBus, get_event_bus
 
 logger = logging.getLogger(__name__)
 
@@ -39,11 +38,11 @@ class ProgressTrackingService:
     def __init__(self, 
                  task_repository: TaskRepository,
                  context_repository: ContextRepository,
-                 event_bus: Optional[Any] = None):  # EventBus not implemented yet
+                 event_bus: Optional[EventBus] = None):
         """Initialize progress tracking service."""
         self.task_repository = task_repository
         self.context_repository = context_repository
-        self.event_bus = event_bus
+        self.event_bus = event_bus or get_event_bus()
         
         # Configuration
         self.stall_threshold_hours = 24  # Consider progress stalled after 24 hours

@@ -89,7 +89,7 @@ class TestTaskCreationPersistenceFix:
         """
         # Arrange: Repository save fails due to foreign key constraint
         mock_task_repository.get_next_id.return_value = "test-task-id"
-        mock_task_repository.save.return_value = False  # Save fails
+        mock_task_repository.save.return_value = None  # Save fails
         
         # Act: Execute task creation
         response = create_task_use_case.execute(invalid_git_branch_request)
@@ -110,7 +110,12 @@ class TestTaskCreationPersistenceFix:
         """
         # Arrange: Repository save succeeds
         mock_task_repository.get_next_id.return_value = "test-task-id"
-        mock_task_repository.save.return_value = True  # Save succeeds
+        # Mock the task entity that would be returned on successful save
+        mock_task = Mock()
+        mock_task.id = "test-task-id"
+        mock_task.title = "Test Task"
+        mock_task.git_branch_id = "valid-branch-id-123"
+        mock_task_repository.save.return_value = mock_task  # Save succeeds
         
         # Act: Execute task creation
         response = create_task_use_case.execute(valid_task_request)
@@ -133,7 +138,7 @@ class TestTaskCreationPersistenceFix:
         """
         # Arrange: Repository save returns False (failure)
         mock_task_repository.get_next_id.return_value = "test-task-id"
-        mock_task_repository.save.return_value = False
+        mock_task_repository.save.return_value = None
         
         # Act: Execute task creation
         response = create_task_use_case.execute(valid_task_request)
@@ -167,8 +172,8 @@ class TestTaskCreationPersistenceFix:
         # Act: Try to save task with invalid git_branch_id
         result = repository.save(task)
         
-        # Assert: Save should return False
-        assert result is False
+        # Assert: Save should return None
+        assert result is None
 
     def test_repository_save_should_return_true_on_successful_save(self):
         """
@@ -176,39 +181,37 @@ class TestTaskCreationPersistenceFix:
         
         This ensures the fix doesn't break successful saves.
         """
-        # Arrange: Get the valid git_branch_id from the test database
-        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
-        from fastmcp.task_management.infrastructure.database.models import ProjectGitBranch
-        
-        # Find a valid git branch ID from the test database
-        valid_branch_id = None
-        db_config = get_db_config()
-        with db_config.get_session() as session:
-            branch = session.query(ProjectGitBranch).first()
-            if branch:
-                valid_branch_id = branch.id
-        
-        # Skip test if no valid branch found
-        if not valid_branch_id:
-            pytest.skip("No valid git branch found in test database")
-        
-        # Create repository with valid git_branch_id
-        repository = ORMTaskRepository(git_branch_id=valid_branch_id)
-        
-        # Create a task entity
-        task = Task.create(
-            id=str(uuid.uuid4()),
-            title="Test Task",
-            description="Test description", 
-            git_branch_id=valid_branch_id,
-            priority="high"
-        )
-        
-        # Act: Save task with valid git_branch_id
-        result = repository.save(task)
-        
-        # Assert: Save should return True
-        assert result is True
+        # Arrange: Mock successful save with valid git_branch_id
+        from sqlalchemy.orm import Session
+        with patch.object(ORMTaskRepository, 'get_db_session') as mock_session_context:
+            mock_session = Mock(spec=Session)
+            mock_session_context.return_value.__enter__.return_value = mock_session
+            mock_session_context.return_value.__exit__.return_value = None
+            
+            # Mock no existing task in database
+            mock_session.query.return_value.filter.return_value.first.return_value = None
+            mock_session.add.return_value = None
+            mock_session.commit.return_value = None
+            
+            # Create repository with valid git_branch_id
+            valid_branch_id = str(uuid.uuid4())
+            repository = ORMTaskRepository(git_branch_id=valid_branch_id)
+            
+            # Create a task entity
+            task = Task.create(
+                id=str(uuid.uuid4()),
+                title="Test Task",
+                description="Test description", 
+                git_branch_id=valid_branch_id,
+                priority="high"
+            )
+            
+            # Act: Save task with valid git_branch_id
+            result = repository.save(task)
+            
+            # Assert: Save should return task entity
+            assert result is not None
+            assert result == task
 
     def test_task_creation_should_validate_git_branch_id_existence_before_save(
         self, create_task_use_case, invalid_git_branch_request, mock_task_repository
@@ -220,7 +223,7 @@ class TestTaskCreationPersistenceFix:
         """
         # Arrange: Repository indicates git_branch_id doesn't exist and save fails
         mock_task_repository.get_next_id.return_value = "test-task-id"
-        mock_task_repository.save.return_value = False  # Save fails due to constraint
+        mock_task_repository.save.return_value = None  # Save fails due to constraint
         
         # Act: Execute task creation
         response = create_task_use_case.execute(invalid_git_branch_request)
@@ -242,7 +245,12 @@ class TestTaskCreationPersistenceFix:
         # Arrange: Repository save succeeds and get_task works
         created_task_id = "test-task-id"
         mock_task_repository.get_next_id.return_value = created_task_id
-        mock_task_repository.save.return_value = True
+        # Mock the task entity that would be returned on successful save
+        mock_task = Mock()
+        mock_task.id = created_task_id
+        mock_task.title = "Test Task"
+        mock_task.git_branch_id = "valid-branch-id-123"
+        mock_task_repository.save.return_value = mock_task
         
         # Mock the task entity that would be returned
         mock_task = Mock()
@@ -272,7 +280,12 @@ class TestTaskCreationPersistenceFix:
         # Arrange: Repository save succeeds and find_all includes the task
         created_task_id = "test-task-id"
         mock_task_repository.get_next_id.return_value = created_task_id
-        mock_task_repository.save.return_value = True
+        # Mock the task entity that would be returned on successful save
+        mock_task = Mock()
+        mock_task.id = created_task_id
+        mock_task.title = "Test Task"
+        mock_task.git_branch_id = "valid-branch-id-123"
+        mock_task_repository.save.return_value = mock_task
         
         # Mock the task entity in the list
         mock_task = Mock()

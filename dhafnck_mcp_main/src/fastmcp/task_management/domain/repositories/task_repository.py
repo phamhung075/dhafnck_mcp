@@ -11,8 +11,8 @@ class TaskRepository(ABC):
     """Repository interface for Task aggregate"""
     
     @abstractmethod
-    def save(self, task: Task) -> bool:
-        """Save a task"""
+    def save(self, task: Task) -> Optional[Task]:
+        """Save a task, returns the saved task on success or None on failure"""
         pass
     
     @abstractmethod

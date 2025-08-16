@@ -97,9 +97,9 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
             dependencies=dependency_ids
         )
         
-        # Set progress_percentage if available
+        # Map progress_percentage from database to overall_progress in entity
         if hasattr(task, 'progress_percentage'):
-            entity.progress_percentage = task.progress_percentage
+            entity.overall_progress = float(task.progress_percentage)
         
         return entity
     
@@ -202,6 +202,10 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
         """Update a task"""
         try:
             with self.transaction():
+                # Map overall_progress to progress_percentage if provided
+                if 'overall_progress' in updates:
+                    updates['progress_percentage'] = int(updates.pop('overall_progress'))
+                
                 # Update basic fields
                 basic_updates = {k: v for k, v in updates.items() 
                                if k not in ['assignee_ids', 'label_names', 'subtasks']}
@@ -413,8 +417,8 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
     
     # Abstract method implementations for TaskRepository interface
     
-    def save(self, task: TaskEntity) -> bool:
-        """Save a task entity"""
+    def save(self, task: TaskEntity) -> TaskEntity | None:
+        """Save a task entity, returns the saved task on success or None on failure"""
         try:
             with self.get_db_session() as session:
                 # Check if task already exists
@@ -432,6 +436,9 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
                     existing.due_date = task.due_date
                     existing.updated_at = task.updated_at
                     existing.context_id = task.context_id
+                    # Map overall_progress to progress_percentage
+                    if hasattr(task, 'overall_progress'):
+                        existing.progress_percentage = int(task.overall_progress)
                     
                     # Update dependencies
                     # First, remove all existing dependencies
@@ -487,7 +494,9 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
                         due_date=task.due_date,
                         created_at=task.created_at,
                         updated_at=task.updated_at,
-                        context_id=task.context_id
+                        context_id=task.context_id,
+                        # Map overall_progress to progress_percentage
+                        progress_percentage=int(task.overall_progress) if hasattr(task, 'overall_progress') else 0
                     )
                     session.add(new_task)
                     
@@ -525,10 +534,11 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
                         session.add(task_label)
                 
                 session.commit()
-                return True
+                # Return the saved task entity
+                return task
         except Exception as e:
             logger.error(f"Failed to save task: {e}")
-            return False
+            return None
     
     def find_by_id(self, task_id) -> TaskEntity | None:
         """Find task by ID"""

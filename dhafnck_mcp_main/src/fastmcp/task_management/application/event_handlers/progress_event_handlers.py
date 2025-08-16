@@ -7,11 +7,7 @@ actions such as notifications, aggregations, and state updates.
 import logging
 from datetime import datetime, timezone
 from datetime import datetime
-from typing import Optional, Dict, Any, List, TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from ...infrastructure.notification_service import NotificationService
-    from ...infrastructure.event_store import EventStore
+from typing import Optional, Dict, Any, List
 
 from ...domain.events.progress_events import (
     ProgressUpdated, ProgressMilestoneReached, ProgressStalled,
@@ -20,8 +16,8 @@ from ...domain.events.progress_events import (
 )
 from ...domain.repositories.task_repository import TaskRepository
 from ...domain.repositories.context_repository import ContextRepository
-# from ...infrastructure.notification_service import NotificationService  # TODO: Not implemented
-# from ...infrastructure.event_store import EventStore  # TODO: Not implemented
+from ...infrastructure.notification_service import NotificationService, get_notification_service
+from ...infrastructure.event_store import EventStore, get_event_store
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +28,7 @@ class ProgressUpdatedHandler:
     def __init__(self,
                  task_repository: TaskRepository,
                  context_repository: ContextRepository,
-                 event_store: Optional['EventStore'] = None):
+                 event_store: Optional[EventStore] = None):
         """Initialize the handler."""
         self.task_repository = task_repository
         self.context_repository = context_repository

@@ -23,6 +23,9 @@ from fastmcp.task_management.domain.value_objects.task_status import TaskStatus
 from fastmcp.task_management.domain.value_objects.priority import Priority
 from fastmcp.task_management.domain.exceptions.base_exceptions import DatabaseException
 
+# Import database fixtures
+from tests.fixtures.database_fixtures import valid_git_branch_id, invalid_git_branch_id, test_project_data
+
 
 class TestORMTaskRepositoryPersistenceFix:
     
@@ -44,29 +47,29 @@ class TestORMTaskRepositoryPersistenceFix:
     """Test cases for ORM Task Repository persistence fix"""
     
     @pytest.fixture
-    def task_repository(self):
-        """Create task repository with test git_branch_id"""
-        return ORMTaskRepository(git_branch_id="test-branch-id")
+    def task_repository(self, valid_git_branch_id):
+        """Create task repository with valid test git_branch_id"""
+        return ORMTaskRepository(git_branch_id=valid_git_branch_id)
     
     @pytest.fixture
-    def valid_task_entity(self):
+    def valid_task_entity(self, valid_git_branch_id):
         """Create valid task entity for testing"""
         return Task.create(
             id=str(uuid.uuid4()),
             title="Test Task",
             description="Test description",
-            git_branch_id="test-branch-id",
+            git_branch_id=valid_git_branch_id,
             priority="high"
         )
     
     @pytest.fixture
-    def invalid_git_branch_task_entity(self):
+    def invalid_git_branch_task_entity(self, invalid_git_branch_id):
         """Create task entity with invalid git_branch_id"""
         return Task.create(
             id=str(uuid.uuid4()),
             title="Test Task",
             description="Test description", 
-            git_branch_id="non-existent-branch-id",
+            git_branch_id=invalid_git_branch_id,
             priority="high"
         )
 
@@ -82,14 +85,14 @@ class TestORMTaskRepositoryPersistenceFix:
         # Act: Try to save task with invalid git_branch_id
         result = task_repository.save(invalid_git_branch_task_entity)
         
-        # Assert: Save should return False
-        assert result is False
+        # Assert: Save should return None on failure
+        assert result is None
 
-    def test_save_should_return_true_on_successful_save(
+    def test_save_should_return_task_on_successful_save(
         self, task_repository, valid_task_entity
     ):
         """
-        Test that save method returns True when save succeeds.
+        Test that save method returns TaskEntity when save succeeds.
         
         This ensures the fix doesn't break successful saves.
         """
@@ -107,8 +110,9 @@ class TestORMTaskRepositoryPersistenceFix:
             # Act: Save task
             result = task_repository.save(valid_task_entity)
             
-            # Assert: Save should return True
-            assert result is True
+            # Assert: Save should return the task entity
+            assert result is not None
+            assert result == valid_task_entity
 
     def test_save_should_handle_integrity_error_gracefully(
         self, task_repository, invalid_git_branch_task_entity
@@ -132,7 +136,7 @@ class TestORMTaskRepositoryPersistenceFix:
             result = task_repository.save(invalid_git_branch_task_entity)
             
             # Assert: Save should return False
-            assert result is False
+            assert result is None
 
     def test_save_should_log_database_errors_for_debugging(
         self, task_repository, invalid_git_branch_task_entity
@@ -159,7 +163,7 @@ class TestORMTaskRepositoryPersistenceFix:
             result = task_repository.save(invalid_git_branch_task_entity)
             
             # Assert: Error should be logged
-            assert result is False
+            assert result is None
             mock_logger.error.assert_called()
             # Check that error message contains constraint information
             logged_call = mock_logger.error.call_args[0][0]
@@ -187,7 +191,7 @@ class TestORMTaskRepositoryPersistenceFix:
             result = task_repository.save(invalid_git_branch_task_entity)
             
             # Assert: Transaction should be rolled back
-            assert result is False
+            assert result is None
             # Session rollback should be called implicitly by context manager
 
     def test_save_should_update_existing_task_when_task_exists(
@@ -212,8 +216,9 @@ class TestORMTaskRepositoryPersistenceFix:
             # Act: Save task
             result = task_repository.save(valid_task_entity)
             
-            # Assert: Save should return True and update existing task
-            assert result is True
+            # Assert: Save should return task entity and update existing task
+            assert result is not None
+            assert result == valid_task_entity
             # Verify task properties were updated
             assert mock_existing_task.title == valid_task_entity.title
             assert mock_existing_task.description == valid_task_entity.description
@@ -238,8 +243,9 @@ class TestORMTaskRepositoryPersistenceFix:
             # Act: Save task
             result = task_repository.save(valid_task_entity)
             
-            # Assert: Save should return True and create new task
-            assert result is True
+            # Assert: Save should return task entity and create new task
+            assert result is not None
+            assert result == valid_task_entity
             mock_session.add.assert_called_once()
 
     def test_save_should_handle_database_connection_errors(
@@ -258,7 +264,7 @@ class TestORMTaskRepositoryPersistenceFix:
             result = task_repository.save(valid_task_entity)
             
             # Assert: Save should return False
-            assert result is False
+            assert result is None
 
     def test_get_task_should_return_none_when_task_not_found_after_failed_save(
         self, task_repository, invalid_git_branch_task_entity
@@ -275,7 +281,7 @@ class TestORMTaskRepositoryPersistenceFix:
         retrieved_task = task_repository.get_task(str(invalid_git_branch_task_entity.id))
         
         # Assert: Save should fail and task should not be found
-        assert save_result is False
+        assert save_result is None
         assert retrieved_task is None
 
     def test_list_tasks_should_not_include_failed_saves(
@@ -294,46 +300,42 @@ class TestORMTaskRepositoryPersistenceFix:
         task_list = task_repository.list_tasks()
         
         # Assert: Save should fail and task should not be in list
-        assert save_result is False
+        assert save_result is None
         task_ids = [task.id for task in task_list]
         assert str(invalid_git_branch_task_entity.id) not in task_ids
 
     def test_repository_save_should_return_true_with_valid_git_branch_id(self):
         """
-        Test that repository save returns True when git_branch_id is valid.
+        Test that repository save returns TaskEntity when git_branch_id is valid.
         
         This ensures the fix doesn't break valid saves.
         """
-        # Arrange: Get the valid git_branch_id from the test database
-        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
-        from fastmcp.task_management.infrastructure.database.models import ProjectGitBranch
-        
-        # Find a valid git branch ID from the test database
-        valid_branch_id = None
-        db_config = get_db_config()
-        with db_config.get_session() as session:
-            branch = session.query(ProjectGitBranch).first()
-            if branch:
-                valid_branch_id = branch.id
-        
-        # Skip test if no valid branch found
-        if not valid_branch_id:
-            pytest.skip("No valid git branch found in test database")
-        
-        # Create repository with valid git_branch_id
-        repository = ORMTaskRepository(git_branch_id=valid_branch_id)
-        
-        # Create a task entity
-        task = Task.create(
-            id=str(uuid.uuid4()),
-            title="Valid Task",
-            description="Task with valid git_branch_id",
-            git_branch_id=valid_branch_id,
-            priority="high"
-        )
-        
-        # Act: Save task
-        result = repository.save(task)
-        
-        # Assert: Save should return True
-        assert result is True
+        # Arrange: Mock successful save with valid git_branch_id
+        with patch.object(ORMTaskRepository, 'get_db_session') as mock_session_context:
+            mock_session = Mock(spec=Session)
+            mock_session_context.return_value.__enter__.return_value = mock_session
+            mock_session_context.return_value.__exit__.return_value = None
+            
+            # Mock no existing task in database
+            mock_session.query.return_value.filter.return_value.first.return_value = None
+            mock_session.add.return_value = None
+            mock_session.commit.return_value = None
+            
+            # Create repository with valid git_branch_id
+            repository = ORMTaskRepository(git_branch_id=str(uuid.uuid4()))
+            
+            # Create a task entity
+            task = Task.create(
+                id=str(uuid.uuid4()),
+                title="Valid Task",
+                description="Task with valid git_branch_id",
+                git_branch_id=str(uuid.uuid4()),
+                priority="high"
+            )
+            
+            # Act: Save task
+            result = repository.save(task)
+            
+            # Assert: Save should return task entity
+            assert result is not None
+            assert result == task

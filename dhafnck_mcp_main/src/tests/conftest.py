@@ -363,53 +363,26 @@ def set_mcp_db_path_for_tests(request):
     original_test_db_url = os.environ.get("TEST_DATABASE_URL")
     
     try:
-        # Set up TestDatabaseConfig for PostgreSQL testing
+        # Set up TestDatabaseConfig - it will respect DATABASE_TYPE environment variable
         test_config = TestDatabaseConfig()
         
-        # If TEST_DATABASE_URL is not set, use the production database with test schema
-        if not os.environ.get("TEST_DATABASE_URL"):
-            # Fix the production DATABASE_URL and use it with a test schema
-            prod_url = os.environ.get("DATABASE_URL", "")
-            if prod_url and "postgres:" in prod_url and "@" in prod_url:
-                # Parse and fix the malformed URL properly
-                # The URL has format: postgresql://user:password@@@@host:port/database
-                # We need to fix the multiple @ symbols in the password
-                try:
-                    # Split by :// to get scheme and rest
-                    parts = prod_url.split("://", 1)
-                    if len(parts) == 2:
-                        scheme, rest = parts
-                        # Find the last @ which separates auth from host
-                        auth_host = rest.rsplit('@', 1)
-                        if len(auth_host) == 2:
-                            auth, host = auth_host
-                            # Fix the password with multiple @
-                            if ":" in auth:
-                                user, password = auth.split(':', 1)
-                                # Remove extra @ symbols from password
-                                password = password.replace("@@@@", "@")
-                                # URL encode the @ symbol
-                                import urllib.parse
-                                encoded_password = urllib.parse.quote(password, safe='')
-                                # Reconstruct the URL
-                                fixed_prod_url = f"{scheme}://{user}:{encoded_password}@{host}"
-                                os.environ["TEST_DATABASE_URL"] = fixed_prod_url
-                                print(f"📝 Fixed TEST_DATABASE_URL for Supabase")
-                except Exception as e:
-                    print(f"⚠️ Could not fix DATABASE_URL: {e}")
+        # Configure test environment (respects DATABASE_TYPE - Supabase/PostgreSQL/SQLite)
+        test_config.configure_test_environment()
         
-        # Setup PostgreSQL test environment and get the fixed URL
-        test_db_url = test_config.setup_postgresql_test_database()
-        
-        # Set environment variables for PostgreSQL
-        os.environ['DATABASE_TYPE'] = 'postgresql'
-        os.environ['DATABASE_URL'] = test_db_url  # Use the fixed URL
-        os.environ['DISABLE_AUTH'] = 'true'
-        os.environ['DHAFNCK_ENABLE_VISION'] = 'true'
-        
-        print(f"\n🐘 Using PostgreSQL test database")
-        print(f"📊 DATABASE_TYPE: {os.environ.get('DATABASE_TYPE', 'not set')}")
-        print(f"🔗 DATABASE_URL: [fixed and configured for test database]")
+        # Display what database is being used
+        db_type = os.environ.get('DATABASE_TYPE', 'not set')
+        if db_type == 'sqlite':
+            print(f"\n📦 Using SQLite test database")
+        elif db_type == 'supabase':
+            print(f"\n🎯 Using Supabase test database")
+        elif db_type == 'postgresql':
+            print(f"\n🐘 Using PostgreSQL test database")
+        else:
+            print(f"\n⚠️ Unknown database type: {db_type}")
+            
+        print(f"📊 DATABASE_TYPE: {db_type}")
+        if db_type != 'sqlite':
+            print(f"🔗 DATABASE_URL: [configured for test database]")
         
         # Initialize the test database with schema and basic test data
         # Note: For PostgreSQL, we don't need to pass a file path

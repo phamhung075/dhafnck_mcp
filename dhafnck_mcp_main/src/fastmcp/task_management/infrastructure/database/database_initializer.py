@@ -72,18 +72,27 @@ def initialize_database(db_path: Optional[str] = None):
     """
     database_type = os.getenv("DATABASE_TYPE", "postgresql").lower()
     
+    # Check if we're in test mode
+    import sys
+    is_test_mode = 'pytest' in sys.modules or 'PYTEST_CURRENT_TEST' in os.environ
+    
     # Validate database type
     if database_type == "sqlite":
-        logger.error(
-            "Database type 'sqlite' is not supported. "
-            "PostgreSQL is required for this system. "
-            "Set DATABASE_TYPE=postgresql to use PostgreSQL."
-        )
-        raise ValueError("PostgreSQL is required. Set DATABASE_TYPE=postgresql or supabase.")
+        if not is_test_mode:
+            # SQLite not allowed in production
+            logger.error(
+                "Database type 'sqlite' is not supported for production. "
+                "PostgreSQL is required for this system. "
+                "Set DATABASE_TYPE=postgresql or supabase to use PostgreSQL."
+            )
+            raise ValueError("PostgreSQL is required for production. Set DATABASE_TYPE=postgresql or supabase.")
+        else:
+            # SQLite allowed for tests
+            logger.info("📦 Using SQLite database for test execution")
     
-    # For PostgreSQL, we don't need db_path as it uses DATABASE_URL
-    if database_type == "postgresql":
-        db_identifier = "postgresql"
+    # For PostgreSQL/Supabase, we don't need db_path as it uses DATABASE_URL
+    if database_type in ["postgresql", "supabase"]:
+        db_identifier = database_type
     else:
         # For SQLite, use provided path or default
         if not db_path:
