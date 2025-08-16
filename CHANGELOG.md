@@ -8,6 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **TDD Analysis Phase 2** - Comprehensive test suite analysis and fixes (2025-08-16)
+  - Analyzed 1,932 tests across 223 test files
+  - Fixed vision system unit test database isolation issue (276 errors resolved)
+  - Renamed TestEventClass to SampleEvent to avoid pytest collection warnings
+  - Created missing application DTOs (AssignAgentRequest, UpdateAgentRequest, CreateSubtaskRequest)
+  - Fixed import paths in integration tests
+  - Created analysis reports:
+    - `docs/reports-status/tdd-analysis-2025-08-16.md`
+    - `docs/reports-status/tdd-fixes-implemented-2025-08-16.md`
+    - `docs/reports-status/tdd-phase2-complete-2025-08-16.md`
+  - Impact: Vision tests 100% passing, test collection improved from ~71% to ~95%
+
+### Fixed
+- **Datetime Deprecation Warnings** - Fixed all datetime.utcnow() deprecation warnings (2025-08-16)
+  - Replaced 156 occurrences of `datetime.utcnow()` with `datetime.now(timezone.utc)`
+  - Modified 19 files across tests and source code
+  - Created automated fix script: `fix_datetime_deprecation.py`
+  - Impact: Zero deprecation warnings in test suite
+
 - **TDD Remediation Complete** - Successfully completed comprehensive Test-Driven Development remediation (2025-08-16)
   - Achieved 98% test pass rate in infrastructure layer (105/107 tests passing)
   - Created database fixtures module with proper parent record setup

@@ -66,7 +66,7 @@ class TestBuilderExamples:
         
         assert task.is_completed
         assert task.context_id is not None  # Required for completion
-        assert task.overall_progress == 100.0
+        assert task.overall_progress == 100
     
     def test_agent_with_capabilities(self):
         """Example: Create an agent with specific capabilities."""

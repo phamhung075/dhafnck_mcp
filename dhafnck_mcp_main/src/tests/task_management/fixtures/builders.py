@@ -97,7 +97,7 @@ class TaskBuilder:
         """Set task to completed status with context."""
         self._status = TaskStatus.done()
         self._context_id = f"context-{uuid.uuid4()}"
-        self._overall_progress = 100.0
+        self._overall_progress = 100
         return self
     
     def with_estimated_effort(self, effort: str) -> 'TaskBuilder':

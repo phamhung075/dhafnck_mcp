@@ -99,7 +99,7 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
         
         # Map progress_percentage from database to overall_progress in entity
         if hasattr(task, 'progress_percentage'):
-            entity.overall_progress = float(task.progress_percentage)
+            entity.overall_progress = task.progress_percentage
         
         return entity
     
@@ -204,7 +204,7 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
             with self.transaction():
                 # Map overall_progress to progress_percentage if provided
                 if 'overall_progress' in updates:
-                    updates['progress_percentage'] = int(updates.pop('overall_progress'))
+                    updates['progress_percentage'] = updates.pop('overall_progress')
                 
                 # Update basic fields
                 basic_updates = {k: v for k, v in updates.items() 
@@ -438,7 +438,7 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
                     existing.context_id = task.context_id
                     # Map overall_progress to progress_percentage
                     if hasattr(task, 'overall_progress'):
-                        existing.progress_percentage = int(task.overall_progress)
+                        existing.progress_percentage = task.overall_progress
                     
                     # Update dependencies
                     # First, remove all existing dependencies
@@ -496,7 +496,7 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
                         updated_at=task.updated_at,
                         context_id=task.context_id,
                         # Map overall_progress to progress_percentage
-                        progress_percentage=int(task.overall_progress) if hasattr(task, 'overall_progress') else 0
+                        progress_percentage=task.overall_progress if hasattr(task, 'overall_progress') else 0
                     )
                     session.add(new_task)
                     

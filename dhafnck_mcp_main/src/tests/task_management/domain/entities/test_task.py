@@ -645,9 +645,9 @@ class TestTaskProgress:
         
         # The update_progress method requires ProgressType
         from fastmcp.task_management.domain.value_objects.progress import ProgressType
-        task.update_progress(ProgressType.IMPLEMENTATION, 50.0)
+        task.update_progress(ProgressType.IMPLEMENTATION, 50)
         
-        assert task.overall_progress == 50.0
+        assert task.overall_progress == 50
         events = task.get_events()
         assert len(events) >= 1
     

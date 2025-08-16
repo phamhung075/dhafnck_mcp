@@ -15,7 +15,7 @@ def create_named_mock(name: str) -> Mock:
     return mock
 
 
-class TestEventClass:
+class SampleEvent:
     """Test event class."""
     def __init__(self, data: str):
         self.data = data
@@ -123,7 +123,7 @@ class TestEventBus:
     async def test_publish_to_sync_handler(self, event_bus):
         """Test publishing event to synchronous handler."""
         handler = create_named_mock("handler")
-        event = TestEventClass("test_data")
+        event = SampleEvent("test_data")
         
         event_bus.subscribe(TestEventClass, handler)
         await event_bus.publish(event)
@@ -134,7 +134,7 @@ class TestEventBus:
     async def test_publish_to_async_handler(self, event_bus):
         """Test publishing event to asynchronous handler."""
         handler = AsyncMock()
-        event = TestEventClass("test_data")
+        event = SampleEvent("test_data")
         
         event_bus.subscribe(TestEventClass, handler)
         await event_bus.publish(event)
@@ -148,7 +148,7 @@ class TestEventBus:
         handler2 = AsyncMock()
         handler2.__name__ = "handler2"
         handler3 = create_named_mock("handler3")
-        event = TestEventClass("test_data")
+        event = SampleEvent("test_data")
         
         event_bus.subscribe(TestEventClass, handler1)
         event_bus.subscribe(TestEventClass, handler2)
@@ -178,7 +178,7 @@ class TestEventBus:
         event_bus.subscribe(TestEventClass, handler2, priority=10)  # Highest priority
         event_bus.subscribe(TestEventClass, handler3, priority=1)
         
-        event = TestEventClass("test_data")
+        event = SampleEvent("test_data")
         await event_bus.publish(event)
         
         # Should be called in descending priority order
@@ -187,7 +187,7 @@ class TestEventBus:
     @pytest.mark.asyncio
     async def test_publish_no_handlers(self, event_bus):
         """Test publishing event with no handlers."""
-        event = TestEventClass("test_data")
+        event = SampleEvent("test_data")
         
         # Should not raise an error
         await event_bus.publish(event)
@@ -204,7 +204,7 @@ class TestEventBus:
         event_bus.subscribe(TestEventClass, handler2)
         event_bus.subscribe(TestEventClass, handler3)
         
-        event = TestEventClass("test_data")
+        event = SampleEvent("test_data")
         
         # Should not raise, but log the error
         with patch('fastmcp.task_management.infrastructure.event_bus.logger') as mock_logger:
@@ -223,8 +223,8 @@ class TestEventBus:
         event_bus.subscribe(TestEventClass, handler1)
         event_bus.subscribe(AnotherTestEventClass, handler2)
         
-        event1 = TestEventClass("test")
-        event2 = AnotherTestEventClass(42)
+        event1 = SampleEvent("test")
+        event2 = AnotherSampleEvent(42)
         
         await event_bus.publish(event1)
         await event_bus.publish(event2)
@@ -275,7 +275,7 @@ class TestEventBus:
         handler = create_named_mock("handler")
         event_bus.subscribe(TestEventClass, handler)
         
-        events = [TestEventClass(f"event_{i}") for i in range(10)]
+        events = [SampleEvent(f"event_{i}") for i in range(10)]
         
         # Publish events concurrently
         await asyncio.gather(*[event_bus.publish(event) for event in events])

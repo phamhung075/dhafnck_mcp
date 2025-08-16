@@ -5,7 +5,7 @@ This test verifies that branch and task contexts are properly differentiated.
 
 import pytest
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import Mock
 
 from fastmcp.task_management.infrastructure.database.database_config import get_session
@@ -66,8 +66,8 @@ class TestContextResolutionSimple:
                 id=str(uuid.uuid4()),
                 name="Test Project",
                 description="Test",
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
             )
             db_session.add(project)
             
@@ -78,8 +78,8 @@ class TestContextResolutionSimple:
                 project_id=project.id,
                 name=f"test-feature-{uuid.uuid4().hex[:8]}",
                 description="Auth feature",
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
             )
             db_session.add(branch)
             
@@ -97,8 +97,8 @@ class TestContextResolutionSimple:
                     coding_standards={},
                     workflow_templates={},
                     delegation_rules={},
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow()
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc)
                 )
                 db_session.add(global_context)
             
@@ -112,8 +112,8 @@ class TestContextResolutionSimple:
                 global_overrides={},
                 delegation_rules={},
                 version=1,
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
             )
             db_session.add(project_context)
             
@@ -127,8 +127,8 @@ class TestContextResolutionSimple:
                 agent_assignments={},
                 local_overrides={},
                 delegation_rules={},
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
                 version=1
             )
             db_session.add(branch_context)
@@ -229,8 +229,8 @@ class TestContextResolutionSimple:
                 id=str(uuid.uuid4()),
                 name="Test Project",
                 description="Test",
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
             )
             db_session.add(project)
             
@@ -239,8 +239,8 @@ class TestContextResolutionSimple:
                 project_id=project.id,
                 name="main",
                 description="Main branch",
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
             )
             db_session.add(branch)
             
@@ -251,8 +251,8 @@ class TestContextResolutionSimple:
                 description="Test",
                 status="todo",
                 priority="medium",
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
             )
             db_session.add(task)
             
@@ -271,8 +271,8 @@ class TestContextResolutionSimple:
                     coding_standards={},
                     workflow_templates={},
                     delegation_rules={},
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow()
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc)
                 )
                 db_session.add(global_context)
             
@@ -286,8 +286,8 @@ class TestContextResolutionSimple:
                 global_overrides={},
                 delegation_rules={},
                 version=1,
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
             )
             db_session.add(project_context)
             
@@ -301,8 +301,8 @@ class TestContextResolutionSimple:
                 agent_assignments={},
                 local_overrides={},
                 delegation_rules={},
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
                 version=1
             )
             db_session.add(branch_context)
@@ -317,8 +317,8 @@ class TestContextResolutionSimple:
                 implementation_notes={},
                 delegation_triggers={},
                 version=1,
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
             )
             db_session.add(task_context)
             
@@ -380,8 +380,8 @@ class TestContextResolutionSimple:
                 id=str(uuid.uuid4()),
                 name=f"test-project-{uuid.uuid4().hex[:8]}",  # Same as frontend
                 description="Test",
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
             )
             db_session.add(project)
             
@@ -392,8 +392,8 @@ class TestContextResolutionSimple:
                 project_id=project.id,
                 name=f"test-feature-{uuid.uuid4().hex[:8]}",
                 description="Authentication system",
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
             )
             db_session.add(branch)
             
@@ -412,8 +412,8 @@ class TestContextResolutionSimple:
                     coding_standards={"style": "PEP8"},
                     workflow_templates={},
                     delegation_rules={},
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow()
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc)
                 )
                 db_session.add(global_ctx)
             
@@ -433,8 +433,8 @@ class TestContextResolutionSimple:
                     global_overrides={},
                     delegation_rules={},
                     version=1,
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow()
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc)
                 )
                 db_session.add(project_ctx)
             
@@ -448,8 +448,8 @@ class TestContextResolutionSimple:
                 agent_assignments={},
                 local_overrides={},
                 delegation_rules={},
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
                 version=1
             )
             db_session.add(branch_ctx)

@@ -23,7 +23,7 @@ from fastmcp.server.server import FastMCP
 from fastmcp.server.context import Context
 from fastmcp.task_management.infrastructure.utilities.path_resolver import PathResolver
 from fastmcp.exceptions import ToolError
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class TestToolIssuesVerification:
@@ -124,8 +124,8 @@ class TestToolIssuesVerification:
                         name="Default Project",
                         description="Default project for testing",
                         user_id=user_id,
-                        created_at=datetime.utcnow(),
-                        updated_at=datetime.utcnow()
+                        created_at=datetime.now(timezone.utc),
+                        updated_at=datetime.now(timezone.utc)
                     )
                     session.add(project)
                     session.flush()
@@ -136,8 +136,8 @@ class TestToolIssuesVerification:
                     project_id="default_project",
                     name=git_branch_name,
                     description="Main branch for testing",
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow()
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc)
                 )
                 session.add(git_branch)
                 session.commit()

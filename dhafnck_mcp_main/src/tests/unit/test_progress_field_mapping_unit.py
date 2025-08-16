@@ -51,7 +51,7 @@ def test_model_to_entity_progress_mapping():
     
     # Verify the mapping
     assert hasattr(entity, 'overall_progress'), "Entity should have overall_progress field"
-    assert entity.overall_progress == 75.0, f"Expected overall_progress to be 75.0, got {entity.overall_progress}"
+    assert entity.overall_progress == 75, f"Expected overall_progress to be 75, got {entity.overall_progress}"
     print("✅ Model to entity progress mapping works correctly")
 
 
@@ -78,12 +78,12 @@ def test_update_task_progress_mapping():
                 # Mock the _model_to_entity to return a simple entity
                 with patch.object(repo, '_model_to_entity') as mock_to_entity:
                     mock_entity = Mock()
-                    mock_entity.overall_progress = 90.0
+                    mock_entity.overall_progress = 90
                     mock_to_entity.return_value = mock_entity
                     
                     # Call update_task with overall_progress
                     task_id = str(uuid.uuid4())
-                    result = repo.update_task(task_id, overall_progress=90.0)
+                    result = repo.update_task(task_id, overall_progress=90)
                     
                     # Verify that update was called with progress_percentage
                     mock_update.assert_called_once()

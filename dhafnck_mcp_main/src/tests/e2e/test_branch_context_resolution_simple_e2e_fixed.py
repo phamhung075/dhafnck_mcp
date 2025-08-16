@@ -5,7 +5,7 @@ Demonstrates proper PostgreSQL test isolation.
 
 import pytest
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import text
 
 from fastmcp.task_management.infrastructure.database.database_config import get_db_config
@@ -63,8 +63,8 @@ class TestBranchContextResolutionSimpleE2EFixed:
                     description="Production-like test project",
                     user_id="test-user",
                     status="active",
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow()
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc)
                 )
                 db_session.add(project)
                 
@@ -73,8 +73,8 @@ class TestBranchContextResolutionSimpleE2EFixed:
                     project_id=project_id,
                     name="feature/auth-system-fixed",
                     description="Authentication system implementation",
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow()
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc)
                 )
                 db_session.add(branch)
                 
@@ -92,8 +92,8 @@ class TestBranchContextResolutionSimpleE2EFixed:
                         coding_standards={"style": "PEP8"},
                         workflow_templates={},
                         delegation_rules={},
-                        created_at=datetime.utcnow(),
-                        updated_at=datetime.utcnow()
+                        created_at=datetime.now(timezone.utc),
+                        updated_at=datetime.now(timezone.utc)
                     )
                     db_session.add(global_ctx)
                 
@@ -108,8 +108,8 @@ class TestBranchContextResolutionSimpleE2EFixed:
                     global_overrides={},
                     delegation_rules={},
                     version=1,
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow()
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc)
                 )
                 db_session.add(project_ctx)
                 
@@ -127,8 +127,8 @@ class TestBranchContextResolutionSimpleE2EFixed:
                     local_overrides={},
                     delegation_rules={},
                     version=1,
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow()
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc)
                 )
                 db_session.add(branch_ctx)
                 
@@ -187,8 +187,8 @@ class TestBranchContextResolutionSimpleE2EFixed:
                     description="Inheritance test project",
                     user_id="test-user",
                     status="active",
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow()
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc)
                 )
                 db_session.add(project)
                 
@@ -197,8 +197,8 @@ class TestBranchContextResolutionSimpleE2EFixed:
                     project_id=project_id,
                     name="test-branch-fixed",
                     description="Test branch for inheritance",
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow()
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc)
                 )
                 db_session.add(branch)
                 
@@ -216,8 +216,8 @@ class TestBranchContextResolutionSimpleE2EFixed:
                         coding_standards={"style": "PEP8"},
                         workflow_templates={},
                         delegation_rules={},
-                        created_at=datetime.utcnow(),
-                        updated_at=datetime.utcnow()
+                        created_at=datetime.now(timezone.utc),
+                        updated_at=datetime.now(timezone.utc)
                     )
                     db_session.add(global_ctx)
                 
@@ -231,8 +231,8 @@ class TestBranchContextResolutionSimpleE2EFixed:
                     global_overrides={},
                     delegation_rules={},
                     version=1,
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow()
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc)
                 )
                 db_session.add(project_ctx)
                 
@@ -246,8 +246,8 @@ class TestBranchContextResolutionSimpleE2EFixed:
                     local_overrides={},
                     delegation_rules={},
                     version=1,
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow()
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc)
                 )
                 db_session.add(branch_ctx)
                 

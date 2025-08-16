@@ -6,7 +6,7 @@ Ensures that frontend API calls use the correct context levels for different ent
 import pytest
 import json
 from unittest.mock import Mock, patch
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastmcp.task_management.interface.controllers.unified_context_controller import (
     UnifiedContextMCPController
@@ -51,8 +51,8 @@ class TestFrontendContextAPIPatterns:
         expected_context = {
             "id": branch_id,
             "branch_standards": {"branch_name": "feature/auth-system"},
-            "created_at": datetime.utcnow().isoformat(),
-            "updated_at": datetime.utcnow().isoformat()
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
         }
         
         # Mock the facade factory to return our mock facade
@@ -110,8 +110,8 @@ class TestFrontendContextAPIPatterns:
             "id": task_id,
             "level": "task",
             "data": {"task_title": "Implement login"},
-            "created_at": datetime.utcnow().isoformat(),
-            "updated_at": datetime.utcnow().isoformat()
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
         }
         
         # Mock the facade factory to return our mock facade

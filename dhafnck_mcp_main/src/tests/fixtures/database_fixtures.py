@@ -7,7 +7,7 @@ including creating necessary parent records before creating child records.
 
 import pytest
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import text
 
 
@@ -38,8 +38,8 @@ def test_project_data(request):
                 'description': 'Project for testing',
                 'user_id': 'test_user',
                 'status': 'active',
-                'created_at': datetime.utcnow(),
-                'updated_at': datetime.utcnow(),
+                'created_at': datetime.now(timezone.utc),
+                'updated_at': datetime.now(timezone.utc),
                 'metadata': '{}'
             })
             
@@ -60,8 +60,8 @@ def test_project_data(request):
                 'project_id': project_id,
                 'name': 'test-branch',
                 'description': 'Branch for testing',
-                'created_at': datetime.utcnow(),
-                'updated_at': datetime.utcnow(),
+                'created_at': datetime.now(timezone.utc),
+                'updated_at': datetime.now(timezone.utc),
                 'priority': 'medium',
                 'status': 'todo',
                 'metadata': '{}',
@@ -125,8 +125,8 @@ def valid_git_branch_id():
                 'description': 'Test project',
                 'user_id': 'test_user',
                 'status': 'active',
-                'created_at': datetime.utcnow(),
-                'updated_at': datetime.utcnow(),
+                'created_at': datetime.now(timezone.utc),
+                'updated_at': datetime.now(timezone.utc),
                 'metadata': '{}'
             })
             
@@ -147,8 +147,8 @@ def valid_git_branch_id():
                 'project_id': project_id,
                 'name': 'valid-test-branch',
                 'description': 'Valid branch for testing',
-                'created_at': datetime.utcnow(),
-                'updated_at': datetime.utcnow(),
+                'created_at': datetime.now(timezone.utc),
+                'updated_at': datetime.now(timezone.utc),
                 'priority': 'medium',
                 'status': 'todo',
                 'metadata': '{}',

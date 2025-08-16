@@ -5,7 +5,7 @@ Tests the exact scenario that was failing without complex fixtures.
 
 import pytest
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastmcp.task_management.infrastructure.database.database_config import get_session
 from fastmcp.task_management.infrastructure.database.models import (
@@ -62,8 +62,8 @@ class TestBranchContextResolutionSimpleE2E:
                 id=str(uuid.uuid4()),
                 name=f"test-project-{uuid.uuid4().hex[:8]}",
                 description="Production-like test project",
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
             )
             db_session.add(project)
             
@@ -74,8 +74,8 @@ class TestBranchContextResolutionSimpleE2E:
                 project_id=project.id,
                 name=f"test-feature-{uuid.uuid4().hex[:8]}",
                 description="Authentication system implementation",
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
             )
             db_session.add(branch)
             
@@ -94,8 +94,8 @@ class TestBranchContextResolutionSimpleE2E:
                     coding_standards={"style": "PEP8"},
                     workflow_templates={},
                     delegation_rules={},
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow()
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc)
                 )
                 db_session.add(global_ctx)
             db_session.flush()  # To get the ID
@@ -116,8 +116,8 @@ class TestBranchContextResolutionSimpleE2E:
                     global_overrides={},
                     delegation_rules={},
                     version=1,
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow()
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc)
                 )
                 db_session.add(project_ctx)
             
@@ -134,8 +134,8 @@ class TestBranchContextResolutionSimpleE2E:
                 agent_assignments={},
                 local_overrides={},
                 delegation_rules={},
-                updated_at=datetime.utcnow(),
-                created_at=datetime.utcnow(),
+                updated_at=datetime.now(timezone.utc),
+                created_at=datetime.now(timezone.utc),
                 version=1
             )
             db_session.add(branch_ctx)
@@ -205,8 +205,8 @@ class TestBranchContextResolutionSimpleE2E:
             project = Project(
                 id=str(uuid.uuid4()),
                 name=f"test-inherit-{uuid.uuid4().hex[:8]}",
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
             )
             db_session.add(project)
             
@@ -214,8 +214,8 @@ class TestBranchContextResolutionSimpleE2E:
                 id=str(uuid.uuid4()),
                 project_id=project.id,
                 name=f"test-branch-{uuid.uuid4().hex[:8]}",
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
             )
             db_session.add(branch)
             
@@ -233,8 +233,8 @@ class TestBranchContextResolutionSimpleE2E:
                     coding_standards={"style": "PEP8"},
                     workflow_templates={},
                     delegation_rules={},
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow()
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc)
                 )
                 db_session.add(global_ctx)
             
@@ -253,8 +253,8 @@ class TestBranchContextResolutionSimpleE2E:
                     global_overrides={},
                     delegation_rules={},
                     version=1,
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow()
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc)
                 )
                 db_session.add(project_ctx)
             
@@ -267,8 +267,8 @@ class TestBranchContextResolutionSimpleE2E:
                 agent_assignments={},
                 local_overrides={},
                 delegation_rules={},
-                updated_at=datetime.utcnow(),
-                created_at=datetime.utcnow(),
+                updated_at=datetime.now(timezone.utc),
+                created_at=datetime.now(timezone.utc),
                 version=1
             )
             db_session.add(branch_ctx)

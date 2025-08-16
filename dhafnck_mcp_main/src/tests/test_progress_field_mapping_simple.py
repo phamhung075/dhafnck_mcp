@@ -73,11 +73,11 @@ def test_progress_field_mapping_simple():
     entity = repo.get_task(task_id)
     assert entity is not None, "Task should be retrieved"
     assert hasattr(entity, 'overall_progress'), "Entity should have overall_progress field"
-    assert entity.overall_progress == 75.0, f"Expected overall_progress to be 75.0, got {entity.overall_progress}"
+    assert entity.overall_progress == 75, f"Expected overall_progress to be 75, got {entity.overall_progress}"
     
     # Test 2: Check that update with overall_progress maps to progress_percentage
-    updated_entity = repo.update_task(task_id, overall_progress=90.0)
-    assert updated_entity.overall_progress == 90.0, "Progress should be updated to 90%"
+    updated_entity = repo.update_task(task_id, overall_progress=90)
+    assert updated_entity.overall_progress == 90, "Progress should be updated to 90%"
     
     # Verify in database
     with db_config.get_session() as session:

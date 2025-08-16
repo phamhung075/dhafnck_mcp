@@ -161,8 +161,8 @@ def _initialize_basic_test_data():
                         'description': 'Project for testing',
                         'user_id': 'default_id',
                         'status': 'active',
-                        'created_at': datetime.utcnow(),
-                        'updated_at': datetime.utcnow(),
+                        'created_at': datetime.now(timezone.utc),
+                        'updated_at': datetime.now(timezone.utc),
                         'metadata': '{}'
                     })
                 
@@ -182,8 +182,8 @@ def _initialize_basic_test_data():
                     'project_id': 'default_project',
                     'name': 'main',
                     'description': 'Main branch for testing',
-                    'created_at': datetime.utcnow(),
-                    'updated_at': datetime.utcnow(),
+                    'created_at': datetime.now(timezone.utc),
+                    'updated_at': datetime.now(timezone.utc),
                     'priority': 'medium',
                     'status': 'todo',
                     'metadata': '{}',

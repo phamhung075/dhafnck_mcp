@@ -9,7 +9,7 @@ Part of Fix for Issue #3: Automatic Context Updates for Task State Changes
 
 import logging
 from typing import Dict, Any, Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 import asyncio
 
 from .task_context_sync_service import TaskContextSyncService
@@ -199,7 +199,7 @@ class AutomatedContextSyncService:
                 "incomplete_subtasks": total - completed,
                 "progress_percentage": progress_percentage,
                 "can_complete_parent": completed == total,
-                "last_updated": datetime.utcnow().isoformat()
+                "last_updated": datetime.now(timezone.utc).isoformat()
             }
             
         except Exception as e:
@@ -258,7 +258,7 @@ class AutomatedContextSyncService:
             "service_status": "active",
             "sync_service_available": bool(self._context_sync_service),
             "subtask_repository_available": bool(self._subtask_repository),
-            "last_health_check": datetime.utcnow().isoformat(),
+            "last_health_check": datetime.now(timezone.utc).isoformat(),
             "features": {
                 "task_context_sync": True,
                 "subtask_parent_sync": bool(self._subtask_repository),
@@ -298,5 +298,5 @@ class AutomatedContextSyncService:
                 "Test context sync service connectivity"
             ] if issues else [],
             "async_support": async_available,
-            "validation_timestamp": datetime.utcnow().isoformat()
+            "validation_timestamp": datetime.now(timezone.utc).isoformat()
         }

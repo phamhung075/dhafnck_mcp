@@ -6,7 +6,7 @@ context levels and prevents the issue where branch IDs are resolved as task cont
 
 import pytest
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from unittest.mock import Mock
 
@@ -89,8 +89,8 @@ class TestContextResolutionDifferentiation:
             id=str(uuid.uuid4()),
             name="Test Project Alpha",
             description="Test project for context resolution",
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
         db_session.add(project)
         
@@ -100,8 +100,8 @@ class TestContextResolutionDifferentiation:
             project_id=project.id,
             name=f"test-feature-{uuid.uuid4().hex[:8]}",
             description="Authentication system feature branch",
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
         db_session.add(branch)
         
@@ -113,8 +113,8 @@ class TestContextResolutionDifferentiation:
             description="Create login form and validation",
             status="todo",
             priority="high",
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
         db_session.add(task)
         
@@ -133,8 +133,8 @@ class TestContextResolutionDifferentiation:
                 coding_standards={},
                 workflow_templates={},
                 delegation_rules={},
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
             )
             db_session.add(global_context)
         
@@ -147,9 +147,9 @@ class TestContextResolutionDifferentiation:
             local_standards={"project_name": project.name},
             global_overrides={},
             delegation_rules={},
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
             version=1,
-            updated_at=datetime.utcnow()
+            updated_at=datetime.now(timezone.utc)
         )
         db_session.add(project_context)
         
@@ -163,8 +163,8 @@ class TestContextResolutionDifferentiation:
             agent_assignments={},
             local_overrides={},
             delegation_rules={},
-            updated_at=datetime.utcnow(),
-            created_at=datetime.utcnow(),
+            updated_at=datetime.now(timezone.utc),
+            created_at=datetime.now(timezone.utc),
             version=1
         )
         db_session.add(branch_context)
@@ -178,9 +178,9 @@ class TestContextResolutionDifferentiation:
             local_overrides={},
             implementation_notes={},
             delegation_triggers={},
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
             version=1,
-            updated_at=datetime.utcnow()
+            updated_at=datetime.now(timezone.utc)
         )
         db_session.add(task_context)
         

@@ -10,10 +10,10 @@ from fastmcp.task_management.infrastructure.database.models import (
     Task
 )
 from fastmcp.task_management.interface.controllers.task_mcp_controller import TaskMCPController
-from fastmcp.task_management.infrastructure.database.database_config import get_db_session
-from fastmcp.task_management.infrastructure.repositories.orm_task_repository import ORMTaskRepository
-from fastmcp.task_management.infrastructure.repositories.orm_git_branch_repository import ORMGitBranchRepository
-from fastmcp.task_management.infrastructure.repositories.orm_subtask_repository import ORMSubtaskRepository
+from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+from fastmcp.task_management.infrastructure.repositories.orm.task_repository import ORMTaskRepository
+from fastmcp.task_management.infrastructure.repositories.orm.git_branch_repository import ORMGitBranchRepository
+from fastmcp.task_management.infrastructure.repositories.orm.subtask_repository import ORMSubtaskRepository
 from fastmcp.task_management.application.services.context_application_service import ContextApplicationService
 from fastmcp.task_management.application.facades.task_application_facade import TaskApplicationFacade
 
@@ -21,7 +21,8 @@ from fastmcp.task_management.application.facades.task_application_facade import 
 @pytest.fixture
 def db_session():
     """Get a database session for testing."""
-    with get_db_session() as session:
+    db_config = get_db_config()
+    with db_config.get_session() as session:
         yield session
 
 

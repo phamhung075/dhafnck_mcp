@@ -51,7 +51,7 @@ class Task:
     context_id: str | None = None  # New field: tracks if context is up-to-date
     
     # Progress tracking fields
-    overall_progress: float = 0.0  # 0-100 percentage
+    overall_progress: int = 0  # 0-100 percentage (integer)
     progress_timeline: ProgressTimeline | None = None
     
     # Domain events

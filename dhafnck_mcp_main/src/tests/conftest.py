@@ -255,7 +255,7 @@ def _initialize_test_database_with_basic_data():
     from fastmcp.task_management.infrastructure.database.database_config import get_db_config
     from sqlalchemy import text
     import uuid
-    from datetime import datetime
+    from datetime import datetime, timezone
     
     try:
         db_config = get_db_config()
@@ -276,13 +276,13 @@ def _initialize_test_database_with_basic_data():
                     'description': 'Project for testing',
                     'user_id': 'default_id',
                     'status': 'active',
-                    'created_at': datetime.utcnow(),
-                    'updated_at': datetime.utcnow(),
+                    'created_at': datetime.now(timezone.utc),
+                    'updated_at': datetime.now(timezone.utc),
                     'metadata': '{}'
                 })
                 
                 # Create main git branch for default project
-                main_branch_id = 'test-main-branch-' + str(uuid.uuid4())
+                main_branch_id = str(uuid.uuid4())
                 session.execute(text("""
                     INSERT INTO project_git_branchs (id, project_id, name, description, created_at, updated_at, priority, status, metadata, task_count, completed_task_count) 
                     VALUES (:id, :project_id, :name, :description, :created_at, :updated_at, :priority, :status, :metadata, :task_count, :completed_task_count)
@@ -295,8 +295,8 @@ def _initialize_test_database_with_basic_data():
                     'project_id': 'default_project',
                     'name': 'main',
                     'description': 'Main branch for testing',
-                    'created_at': datetime.utcnow(),
-                    'updated_at': datetime.utcnow(),
+                    'created_at': datetime.now(timezone.utc),
+                    'updated_at': datetime.now(timezone.utc),
                     'priority': 'medium',
                     'status': 'todo',
                     'metadata': '{}',

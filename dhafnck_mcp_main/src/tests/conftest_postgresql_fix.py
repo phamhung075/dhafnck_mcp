@@ -6,7 +6,7 @@ Import this in conftest.py to enable better test isolation.
 """
 import pytest
 from sqlalchemy import text
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 import uuid
 
@@ -127,8 +127,8 @@ def ensure_postgresql_defaults(session):
                 :created_at, :updated_at
             ) ON CONFLICT (id) DO NOTHING
         """), {
-            'created_at': datetime.utcnow(),
-            'updated_at': datetime.utcnow()
+            'created_at': datetime.now(timezone.utc),
+            'updated_at': datetime.now(timezone.utc)
         })
         
         # Ensure default project
@@ -147,8 +147,8 @@ def ensure_postgresql_defaults(session):
             ) ON CONFLICT (id) DO UPDATE SET
                 updated_at = EXCLUDED.updated_at
         """), {
-            'created_at': datetime.utcnow(),
-            'updated_at': datetime.utcnow()
+            'created_at': datetime.now(timezone.utc),
+            'updated_at': datetime.now(timezone.utc)
         })
         
         # Ensure at least one branch exists
@@ -173,8 +173,8 @@ def ensure_postgresql_defaults(session):
                 )
             """), {
                 'id': branch_id,
-                'created_at': datetime.utcnow(),
-                'updated_at': datetime.utcnow()
+                'created_at': datetime.now(timezone.utc),
+                'updated_at': datetime.now(timezone.utc)
             })
         
         session.commit()

@@ -7,7 +7,7 @@ This test simulates the exact scenario that caused the error:
 
 import pytest
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import Mock
 
 from fastmcp.task_management.infrastructure.database.models import (
@@ -63,8 +63,8 @@ class TestBranchContextResolutionE2E:
             id=str(uuid.uuid4()),
             name=f"test-project-{uuid.uuid4().hex[:8]}",
             description="Production-like test project",
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
         db_session.add(project)
         
@@ -75,8 +75,8 @@ class TestBranchContextResolutionE2E:
             project_id=project.id,
             name=f"test-feature-{uuid.uuid4().hex[:8]}",
             description="Authentication system implementation",
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
         db_session.add(branch)
         
@@ -88,8 +88,8 @@ class TestBranchContextResolutionE2E:
             description="Design and implement login UI",
             status="in_progress",
             priority="high",
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
         db_session.add(task1)
         
@@ -100,8 +100,8 @@ class TestBranchContextResolutionE2E:
             description="Add JWT token generation and validation",
             status="todo",
             priority="high",
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
         db_session.add(task2)
         
@@ -120,8 +120,8 @@ class TestBranchContextResolutionE2E:
                 coding_standards={"code_style": "PEP8", "testing": "TDD"},
                 workflow_templates={},
                 delegation_rules={},
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
             )
             db_session.add(global_context)
         
@@ -134,9 +134,9 @@ class TestBranchContextResolutionE2E:
             local_standards={"_custom": {"project_name": project.name, "team_size": 5}},
             global_overrides={},
             delegation_rules={},
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
             version=1,
-            updated_at=datetime.utcnow()
+            updated_at=datetime.now(timezone.utc)
         )
         db_session.add(project_context)
         
@@ -154,8 +154,8 @@ class TestBranchContextResolutionE2E:
             agent_assignments={},
             local_overrides={},
             delegation_rules={},
-            updated_at=datetime.utcnow(),
-            created_at=datetime.utcnow(),
+            updated_at=datetime.now(timezone.utc),
+            created_at=datetime.now(timezone.utc),
             version=1
         )
         db_session.add(branch_context)
@@ -173,9 +173,9 @@ class TestBranchContextResolutionE2E:
             local_overrides={},
             implementation_notes={},
             delegation_triggers={},
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
             version=1,
-            updated_at=datetime.utcnow()
+            updated_at=datetime.now(timezone.utc)
         )
         db_session.add(task1_context)
         

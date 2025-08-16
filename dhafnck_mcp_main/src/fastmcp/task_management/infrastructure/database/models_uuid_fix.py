@@ -18,7 +18,7 @@ SOLUTION:
 import uuid
 import logging
 from typing import Dict, Any, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, String, Text, DateTime, Integer, Boolean, ForeignKey, JSON, Float
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship, Mapped, mapped_column
@@ -127,8 +127,8 @@ def create_global_singleton_if_missing(session):
                     "approval_required": False,
                     "confidence_threshold": 0.8
                 },
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
                 version=1
             )
             session.add(global_context)

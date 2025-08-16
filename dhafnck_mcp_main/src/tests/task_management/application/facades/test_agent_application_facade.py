@@ -13,7 +13,7 @@ from fastmcp.task_management.application.dtos.agent.register_agent_request impor
 from fastmcp.task_management.application.dtos.agent.assign_agent_request import AssignAgentRequest
 from fastmcp.task_management.application.dtos.agent.update_agent_request import UpdateAgentRequest
 from fastmcp.task_management.domain.entities.agent import Agent as AgentEntity
-from fastmcp.task_management.domain.value_objects.agent_id import AgentId
+# AgentId is not needed - Agent entity uses string id
 from fastmcp.task_management.domain.exceptions.agent_exceptions import AgentNotFoundError
 
 
@@ -49,12 +49,13 @@ def agent_facade(mock_agent_repository, mock_project_repository, mock_git_branch
 @pytest.fixture
 def sample_agent_entity():
     """Create a sample agent entity"""
+    from fastmcp.task_management.domain.entities.agent import AgentStatus, AgentCapability
     return AgentEntity(
-        id=AgentId(str(uuid.uuid4())),
+        id=str(uuid.uuid4()),
         name="Test Agent",
-        project_id=str(uuid.uuid4()),
-        status="active",
-        capabilities=["coding", "testing"],
+        description="Test agent for unit tests",
+        status=AgentStatus.AVAILABLE,
+        capabilities={AgentCapability.BACKEND_DEVELOPMENT, AgentCapability.TESTING},
         created_at=datetime.now(),
         updated_at=datetime.now()
     )

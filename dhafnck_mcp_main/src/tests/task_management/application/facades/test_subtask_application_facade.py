@@ -300,10 +300,10 @@ class TestSubtaskApplicationFacade:
         subtask_facade.update_parent_progress(task_id)
         
         # Assert
-        # Average progress should be (100 + 100 + 50 + 0) / 4 = 62.5
+        # Average progress should be (100 + 100 + 50 + 0) / 4 = 62.5, rounded to 62 for integer
         mock_task_repository.save.assert_called_once()
         saved_task = mock_task_repository.save.call_args[0][0]
-        assert saved_task.overall_progress == 62.5
+        assert saved_task.overall_progress == 62
     
     @pytest.mark.unit
     def test_get_progress_summary(self, subtask_facade, mock_subtask_repository):

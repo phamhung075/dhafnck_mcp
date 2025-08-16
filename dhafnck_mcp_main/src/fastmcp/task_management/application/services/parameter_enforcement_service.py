@@ -7,7 +7,7 @@ Part of Phase 2: Core Enforcement Implementation
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Dict, List, Optional, Any, Set
 import logging
@@ -66,7 +66,7 @@ class AgentCompliance:
             self.compliant_operations / self.total_operations 
             if self.total_operations > 0 else 0.0
         )
-        self.last_operation = datetime.utcnow()
+        self.last_operation = datetime.now(timezone.utc)
 
 
 class ParameterEnforcementService:

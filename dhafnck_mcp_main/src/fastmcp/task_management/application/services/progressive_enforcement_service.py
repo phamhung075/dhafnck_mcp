@@ -7,7 +7,7 @@ Part of Phase 2: Core Enforcement Implementation
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional, List
 import logging
 
@@ -100,7 +100,7 @@ class AgentProfile:
             self.enforcement_level = EnforcementLevel.STRICT
             logger.info(f"Agent {self.agent_id} escalated to STRICT level")
         
-        self.last_escalation = datetime.utcnow()
+        self.last_escalation = datetime.now(timezone.utc)
         self.consecutive_failures = 0  # Reset counter after escalation
     
     def deescalate_level(self):
@@ -218,7 +218,7 @@ class ProgressiveEnforcementService:
         if agent_id not in self.agent_profiles:
             self.agent_profiles[agent_id] = AgentProfile(
                 agent_id=agent_id,
-                first_seen=datetime.utcnow(),
+                first_seen=datetime.now(timezone.utc),
                 enforcement_level=self.default_level,
                 learning_phase_operations=self.LEARNING_PHASE_OPERATIONS
             )
@@ -240,7 +240,7 @@ class ProgressiveEnforcementService:
             old_profile = self.agent_profiles[agent_id]
             self.agent_profiles[agent_id] = AgentProfile(
                 agent_id=agent_id,
-                first_seen=datetime.utcnow(),
+                first_seen=datetime.now(timezone.utc),
                 enforcement_level=self.default_level,
                 learning_phase_operations=self.LEARNING_PHASE_OPERATIONS
             )

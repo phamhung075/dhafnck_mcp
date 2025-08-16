@@ -12,7 +12,7 @@ from pathlib import Path
 from fastmcp.task_management.infrastructure.event_store import EventStore, StoredEvent
 
 
-class TestEventClass:
+class SampleEvent:
     """Test event class."""
     def __init__(self, aggregate_id: str, data: str, user_id: str = "test_user"):
         self.aggregate_id = aggregate_id
@@ -55,7 +55,7 @@ class TestEventStore:
     @pytest.mark.asyncio
     async def test_append_event(self, event_store):
         """Test appending an event to the store."""
-        event = TestEventClass("agg_123", "test_data")
+        event = SampleEvent("agg_123", "test_data")
         
         event_id = await event_store.append(event)
         
@@ -65,7 +65,7 @@ class TestEventStore:
     @pytest.mark.asyncio
     async def test_get_event_by_id(self, event_store):
         """Test retrieving an event by ID."""
-        event = TestEventClass("agg_123", "test_data")
+        event = SampleEvent("agg_123", "test_data")
         event_id = await event_store.append(event)
         
         stored_event = await event_store.get_event_by_id(event_id)
@@ -88,9 +88,9 @@ class TestEventStore:
         aggregate_id = "agg_456"
         
         # Append multiple events
-        event1 = TestEventClass(aggregate_id, "data_1")
-        event2 = TestEventClass(aggregate_id, "data_2")
-        event3 = TestEventClass("other_agg", "data_3")
+        event1 = SampleEvent(aggregate_id, "data_1")
+        event2 = SampleEvent(aggregate_id, "data_2")
+        event3 = SampleEvent("other_agg", "data_3")
         
         await event_store.append(event1)
         await asyncio.sleep(0.01)  # Ensure different timestamps
@@ -115,8 +115,8 @@ class TestEventStore:
     @pytest.mark.asyncio
     async def test_get_events_by_type(self, event_store):
         """Test retrieving events by type."""
-        event1 = TestEventClass("agg_1", "data_1")
-        event2 = TestEventClass("agg_2", "data_2")
+        event1 = SampleEvent("agg_1", "data_1")
+        event2 = SampleEvent("agg_2", "data_2")
         
         # Create a different event type
         class OtherEventClass:
@@ -149,13 +149,13 @@ class TestEventStore:
         now = datetime.now(timezone.utc)
         
         # Create events at different times
-        event1 = TestEventClass("agg_1", "data_1")
+        event1 = SampleEvent("agg_1", "data_1")
         event1.occurred_at = now - timedelta(hours=2)
         
-        event2 = TestEventClass("agg_2", "data_2")
+        event2 = SampleEvent("agg_2", "data_2")
         event2.occurred_at = now - timedelta(minutes=30)
         
-        event3 = TestEventClass("agg_3", "data_3")
+        event3 = SampleEvent("agg_3", "data_3")
         event3.occurred_at = now + timedelta(minutes=30)
         
         await event_store.append(event1)
@@ -185,7 +185,7 @@ class TestEventStore:
         """Test retrieving specific event types within a time range."""
         now = datetime.now(timezone.utc)
         
-        event1 = TestEventClass("agg_1", "data_1")
+        event1 = SampleEvent("agg_1", "data_1")
         event1.occurred_at = now
         
         class OtherEventClass:
@@ -259,8 +259,8 @@ class TestEventStore:
         aggregate_type = "TestAggregate"
         
         # Append some events
-        event1 = TestEventClass(aggregate_id, "before_snap_1")
-        event2 = TestEventClass(aggregate_id, "before_snap_2")
+        event1 = SampleEvent(aggregate_id, "before_snap_1")
+        event2 = SampleEvent(aggregate_id, "before_snap_2")
         await event_store.append(event1)
         await event_store.append(event2)
         
@@ -271,8 +271,8 @@ class TestEventStore:
         
         # Append more events after snapshot
         await asyncio.sleep(0.01)
-        event3 = TestEventClass(aggregate_id, "after_snap_1")
-        event4 = TestEventClass(aggregate_id, "after_snap_2")
+        event3 = SampleEvent(aggregate_id, "after_snap_1")
+        event4 = SampleEvent(aggregate_id, "after_snap_2")
         await event_store.append(event3)
         await event_store.append(event4)
         
@@ -294,8 +294,8 @@ class TestEventStore:
         aggregate_id = "agg_no_snap"
         
         # Append events without creating a snapshot
-        event1 = TestEventClass(aggregate_id, "data_1")
-        event2 = TestEventClass(aggregate_id, "data_2")
+        event1 = SampleEvent(aggregate_id, "data_1")
+        event2 = SampleEvent(aggregate_id, "data_2")
         await event_store.append(event1)
         await event_store.append(event2)
         
@@ -308,9 +308,9 @@ class TestEventStore:
     async def test_get_events_with_filters(self, event_store):
         """Test getting events with multiple filters."""
         # Append various events
-        event1 = TestEventClass("agg_1", "data_1", "user_1")
-        event2 = TestEventClass("agg_2", "data_2", "user_2")
-        event3 = TestEventClass("agg_1", "data_3", "user_1")
+        event1 = SampleEvent("agg_1", "data_1", "user_1")
+        event2 = SampleEvent("agg_2", "data_2", "user_2")
+        event3 = SampleEvent("agg_1", "data_3", "user_1")
         
         await event_store.append(event1)
         await event_store.append(event2)
@@ -327,7 +327,7 @@ class TestEventStore:
         """Test getting events with limit."""
         # Append multiple events
         for i in range(10):
-            event = TestEventClass(f"agg_{i}", f"data_{i}")
+            event = SampleEvent(f"agg_{i}", f"data_{i}")
             await event_store.append(event)
         
         # Get events with limit
@@ -376,7 +376,7 @@ class TestEventStore:
         aggregate_id = "concurrent_agg"
         
         # Create multiple events
-        events = [TestEventClass(aggregate_id, f"data_{i}") for i in range(10)]
+        events = [SampleEvent(aggregate_id, f"data_{i}") for i in range(10)]
         
         # Append concurrently
         tasks = [event_store.append(event) for event in events]
@@ -398,8 +398,8 @@ class TestEventStore:
         assert count == 0
         
         # Append some events
-        event1 = TestEventClass("agg_1", "data_1")
-        event2 = TestEventClass("agg_2", "data_2")
+        event1 = SampleEvent("agg_1", "data_1")
+        event2 = SampleEvent("agg_2", "data_2")
         await event_store.append(event1)
         await event_store.append(event2)
         

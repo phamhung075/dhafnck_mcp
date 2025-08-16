@@ -4,7 +4,7 @@ import logging
 import logging.handlers
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Dict, Any
 import json
@@ -16,7 +16,7 @@ class JSONFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         """Format log record as JSON."""
         log_data = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -238,7 +238,7 @@ def log_operation(operation: str):
     def decorator(func):
         async def async_wrapper(*args, **kwargs):
             logger = TaskManagementLogger.get_logger(func.__module__)
-            start_time = datetime.utcnow()
+            start_time = datetime.now(timezone.utc)
             
             # Extract context from arguments if available
             context = {}
@@ -253,11 +253,11 @@ def log_operation(operation: str):
             
             try:
                 result = await func(*args, **kwargs)
-                duration = (datetime.utcnow() - start_time).total_seconds()
+                duration = (datetime.now(timezone.utc) - start_time).total_seconds()
                 ctx_logger.info(f"Completed {operation} in {duration:.3f}s")
                 return result
             except Exception as e:
-                duration = (datetime.utcnow() - start_time).total_seconds()
+                duration = (datetime.now(timezone.utc) - start_time).total_seconds()
                 ctx_logger.error(
                     f"Failed {operation} after {duration:.3f}s: {str(e)}",
                     exc_info=True,
@@ -267,7 +267,7 @@ def log_operation(operation: str):
                 
         def sync_wrapper(*args, **kwargs):
             logger = TaskManagementLogger.get_logger(func.__module__)
-            start_time = datetime.utcnow()
+            start_time = datetime.now(timezone.utc)
             
             # Extract context from arguments if available
             context = {}
@@ -282,11 +282,11 @@ def log_operation(operation: str):
             
             try:
                 result = func(*args, **kwargs)
-                duration = (datetime.utcnow() - start_time).total_seconds()
+                duration = (datetime.now(timezone.utc) - start_time).total_seconds()
                 ctx_logger.info(f"Completed {operation} in {duration:.3f}s")
                 return result
             except Exception as e:
-                duration = (datetime.utcnow() - start_time).total_seconds()
+                duration = (datetime.now(timezone.utc) - start_time).total_seconds()
                 ctx_logger.error(
                     f"Failed {operation} after {duration:.3f}s: {str(e)}",
                     exc_info=True,

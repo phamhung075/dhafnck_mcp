@@ -192,8 +192,8 @@ def ensure_global_context_exists():
                     :created_at, :updated_at
                 ) ON CONFLICT (id) DO NOTHING
             """), {
-                'created_at': datetime.utcnow(),
-                'updated_at': datetime.utcnow()
+                'created_at': datetime.now(timezone.utc),
+                'updated_at': datetime.now(timezone.utc)
             })
             session.commit()
     except Exception as e:
