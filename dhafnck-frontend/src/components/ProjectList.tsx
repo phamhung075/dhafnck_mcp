@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "./ui/input";
 import { Separator } from "./ui/separator";
 import { RefreshButton } from "./ui/refresh-button";
+import BranchDetailsDialog from "./BranchDetailsDialog";
 
 interface ProjectListProps {
   onSelect?: (projectId: string, branchId: string) => void;
@@ -27,7 +28,6 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect, refreshKey }) => {
   const [showProjectDetails, setShowProjectDetails] = useState<Project | null>(null);
   const [showBranchDetails, setShowBranchDetails] = useState<{ project: Project; branch: any } | null>(null);
   const [showProjectContext, setShowProjectContext] = useState<{ project: Project; context: any } | null>(null);
-  const [showBranchContext, setShowBranchContext] = useState<{ project: Project; branch: any; context: any } | null>(null);
   const [showGlobalContext, setShowGlobalContext] = useState<{ context: any } | null>(null);
   const [loadingContext, setLoadingContext] = useState(false);
   const [form, setForm] = useState<{ name: string; description: string }>({ name: "", description: "" });
@@ -342,28 +342,10 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect, refreshKey }) => {
                               variant="ghost" 
                               className="h-6 w-6"
                               onClick={() => setShowBranchDetails({ project, branch })}
-                              aria-label="View Branch Details"
+                              aria-label="View Branch Details & Context"
+                              title="View Branch Details & Context"
                             >
                               <Eye className="w-3 h-3" />
-                            </Button>
-                            <Button 
-                              size="icon" 
-                              variant="ghost" 
-                              className="h-6 w-6"
-                              onClick={async () => {
-                                setLoadingContext(true);
-                                try {
-                                  const context = await getBranchContext(branch.id);
-                                  setShowBranchContext({ project, branch, context });
-                                } catch (e) {
-                                  console.error('Error fetching branch context:', e);
-                                } finally {
-                                  setLoadingContext(false);
-                                }
-                              }}
-                              aria-label="View Branch Context"
-                            >
-                              <FileText className="w-3 h-3" />
                             </Button>
                             {branch.name !== 'main' && (
                               <Button 
@@ -406,28 +388,10 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect, refreshKey }) => {
                               variant="ghost" 
                               className="h-6 w-6"
                               onClick={() => setShowBranchDetails({ project, branch: tree })}
-                              aria-label="View Branch Details"
+                              aria-label="View Branch Details & Context"
+                              title="View Branch Details & Context"
                             >
                               <Eye className="w-3 h-3" />
-                            </Button>
-                            <Button 
-                              size="icon" 
-                              variant="ghost" 
-                              className="h-6 w-6"
-                              onClick={async () => {
-                                setLoadingContext(true);
-                                try {
-                                  const context = await getBranchContext(tree.id);
-                                  setShowBranchContext({ project, branch: tree, context });
-                                } catch (e) {
-                                  console.error('Error fetching branch context:', e);
-                                } finally {
-                                  setLoadingContext(false);
-                                }
-                              }}
-                              aria-label="View Branch Context"
-                            >
-                              <FileText className="w-3 h-3" />
                             </Button>
                             {tree.name !== 'main' && (
                               <Button 
@@ -729,158 +693,15 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect, refreshKey }) => {
         </DialogContent>
       </Dialog>
 
-      {/* Branch Details Dialog */}
-      <Dialog open={!!showBranchDetails} onOpenChange={(v) => { if (!v) setShowBranchDetails(null); }}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-xl text-left">Branch Details - {showBranchDetails?.branch?.name}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {/* Basic Information */}
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="text-lg font-semibold mb-3">Basic Information</h3>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Name:</span>
-                  <span className="ml-2 font-medium">{showBranchDetails?.branch?.name}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">ID:</span>
-                  <span className="ml-2 font-mono text-xs">{showBranchDetails?.branch?.id}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Description:</span>
-                  <span className="ml-2">{showBranchDetails?.branch?.description || "No description"}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Project:</span>
-                  <span className="ml-2">{showBranchDetails?.project?.name}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Project ID:</span>
-                  <span className="ml-2 font-mono text-xs">{showBranchDetails?.project?.id}</span>
-                </div>
-              </div>
-            </div>
+      {/* Branch Details Dialog with Tabs */}
+      <BranchDetailsDialog
+        open={!!showBranchDetails}
+        onOpenChange={(open) => { if (!open) setShowBranchDetails(null); }}
+        project={showBranchDetails?.project || null}
+        branch={showBranchDetails?.branch || null}
+        onClose={() => setShowBranchDetails(null)}
+      />
 
-            <Separator />
-
-            {/* Branch Status */}
-            {showBranchDetails?.branch && (showBranchDetails.branch as any)['status'] && (
-              <>
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-semibold mb-3 text-blue-700">Branch Status</h3>
-                  <div className="bg-white p-3 rounded border border-blue-200">
-                    <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                      {typeof (showBranchDetails.branch as any)['status'] === 'object' 
-                        ? JSON.stringify((showBranchDetails.branch as any)['status'], null, 2)
-                        : (showBranchDetails.branch as any)['status']}
-                    </pre>
-                  </div>
-                </div>
-                <Separator />
-              </>
-            )}
-
-            {/* Task Statistics */}
-            {showBranchDetails?.branch && (showBranchDetails.branch as any)['task_statistics'] && (
-              <>
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-semibold mb-3 text-green-700">Task Statistics</h3>
-                  <div className="bg-white p-3 rounded border border-green-200">
-                    <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                      {typeof (showBranchDetails.branch as any)['task_statistics'] === 'object' 
-                        ? JSON.stringify((showBranchDetails.branch as any)['task_statistics'], null, 2)
-                        : (showBranchDetails.branch as any)['task_statistics']}
-                    </pre>
-                  </div>
-                </div>
-                <Separator />
-              </>
-            )}
-
-            {/* Assigned Agents */}
-            {showBranchDetails?.branch && (showBranchDetails.branch as any)['assigned_agents'] && (
-              <>
-                <div className="bg-purple-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-semibold mb-3 text-purple-700">Assigned Agents</h3>
-                  <div className="bg-white p-3 rounded border border-purple-200">
-                    <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                      {typeof (showBranchDetails.branch as any)['assigned_agents'] === 'object' 
-                        ? JSON.stringify((showBranchDetails.branch as any)['assigned_agents'], null, 2)
-                        : (showBranchDetails.branch as any)['assigned_agents']}
-                    </pre>
-                  </div>
-                </div>
-                <Separator />
-              </>
-            )}
-
-            {/* Branch Metadata */}
-            {showBranchDetails?.branch && (showBranchDetails.branch as any)['metadata'] && (
-              <>
-                <div className="bg-orange-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-semibold mb-3 text-orange-700">Branch Metadata</h3>
-                  <div className="bg-white p-3 rounded border border-orange-200">
-                    <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                      {typeof (showBranchDetails.branch as any)['metadata'] === 'object' 
-                        ? JSON.stringify((showBranchDetails.branch as any)['metadata'], null, 2)
-                        : (showBranchDetails.branch as any)['metadata']}
-                    </pre>
-                  </div>
-                </div>
-                <Separator />
-              </>
-            )}
-
-            {/* Additional Fields - Display any other fields */}
-            {showBranchDetails?.branch && (
-              <>
-                {Object.entries(showBranchDetails.branch).filter(([key]) => 
-                  !['id', 'name', 'description', 'status', 'task_statistics', 'assigned_agents', 'metadata'].includes(key)
-                ).map(([key, value]) => {
-                  if (value === null || value === undefined) return null;
-                  
-                  return (
-                    <React.Fragment key={key}>
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <h3 className="text-lg font-semibold mb-3 capitalize">{key.replace(/_/g, ' ')}</h3>
-                        <div className="bg-white p-3 rounded border border-gray-200">
-                          {typeof value === 'object' ? (
-                            <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                              {JSON.stringify(value, null, 2)}
-                            </pre>
-                          ) : (
-                            <span className="text-sm">{String(value)}</span>
-                          )}
-                        </div>
-                      </div>
-                      <Separator />
-                    </React.Fragment>
-                  );
-                })}
-              </>
-            )}
-
-            {/* Raw Data */}
-            <details className="cursor-pointer">
-              <summary className="font-semibold text-sm text-gray-700 hover:text-gray-900">
-                View Complete Raw Branch Data (JSON)
-              </summary>
-              <div className="mt-3 bg-gray-100 p-3 rounded">
-                <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                  {JSON.stringify({ branch: showBranchDetails?.branch, project: showBranchDetails?.project }, null, 2)}
-                </pre>
-              </div>
-            </details>
-          </div>
-          <DialogFooter className="mt-6">
-            <Button variant="outline" onClick={() => setShowBranchDetails(null)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Project Context Dialog */}
       <Dialog open={!!showProjectContext} onOpenChange={(v) => { if (!v) setShowProjectContext(null); }}>
@@ -992,119 +813,6 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect, refreshKey }) => {
         </DialogContent>
       </Dialog>
 
-      {/* Branch Context Dialog */}
-      <Dialog open={!!showBranchContext} onOpenChange={(v) => { if (!v) setShowBranchContext(null); }}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-xl text-left">Branch/Task Tree Context - {showBranchContext?.branch?.name}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {loadingContext ? (
-              <div className="text-center py-8">
-                <div className="text-sm text-muted-foreground">Loading context...</div>
-              </div>
-            ) : showBranchContext?.context ? (
-              <>
-                {/* Context Resolution Info */}
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-semibold mb-2">Context Resolution</h3>
-                  <div className="space-y-2 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Level:</span>
-                      <Badge className="ml-2" variant="secondary">Task (Branch)</Badge>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Context ID:</span>
-                      <span className="ml-2 font-mono text-xs">{showBranchContext.context.context_id || showBranchContext.branch.id}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Project:</span>
-                      <span className="ml-2">{showBranchContext.project.name}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Inheritance Chain */}
-                {showBranchContext.context.inheritance_chain && (
-                  <>
-                    <div>
-                      <h4 className="font-semibold text-sm mb-3 text-blue-700">Inheritance Chain</h4>
-                      <div className="bg-blue-50 p-3 rounded">
-                        <div className="flex items-center gap-2">
-                          {showBranchContext.context.inheritance_chain.map((level: string, index: number) => (
-                            <React.Fragment key={level}>
-                              <Badge variant={level === 'task' ? 'default' : 'outline'}>
-                                {level.toUpperCase()}
-                              </Badge>
-                              {index < showBranchContext.context.inheritance_chain.length - 1 && (
-                                <span className="text-muted-foreground">→</span>
-                              )}
-                            </React.Fragment>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    <Separator />
-                  </>
-                )}
-
-                {/* Context Data */}
-                {showBranchContext.context.data && (
-                  <>
-                    <div>
-                      <h4 className="font-semibold text-sm mb-3 text-green-700">Context Data</h4>
-                      <div className="bg-green-50 p-3 rounded">
-                        <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                          {JSON.stringify(showBranchContext.context.data, null, 2)}
-                        </pre>
-                      </div>
-                    </div>
-                    <Separator />
-                  </>
-                )}
-
-                {/* Metadata */}
-                {showBranchContext.context.metadata && (
-                  <>
-                    <div>
-                      <h4 className="font-semibold text-sm mb-3 text-purple-700">Metadata</h4>
-                      <div className="bg-purple-50 p-3 rounded">
-                        <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                          {JSON.stringify(showBranchContext.context.metadata, null, 2)}
-                        </pre>
-                      </div>
-                    </div>
-                    <Separator />
-                  </>
-                )}
-
-                {/* Raw Context Data */}
-                <details className="cursor-pointer">
-                  <summary className="font-semibold text-sm text-gray-700 hover:text-gray-900">
-                    View Complete Raw Context Data (JSON)
-                  </summary>
-                  <div className="mt-3 bg-gray-100 p-3 rounded">
-                    <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                      {JSON.stringify(showBranchContext.context, null, 2)}
-                    </pre>
-                  </div>
-                </details>
-              </>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-sm text-muted-foreground">No context data available</p>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowBranchContext(null)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Global Context Dialog */}
       <Dialog open={!!showGlobalContext} onOpenChange={(v) => { if (!v) setShowGlobalContext(null); }}>
