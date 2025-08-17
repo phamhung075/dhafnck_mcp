@@ -98,9 +98,12 @@ class DatabaseConfig:
                     "🔧 Check your .env file and ensure all Supabase variables are set."
                 )
             
+            # PERFORMANCE FIX: Only get the database URL, don't initialize the connection yet
+            # The connection will be created once when DatabaseConfig initializes its engine
             supabase_config = get_supabase_config()
-            logger.info(f"✅ Supabase connection established: {supabase_config.database_url[:50]}...")
-            return supabase_config.database_url
+            db_url = supabase_config.database_url
+            logger.info(f"✅ Supabase URL obtained: {db_url[:50]}...")
+            return db_url
             
         elif self.database_type == "postgresql" and self.database_url:
             # Use PostgreSQL with provided URL

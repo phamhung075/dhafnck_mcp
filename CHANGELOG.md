@@ -7,134 +7,111 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Analyzed
+- **Task List Performance Issues - TDD Analysis** (2025-08-17)
+  - Problem: Task list loading takes 3-5 seconds for just 5 tasks instead of expected 150ms
+  - Root Causes Identified:
+    1. Context lookups causing N+1 query problem (500ms-1s per task)
+    2. Database connection pool not reusing connections (3-3.5s establishment time)
+    3. Redis cache decorator potentially timing out
+  - Temporary Fixes Applied:
+    - Disabled context lookups in task_summary_routes.py (commented lines 112-127)
+    - Disabled Redis cache decorator for debugging (line 38-39)
+  - Created Tasks for Resolution:
+    - Task df2deb36: Fix Database Connection Pooling Issue (Critical)
+    - Task 9289fc76: Implement Batch Context Lookup (High)
+    - Task 75800aec: Configure Redis Cache (Medium)
+  - Expected Outcome: Restore <200ms response time per documentation
+
+### Fixed
+- **Facade Initialization Performance** (2025-08-17) - Fixed 3-second delay in facade initialization
+  - Problem: Task list requests taking 3+ seconds due to facade initialization creating multiple database connections
+  - Root Cause: SupabaseConfig class was initializing database connection in __init__ method, causing duplicate connections
+  - Solution:
+    - Implemented lazy database connection initialization in SupabaseConfig
+    - Connection now created only when first needed via get_session() or create_tables()
+    - Optimized database URL retrieval to avoid unnecessary connection attempts
+  - Files Modified:
+    - `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/database/supabase_config.py` - Lazy initialization
+    - `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/database/database_config.py` - Optimized URL retrieval
+  - Impact: Reduced facade initialization from 3.1 seconds to 1.0 second (3x improvement)
+  - Total request time reduced from 3.4+ seconds to 1.3 seconds
+
+- **Task List Performance with Subtasks** (2025-08-17) - Fixed slow loading when tasks have subtasks
+  - Problem: Task listing taking 5-8 seconds when subtasks are present
+  - Root Cause: Not using optimized repository path consistently in `list_tasks_summary`
+  - Solution: 
+    - Modified `TaskApplicationFacade.list_tasks_summary` to use `SupabaseOptimizedRepository` directly
+    - Added database indexes for performance optimization
+    - Fixed frontend TypeError when taskSummaries is undefined
+    - **Critical Fix**: Fixed SQL query using wrong table name (`subtasks` instead of `task_subtasks`)
+  - Files Modified:
+    - `src/fastmcp/task_management/application/facades/task_application_facade.py` - Direct use of optimized repository, added missing imports (PerformanceConfig, os)
+    - `src/fastmcp/server/routes/task_summary_routes.py` - Use pre-calculated counts
+    - `src/fastmcp/task_management/infrastructure/repositories/orm/supabase_optimized_repository.py` - Fixed table name in SQL queries (2 occurrences), added debug logging
+    - `dhafnck-frontend/src/components/LazyTaskList.tsx` - Added safety checks for undefined data
+    - Created `database/migrations/add_performance_indexes.sql` - Performance indexes
+  - Performance Indexes Added:
+    - `idx_tasks_branch_status` - For filtering by branch and status
+    - `idx_tasks_branch_priority` - For filtering by branch and priority  
+    - `idx_tasks_created_at` - For ordering by creation date
+    - `idx_subtasks_task_id_status` - For subtask counts
+    - `idx_task_assignees_task_id` - For assignee counts
+    - `idx_task_dependencies_task_id` - For dependency counts
+  - Impact: Reduced query time from 5-8 seconds to <200ms, fixed subtask counts showing as 0
+
 ### Added
-- **Branch Task Count Performance Optimization** - Implemented single-query optimization for sidebar branch loading (2025-08-17)
-  - **Problem**: Loading branches with task counts in sidebar triggered N+1 query problem causing slow performance
-  - **Root Cause**: Each branch required separate queries to count tasks by status
-  - **Solution Strategy**: Applied same single-query optimization used for task listing
-  - **Implementation**:
+- **Branch Task Count Performance Optimization** (2025-08-17) - Implemented single-query optimization for sidebar branch loading
+  - Problem: Loading branches with task counts in sidebar triggered N+1 query problem causing slow performance
+  - Root Cause: Each branch required separate queries to count tasks by status
+  - Solution Strategy: Applied same single-query optimization used for task listing
+  - Implementation:
     - Created `OptimizedBranchRepository` with single SQL query using subqueries for counts
     - Added `/api/branches/summaries` endpoint for optimized branch data retrieval
     - Enhanced frontend `ProjectList` component to use optimized endpoint when expanding projects
     - Added visual indicators for urgent tasks and completed branches
-  - **Issues Fixed During Implementation**:
+  - Issues Fixed During Implementation:
     - Fixed incorrect import path for `BaseRepository` (should inherit from `BaseORMRepository`)
     - Fixed UUID serialization error in JSON responses (UUIDs must be converted to strings)
     - Resolved module import errors preventing route registration in Docker container
-  - **Files Created/Modified**:
+  - Files Created/Modified:
     - Created `src/fastmcp/task_management/infrastructure/repositories/orm/optimized_branch_repository.py`
     - Created `src/fastmcp/server/routes/branch_summary_routes.py`
     - Modified `src/fastmcp/server/http_server.py` - Added branch summary route registration
     - Modified `dhafnck-frontend/src/api-lazy.ts` - Added `getBranchSummaries` function
     - Modified `dhafnck-frontend/src/components/ProjectList.tsx` - Integrated optimized loading
-  - **Performance Target**: 95% reduction in query time (100+ queries → 1 query)
-  - **Features Added**:
+  - Performance Target: 95% reduction in query time (100+ queries → 1 query)
+  - Features Added:
     - Task counts by status (todo, in_progress, done, blocked)
     - Task counts by priority (urgent, high)
     - Completion percentage calculation
     - Visual indicators for branch status
     - Loading state while fetching branch data
-  - **Endpoint Response**: Successfully returns branches with comprehensive task statistics
-  - **Impact**: Dramatically improved sidebar responsiveness when clicking on projects
+  - Endpoint Response: Successfully returns branches with comprehensive task statistics
+  - Impact: Dramatically improved sidebar responsiveness when clicking on projects
 
-### Fixed
-- **NoneType Comparison Error in SupabaseOptimizedRepository** - Fixed critical error preventing task listing (2025-08-16)
-  - **Error**: `"'<' not supported between instances of 'NoneType' and 'int'"`
-  - **Root Cause**: SupabaseOptimizedRepository's `list_tasks_minimal` method didn't handle None values for limit parameter
-  - **Issue**: When frontend called MCP protocol without specifying limit, it passed None which caused comparison failures
-  - **Solution**: Added None checks before numeric comparisons, defaulting to sensible values (limit=20, offset=0)
-  - **Files Modified**: 
-    - `src/fastmcp/task_management/infrastructure/repositories/orm/supabase_optimized_repository.py` - Added None parameter handling
-  - **Validation**: MCP protocol now successfully returns task lists without limit parameter
-  - **Impact**: Frontend can now properly load tasks through both HTTP REST API and MCP protocol
+- **Task Listing Subtask Count Optimization** (2025-08-17) - Applied single-query optimization to task listings
+  - Implementation: Modified task queries to include subtask counts using SQL subqueries
+  - Files Modified:
+    - `src/fastmcp/task_management/infrastructure/repositories/orm/task_repository.py` - Updated `list_tasks_optimized` to use subqueries instead of JOINs
+  - Existing Optimization Found: 
+    - `SupabaseOptimizedRepository` already implements this pattern with subqueries for subtask_count, assignee_count, and dependency_count
+  - Performance Impact: 60-70% improvement for regular repository, Supabase repository already optimized
+  - Query Pattern: `(SELECT COUNT(*) FROM task_subtasks WHERE task_id = t.id) as subtask_count`
 
-### Fixed
-- **Supabase Cloud Performance Optimizations** - Implemented comprehensive optimizations for Supabase cloud database (2025-08-16)
-  - **Problem**: 5-6 second task loading times with Supabase cloud due to network latency and eager loading
-  - **Root Causes Identified**:
-    - Remote database latency (50-200ms per query)
-    - Multiple eager-loaded relationships with joinedload
-    - N+1 query problems in ORM
-    - No connection pooling optimization
-  - **Solutions Implemented**:
-    - Created `SupabaseOptimizedRepository` with minimal queries and no eager loading
-    - Modified `TaskApplicationFacade` to detect and use optimized repository for Supabase
-    - Implemented connection pooling with optimal settings for cloud databases
-    - Added support for read/write pool splitting
-    - Reduced eager loading with noload strategies
-    - Implemented single-query operations with subquery counts
-  - **Files Created/Modified**:
-    - Created `src/fastmcp/task_management/infrastructure/repositories/orm/supabase_optimized_repository.py`
-    - Modified `src/fastmcp/task_management/application/facades/task_application_facade.py`
-    - Enhanced `src/fastmcp/task_management/infrastructure/database/connection_pool.py`
-    - Created `test_api_performance.py` for performance validation
-  - **Performance Improvements**: Expected 50-70% reduction in response times for Supabase cloud
-  - **Next Steps**: Enable Redis caching layer for additional performance gains
-- **CRITICAL: Frontend API Connection Issue - "0 tasks on all branches"** - Complete resolution of systemwide frontend failure (2025-08-16)
-  - **Problem**: TDD analysis revealed progression from "task loading very long" → "complete frontend failure showing 0 tasks"
-  - **Phase 1 Root Cause**: Backend optimization introduced trailing slash requirement for MCP endpoint (/mcp/)
-    - **Issue**: Frontend calling `/mcp` (no slash) → 307 redirect → connection failure  
-    - **Solution**: Updated frontend API URLs to include trailing slash
-    - **Files Modified**: 
-      - `dhafnck-frontend/src/api.ts` - Changed API_BASE to include trailing slash
-      - `dhafnck-frontend/src/api-lazy.ts` - Changed MCP_BASE to include trailing slash
-  - **Phase 2 Root Cause**: HTTP REST API routes missing from streamable-http server mode
-    - **Issue**: Task summary routes only registered for SSE mode, not streamable-HTTP mode (default server mode)
-    - **Analysis**: Frontend expects HTTP REST API (`/api/tasks/summaries`) but server runs streamable-HTTP by default
-    - **Solution**: Added task_summary_routes to `create_streamable_http_app()` function
-    - **Files Modified**: `src/fastmcp/server/http_server.py` - Added HTTP routes registration
-  - **Phase 3 Root Cause**: TaskApplicationFacade initialized with null repository
-    - **Issue**: `TaskApplicationFacade(None)` caused `'NoneType' object has no attribute 'find_by_criteria'` error  
-    - **Solution**: Proper dependency injection using TaskFacadeFactory with repository factories
-    - **Files Modified**: `src/fastmcp/server/routes/task_summary_routes.py` - Fixed facade initialization
-  - **VALIDATION**: `curl /api/tasks/summaries` now returns 20 tasks with HTTP 200 OK (64 total tasks available)
-  - **Result**: Frontend displays all tasks correctly with 97% performance improvement (6s → 150ms)
-  - **Impact**: Completed full performance optimization cycle - fast backend + working frontend integration
+- **TDD Analysis Phase 2** (2025-08-16) - Comprehensive test suite analysis and fixes
+  - Analyzed 1,932 tests across 223 test files
+  - Fixed vision system unit test database isolation issue (276 errors resolved)
+  - Renamed TestEventClass to SampleEvent to avoid pytest collection warnings
+  - Created missing application DTOs (AssignAgentRequest, UpdateAgentRequest, CreateSubtaskRequest)
+  - Fixed import paths in integration tests
+  - Created analysis reports:
+    - `docs/reports-status/tdd-analysis-2025-08-16.md`
+    - `docs/reports-status/tdd-fixes-implemented-2025-08-16.md`
+    - `docs/reports-status/tdd-phase2-complete-2025-08-16.md`
+  - Impact: Vision tests 100% passing, test collection improved from ~71% to ~95%
 
-### Fixed
-- **Performance Issue: 5-Second Task Loading Delay** - Diagnosed and documented fix for severe performance issue (2025-08-16)
-  - **Root Cause**: Remote Supabase cloud database with 50-200ms latency per query
-  - **Issue**: Loading 5 tasks taking 5-6 seconds due to multiple eager-loaded relationships
-  - **Solutions Implemented**:
-    - Enabled performance mode in `performance_config.py` (forces optimized repository usage)
-    - Set up local PostgreSQL container for development (eliminates network latency)
-    - Created `.env.local` configuration for local database
-    - Created `switch_database.sh` script for easy database switching
-    - Created Docker Compose override for local database configuration
-  - **Performance Test Results**: Current 6.5s average (still on Supabase), expected <100ms with local DB
-  - **Documentation**: Created `PERFORMANCE_FIX.md` with complete diagnosis and solutions
-  - **Next Step Required**: Restart Docker containers with local database configuration
-
-### Added
-- **Performance Optimization Project Task Breakdown** - Complete project planning for implementation (2025-08-16)
-  - **EPIC Task Created**: "Task List Performance Optimization - 70-80% Speed Improvement" 
-  - **8 Comprehensive Subtasks**: Complete coverage from database to monitoring
-    - Phase 1.1: Add Database Composite Indexes (urgent priority)
-    - Phase 1.2: Optimize Database Query Patterns (urgent priority)
-    - Phase 2.1: Create Lightweight API Summary Endpoints (high priority)
-    - Phase 2.2: Implement Response Caching Layer (high priority)
-    - Phase 3.1: Integrate LazyTaskList with New API Endpoints (high priority)
-    - Phase 3.2: Performance Testing and Validation (high priority)
-    - Phase 4: Monitoring and Metrics Setup (medium priority)
-    - Phase 5: Documentation and Knowledge Transfer (medium priority)
-  - **Project Structure**: Organized in test-project-alpha with main branch
-  - **Task Management**: Full traceability with task IDs for tracking implementation progress
-  - **Expected Timeline**: 2 weeks for complete implementation
-
-- **Comprehensive Performance Analysis & Optimization Strategy** - Complete stack analysis for task list loading optimization (2025-08-16)
-  - **Frontend to Database Performance Analysis**: Identified 17 critical bottlenecks across all layers
-  - **Database Layer Issues**: N+1 queries, missing composite indexes, inefficient relationship loading
-  - **Backend API Issues**: Monolithic responses, no pagination, excessive eager loading, heavy serialization
-  - **Frontend Issues**: No lazy loading, excessive re-renders, large bundle sizes, no client caching
-  - **Optimization Strategy**: Three-phase plan targeting 70-80% performance improvement
-  - **Implementation Guides**: Detailed technical specifications for immediate high-impact fixes
-  - **Performance Targets**: Sub-600ms load times, <100KB payloads, 90% faster database queries
-  - **Expected Impact**: Transform 2-3 second load times to 400-600ms with dramatically improved UX
-  - Files created:
-    - `dhafnck-frontend/docs/performance-analysis-report.md` - Complete 17-bottleneck analysis
-    - `dhafnck-frontend/docs/immediate-performance-fixes.md` - Implementation guide for quick wins
-  - **Lazy Loading Architecture** ✅ COMPLETED: Three-tier lazy loading implementation ready for deployment
-- **Test System Architecture Standardization** - Complete test infrastructure improvement (2025-08-16)
+- **Test System Architecture Standardization** (2025-08-16) - Complete test infrastructure improvement
   - Created centralized test utilities package (`dhafnck_mcp_main/src/tests/utils/`)
   - Standardized database testing with `TestDataBuilder` pattern and consolidated fixtures
   - Added domain-specific assertion helpers for task, context, and MCP tool validation
@@ -152,7 +129,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `dhafnck_mcp_main/src/tests/utils/coverage_analysis.py` - Coverage analysis tool
     - `dhafnck_mcp_main/src/tests/utils/test_isolation_utils.py` - Enhanced isolation utilities
     - `dhafnck_mcp_main/docs/DEVELOPMENT GUIDES/test-organization-guide.md` - Complete guide
-- **Application Layer Test Coverage Improvement** - Enhanced facade testing infrastructure (2025-08-16)
+
+- **Performance Optimization Project Task Breakdown** (2025-08-16) - Complete project planning for implementation
+  - EPIC Task Created: "Task List Performance Optimization - 70-80% Speed Improvement" 
+  - 8 Comprehensive Subtasks: Complete coverage from database to monitoring
+    - Phase 1.1: Add Database Composite Indexes (urgent priority)
+    - Phase 1.2: Optimize Database Query Patterns (urgent priority)
+    - Phase 2.1: Create Lightweight API Summary Endpoints (high priority)
+    - Phase 2.2: Implement Response Caching Layer (high priority)
+    - Phase 3.1: Integrate LazyTaskList with New API Endpoints (high priority)
+    - Phase 3.2: Performance Testing and Validation (high priority)
+    - Phase 4: Monitoring and Metrics Setup (medium priority)
+    - Phase 5: Documentation and Knowledge Transfer (medium priority)
+  - Project Structure: Organized in test-project-alpha with main branch
+  - Task Management: Full traceability with task IDs for tracking implementation progress
+  - Expected Timeline: 2 weeks for complete implementation
+
+- **Comprehensive Performance Analysis & Optimization Strategy** (2025-08-16) - Complete stack analysis for task list loading optimization
+  - Frontend to Database Performance Analysis: Identified 17 critical bottlenecks across all layers
+  - Database Layer Issues: N+1 queries, missing composite indexes, inefficient relationship loading
+  - Backend API Issues: Monolithic responses, no pagination, excessive eager loading, heavy serialization
+  - Frontend Issues: No lazy loading, excessive re-renders, large bundle sizes, no client caching
+  - Optimization Strategy: Three-phase plan targeting 70-80% performance improvement
+  - Implementation Guides: Detailed technical specifications for immediate high-impact fixes
+  - Performance Targets: Sub-600ms load times, <100KB payloads, 90% faster database queries
+  - Expected Impact: Transform 2-3 second load times to 400-600ms with dramatically improved UX
+  - Files created:
+    - `dhafnck-frontend/docs/performance-analysis-report.md` - Complete 17-bottleneck analysis
+    - `dhafnck-frontend/docs/immediate-performance-fixes.md` - Implementation guide for quick wins
+  - Lazy Loading Architecture ✅ COMPLETED: Three-tier lazy loading implementation ready for deployment
+
+- **Application Layer Test Coverage Improvement** (2025-08-16) - Enhanced facade testing infrastructure
   - Created comprehensive test suite for UnifiedContextFacade (37 tests, 100% pass rate)
   - Added thorough testing for RuleApplicationFacade (24 tests covering rule orchestration)
   - Implemented DependencyApplicationFacade test coverage (18 tests for dependency management)
@@ -164,85 +171,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `dhafnck_mcp_main/src/tests/task_management/application/facades/test_dependency_application_facade.py`
   - Enhanced test quality with integration workflows, error handling validation, and mock isolation
 
-### Fixed
-- **Frontend Lazy Loading TypeScript Build Errors** - Fixed TypeScript compilation issues in lazy loading components (2025-08-16)
-  - Fixed Map.get() return type issues where undefined needed to be explicitly handled as null
-  - Fixed Set/Map spread operator compatibility issues for older TypeScript targets
-  - Replaced spread operators with explicit Set.add() and Map.set() methods for better compatibility
-  - Files fixed:
-    - `dhafnck-frontend/src/components/LazyTaskList.tsx` - Fixed 6 TypeScript type issues
-    - `dhafnck-frontend/src/components/LazySubtaskList.tsx` - Fixed 3 TypeScript type issues
-  - Impact: Frontend now builds successfully with lazy loading implementation for improved performance
-- **Test Aggregate Dependencies and Data Setup** - Fixed ORM relationship test failures (2025-08-16)
-  - Fixed UUID generation from prefixed format to pure UUIDs for SQLite compatibility
-  - Fixed missing timezone import in conftest.py causing test initialization failures
-  - Fixed Label model to include required id field in test setup
-  - Fixed BranchContext field names (changed from branch_standards/agent_assignments to feature_flags/active_patterns)
-  - Fixed context hierarchy models to include required id fields (ProjectContext, BranchContext, TaskContext)
-  - Simplified context hierarchy test for SQLite UUID type compatibility issues
-  - Changed overall_progress from float to int throughout codebase for database consistency
-  - Impact: All 8 ORM relationship tests now passing (100% success rate)
-
-### Added
-- **TDD Analysis Phase 2** - Comprehensive test suite analysis and fixes (2025-08-16)
-  - Analyzed 1,932 tests across 223 test files
-  - Fixed vision system unit test database isolation issue (276 errors resolved)
-  - Renamed TestEventClass to SampleEvent to avoid pytest collection warnings
-  - Created missing application DTOs (AssignAgentRequest, UpdateAgentRequest, CreateSubtaskRequest)
-  - Fixed import paths in integration tests
-  - Created analysis reports:
-    - `docs/reports-status/tdd-analysis-2025-08-16.md`
-    - `docs/reports-status/tdd-fixes-implemented-2025-08-16.md`
-    - `docs/reports-status/tdd-phase2-complete-2025-08-16.md`
-  - Impact: Vision tests 100% passing, test collection improved from ~71% to ~95%
-
-### Fixed
-- **Datetime Deprecation Warnings** - Fixed all datetime.utcnow() deprecation warnings (2025-08-16)
-  - Replaced 156 occurrences of `datetime.utcnow()` with `datetime.now(timezone.utc)`
-  - Modified 19 files across tests and source code
-  - Created automated fix script: `fix_datetime_deprecation.py`
-  - Impact: Zero deprecation warnings in test suite
-
-- **TDD Remediation Complete** - Successfully completed comprehensive Test-Driven Development remediation (2025-08-16)
-  - Achieved 98% test pass rate in infrastructure layer (105/107 tests passing)
-  - Created database fixtures module with proper parent record setup
-  - Simplified pytest configuration from 585 to ~400 lines (30% reduction)
-  - Documentation created:
-    - `docs/reports-status/tdd-remediation-complete.md` - Final status report
-    - `docs/troubleshooting-guides/test-fixture-simplification.md` - Migration guide
-    - `docs/troubleshooting-guides/tdd-remediation-fixes.md` - Comprehensive fix documentation
-    - `tests/fixtures/database_fixtures.py` - Reusable test fixtures
-  - Impact: Test infrastructure now simpler, more reliable, and DDD-compliant
-
-### Fixed
-- **TaskRepository Interface** - Fixed return type mismatch for DDD compliance (2025-08-16)
-  - Changed repository save() method from returning `bool` to `Optional[Task]`
-  - Updated domain interface in `domain/repositories/task_repository.py`
-  - Modified ORM implementation in `infrastructure/repositories/orm/task_repository.py` (lines 420-541)
-  - Updated all test assertions to expect entity return values instead of booleans
-  - Impact: Repository pattern now DDD-compliant, all 31 repository tests passing
-
-- **Foreign Key Constraints** - Resolved test failures due to missing parent records (2025-08-16)
-  - Created `tests/fixtures/database_fixtures.py` with proper parent record setup
-  - Added fixtures: `valid_git_branch_id`, `invalid_git_branch_id`, `test_project_data`
-  - Updated tests to use fixtures instead of hardcoded IDs
-  - Impact: Eliminated all foreign key constraint violations in tests
-
-- **Test Fixture Conflicts** - Consolidated overlapping database fixtures (2025-08-16)
-  - Reduced conftest.py from 585 to ~400 lines (30% reduction)
-  - Consolidated 5 overlapping fixtures into 1 unified `test_database` fixture
-  - Eliminated environment variable conflicts and fixture precedence issues
-  - Created `tests/conftest_simplified.py` as new streamlined configuration
-  - Impact: Test setup 50% faster, no more fixture conflicts
-
-- **DIContainer Tests** - Verified implementation correctness (2025-08-16)
-  - Confirmed 24/25 tests passing (96% success rate)
-  - Single failure due to EventStore table issue, not DIContainer problem
-  - All core functionality (`register_singleton`, `_instances`, `_factories`) working correctly
-  - Impact: DIContainer ready for production use
-
-### Added
-- **Event Infrastructure Implementation** - Complete event-driven architecture for task management (2025-08-16)
+- **Event Infrastructure Implementation** (2025-08-16) - Complete event-driven architecture for task management
   - Created `EventBus` with publish/subscribe pattern, priority-based handler execution, async/sync support
   - Implemented `EventStore` with SQLite persistence for event sourcing, snapshots, and time-range queries
   - Built `NotificationService` with multiple channels (InMemory, Logging, File) and retry mechanism
@@ -259,7 +188,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `dhafnck_mcp_main/src/tests/task_management/infrastructure/test_di_container.py` (480 lines)
   - Impact: Enables event-driven architecture throughout the application with proper testing
 
-- **Application Layer Test Coverage** - Comprehensive test suites for application facades (2025-08-16)
+- **Application Layer Test Coverage** (2025-08-16) - Comprehensive test suites for application facades
   - Created full test coverage for `TaskApplicationFacade` with 17 test methods
   - Added tests for `ProjectApplicationFacade` with 13 test methods for project lifecycle
   - Implemented tests for `SubtaskApplicationFacade` with 12 test methods for subtask management
@@ -271,59 +200,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `dhafnck_mcp_main/src/tests/task_management/application/facades/test_agent_application_facade.py` (420 lines)
   - Impact: Application layer now has comprehensive unit test coverage with proper mocking
 
-### Fixed
-- **EventBus Test Suite** - Fixed all EventBus tests to match actual implementation (2025-08-16)
-  - Updated test structure to use EventSubscription objects instead of direct handler storage
-  - Fixed Mock handlers to include __name__ attribute for EventBus logging compatibility
-  - Created helper function create_named_mock() for proper mock setup in tests
-  - All 22 EventBus tests now pass, providing complete coverage for event-driven functionality
-  - Files modified: `dhafnck_mcp_main/src/tests/task_management/infrastructure/test_event_bus.py`
-  - Impact: EventBus component now has verified test coverage, validating core event architecture
-
-- **Infrastructure Test Remediation** - Fixed NotificationService and EventStore tests to match actual implementations (2025-08-16)
-  - **NotificationService Tests**: Updated 30 tests to align with actual class names and interfaces
-    - Fixed imports: `InMemoryChannel` → `InMemoryNotificationChannel`, `LoggingChannel` → `LoggingNotificationChannel`, etc.
-    - Updated Notification dataclass structure: `notification_id` → `id`, added `title`, `message`, `recipients`, `metadata` fields
-    - Corrected channel interface: `send(type, data, priority)` → `send(notification: Notification)`
-    - Updated service interface: dict-based channels → list-based channels with proper channel objects
-  - **EventStore Tests**: Updated 19 tests to match actual method signatures and return types
-    - Fixed method names: `get_by_id()` → `get_event_by_id()`, `get_events_by_type()` → `get_events(event_type=...)`
-    - Updated `create_snapshot()` to use 4 parameters (aggregate_id, aggregate_type, snapshot_data, version)
-    - Corrected `get_latest_snapshot()` to return StoredEvent object instead of dictionary
-    - Replaced missing methods (`get_events_since_snapshot()`, `query_events()`) with equivalent `get_events()` calls
-    - Updated fixture to use correct constructor parameters and cleanup methods
-  - **Test Results**: All 71 infrastructure tests now pass (22 EventBus + 19 EventStore + 30 NotificationService)
-  - Files modified: 
-    - `dhafnck_mcp_main/src/tests/task_management/infrastructure/test_notification_service.py` (506 → 506 lines, major interface updates)
-    - `dhafnck_mcp_main/src/tests/task_management/infrastructure/test_event_store.py` (415 → 415 lines, method signature fixes)
-  - Impact: Infrastructure test suite now provides accurate validation of actual implementations
-
-- **Codebase Cleanup** - Removed obsolete test fix scripts and temporary debugging files (2025-08-16)
-  - Removed entire `/src/tests/fixes/` directory containing 20+ temporary fix scripts
-  - Removed obsolete `fix_postgresql_tests.py` and `fix_indent_properly.py` scripts
-  - Removed `temp_review` directory with temporary debugging files
-  - Preserved useful maintenance scripts (`fix_task_counts.py`, `fix_yaml_json_formatting.py`)
-  - Left `removed_tests_backup` directory intact for reference
-  - Files removed:
-    - `dhafnck_mcp_main/src/tests/fixes/` (entire directory)
-    - `dhafnck_mcp_main/scripts/fix_postgresql_tests.py`
-    - `dhafnck_mcp_main/src/tests/fix_indent_properly.py`
-    - `dhafnck_mcp_main/src/tests/temp_review/` (entire directory)
-  - Impact: Codebase is cleaner with proper infrastructure replacing temporary fixes
-
-- **Agent Assignment Display in Frontend** - Fixed critical issue where agent assignments were not displaying (2025-08-14)
-  - Enhanced `sanitizeTask` function in `api.ts` to properly handle assignees data
-  - Added robust parsing for assignees field supporting strings, arrays, and objects
-  - Added debug logging to track assignee data flow through the frontend
-  - Ensured assignees are always returned as an array of strings
-  - Handles edge cases like empty strings, invalid brackets, and object formats
-  - Files modified:
-    - `dhafnck-frontend/src/api.ts` - Enhanced sanitizeTask with assignee handling
-    - `dhafnck-frontend/src/components/ClickableAssignees.tsx` - Already had debug logging
-  - Impact: Agent assignments now display correctly in the task list UI
-
-### Added
-- **Performance Optimization System** - Comprehensive task loading performance improvements (2025-08-14)
+- **Performance Optimization System** (2025-08-14) - Comprehensive task loading performance improvements
   - Created `OptimizedTaskRepository` with selectinload strategy to prevent N+1 queries
   - Implemented `TaskPerformanceOptimizer` with LRU caching (5-minute TTL)
   - Added `PerformanceConfig` for environment-based performance tuning
@@ -335,7 +212,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/performance/performance_config.py` (82 lines)
   - Expected improvements: 50-70% query time reduction, 95%+ with caching, 80% payload reduction
   - Task completed: "Optimize Task Loading Performance - Very Slow Response Times"
-- **Test Suite Recovery Project Setup** - Created comprehensive project structure for fixing test issues
+
+- **Test Suite Recovery Project Setup** (2025-08-14) - Created comprehensive project structure for fixing test issues
   - Created new git branch `fix/test-suite-recovery` in MCP project system
   - Created 6 critical tasks to address all test problems:
     1. Fix Critical Import Errors (Priority: Critical) - Resolve ModuleNotFoundError issues
@@ -349,7 +227,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - @test_orchestrator_agent - For test coordination and verification
   - All tasks properly linked with dependencies to ensure correct execution order
   - Impact: Provides structured approach to restore test suite functionality
-- **Comprehensive Test Status Documentation** - Complete analysis of test suite health and recovery plan
+
+- **Comprehensive Test Status Documentation** (2025-08-14) - Complete analysis of test suite health and recovery plan
   - Created `dhafnck_mcp_main/docs/reports-status/test-status-report-2025-08-14.md`
     - Analyzed 325 test files across unit, integration, e2e, and performance categories
     - Identified critical import errors blocking test execution
@@ -367,37 +246,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Impact: Provides clear path to restore test suite functionality
   - Testing: Verified all test errors and documented solutions
 
-### Fixed
-- **Removed obsolete run_docker.sh references** - Updated all documentation to use docker-menu.sh
-  - Files updated:
-    - `README.md` - Replaced all run_docker.sh references with docker-system/docker-menu.sh
-    - `dhafnck_mcp_main/docker/README_DATABASE_TOOLS.md` - Updated workflow instructions
-    - `.claude/settings.local.json` - Updated Bash command permissions
-  - Files removed:
-    - `.claude/commands/run-docker.md` - Obsolete documentation removed
-  - All references now point to the centralized `docker-system/docker-menu.sh` script
-  - Updated documentation to reflect new menu options and configurations
-
-### Changed
-- **Cleaned up unused docker-compose files** - Kept only files used by docker-menu.sh
-  - Active docker-compose files (kept):
-    - `dhafnck_mcp_main/docker/docker-compose.postgresql.yml` - PostgreSQL Local configuration
-    - `dhafnck_mcp_main/docker/docker-compose.supabase.yml` - Supabase Cloud configuration
-    - `dhafnck_mcp_main/docker/docker-compose.redis.yml` - Redis extension for Supabase
-    - `docker-system/docker/docker-compose.optimized.yml` - Auto-generated for Performance Mode
-  - Obsolete files moved to backup directories:
-    - `dhafnck_mcp_main/docker/obsolete_docker_compose_backup/` - Contains 5 unused files
-    - `docker-system/docker/obsolete_docker_compose_backup/` - Contains 6 duplicate files
-  - This cleanup ensures consistency with docker-menu.sh configurations
-
-### Added
-- **Documentation Management CLI Tools** - Comprehensive documentation for managing markdown files
+- **Documentation Management CLI Tools** (2025-08-13) - Comprehensive documentation for managing markdown files
   - Created `dhafnck_mcp_main/docs/claude-document-management-system/cli-commands/manage-documentation-tools.md`
   - Added new index.md for Claude Document Management System with complete navigation
   - Updated main docs index.md to include CLI tools documentation links
   - Documented three tools: manage_document_md, manage_document_md_simple, manage_document_md_postgresql
   - Added detailed usage examples, workflow patterns, and troubleshooting guides
-- **Docker Performance Optimization Mode** for low-resource PCs
+
+- **Docker Performance Optimization Mode** (2025-08-13) - for low-resource PCs
   - New "P" option in docker-menu.sh for optimized mode
   - New "M" option for live performance monitoring  
   - Automatic memory detection and minimal mode for <2GB RAM
@@ -414,19 +270,220 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `docker-system/docker/frontend.optimized.Dockerfile` - New optimized frontend build
     - `dhafnck_mcp_main/scripts/docker-entrypoint-optimized.sh` - New lazy init script
 
+### Fixed
+- **NoneType Comparison Error in SupabaseOptimizedRepository** (2025-08-16) - Fixed critical error preventing task listing
+  - Error: `"'<' not supported between instances of 'NoneType' and 'int'"`
+  - Root Cause: SupabaseOptimizedRepository's `list_tasks_minimal` method didn't handle None values for limit parameter
+  - Issue: When frontend called MCP protocol without specifying limit, it passed None which caused comparison failures
+  - Solution: Added None checks before numeric comparisons, defaulting to sensible values (limit=20, offset=0)
+  - Files Modified: 
+    - `src/fastmcp/task_management/infrastructure/repositories/orm/supabase_optimized_repository.py` - Added None parameter handling
+  - Validation: MCP protocol now successfully returns task lists without limit parameter
+  - Impact: Frontend can now properly load tasks through both HTTP REST API and MCP protocol
+
+- **Supabase Cloud Performance Optimizations** (2025-08-16) - Implemented comprehensive optimizations for Supabase cloud database
+  - Problem: 5-6 second task loading times with Supabase cloud due to network latency and eager loading
+  - Root Causes Identified:
+    - Remote database latency (50-200ms per query)
+    - Multiple eager-loaded relationships with joinedload
+    - N+1 query problems in ORM
+    - No connection pooling optimization
+  - Solutions Implemented:
+    - Created `SupabaseOptimizedRepository` with minimal queries and no eager loading
+    - Modified `TaskApplicationFacade` to detect and use optimized repository for Supabase
+    - Implemented connection pooling with optimal settings for cloud databases
+    - Added support for read/write pool splitting
+    - Reduced eager loading with noload strategies
+    - Implemented single-query operations with subquery counts
+  - Files Created/Modified:
+    - Created `src/fastmcp/task_management/infrastructure/repositories/orm/supabase_optimized_repository.py`
+    - Modified `src/fastmcp/task_management/application/facades/task_application_facade.py`
+    - Enhanced `src/fastmcp/task_management/infrastructure/database/connection_pool.py`
+    - Created `test_api_performance.py` for performance validation
+  - Performance Improvements: Expected 50-70% reduction in response times for Supabase cloud
+  - Next Steps: Enable Redis caching layer for additional performance gains
+
+- **CRITICAL: Frontend API Connection Issue - "0 tasks on all branches"** (2025-08-16) - Complete resolution of systemwide frontend failure
+  - Problem: TDD analysis revealed progression from "task loading very long" → "complete frontend failure showing 0 tasks"
+  - Phase 1 Root Cause: Backend optimization introduced trailing slash requirement for MCP endpoint (/mcp/)
+    - Issue: Frontend calling `/mcp` (no slash) → 307 redirect → connection failure  
+    - Solution: Updated frontend API URLs to include trailing slash
+    - Files Modified: 
+      - `dhafnck-frontend/src/api.ts` - Changed API_BASE to include trailing slash
+      - `dhafnck-frontend/src/api-lazy.ts` - Changed MCP_BASE to include trailing slash
+  - Phase 2 Root Cause: HTTP REST API routes missing from streamable-http server mode
+    - Issue: Task summary routes only registered for SSE mode, not streamable-HTTP mode (default server mode)
+    - Analysis: Frontend expects HTTP REST API (`/api/tasks/summaries`) but server runs streamable-HTTP by default
+    - Solution: Added task_summary_routes to `create_streamable_http_app()` function
+    - Files Modified: `src/fastmcp/server/http_server.py` - Added HTTP routes registration
+  - Phase 3 Root Cause: TaskApplicationFacade initialized with null repository
+    - Issue: `TaskApplicationFacade(None)` caused `'NoneType' object has no attribute 'find_by_criteria'` error  
+    - Solution: Proper dependency injection using TaskFacadeFactory with repository factories
+    - Files Modified: `src/fastmcp/server/routes/task_summary_routes.py` - Fixed facade initialization
+  - VALIDATION: `curl /api/tasks/summaries` now returns 20 tasks with HTTP 200 OK (64 total tasks available)
+  - Result: Frontend displays all tasks correctly with 97% performance improvement (6s → 150ms)
+  - Impact: Completed full performance optimization cycle - fast backend + working frontend integration
+
+- **Performance Issue: 5-Second Task Loading Delay** (2025-08-16) - Diagnosed and documented fix for severe performance issue
+  - Root Cause: Remote Supabase cloud database with 50-200ms latency per query
+  - Issue: Loading 5 tasks taking 5-6 seconds due to multiple eager-loaded relationships
+  - Solutions Implemented:
+    - Enabled performance mode in `performance_config.py` (forces optimized repository usage)
+    - Set up local PostgreSQL container for development (eliminates network latency)
+    - Created `.env.local` configuration for local database
+    - Created `switch_database.sh` script for easy database switching
+    - Created Docker Compose override for local database configuration
+  - Performance Test Results: Current 6.5s average (still on Supabase), expected <100ms with local DB
+  - Documentation: Created `PERFORMANCE_FIX.md` with complete diagnosis and solutions
+  - Next Step Required: Restart Docker containers with local database configuration
+
+- **Frontend Lazy Loading TypeScript Build Errors** (2025-08-16) - Fixed TypeScript compilation issues in lazy loading components
+  - Fixed Map.get() return type issues where undefined needed to be explicitly handled as null
+  - Fixed Set/Map spread operator compatibility issues for older TypeScript targets
+  - Replaced spread operators with explicit Set.add() and Map.set() methods for better compatibility
+  - Files fixed:
+    - `dhafnck-frontend/src/components/LazyTaskList.tsx` - Fixed 6 TypeScript type issues
+    - `dhafnck-frontend/src/components/LazySubtaskList.tsx` - Fixed 3 TypeScript type issues
+  - Impact: Frontend now builds successfully with lazy loading implementation for improved performance
+
+- **Test Aggregate Dependencies and Data Setup** (2025-08-16) - Fixed ORM relationship test failures
+  - Fixed UUID generation from prefixed format to pure UUIDs for SQLite compatibility
+  - Fixed missing timezone import in conftest.py causing test initialization failures
+  - Fixed Label model to include required id field in test setup
+  - Fixed BranchContext field names (changed from branch_standards/agent_assignments to feature_flags/active_patterns)
+  - Fixed context hierarchy models to include required id fields (ProjectContext, BranchContext, TaskContext)
+  - Simplified context hierarchy test for SQLite UUID type compatibility issues
+  - Changed overall_progress from float to int throughout codebase for database consistency
+  - Impact: All 8 ORM relationship tests now passing (100% success rate)
+
+- **Datetime Deprecation Warnings** (2025-08-16) - Fixed all datetime.utcnow() deprecation warnings
+  - Replaced 156 occurrences of `datetime.utcnow()` with `datetime.now(timezone.utc)`
+  - Modified 19 files across tests and source code
+  - Created automated fix script: `fix_datetime_deprecation.py`
+  - Impact: Zero deprecation warnings in test suite
+
+- **TDD Remediation Complete** (2025-08-16) - Successfully completed comprehensive Test-Driven Development remediation
+  - Achieved 98% test pass rate in infrastructure layer (105/107 tests passing)
+  - Created database fixtures module with proper parent record setup
+  - Simplified pytest configuration from 585 to ~400 lines (30% reduction)
+  - Documentation created:
+    - `docs/reports-status/tdd-remediation-complete.md` - Final status report
+    - `docs/troubleshooting-guides/test-fixture-simplification.md` - Migration guide
+    - `docs/troubleshooting-guides/tdd-remediation-fixes.md` - Comprehensive fix documentation
+    - `tests/fixtures/database_fixtures.py` - Reusable test fixtures
+  - Impact: Test infrastructure now simpler, more reliable, and DDD-compliant
+
+- **TaskRepository Interface** (2025-08-16) - Fixed return type mismatch for DDD compliance
+  - Changed repository save() method from returning `bool` to `Optional[Task]`
+  - Updated domain interface in `domain/repositories/task_repository.py`
+  - Modified ORM implementation in `infrastructure/repositories/orm/task_repository.py` (lines 420-541)
+  - Updated all test assertions to expect entity return values instead of booleans
+  - Impact: Repository pattern now DDD-compliant, all 31 repository tests passing
+
+- **Foreign Key Constraints** (2025-08-16) - Resolved test failures due to missing parent records
+  - Created `tests/fixtures/database_fixtures.py` with proper parent record setup
+  - Added fixtures: `valid_git_branch_id`, `invalid_git_branch_id`, `test_project_data`
+  - Updated tests to use fixtures instead of hardcoded IDs
+  - Impact: Eliminated all foreign key constraint violations in tests
+
+- **Test Fixture Conflicts** (2025-08-16) - Consolidated overlapping database fixtures
+  - Reduced conftest.py from 585 to ~400 lines (30% reduction)
+  - Consolidated 5 overlapping fixtures into 1 unified `test_database` fixture
+  - Eliminated environment variable conflicts and fixture precedence issues
+  - Created `tests/conftest_simplified.py` as new streamlined configuration
+  - Impact: Test setup 50% faster, no more fixture conflicts
+
+- **DIContainer Tests** (2025-08-16) - Verified implementation correctness
+  - Confirmed 24/25 tests passing (96% success rate)
+  - Single failure due to EventStore table issue, not DIContainer problem
+  - All core functionality (`register_singleton`, `_instances`, `_factories`) working correctly
+  - Impact: DIContainer ready for production use
+
+- **EventBus Test Suite** (2025-08-16) - Fixed all EventBus tests to match actual implementation
+  - Updated test structure to use EventSubscription objects instead of direct handler storage
+  - Fixed Mock handlers to include __name__ attribute for EventBus logging compatibility
+  - Created helper function create_named_mock() for proper mock setup in tests
+  - All 22 EventBus tests now pass, providing complete coverage for event-driven functionality
+  - Files modified: `dhafnck_mcp_main/src/tests/task_management/infrastructure/test_event_bus.py`
+  - Impact: EventBus component now has verified test coverage, validating core event architecture
+
+- **Infrastructure Test Remediation** (2025-08-16) - Fixed NotificationService and EventStore tests to match actual implementations
+  - NotificationService Tests: Updated 30 tests to align with actual class names and interfaces
+    - Fixed imports: `InMemoryChannel` → `InMemoryNotificationChannel`, `LoggingChannel` → `LoggingNotificationChannel`, etc.
+    - Updated Notification dataclass structure: `notification_id` → `id`, added `title`, `message`, `recipients`, `metadata` fields
+    - Corrected channel interface: `send(type, data, priority)` → `send(notification: Notification)`
+    - Updated service interface: dict-based channels → list-based channels with proper channel objects
+  - EventStore Tests: Updated 19 tests to match actual method signatures and return types
+    - Fixed method names: `get_by_id()` → `get_event_by_id()`, `get_events_by_type()` → `get_events(event_type=...)`
+    - Updated `create_snapshot()` to use 4 parameters (aggregate_id, aggregate_type, snapshot_data, version)
+    - Corrected `get_latest_snapshot()` to return StoredEvent object instead of dictionary
+    - Replaced missing methods (`get_events_since_snapshot()`, `query_events()`) with equivalent `get_events()` calls
+    - Updated fixture to use correct constructor parameters and cleanup methods
+  - Test Results: All 71 infrastructure tests now pass (22 EventBus + 19 EventStore + 30 NotificationService)
+  - Files modified: 
+    - `dhafnck_mcp_main/src/tests/task_management/infrastructure/test_notification_service.py` (506 → 506 lines, major interface updates)
+    - `dhafnck_mcp_main/src/tests/task_management/infrastructure/test_event_store.py` (415 → 415 lines, method signature fixes)
+  - Impact: Infrastructure test suite now provides accurate validation of actual implementations
+
+- **Codebase Cleanup** (2025-08-16) - Removed obsolete test fix scripts and temporary debugging files
+  - Removed entire `/src/tests/fixes/` directory containing 20+ temporary fix scripts
+  - Removed obsolete `fix_postgresql_tests.py` and `fix_indent_properly.py` scripts
+  - Removed `temp_review` directory with temporary debugging files
+  - Preserved useful maintenance scripts (`fix_task_counts.py`, `fix_yaml_json_formatting.py`)
+  - Left `removed_tests_backup` directory intact for reference
+  - Files removed:
+    - `dhafnck_mcp_main/src/tests/fixes/` (entire directory)
+    - `dhafnck_mcp_main/scripts/fix_postgresql_tests.py`
+    - `dhafnck_mcp_main/src/tests/fix_indent_properly.py`
+    - `dhafnck_mcp_main/src/tests/temp_review/` (entire directory)
+  - Impact: Codebase is cleaner with proper infrastructure replacing temporary fixes
+
+- **Agent Assignment Display in Frontend** (2025-08-14) - Fixed critical issue where agent assignments were not displaying
+  - Enhanced `sanitizeTask` function in `api.ts` to properly handle assignees data
+  - Added robust parsing for assignees field supporting strings, arrays, and objects
+  - Added debug logging to track assignee data flow through the frontend
+  - Ensured assignees are always returned as an array of strings
+  - Handles edge cases like empty strings, invalid brackets, and object formats
+  - Files modified:
+    - `dhafnck-frontend/src/api.ts` - Enhanced sanitizeTask with assignee handling
+    - `dhafnck-frontend/src/components/ClickableAssignees.tsx` - Already had debug logging
+  - Impact: Agent assignments now display correctly in the task list UI
+
+- **Removed obsolete run_docker.sh references** (2025-08-13) - Updated all documentation to use docker-menu.sh
+  - Files updated:
+    - `README.md` - Replaced all run_docker.sh references with docker-system/docker-menu.sh
+    - `dhafnck_mcp_main/docker/README_DATABASE_TOOLS.md` - Updated workflow instructions
+    - `.claude/settings.local.json` - Updated Bash command permissions
+  - Files removed:
+    - `.claude/commands/run-docker.md` - Obsolete documentation removed
+  - All references now point to the centralized `docker-system/docker-menu.sh` script
+  - Updated documentation to reflect new menu options and configurations
+
 ### Changed
-- Enhanced docker-menu.sh with performance features:
+- **Cleaned up unused docker-compose files** (2025-08-13) - Kept only files used by docker-menu.sh
+  - Active docker-compose files (kept):
+    - `dhafnck_mcp_main/docker/docker-compose.postgresql.yml` - PostgreSQL Local configuration
+    - `dhafnck_mcp_main/docker/docker-compose.supabase.yml` - Supabase Cloud configuration
+    - `dhafnck_mcp_main/docker/docker-compose.redis.yml` - Redis extension for Supabase
+    - `docker-system/docker/docker-compose.optimized.yml` - Auto-generated for Performance Mode
+  - Obsolete files moved to backup directories:
+    - `dhafnck_mcp_main/docker/obsolete_docker_compose_backup/` - Contains 5 unused files
+    - `docker-system/docker/obsolete_docker_compose_backup/` - Contains 6 duplicate files
+  - This cleanup ensures consistency with docker-menu.sh configurations
+
+- **Enhanced docker-menu.sh with performance features** (2025-08-13):
   - Added system resource checking
   - Added live performance monitoring
   - Integrated optimized build configurations
   - All optimizations accessible through single menu entry point
-- Docker configurations now support resource constraints
-- Improved startup times with lazy initialization
+
+- **Docker configurations now support resource constraints** (2025-08-13)
+- **Improved startup times with lazy initialization** (2025-08-13)
 
 ## [2.0.2.dev] - 2025-01-13
 
 ### Added
-- **Context Management Guidelines in CLAUDE.md**: Added comprehensive guidelines for proper context creation and management
+- **Context Management Guidelines in CLAUDE.md** (2025-01-13): Added comprehensive guidelines for proper context creation and management
   - Added critical section about manual context creation requirement for frontend visibility
   - Added troubleshooting section for context issues with step-by-step solutions
   - Added examples showing proper context creation workflow after task creation
@@ -435,23 +492,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `CLAUDE.md` - Added context creation guidelines, troubleshooting section, and known issues
   - Benefits: Clear guidance for AI agents on proper context management for frontend visibility
 
-### Diagnosed
-- **Task Context Not Being Created on Completion**: Identified critical backend issue
-  - Issue: Tasks completed with completion_summary and testing_notes don't have context created
-  - Root cause: Backend manage_task complete action doesn't auto-create context to store completion data
-  - Impact: All completed tasks have null context_data despite being marked as done
-  - Additional finding: Context hierarchy is broken - project and branch contexts don't exist either
-  - Testing performed:
-    - Verified existing completed tasks have context_id: null, context_data: null
-    - Created test task and completed with summary - no context created
-    - Attempted manual context creation - failed due to missing parent contexts
-  - Backend fix needed: Auto-create context when task is completed with summary
-  - Frontend workaround: Added warning message for completed tasks without context
-  - Files modified:
-    - `dhafnck-frontend/src/components/TaskDetailsDialog.tsx` - Added missing context warning
-
-### Added
-- **Database Schema Validation on Startup**: Implemented automatic schema validation at server startup
+- **Database Schema Validation on Startup** (2025-01-13): Implemented automatic schema validation at server startup
   - Created `SchemaValidator` class that compares ORM models with actual database schema
   - Validates table existence, column presence, type compatibility, and foreign key constraints
   - Integrated into server startup process in `mcp_entry_point.py`
@@ -462,8 +503,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `src/tests/test_schema_validator.py` (new test file)
   - Benefits: Early detection of schema mismatches prevents runtime errors
 
+### Diagnosed
+- **Task Context Not Being Created on Completion** (2025-01-13): Identified critical backend issue
+  - Issue: Tasks completed with completion_summary and testing_notes don't have context created
+  - Root cause: Backend manage_task complete action doesn't auto-create context to store completion data
+  - Impact: All completed tasks have context_id: null, context_data: null despite being marked as done
+  - Additional finding: Context hierarchy is broken - project and branch contexts don't exist either
+  - Testing performed:
+    - Verified existing completed tasks have context_id: null, context_data: null
+    - Created test task and completed with summary - no context created
+    - Attempted manual context creation - failed due to missing parent contexts
+  - Backend fix needed: Auto-create context when task is completed with summary
+  - Frontend workaround: Added warning message for completed tasks without context
+  - Files modified:
+    - `dhafnck-frontend/src/components/TaskDetailsDialog.tsx` - Added missing context warning
+
 ### Fixed
-- **Task Context Display After Docker Rebuild**: Verified and confirmed all fixes are working
+- **Task Context Display After Docker Rebuild** (2025-01-13): Verified and confirmed all fixes are working
   - Backend correctly stores completion_summary in hierarchical context system
   - Frontend TaskDetailsDialog retrieves and displays context data properly
   - Both new format (current_session_summary) and legacy format (completion_summary) supported
@@ -471,7 +527,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Test task `213fe8c5-063d-421a-af0f-4e0e66f99501` confirms end-to-end functionality
   - All repository primary key issues, BranchContext field mismatches, and logger scope conflicts resolved
 
-- **Documentation Tool Name Update**: Replaced all references to deprecated `manage_hierarchical_context` with `manage_context`
+- **Documentation Tool Name Update** (2025-01-13): Replaced all references to deprecated `manage_hierarchical_context` with `manage_context`
   - Issue: Documentation referenced non-existent `manage_hierarchical_context` tool
   - Solution: Updated all documentation to use the correct `manage_context` tool name
   - Files updated:
@@ -483,7 +539,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Python source files (comments and test references)
   - Benefits: Consistent and accurate documentation, prevents confusion about tool names
 
-- **Improved Agent Registration Error Handling**: Enhanced error handling and user feedback for agent registration
+- **Improved Agent Registration Error Handling** (2025-01-13): Enhanced error handling and user feedback for agent registration
   - Issue: Agent registration errors were not user-friendly, especially for duplicate agents
   - Solution: Added comprehensive error handling with helpful messages and suggested actions
   - Changes made:
@@ -504,7 +560,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `dhafnck_mcp_main/src/tests/test_agent_error_handling.py`
   - Benefits: Better user experience with clear, actionable error messages
 
-- **Agent Auto-Registration Duplicate Key Constraint Violation**: Fixed duplicate key errors during agent auto-registration
+- **Agent Auto-Registration Duplicate Key Constraint Violation** (2025-01-13): Fixed duplicate key errors during agent auto-registration
   - Issue: When auto-registering agents during assignment, duplicate key constraint violations occurred
   - Root cause: `assign_agent_to_tree` method did not check for existing agents before creating
   - Solution: Added duplicate check and race condition handling in agent auto-registration
@@ -518,7 +574,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Test file created:
     - `dhafnck_mcp_main/src/tests/test_agent_duplicate_fix.py`
   - Benefits: Prevents crashes during concurrent agent assignments and improves system reliability
-- **Frontend Task Context Display**: Optimized task context fetching to load only when needed
+
+- **Frontend Task Context Display** (2025-01-13): Optimized task context fetching to load only when needed
   - Issue: Task context data was not visible in TaskDetailsDialog
   - Root cause: Context data needs to be fetched separately when viewing task details
   - Solution: Updated TaskDetailsDialog to fetch full task with context when opened
@@ -534,10 +591,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Performance benefit: List views remain fast by not fetching context for all tasks
   - Testing: Built frontend successfully with no errors, only linting warnings
 
-## [2.0.2.dev] - 2025-01-13 (Earlier)
-
-### Fixed
-- **Frontend Dockerfile Build Context**: Fixed nginx.conf copy path in frontend Dockerfile
+- **Frontend Dockerfile Build Context** (2025-01-13): Fixed nginx.conf copy path in frontend Dockerfile
   - Issue: Docker build was failing with "nginx.conf not found" error
   - Root cause: Dockerfile was using incorrect paths relative to build context
   - Solution: Updated COPY commands to use correct paths relative to dhafnck-frontend directory
@@ -547,7 +601,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Changed `COPY dhafnck-frontend/nginx.conf` to `COPY nginx.conf`
   - Files modified: `dhafnck-frontend/docker/Dockerfile`
 
-- **Docker Menu Configuration and Redundancy**: Fixed PostgreSQL configuration and removed redundant menu options
+- **Docker Menu Configuration and Redundancy** (2025-01-13): Fixed PostgreSQL configuration and removed redundant menu options
   - Issue: Docker menu option 1 was failing, and options 1 and 3 were identical
   - Root causes: 
     1. docker-menu.sh was referencing non-existent `docker-compose.postgresql-local.yml` file
@@ -566,40 +620,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Files modified: `docker-system/docker-menu.sh`
   - Verified: All paths now correctly resolve from `docker-system/docker/` directory
 
-### Changed
-- **Test and Script Organization**: Cleaned and organized test and script files
-  - Moved all Python test files from root to `dhafnck_mcp_main/src/tests/api/`
-  - Moved database utility scripts from root to `dhafnck_mcp_main/scripts/database/`
-  - Consolidated duplicate test directories (`tests/` → `src/tests/`)
-  - Created README documentation for scripts directory
-  - Project root now clean of loose Python files
-
-### Changed (Earlier)
-- **CHANGELOG Consolidation**: Consolidated all project changelogs into single root CHANGELOG.md
-  - Merged dhafnck_mcp_main/CHANGELOG.md into root CHANGELOG.md
-  - Removed duplicate CHANGELOG from dhafnck_mcp_main
-  - Frontend maintains separate CHANGELOG.md for frontend-specific changes
-  - Single source of truth for project-wide changes
-
-- **Documentation Reorganization**: Moved all documentation files to correct locations
-  - Moved troubleshooting guides to `docs/troubleshooting-guides/`
-  - Moved migration documents to `docs/migration-guides/`
-  - Moved reports to `docs/reports-status/`
-  - Moved issue documentation to `docs/issues/`
-  - Created `docs/operations/` for operational guides
-  - Moved ENVIRONMENT_SETUP.md to `docs/operations/environment-setup.md`
-  - Updated all index files with proper references
-  - **Project root now contains ONLY 4 .md files**: README.md, CHANGELOG.md, CLAUDE.md, CLAUDE.local.md
-
-### Fixed
-- **Complete Context Models Database Schema Fix**: Fixed all context table ORM models to match actual Supabase database schema
+- **Complete Context Models Database Schema Fix** (2025-01-13): Fixed all context table ORM models to match actual Supabase database schema
   - Issue: Multiple SQLAlchemy models were out of sync with actual database, causing "column does not exist" errors
   - Root cause: ORM models were using incorrect primary keys and missing columns
   - Solution: Updated all context models (Global, Project, Branch, Task) to match exact database structure
   - Changes made:
-    - **BranchContext**: Added `id` as primary key, removed `parent_project_context_id`, added `data` field
-    - **ProjectContext**: Changed primary key from `project_id` to `id`, added `data` field
-    - **TaskContext**: Added `id` as primary key, fixed foreign keys, added missing columns
+    - BranchContext: Added `id` as primary key, removed `parent_project_context_id`, added `data` field
+    - ProjectContext: Changed primary key from `project_id` to `id`, added `data` field
+    - TaskContext: Added `id` as primary key, fixed foreign keys, added missing columns
     - All models now use nullable fields to match database schema
     - Added proper JSON fields for data storage
   - Files modified:
@@ -607,7 +635,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `src/fastmcp/task_management/infrastructure/repositories/branch_context_repository.py` - Updated repository logic
   - Testing: SQL introspection confirmed exact schema match with Supabase database
 
-- **Docker Menu Enhanced Rebuild System**: Improved docker-menu.sh for reliable rebuilds after code changes
+- **Docker Menu Enhanced Rebuild System** (2025-01-13): Improved docker-menu.sh for reliable rebuilds after code changes
   - Issue: Docker builds were caching old code, preventing schema fixes from being applied
   - Solution: Enhanced rebuild process to ensure fresh builds with latest code
   - Improvements:
@@ -624,17 +652,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Automatic DATABASE_TYPE=supabase verification for option 2
     - Better error messages and tips for Supabase connection issues
 
-- **Complete Database Schema Recreation with UUID Types**: Recreated all context tables with consistent UUID types
+- **Complete Database Schema Recreation with UUID Types** (2025-01-13): Recreated all context tables with consistent UUID types
   - Issue: Foreign key constraint failures due to mixed VARCHAR/UUID types in ID fields
   - Root cause: Some tables had VARCHAR(255) IDs while others expected UUID foreign keys
   - Solution: Dropped and recreated all context tables with UUID for ALL id fields
   - Tables recreated:
-    - **global_contexts**: Changed id from VARCHAR(255) to UUID
-    - **project_contexts**: All IDs now UUID, proper foreign key to global_contexts
-    - **branch_contexts**: All IDs now UUID, proper foreign key to project_contexts
-    - **task_contexts**: All IDs now UUID, proper foreign key to branch_contexts
-    - **context_delegations**: Recreated with UUID IDs and proper structure
-    - **context_inheritance_cache**: Recreated with UUID IDs for caching
+    - global_contexts: Changed id from VARCHAR(255) to UUID
+    - project_contexts: All IDs now UUID, proper foreign key to global_contexts
+    - branch_contexts: All IDs now UUID, proper foreign key to project_contexts
+    - task_contexts: All IDs now UUID, proper foreign key to branch_contexts
+    - context_delegations: Recreated with UUID IDs and proper structure
+    - context_inheritance_cache: Recreated with UUID IDs for caching
   - ORM Model Updates:
     - Updated all context models to use UUID(as_uuid=False) for ID fields
     - Added explicit primaryjoin conditions for SQLAlchemy relationships
@@ -644,127 +672,127 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `/tmp/recreate_tables.py` - Script to recreate tables with proper types
   - Testing: Verified all tables now have consistent UUID types and proper foreign keys
 
-- **TASK COUNT SYNCHRONIZATION ISSUE**: Fixed incorrect task_count in git branches (fixed 2025-08-13)
-  - **Problem**: Project "E-Commerce Platform" showed 2 tasks in main branch but actual task list was empty, preventing deletion
-  - **Root Cause**: The `task_count` field in `ProjectGitBranch` table was out of sync with actual task count
-  - **Solution**: Manually corrected the task_count from 2 to 0 to match the actual number of tasks in the database
-  - **Impact**: Project can now be deleted correctly since it has only main branch with 0 tasks
-  - **Note**: This indicates a potential bug where task_count isn't properly updated when tasks are deleted
+- **TASK COUNT SYNCHRONIZATION ISSUE** (2025-08-13): Fixed incorrect task_count in git branches
+  - Problem: Project "E-Commerce Platform" showed 2 tasks in main branch but actual task list was empty, preventing deletion
+  - Root Cause: The `task_count` field in `ProjectGitBranch` table was out of sync with actual task count
+  - Solution: Manually corrected the task_count from 2 to 0 to match the actual number of tasks in the database
+  - Impact: Project can now be deleted correctly since it has only main branch with 0 tasks
+  - Note: This indicates a potential bug where task_count isn't properly updated when tasks are deleted
 
-- **PROJECT REPOSITORY DELETE METHOD FIX**: Fixed async/sync mismatch in project deletion (fixed 2025-08-13)
-  - **Problem**: Project deletion was failing with "delete not success" error
-  - **Root Cause**: The async `delete` method in ORMProjectRepository was incorrectly calling `super().delete()` directly, which is a synchronous method
-  - **Solution**: Changed the async `delete` method to call the synchronous `delete_project` method which properly handles the deletion
-  - **Files Modified**:
+- **PROJECT REPOSITORY DELETE METHOD FIX** (2025-08-13): Fixed async/sync mismatch in project deletion
+  - Problem: Project deletion was failing with "delete not success" error
+  - Root Cause: The async `delete` method in ORMProjectRepository was incorrectly calling `super().delete()` directly, which is a synchronous method
+  - Solution: Changed the async `delete` method to call the synchronous `delete_project` method which properly handles the deletion
+  - Files Modified:
     - `src/fastmcp/task_management/infrastructure/repositories/orm/project_repository.py` (line 161)
-  - **Impact**: Project deletion now works correctly, properly calling the base class delete method
-  - **Testing**: Backend restarted successfully, deletion operations should now complete
+  - Impact: Project deletion now works correctly, properly calling the base class delete method
+  - Testing: Backend restarted successfully, deletion operations should now complete
 
-- **PROJECT DELETION VALIDATION IMPROVEMENTS**: Enhanced validation logic and logging (fixed 2025-08-12)
-  - **Problem**: Project deletion was incorrectly failing for projects with only main branch and 0 tasks
-  - **Improvements Made**:
+- **PROJECT DELETION VALIDATION IMPROVEMENTS** (2025-08-12): Enhanced validation logic and logging
+  - Problem: Project deletion was incorrectly failing for projects with only main branch and 0 tasks
+  - Improvements Made:
     - Added detailed logging for deletion validation to track branch names and task counts
     - Added success path logging when validation passes
     - Removed unused DeleteProjectUseCase import that could cause confusion
     - Enhanced error messages with more context
-  - **Files Modified**:
+  - Files Modified:
     - `src/fastmcp/task_management/application/services/project_management_service.py` (lines 168-170, 199-200, commented line 20)
-  - **Impact**: Project deletion validation now clearly logs the validation process and allows deletion when appropriate
-  - **Testing**: Backend restarted successfully, validation logic working as expected
+  - Impact: Project deletion validation now clearly logs the validation process and allows deletion when appropriate
+  - Testing: Backend restarted successfully, validation logic working as expected
 
-- **GIT BRANCH FACADE METHOD NAME ERROR**: Fixed incorrect method name and async/sync mismatch (fixed 2025-08-12)
-  - **Problem**: Project deletion was failing with "GitBranchApplicationFacade object has no attribute 'list_git_branches'"
-  - **Root Cause**: 
+- **GIT BRANCH FACADE METHOD NAME ERROR** (2025-08-12): Fixed incorrect method name and async/sync mismatch
+  - Problem: Project deletion was failing with "GitBranchApplicationFacade object has no attribute 'list_git_branches'"
+  - Root Cause: 
     - Method name was incorrect - should be `list_git_branchs` not `list_git_branches`
     - Methods were being called with `await` but they are synchronous
     - `delete_git_branch` was being called with 2 parameters but only takes 1
-  - **Solution**: 
+  - Solution: 
     - Changed `list_git_branches` to `list_git_branchs` (lines 164, 200)
     - Removed `await` from facade method calls
     - Fixed `delete_git_branch` to only pass branch_id parameter (line 207)
-  - **Files Modified**:
+  - Files Modified:
     - `src/fastmcp/task_management/application/services/project_management_service.py` (lines 164, 200, 207)
-  - **Impact**: Project deletion now works correctly with proper method calls
-  - **Testing**: Backend restarted successfully and health check passes
+  - Impact: Project deletion now works correctly with proper method calls
+  - Testing: Backend restarted successfully and health check passes
 
-- **INDENTATION ERRORS IN SUBTASK CONTROLLER**: Fixed multiple Python indentation errors (fixed 2025-08-12)
-  - **Problem**: Backend was failing to start with IndentationError in subtask_mcp_controller.py
-  - **Root Cause**: Multiple if statements and for loops had incorrect indentation after conditions
-  - **Solution**: Fixed indentation at lines 726, 735, 749, 763, 777, 791, 805, 813-822
-  - **Files Modified**:
+- **INDENTATION ERRORS IN SUBTASK CONTROLLER** (2025-08-12): Fixed multiple Python indentation errors
+  - Problem: Backend was failing to start with IndentationError in subtask_mcp_controller.py
+  - Root Cause: Multiple if statements and for loops had incorrect indentation after conditions
+  - Solution: Fixed indentation at lines 726, 735, 749, 763, 777, 791, 805, 813-822
+  - Files Modified:
     - `src/fastmcp/task_management/interface/controllers/subtask_mcp_controller.py` (8 indentation fixes)
-  - **Impact**: Backend can now start successfully without Python syntax errors
-  - **Testing**: Backend health check returns healthy status, server running at http://localhost:8000
+  - Impact: Backend can now start successfully without Python syntax errors
+  - Testing: Backend health check returns healthy status, server running at http://localhost:8000
 
-- **PROJECT DELETION SERVICE BUG**: Fixed AttributeError in project deletion method (fixed 2025-08-12)
-  - **Problem**: Project deletion was failing with "ProjectManagementService has no attribute 'repository_manager'"
-  - **Root Cause**: Incorrect variable names used in delete_project method
-  - **Solution**: Changed `self.repository_manager` to `self._project_repo` at lines 155 and 210
-  - **Files Modified**:
+- **PROJECT DELETION SERVICE BUG** (2025-08-12): Fixed AttributeError in project deletion method
+  - Problem: Project deletion was failing with "ProjectManagementService has no attribute 'repository_manager'"
+  - Root Cause: Incorrect variable names used in delete_project method
+  - Solution: Changed `self.repository_manager` to `self._project_repo` at lines 155 and 210
+  - Files Modified:
     - `src/fastmcp/task_management/application/services/project_management_service.py` (lines 155, 210)
-  - **Impact**: Project deletion now works correctly through the service layer
-  - **Testing**: Files copied to Docker container, backend restarted successfully
+  - Impact: Project deletion now works correctly through the service layer
+  - Testing: Files copied to Docker container, backend restarted successfully
 
-### Added
-- **PROJECT DELETION FUNCTIONALITY**: Added ability to delete projects with safety validation (added 2025-08-12)
-  - **Feature**: Projects can now be deleted when they have only the 'main' branch with 0 tasks
-  - **Validation Rules**:
+### Added (2025-08-12)
+- **PROJECT DELETION FUNCTIONALITY**: Added ability to delete projects with safety validation
+  - Feature: Projects can now be deleted when they have only the 'main' branch with 0 tasks
+  - Validation Rules:
     - Project must have only 'main' branch (no other branches)
     - Main branch must have 0 tasks
     - Can use force=True to bypass validation
-  - **Implementation**:
+  - Implementation:
     - Updated delete_project method in ProjectManagementService
     - Added comprehensive validation before deletion
     - Cascade deletion of branches and tasks
-  - **Frontend Updates**:
+  - Frontend Updates:
     - Enhanced deleteProject API to return detailed error messages
     - Updated ProjectList component to show specific validation errors
-  - **Files Modified**:
+  - Files Modified:
     - `src/fastmcp/task_management/application/services/project_management_service.py` (lines 141-224)
     - `src/fastmcp/task_management/application/use_cases/delete_project.py` (validation logic)
     - `dhafnck-frontend/src/api.ts` (lines 1074-1103)
     - `dhafnck-frontend/src/components/ProjectList.tsx` (lines 133-152)
-  - **Safety Features**:
+  - Safety Features:
     - Clear error messages explaining why deletion is blocked
     - Suggestions for how to proceed (delete branches/tasks first)
     - Force option for administrative override
 
-### Added
-- **FRONTEND LAZY LOADING OPTIMIZATION**: Implemented lazy loading for better performance (added 2025-08-11)
-  - **Feature**: Frontend now loads data only when needed instead of loading everything upfront
-  - **Benefits**:
+### Added (2025-08-11)
+- **FRONTEND LAZY LOADING OPTIMIZATION**: Implemented lazy loading for better performance
+  - Feature: Frontend now loads data only when needed instead of loading everything upfront
+  - Benefits:
     - Faster initial page load times
     - Reduced unnecessary API calls
     - Lower memory usage in browser
     - Better performance with large datasets
-  - **Implementation**:
+  - Implementation:
     - Agent data loaded only when assignment dialog is opened
     - Task context fetched only when context button is clicked
     - Removed automatic agent loading on component mount
     - All heavy data operations now triggered by user action
-  - **Files Modified**:
+  - Files Modified:
     - `dhafnck-frontend/src/components/TaskList.tsx` - Lazy load agents, removed auto-fetch
     - `dhafnck-frontend/src/components/SubtaskList.tsx` - Lazy load agents for subtasks
-  - **User Experience**:
+  - User Experience:
     - Initial task list loads instantly
     - Data fetched on-demand when user interacts with specific features
     - No preloading of unused data
 
-- **TASK LIST PERFORMANCE OPTIMIZATION**: Implemented minimal task list response for improved performance (added 2025-08-11)
-  - **Feature**: Task list now returns only essential fields for quick global overview
-  - **Benefits**:
+- **TASK LIST PERFORMANCE OPTIMIZATION** (2025-08-11): Implemented minimal task list response for improved performance
+  - Feature: Task list now returns only essential fields for quick global overview
+  - Benefits:
     - Reduces response payload size by ~70% for task list operations
     - Faster loading times for projects with many tasks
     - Lower bandwidth usage and memory footprint
-  - **Implementation**:
+  - Implementation:
     - Created `TaskListItemResponse` DTO with only essential fields (id, title, status, priority, progress)
     - Added `minimal` flag to `list_tasks` facade method (defaults to true)
     - Modified MCP controller to use minimal response by default
-  - **Files Modified**:
+  - Files Modified:
     - Created: `src/fastmcp/task_management/application/dtos/task/task_list_item_response.py`
     - Modified: `src/fastmcp/task_management/application/facades/task_application_facade.py` (lines 503-567)
     - Modified: `src/fastmcp/task_management/interface/controllers/task_mcp_controller.py` (line 1074)
-  - **Fields Included in Minimal Response**:
+  - Fields Included in Minimal Response:
     - id, title, status, priority
     - progress_percentage
     - assignees_count (count only, not full list)
@@ -772,63 +800,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - due_date, updated_at
     - has_dependencies, is_blocked (boolean flags)
 
-- **DELETE BRANCH BUTTON IN FRONTEND SIDEBAR**: Added ability to delete git branches directly from the frontend (added 2025-08-11)
-  - **Feature**: Users can now delete branches (except 'main') directly from the project sidebar
-  - **UI Components**:
+- **DELETE BRANCH BUTTON IN FRONTEND SIDEBAR** (2025-08-11): Added ability to delete git branches directly from the frontend
+  - Feature: Users can now delete branches (except 'main') directly from the project sidebar
+  - UI Components:
     - Added delete button (trash icon) next to each branch in the sidebar
     - Button only appears on hover for non-main branches
     - Added confirmation dialog with warning about tasks that will be deleted
     - Shows task count warning if branch contains tasks
-  - **Implementation**:
+  - Implementation:
     - Implemented `deleteBranch` API function in `api.ts`
     - Added delete branch state management in `ProjectList.tsx`
     - Added `handleDeleteBranch` function to handle the deletion
     - Added delete confirmation dialog with appropriate warnings
-  - **Files Modified**:
+  - Files Modified:
     - `dhafnck-frontend/src/api.ts` (lines 1208-1235) - Added deleteBranch API function
     - `dhafnck-frontend/src/components/ProjectList.tsx` - Added delete button, handler, and dialog
-  - **Safety Features**:
+  - Safety Features:
     - Cannot delete 'main' branch (button hidden)
     - Shows warning if branch contains tasks
     - Requires confirmation before deletion
     - Shows "Deleting..." during operation
 
-### Fixed
-- **BRANCH DELETION UI BUG**: Fixed branch still showing after deletion in frontend (fixed 2025-08-11)
-  - **Problem**: After deleting a branch, the UI showed success but the branch remained visible in the expanded project
-  - **Root Cause**: The `openProjects` state was maintaining the expanded state, causing the UI to render deleted branches
-  - **Solution**: Collapse the project in the UI immediately after successful deletion
-  - **Files Modified**:
+### Fixed (2025-08-11)
+- **BRANCH DELETION UI BUG**: Fixed branch still showing after deletion in frontend
+  - Problem: After deleting a branch, the UI showed success but the branch remained visible in the expanded project
+  - Root Cause: The `openProjects` state was maintaining the expanded state, causing the UI to render deleted branches
+  - Solution: Collapse the project in the UI immediately after successful deletion
+  - Files Modified:
     - `dhafnck-frontend/src/components/ProjectList.tsx` (lines 159-161) - Added code to collapse project after deletion
-  - **Testing**: Branch now disappears immediately from UI after deletion
+  - Testing: Branch now disappears immediately from UI after deletion
 
-- **BRANCH DELETION DATABASE ERROR**: Fixed "Failed to delete branch" error with PostgreSQL/Supabase (fixed 2025-08-11)
-  - **Problem**: Branch deletion was failing with "LOCAL DATABASE PATH ACCESS NOT SUPPORTED" error
-  - **Root Cause**: The `delete_git_branch` method was using direct SQLite3 queries instead of the proper ORM layer
-  - **Solution**: Refactored to use proper service layer and ORM for database-agnostic deletion:
+- **BRANCH DELETION DATABASE ERROR**: Fixed "Failed to delete branch" error with PostgreSQL/Supabase
+  - Problem: Branch deletion was failing with "LOCAL DATABASE PATH ACCESS NOT SUPPORTED" error
+  - Root Cause: The `delete_git_branch` method was using direct SQLite3 queries instead of the proper ORM layer
+  - Solution: Refactored to use proper service layer and ORM for database-agnostic deletion:
     - Added `delete_git_branch` method to GitBranchService
     - Added `delete_branch` method to ORMGitBranchRepository with cascade deletion
     - Updated facade to use service method instead of direct SQL
-  - **Files Modified**:
+  - Files Modified:
     - `dhafnck_mcp_main/src/fastmcp/task_management/application/services/git_branch_service.py` (lines 104-143) - Added delete_git_branch method
     - `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/git_branch_repository.py` (lines 262-285) - Added delete_branch method with cascade
     - `dhafnck_mcp_main/src/fastmcp/task_management/application/facades/git_branch_application_facade.py` (lines 204-255) - Fixed to use service layer
-  - **Testing**: Branch deletion now works properly with PostgreSQL/Supabase databases
+  - Testing: Branch deletion now works properly with PostgreSQL/Supabase databases
 
-- **BRANCH DELETION BACKEND FIX**: Fixed git branch deletion not actually deleting from database (fixed 2025-08-11)
-  - **Problem**: The `delete_git_branch` function was returning success without performing any deletion
-  - **Root Cause**: The function was a placeholder that just returned success message
-  - **Solution**: Implemented actual database deletion logic that:
+- **BRANCH DELETION BACKEND FIX**: Fixed git branch deletion not actually deleting from database
+  - Problem: The `delete_git_branch` function was returning success without performing any deletion
+  - Root Cause: The function was a placeholder that just returned success message
+  - Solution: Implemented actual database deletion logic that:
     - Deletes all tasks associated with the branch
     - Deletes the branch record from project_git_branchs table
     - Properly handles both async and sync execution contexts
-  - **Files Modified**:
+  - Files Modified:
     - `dhafnck_mcp_main/src/fastmcp/task_management/application/facades/git_branch_application_facade.py` (lines 204-323)
-  - **Testing**: Branch deletion now properly removes branch and all associated tasks from database
+  - Testing: Branch deletion now properly removes branch and all associated tasks from database
 
-- **TASK LOADING PERFORMANCE OPTIMIZATION**: Significantly improved "Loading tasks..." performance (fixed 2025-08-11)
-  - **Problem**: Task list API responses were extremely large and slow due to excessive workflow_guidance data
-  - **Root Cause**: The `_enhance_with_workflow_hints` method was adding massive amounts of data to every response including:
+- **TASK LOADING PERFORMANCE OPTIMIZATION**: Significantly improved "Loading tasks..." performance
+  - Problem: Task list API responses were extremely large and slow due to excessive workflow_guidance data
+  - Root Cause: The `_enhance_with_workflow_hints` method was adding massive amounts of data to every response including:
     - autonomous_rules (4+ detailed rules with conditions and enforcement)
     - decision_matrix (priority factors, thresholds, urgency scores)
     - conflict_resolution (multiple resolution strategies)
@@ -836,28 +864,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - multi_project_context (cross-project coordination data)
     - validation_schema (complete validation rules)
     - And much more unnecessary data for simple list operations
-  - **Solution**: Disabled workflow enhancement for list and search operations
-  - **Performance Impact**: Response size reduced from ~50KB+ to ~82 bytes (99%+ reduction)
-  - **Files Modified**: 
+  - Solution: Disabled workflow enhancement for list and search operations
+  - Performance Impact: Response size reduced from ~50KB+ to ~82 bytes (99%+ reduction)
+  - Files Modified: 
     - `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/task_mcp_controller.py` (lines 1118-1126, 1160-1168)
-  - **Testing**: Verified workflow_guidance is now null for list operations, dramatically improving load time
+  - Testing: Verified workflow_guidance is now null for list operations, dramatically improving load time
+
 - **TASK COUNT DISPLAY FIX**: Fixed issue where task counts were always showing 0 when expanding projects in the frontend
-  - **Problem**: Task counts were not being properly loaded from the database or maintained when tasks were created/deleted
-  - **Root Cause**: 
+  - Problem: Task counts were not being properly loaded from the database or maintained when tasks were created/deleted
+  - Root Cause: 
     - The ORM repository wasn't populating the GitBranch entity's `all_tasks` field
     - Task creation/deletion operations weren't updating the database `task_count` field
-  - **Solution**: 
+  - Solution: 
     - Modified `project_repository.py` to use the database `task_count` field and populate placeholder tasks
     - Updated `create_task.py` to increment branch task_count when tasks are created
     - Updated `delete_task.py` to decrement branch task_count when tasks are deleted
     - Created `scripts/fix_task_counts.py` to recalculate existing task counts
-  - **Files Modified**:
+  - Files Modified:
     - `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/project_repository.py` (lines 62-68)
     - `dhafnck_mcp_main/src/fastmcp/task_management/application/use_cases/create_task.py` (lines 88-102)
     - `dhafnck_mcp_main/src/fastmcp/task_management/application/use_cases/delete_task.py` (lines 32-57)
-  - **Testing**: Verified task counts now display correctly when expanding projects in the frontend
+  - Testing: Verified task counts now display correctly when expanding projects in the frontend
 
-### Added
+### Added (2025-08-10)
 - **PROJECT CASCADE DELETION FEATURE**: Implemented comprehensive project deletion with cascade deletion of all related data
   - Created `DeleteProjectUseCase` for handling cascade deletion logic
   - Deletes all git branches, tasks, subtasks, contexts, and agent assignments
@@ -872,7 +901,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Repository now has clean history with single initial commit (cd5abed0)
   - Simplified git history while preserving current codebase
 
-### Fixed
+### Fixed (2025-08-10)
 - **DOCKER PORT MAPPING FIX**: Fixed frontend accessibility issue at http://localhost:3800/
   - Corrected port mapping mismatch in docker-system compose files
   - Updated all configurations from `3800:3000` to `3800:80` to match nginx port
@@ -883,38 +912,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated docker-compose command to properly load .env file with `--env-file` flag
   - Backend successfully connected to Supabase cloud database with healthy status
 
-## [2.1.1] - 2025-08-10
-
-### Fixed
-- **FRONTEND PERFORMANCE OPTIMIZATION**: Eliminated N+1 query problem in project list loading (fixed 2025-08-10)
-  - **Problem**: Frontend was making 30+ individual API calls to get task counts for each branch
-  - **Root Cause**: `getTaskCount()` was called separately for each branch after loading projects
-  - **Solution**: Modified backend to include `task_count` in project list response, removed individual API calls
-  - **Performance Impact**: Reduced from 31 API calls to 1 API call (97% reduction)
-  - **Files Modified**: 
+- **FRONTEND PERFORMANCE OPTIMIZATION** (2025-08-10): Eliminated N+1 query problem in project list loading
+  - Problem: Frontend was making 30+ individual API calls to get task counts for each branch
+  - Root Cause: `getTaskCount()` was called separately for each branch after loading projects
+  - Solution: Modified backend to include `task_count` in project list response, removed individual API calls
+  - Performance Impact: Reduced from 31 API calls to 1 API call (97% reduction)
+  - Files Modified: 
     - Backend: `dhafnck_mcp_main/src/fastmcp/task_management/application/use_cases/list_projects.py` (line 59 - added task_count field)
     - Frontend: `dhafnck-frontend/src/components/ProjectList.tsx` (lines 65-87, 39-58 - removed getTaskCount calls)
     - Frontend: `dhafnck-frontend/src/api.ts` (line 45 - added task_count to Branch interface)
-  - **Testing**: Verified single API call returns all projects with task counts included
-- **TASK LIST PERFORMANCE OPTIMIZATION**: Eliminated N+1 query problem in TaskList component (fixed 2025-08-10)
-  - **Problem**: TaskList was making individual API calls for each task dependency to fetch titles
-  - **Root Cause**: `getTask()` was called for each dependency ID to get the task title
-  - **Solution**: Resolve dependency titles from already-loaded tasks in memory, eliminating extra API calls
-  - **Performance Impact**: Reduced API calls by up to 90% for tasks with multiple dependencies
-  - **Files Modified**: 
+  - Testing: Verified single API call returns all projects with task counts included
+
+- **TASK LIST PERFORMANCE OPTIMIZATION** (2025-08-10): Eliminated N+1 query problem in TaskList component
+  - Problem: TaskList was making individual API calls for each task dependency to fetch titles
+  - Root Cause: `getTask()` was called for each dependency ID to get the task title
+  - Solution: Resolve dependency titles from already-loaded tasks in memory, eliminating extra API calls
+  - Performance Impact: Reduced API calls by up to 90% for tasks with multiple dependencies
+  - Files Modified: 
     - Frontend: `dhafnck-frontend/src/components/TaskList.tsx` (lines 73-97 - replaced API calls with in-memory lookup)
-  - **Note**: SubtaskList component was already optimized and didn't have N+1 query issues
-- **TASK CONTEXT AUTO-CREATION**: Task completion now auto-creates context if missing (fixed 2025-01-19)
+  - Note: SubtaskList component was already optimized and didn't have N+1 query issues
+
+- **TASK CONTEXT AUTO-CREATION** (2025-01-19): Task completion now auto-creates context if missing
   - Prevents errors when completing tasks without pre-existing context
   - Context is automatically initialized with task completion data
   - Ensures data integrity in the context hierarchy system
+
 - **FRONTEND PROJECT DISPLAY FIX**: Resolved critical issue where frontend showed "No projects found" despite 10 projects existing in Supabase
-  - **Problem**: Backend API endpoint `/mcp/` was returning error: `'str' object has no attribute 'id'`
-  - **Root Cause**: In `list_projects.py`, line 49 was iterating over dictionary keys (strings) instead of key-value pairs
-  - **Solution**: Changed iteration from `for branch in project.git_branchs:` to `for branch_id, branch in project.git_branchs.items()`
-  - **Files Modified**: `dhafnck_mcp_main/src/fastmcp/task_management/application/use_cases/list_projects.py` (lines 49-59)
-  - **Impact**: Frontend now successfully displays all projects from Supabase database with complete branch information
-  - **Testing**: Verified API returns all 10 projects with git branches via curl to `/mcp/` endpoint
+  - Problem: Backend API endpoint `/mcp/` was returning error: `'str' object has no attribute 'id'`
+  - Root Cause: In `list_projects.py`, line 49 was iterating over dictionary keys (strings) instead of key-value pairs
+  - Solution: Changed iteration from `for branch in project.git_branchs:` to `for branch_id, branch in project.git_branchs.items()`
+  - Files Modified: `dhafnck_mcp_main/src/fastmcp/task_management/application/use_cases/list_projects.py` (lines 49-59)
+  - Impact: Frontend now successfully displays all projects from Supabase database with complete branch information
+  - Testing: Verified API returns all 10 projects with git branches via curl to `/mcp/` endpoint
 
 ## [Previous] - 2025-08-09
 
@@ -1008,7 +1037,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Enhanced agent resolution in _resolve_agent_identifier to accept UUIDs, @agent_name, and agent_name formats
   - Implemented deterministic UUID generation for new agents with special uuid:name format to preserve names
   - Added automatic agent registration with meaningful names when new agents are encountered
-  - **Supported Formats**: 
+  - Supported Formats: 
     - ✅ UUID: "2d3727cf-6915-4b54-be8d-4a5a0311ca03"
     - ✅ Name with @: "@coding_agent" 
     - ✅ Name without @: "coding_agent"
@@ -1045,7 +1074,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added `'include_inherited'` to `BOOLEAN_PARAMETERS` set in parameter_validation_fix.py
   - Integrated `ParameterTypeCoercer` in unified_context_controller.py to automatically coerce boolean parameters
   - Added graceful error handling that continues with original values if coercion fails
-  - **Supported Boolean Formats**: 
+  - Supported Boolean Formats: 
     - TRUE values: "true", "True", "TRUE", "1", "yes", "Yes", "YES", "on", "On", "ON"
     - FALSE values: "false", "False", "FALSE", "0", "no", "No", "NO", "off", "Off", "OFF"
   - Created comprehensive test suite in test_parameter_coercer_standalone.py (9 tests)
@@ -1053,7 +1082,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **INSIGHTS_FOUND PARAMETER VALIDATION FIX**: Resolved MCP validation error for array parameters in subtask management
   - Enhanced `parameter_validation_fix.py` with LIST_PARAMETERS support and `_coerce_to_list` method handling multiple formats
   - Created `schema_monkey_patch.py` to patch FastMCP's schema generation, creating flexible `anyOf` schemas accepting both arrays and strings
-  - **Supported Formats**: 
+  - Supported Formats: 
     - JSON string arrays: `'["item1", "item2"]'`
     - Comma-separated strings: `"item1, item2, item3"`
     - Direct arrays: `["item1", "item2"]`
@@ -1064,10 +1093,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Created `docs/INSIGHTS_FOUND_PARAMETER_FIX_SOLUTION.md` with complete technical details
 
 - **AUTOMATIC CONTEXT SYNCHRONIZATION IMPLEMENTATION (Issue #3 - Fix Prompt 3)**: Implemented comprehensive automatic context updates for task state changes
-  - **UpdateTaskUseCase Enhancement**: Added `_sync_task_context_after_update()` method with lazy initialization of TaskContextSyncService
-  - **UpdateSubtaskUseCase Enhancement**: Added `_sync_parent_task_context_after_subtask_update()` method to sync parent task context
-  - **AutomatedContextSyncService**: Created centralized coordination service for context synchronization
-  - **Technical Features**:
+  - UpdateTaskUseCase Enhancement: Added `_sync_task_context_after_update()` method with lazy initialization of TaskContextSyncService
+  - UpdateSubtaskUseCase Enhancement: Added `_sync_parent_task_context_after_subtask_update()` method to sync parent task context
+  - AutomatedContextSyncService: Created centralized coordination service for context synchronization
+  - Technical Features:
     - Lazy Initialization: TaskContextSyncService initialized on first use to avoid circular imports
     - Graceful Error Handling: Context sync failures don't break core task operations
     - Async/Sync Bridge: Handles both synchronous and asynchronous execution contexts automatically
@@ -1112,8 +1141,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Tasks can now be completed with just `manage_task(action="complete", task_id="task-123", completion_summary="Work done")`
 
 - **Extended Auto-Context Creation to All Entity Levels**: Implemented automatic context creation when creating projects, branches, and tasks
-  - **Branch Creation Enhancement**: Added auto-context creation to CreateGitBranchUseCase
-  - **Task Creation Enhancement**: Added auto-context creation to CreateTaskUseCase
+  - Branch Creation Enhancement: Added auto-context creation to CreateGitBranchUseCase
+  - Task Creation Enhancement: Added auto-context creation to CreateTaskUseCase
   - All auto-context creation includes graceful error handling with warning logs
   - Total 10 unit tests covering success paths, failure scenarios, and exception handling
 
@@ -1177,6 +1206,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Created test_task_completion_hierarchical_context.py (7 tests)
   - Replaced manage_context calls in: error_handler.py, task_workflow_guidance.py, workflow_hint_enhancer.py, next_task.py, complete_task_optimized.py
 
+- **Test and Script Organization** (2025-01-13): Cleaned and organized test and script files
+  - Moved all Python test files from root to `dhafnck_mcp_main/src/tests/api/`
+  - Moved database utility scripts from root to `dhafnck_mcp_main/scripts/database/`
+  - Consolidated duplicate test directories (`tests/` → `src/tests/`)
+  - Created README documentation for scripts directory
+  - Project root now clean of loose Python files
+
+- **CHANGELOG Consolidation** (2025-01-11): Consolidated all project changelogs into single root CHANGELOG.md
+  - Merged dhafnck_mcp_main/CHANGELOG.md into root CHANGELOG.md
+  - Removed duplicate CHANGELOG from dhafnck_mcp_main
+  - Frontend maintains separate CHANGELOG.md for frontend-specific changes
+  - Single source of truth for project-wide changes
+
+- **Documentation Reorganization** (2025-01-11): Moved all documentation files to correct locations
+  - Moved troubleshooting guides to `docs/troubleshooting-guides/`
+  - Moved migration documents to `docs/migration-guides/`
+  - Moved reports to `docs/reports-status/`
+  - Moved issue documentation to `docs/issues/`
+  - Created `docs/operations/` for operational guides
+  - Moved ENVIRONMENT_SETUP.md to `docs/operations/environment-setup.md`
+  - Updated all index files with proper references
+  - Project root now contains ONLY 4 .md files: README.md, CHANGELOG.md, CLAUDE.md, CLAUDE.local.md
+
 ### Fixed
 - **Subtask Architecture Fix**: Task entity stores subtask IDs only, validation in TaskCompletionService
   - Frontend updated for new structure
@@ -1204,44 +1256,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SQLite database integration
 - Compliance-ready audit trails
 - Real-time monitoring capabilities
-
-## [2.0.1] - 2025-01-11
-
-### Fixed
-- **Task List Performance Optimizations**: Major performance improvements for task operations
-  - **Backend Optimization**: Created minimal `TaskListItemResponse` DTO
-    - Returns only essential fields (id, title, status, priority, progress)
-    - Reduces payload size by ~70%
-    - Added `minimal` flag to list_tasks facade method (defaults to true)
-    - Files modified:
-      - Created: `src/fastmcp/task_management/application/dtos/task/task_list_item_response.py`
-      - Modified: `src/fastmcp/task_management/application/facades/task_application_facade.py`
-      - Modified: `src/fastmcp/task_management/interface/controllers/task_mcp_controller.py`
-  - **Frontend Lazy Loading**: Implemented on-demand data loading
-    - Agent data loaded only when assignment dialog opens
-    - Removed automatic agent fetching on component mount
-    - Task context already lazy loaded (fetched on button click)
-    - Files modified:
-      - `dhafnck-frontend/src/components/TaskList.tsx`
-      - `dhafnck-frontend/src/components/SubtaskList.tsx`
-  - **Impact**: Faster task list display, reduced API calls, lower memory usage
-
-- **Branch Deletion Fixes**: Fixed multiple issues preventing branch deletion
-  - Frontend UI bug: Branches remained visible after deletion (fixed by collapsing project)
-  - Database error: SQLite3 direct queries incompatible with PostgreSQL/Supabase (refactored to use ORM)
-  - Service layer: Added proper delete_git_branch method to service and repository layers
-  - Files modified:
-    - `dhafnck-frontend/src/components/ProjectList.tsx`
-    - `dhafnck_mcp_main/src/fastmcp/task_management/application/services/git_branch_service.py`
-    - `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/git_branch_repository.py`
-    - `dhafnck_mcp_main/src/fastmcp/task_management/application/facades/git_branch_application_facade.py`
-  - Impact: Branch deletion now works correctly with all database types
-
-## [2.0.0] - 2025-01-10
-
-### Fixed
-- **Frontend Performance Fix**: Eliminated N+1 query problem in project list
-  - Reduced API calls from 31 to 1 (97% improvement)
-  - Added `task_count` field to backend project list response
-  - Removed individual `getTaskCount()` calls from frontend
-  - Impact: Instant project loading instead of ~3-5 second delay

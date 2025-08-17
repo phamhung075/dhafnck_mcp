@@ -38,8 +38,10 @@ class SupabaseConfig:
         self.engine: Optional[Engine] = None
         self.SessionLocal: Optional[sessionmaker] = None
         
-        # Initialize database connection
-        self._initialize_database()
+        # PERFORMANCE FIX: Don't initialize database connection in __init__
+        # This avoids creating multiple connections during facade initialization
+        # Connection will be created lazily when first needed
+        # self._initialize_database()  # REMOVED to prevent duplicate connections
     
     def _get_supabase_database_url(self) -> str:
         """
@@ -182,13 +184,15 @@ class SupabaseConfig:
     def get_session(self) -> Session:
         """Get a new database session"""
         if not self.SessionLocal:
-            raise RuntimeError("Database not initialized")
+            # Lazy initialization - create connection on first use
+            self._initialize_database()
         return self.SessionLocal()
     
     def create_tables(self, base):
         """Create all tables in the Supabase database"""
         if not self.engine:
-            raise RuntimeError("Database engine not initialized")
+            # Lazy initialization - create connection on first use
+            self._initialize_database()
         
         logger.info("Creating tables in Supabase database...")
         base.metadata.create_all(bind=self.engine)

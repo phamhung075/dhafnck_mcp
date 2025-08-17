@@ -35,7 +35,8 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-@redis_cache(ttl=300, key_prefix="task_summaries")
+# PERFORMANCE: Temporarily disabled Redis cache to debug performance issue
+# @redis_cache(ttl=300, key_prefix="task_summaries")
 async def get_task_summaries(request: Request) -> JSONResponse:
     """
     Get lightweight task summaries for list views.
@@ -108,22 +109,34 @@ async def get_task_summaries(request: Request) -> JSONResponse:
         
         # Convert to task summaries
         task_summaries = []
+        
+        # PERFORMANCE FIX: Skip individual context lookups as they cause N+1 query problem
+        # Each context lookup can take 500ms-1s with cloud database latency
+        # For now, set has_context to False to avoid the performance penalty
+        # TODO: Implement batch context lookup or cache context status in task table
+        import time
+        
         for task_data in tasks_data:
-            # Check if task has context
+            # Check if task has context - DISABLED FOR PERFORMANCE
             has_context = False
-            if include_counts:
-                context_result = context_facade.get_context_summary(task_data.get("id"))
-                has_context = context_result.get("success", False) and context_result.get("has_context", False)
+            # PERFORMANCE ISSUE: This was causing 5+ second delays
+            # if include_counts:
+            #     context_start = time.time()
+            #     context_result = context_facade.get_context_summary(task_data.get("id"))
+            #     context_time = (time.time() - context_start) * 1000
+            #     logger.warning(f"[PERF] Context lookup for task {task_data.get('id')} took {context_time:.1f}ms")
+            #     has_context = context_result.get("success", False) and context_result.get("has_context", False)
             
             summary = {
                 "id": task_data["id"],
                 "title": task_data["title"],
                 "status": task_data["status"],
                 "priority": task_data["priority"],
-                "subtask_count": len(task_data.get("subtasks", [])),
-                "assignees_count": len(task_data.get("assignees", [])),
-                "has_dependencies": bool(task_data.get("dependencies")),
-                "has_context": has_context,
+                # Use the pre-calculated count if available, otherwise fallback to array length
+                "subtask_count": task_data.get("subtask_count", len(task_data.get("subtasks", []))),
+                "assignees_count": task_data.get("assignee_count", len(task_data.get("assignees", []))),
+                "has_dependencies": bool(task_data.get("dependencies")) or task_data.get("dependency_count", 0) > 0,
+                "has_context": has_context,  # Always False for now due to performance
                 "created_at": task_data.get("created_at"),
                 "updated_at": task_data.get("updated_at")
             }

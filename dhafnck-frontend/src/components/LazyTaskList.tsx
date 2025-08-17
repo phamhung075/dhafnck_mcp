@@ -73,6 +73,9 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
 
   // Memoized filtered and sorted tasks
   const displayTasks = useMemo(() => {
+    if (!taskSummaries || !Array.isArray(taskSummaries)) {
+      return [];
+    }
     const startIndex = (currentPage - 1) * TASKS_PER_PAGE;
     const endIndex = startIndex + TASKS_PER_PAGE;
     return taskSummaries.slice(0, endIndex);
@@ -98,14 +101,20 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
       
       const data = await response.json();
       
-      if (page === 1) {
-        setTaskSummaries(data.tasks);
+      // Ensure we have valid data
+      if (data.tasks && Array.isArray(data.tasks)) {
+        if (page === 1) {
+          setTaskSummaries(data.tasks);
+        } else {
+          setTaskSummaries(prev => [...(prev || []), ...data.tasks]);
+        }
       } else {
-        setTaskSummaries(prev => [...prev, ...data.tasks]);
+        console.error('Invalid response from API:', data);
+        setTaskSummaries([]);
       }
       
-      setTotalTasks(data.total);
-      setHasMore(data.has_more);
+      setTotalTasks(data.total || 0);
+      setHasMore(data.has_more || false);
       
     } catch (e: any) {
       // Fallback to full task loading if lightweight endpoint doesn't exist

@@ -1,5 +1,6 @@
 """Task Application Facade - Orchestrates task-related use cases"""
 
+import os
 import logging
 from typing import Dict, Any, Optional, List
 from dataclasses import asdict
@@ -27,6 +28,7 @@ from ...domain.repositories.task_repository import TaskRepository
 from ...domain.repositories.subtask_repository import SubtaskRepository
 from ...domain.repositories.git_branch_repository import GitBranchRepository
 from ...domain.exceptions import TaskNotFoundError, AutoRuleGenerationError
+from ...infrastructure.performance.performance_config import PerformanceConfig
 
 from ...domain.value_objects.task_id import TaskId
 from ..services.unified_context_service import UnifiedContextService
@@ -818,6 +820,56 @@ class TaskApplicationFacade:
         compatibility with the existing DTO structure.
         """
         try:
+            # PERFORMANCE OPTIMIZATION: Use optimized repository for Supabase
+            if PerformanceConfig.is_performance_mode():
+                database_type = os.getenv("DATABASE_TYPE", "").lower()
+                
+                if database_type == "supabase":
+                    # Use Supabase-optimized repository directly for maximum performance
+                    from ...infrastructure.repositories.orm.supabase_optimized_repository import SupabaseOptimizedRepository
+                    
+                    optimized_repo = SupabaseOptimizedRepository(
+                        git_branch_id=filters.get("git_branch_id")
+                    )
+                    
+                    # Get minimal task data with counts in a single query
+                    task_data = optimized_repo.list_tasks_minimal(
+                        status=filters.get("status"),
+                        priority=filters.get("priority"),
+                        assignee_id=None,  # Not filtering by assignee for now
+                        limit=limit,
+                        offset=offset
+                    )
+                    
+                    # Convert to expected format
+                    task_summaries = []
+                    for task in task_data:
+                        summary = {
+                            "id": task["id"],
+                            "title": task["title"],
+                            "status": task["status"],
+                            "priority": task["priority"],
+                            "created_at": task["created_at"],
+                            "updated_at": task["updated_at"],
+                            "subtask_count": task["subtask_count"],
+                            "assignee_count": task["assignee_count"],
+                            "dependency_count": task["dependency_count"]
+                        }
+                        task_summaries.append(summary)
+                    
+                    # Get total count
+                    total_count = optimized_repo.get_task_count_optimized(
+                        status=filters.get("status"),
+                        priority=filters.get("priority")
+                    )
+                    
+                    return {
+                        "success": True,
+                        "tasks": task_summaries,
+                        "count": total_count
+                    }
+            
+            # Fallback to standard implementation
             # Get tasks up to offset + limit
             request = ListTasksRequest(
                 status=filters.get("status"),
@@ -846,7 +898,27 @@ class TaskApplicationFacade:
                 }
                 
                 if include_counts:
-                    # Add counts for related data
+                    # Add counts for related data (not the full arrays)
+                    # Check if task has a subtask_count attribute (from optimized query)
+                    if hasattr(task, 'subtask_count'):
+                        summary["subtask_count"] = task.subtask_count
+                    else:
+                        # Fallback to counting the array length
+                        summary["subtask_count"] = len(task.subtasks) if hasattr(task, 'subtasks') else 0
+                    
+                    # Similarly for assignees
+                    if hasattr(task, 'assignee_count'):
+                        summary["assignee_count"] = task.assignee_count
+                    else:
+                        summary["assignee_count"] = len(task.assignees) if hasattr(task, 'assignees') else 0
+                    
+                    # And dependencies
+                    if hasattr(task, 'dependency_count'):
+                        summary["dependency_count"] = task.dependency_count
+                    else:
+                        summary["dependency_count"] = len(task.dependencies) if hasattr(task, 'dependencies') else 0
+                    
+                    # Include the arrays too for backward compatibility
                     summary["subtasks"] = task.subtasks if hasattr(task, 'subtasks') else []
                     summary["assignees"] = task.assignees if hasattr(task, 'assignees') else []
                     summary["dependencies"] = task.dependencies if hasattr(task, 'dependencies') else []

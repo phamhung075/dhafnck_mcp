@@ -36,6 +36,10 @@ class SupabaseOptimizedRepository(ORMTaskRepository):
         
         Returns raw dictionaries instead of entities for speed.
         """
+        import time
+        method_start = time.time()
+        logger.info(f"[PERF] Starting list_tasks_minimal - branch_id={self.git_branch_id}, status={status}, limit={limit}")
+        
         # Handle None parameters with defaults
         if limit is None:
             limit = 20
@@ -61,7 +65,9 @@ class SupabaseOptimizedRepository(ORMTaskRepository):
             logger.warning(f"Invalid priority type: {type(priority)}, ignoring")
             priority = None
             
+        session_start = time.time()
         with self.get_db_session() as session:
+            logger.info(f"[PERF] Session created in {(time.time() - session_start)*1000:.1f}ms")
             # Use raw SQL for maximum performance with Supabase
             filters = ["1=1"]  # Always true base condition
             params = {"limit": limit, "offset": offset}
@@ -92,7 +98,7 @@ class SupabaseOptimizedRepository(ORMTaskRepository):
                     created_at,
                     updated_at,
                     -- Count relationships in subqueries (single round trip)
-                    (SELECT COUNT(*) FROM subtasks WHERE task_id = tasks.id) as subtask_count,
+                    (SELECT COUNT(*) FROM task_subtasks WHERE task_id = tasks.id) as subtask_count,
                     (SELECT COUNT(*) FROM task_assignees WHERE task_id = tasks.id) as assignee_count,
                     (SELECT COUNT(*) FROM task_dependencies WHERE task_id = tasks.id) as dependency_count
                 FROM tasks
@@ -102,12 +108,25 @@ class SupabaseOptimizedRepository(ORMTaskRepository):
                 OFFSET :offset
             """)
             
+            # Debug logging
+            logger.info(f"Executing SQL with filters: {filters}")
+            logger.info(f"Parameters: {params}")
+            
+            # Log SQL for debugging
+            logger.info(f"[PERF] Executing optimized SQL query")
+            logger.info(f"[PERF] SQL: {sql.text[:200]}...")  # Log first 200 chars
+            
+            query_start = time.time()
             result = session.execute(sql, params)
+            query_time = (time.time() - query_start) * 1000
+            logger.info(f"[PERF] SQL query executed in {query_time:.1f}ms")
+            
             tasks = []
+            process_start = time.time()
             
             for row in result:
                 tasks.append({
-                    "id": row.id,
+                    "id": str(row.id) if row.id else None,  # Convert UUID to string
                     "title": row.title,
                     "status": row.status,
                     "priority": row.priority,
@@ -119,7 +138,11 @@ class SupabaseOptimizedRepository(ORMTaskRepository):
                     "has_relationships": (row.subtask_count + row.assignee_count + row.dependency_count) > 0
                 })
             
-            logger.info(f"Fetched {len(tasks)} tasks with minimal query (Supabase optimized)")
+            process_time = (time.time() - process_start) * 1000
+            total_time = (time.time() - method_start) * 1000
+            
+            logger.info(f"[PERF] Processed {len(tasks)} rows in {process_time:.1f}ms")
+            logger.info(f"[PERF] Total list_tasks_minimal time: {total_time:.1f}ms (query={query_time:.1f}ms, process={process_time:.1f}ms)")
             return tasks
     
     def list_tasks_no_relations(self, status: str = None, priority: str = None,
@@ -204,7 +227,7 @@ class SupabaseOptimizedRepository(ORMTaskRepository):
             sql = text("""
                 SELECT 
                     t.*,
-                    (SELECT COUNT(*) FROM subtasks WHERE task_id = t.id) as subtask_count,
+                    (SELECT COUNT(*) FROM task_subtasks WHERE task_id = t.id) as subtask_count,
                     (SELECT COUNT(*) FROM task_assignees WHERE task_id = t.id) as assignee_count,
                     (SELECT COUNT(*) FROM task_dependencies WHERE task_id = t.id) as dependency_count,
                     (SELECT COUNT(*) FROM task_labels WHERE task_id = t.id) as label_count
