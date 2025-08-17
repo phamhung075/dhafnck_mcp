@@ -9,6 +9,7 @@ import { Input } from "./ui/input";
 import { Separator } from "./ui/separator";
 import { RefreshButton } from "./ui/refresh-button";
 import BranchDetailsDialog from "./BranchDetailsDialog";
+import ProjectDetailsDialog from "./ProjectDetailsDialog";
 
 interface ProjectListProps {
   onSelect?: (projectId: string, branchId: string) => void;
@@ -27,7 +28,6 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect, refreshKey }) => {
   const [showCreateBranch, setShowCreateBranch] = useState<Project | null>(null);
   const [showProjectDetails, setShowProjectDetails] = useState<Project | null>(null);
   const [showBranchDetails, setShowBranchDetails] = useState<{ project: Project; branch: any } | null>(null);
-  const [showProjectContext, setShowProjectContext] = useState<{ project: Project; context: any } | null>(null);
   const [showGlobalContext, setShowGlobalContext] = useState<{ context: any } | null>(null);
   const [loadingContext, setLoadingContext] = useState(false);
   const [form, setForm] = useState<{ name: string; description: string }>({ name: "", description: "" });
@@ -277,21 +277,15 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect, refreshKey }) => {
                   </div>
                 </div>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">
-                  <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="View Details" onClick={() => setShowProjectDetails(project)}>
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    className="h-7 w-7" 
+                    aria-label="View Project Details & Context" 
+                    title="View Project Details & Context"
+                    onClick={() => setShowProjectDetails(project)}
+                  >
                     <Eye className="w-3 h-3" />
-                  </Button>
-                  <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="View Context" onClick={async () => {
-                    setLoadingContext(true);
-                    try {
-                      const context = await getProjectContext(project.id);
-                      setShowProjectContext({ project, context });
-                    } catch (e) {
-                      console.error('Error fetching project context:', e);
-                    } finally {
-                      setLoadingContext(false);
-                    }
-                  }}>
-                    <FileText className="w-3 h-3" />
                   </Button>
                   <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="Create Branch" onClick={() => { setShowCreateBranch(project); setForm({ name: "", description: "" }); }}>
                     <GitBranchPlus className="w-3 h-3" />
@@ -550,148 +544,13 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect, refreshKey }) => {
         </DialogContent>
       </Dialog>
 
-      {/* Project Details Dialog */}
-      <Dialog open={!!showProjectDetails} onOpenChange={(v) => { if (!v) setShowProjectDetails(null); }}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-xl text-left">Project Details - {showProjectDetails?.name}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {/* Basic Information */}
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="text-lg font-semibold mb-3">Basic Information</h3>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Name:</span>
-                  <span className="ml-2 font-medium">{showProjectDetails?.name}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">ID:</span>
-                  <span className="ml-2 font-mono text-xs">{showProjectDetails?.id}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Description:</span>
-                  <span className="ml-2">{showProjectDetails?.description || "No description"}</span>
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Orchestration Status */}
-            {showProjectDetails && (showProjectDetails as any)['orchestration_status'] && (
-              <>
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-semibold mb-3 text-green-700">Orchestration Status</h3>
-                  <div className="bg-white p-3 rounded border border-green-200">
-                    <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                      {typeof (showProjectDetails as any)['orchestration_status'] === 'object' 
-                        ? JSON.stringify((showProjectDetails as any)['orchestration_status'], null, 2)
-                        : (showProjectDetails as any)['orchestration_status']}
-                    </pre>
-                  </div>
-                </div>
-                <Separator />
-              </>
-            )}
-
-            {/* Registered Agents */}
-            {showProjectDetails && (showProjectDetails as any)['registered_agents'] && (
-              <>
-                <div className="bg-purple-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-semibold mb-3 text-purple-700">Registered Agents</h3>
-                  <div className="bg-white p-3 rounded border border-purple-200">
-                    <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                      {typeof (showProjectDetails as any)['registered_agents'] === 'object' 
-                        ? JSON.stringify((showProjectDetails as any)['registered_agents'], null, 2)
-                        : (showProjectDetails as any)['registered_agents']}
-                    </pre>
-                  </div>
-                </div>
-                <Separator />
-              </>
-            )}
-
-            {/* Agent Assignments */}
-            {showProjectDetails && (showProjectDetails as any)['agent_assignments'] && (
-              <>
-                <div className="bg-orange-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-semibold mb-3 text-orange-700">Agent Assignments</h3>
-                  <div className="bg-white p-3 rounded border border-orange-200">
-                    <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                      {typeof (showProjectDetails as any)['agent_assignments'] === 'object' 
-                        ? JSON.stringify((showProjectDetails as any)['agent_assignments'], null, 2)
-                        : (showProjectDetails as any)['agent_assignments']}
-                    </pre>
-                  </div>
-                </div>
-                <Separator />
-              </>
-            )}
-
-            {/* Task Trees / Branches */}
-            {showProjectDetails?.git_branchs && Object.keys(showProjectDetails.git_branchs).length > 0 && (
-              <>
-                <div className="bg-indigo-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-semibold mb-3 text-indigo-700">Task Trees / Branches ({Object.keys(showProjectDetails.git_branchs).length})</h3>
-                  <div className="bg-white p-3 rounded border border-indigo-200">
-                    <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                      {JSON.stringify(showProjectDetails.git_branchs, null, 2)}
-                    </pre>
-                  </div>
-                </div>
-                <Separator />
-              </>
-            )}
-
-            {/* Additional Fields - Display any other fields */}
-            {showProjectDetails && (
-              <>
-                {Object.entries(showProjectDetails).filter(([key]) => 
-                  !['id', 'name', 'description', 'git_branchs', 'orchestration_status', 'registered_agents', 'agent_assignments'].includes(key)
-                ).map(([key, value]) => {
-                  if (value === null || value === undefined) return null;
-                  
-                  return (
-                    <React.Fragment key={key}>
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <h3 className="text-lg font-semibold mb-3 capitalize">{key.replace(/_/g, ' ')}</h3>
-                        <div className="bg-white p-3 rounded border border-gray-200">
-                          {typeof value === 'object' ? (
-                            <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                              {JSON.stringify(value, null, 2)}
-                            </pre>
-                          ) : (
-                            <span className="text-sm">{String(value)}</span>
-                          )}
-                        </div>
-                      </div>
-                      <Separator />
-                    </React.Fragment>
-                  );
-                })}
-              </>
-            )}
-
-            {/* Raw Data */}
-            <details className="cursor-pointer">
-              <summary className="font-semibold text-sm text-gray-700 hover:text-gray-900">
-                View Complete Raw Project Data (JSON)
-              </summary>
-              <div className="mt-3 bg-gray-100 p-3 rounded">
-                <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                  {JSON.stringify(showProjectDetails, null, 2)}
-                </pre>
-              </div>
-            </details>
-          </div>
-          <DialogFooter className="mt-6">
-            <Button variant="outline" onClick={() => setShowProjectDetails(null)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Project Details Dialog with Tabs */}
+      <ProjectDetailsDialog
+        open={!!showProjectDetails}
+        onOpenChange={(open) => { if (!open) setShowProjectDetails(null); }}
+        project={showProjectDetails}
+        onClose={() => setShowProjectDetails(null)}
+      />
 
       {/* Branch Details Dialog with Tabs */}
       <BranchDetailsDialog
@@ -703,115 +562,6 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect, refreshKey }) => {
       />
 
 
-      {/* Project Context Dialog */}
-      <Dialog open={!!showProjectContext} onOpenChange={(v) => { if (!v) setShowProjectContext(null); }}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-xl text-left">Project Context - {showProjectContext?.project?.name}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {loadingContext ? (
-              <div className="text-center py-8">
-                <div className="text-sm text-muted-foreground">Loading context...</div>
-              </div>
-            ) : showProjectContext?.context ? (
-              <>
-                {/* Context Resolution Info */}
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-semibold mb-2">Context Resolution</h3>
-                  <div className="space-y-2 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Level:</span>
-                      <Badge className="ml-2" variant="secondary">Project</Badge>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Context ID:</span>
-                      <span className="ml-2 font-mono text-xs">{showProjectContext.context.context_id || showProjectContext.project.id}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Inheritance Chain */}
-                {showProjectContext.context.inheritance_chain && (
-                  <>
-                    <div>
-                      <h4 className="font-semibold text-sm mb-3 text-blue-700">Inheritance Chain</h4>
-                      <div className="bg-blue-50 p-3 rounded">
-                        <div className="flex items-center gap-2">
-                          {showProjectContext.context.inheritance_chain.map((level: string, index: number) => (
-                            <React.Fragment key={level}>
-                              <Badge variant={level === 'project' ? 'default' : 'outline'}>
-                                {level.toUpperCase()}
-                              </Badge>
-                              {index < showProjectContext.context.inheritance_chain.length - 1 && (
-                                <span className="text-muted-foreground">→</span>
-                              )}
-                            </React.Fragment>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    <Separator />
-                  </>
-                )}
-
-                {/* Context Data */}
-                {showProjectContext.context.data && (
-                  <>
-                    <div>
-                      <h4 className="font-semibold text-sm mb-3 text-green-700">Context Data</h4>
-                      <div className="bg-green-50 p-3 rounded">
-                        <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                          {JSON.stringify(showProjectContext.context.data, null, 2)}
-                        </pre>
-                      </div>
-                    </div>
-                    <Separator />
-                  </>
-                )}
-
-                {/* Metadata */}
-                {showProjectContext.context.metadata && (
-                  <>
-                    <div>
-                      <h4 className="font-semibold text-sm mb-3 text-purple-700">Metadata</h4>
-                      <div className="bg-purple-50 p-3 rounded">
-                        <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                          {JSON.stringify(showProjectContext.context.metadata, null, 2)}
-                        </pre>
-                      </div>
-                    </div>
-                    <Separator />
-                  </>
-                )}
-
-                {/* Raw Context Data */}
-                <details className="cursor-pointer">
-                  <summary className="font-semibold text-sm text-gray-700 hover:text-gray-900">
-                    View Complete Raw Context Data (JSON)
-                  </summary>
-                  <div className="mt-3 bg-gray-100 p-3 rounded">
-                    <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                      {JSON.stringify(showProjectContext.context, null, 2)}
-                    </pre>
-                  </div>
-                </details>
-              </>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-sm text-muted-foreground">No context data available</p>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowProjectContext(null)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
 
       {/* Global Context Dialog */}

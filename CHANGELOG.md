@@ -8,6 +8,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Unified Detail Views with Tabbed Interface** - Consistent tabbed dialogs for Projects, Branches, and Tasks (2025-08-17)
+  - **Feature**: All entity types now have unified dialogs with Details and Context tabs
+  - **Implementation**:
+    - Created `ProjectDetailsDialog.tsx` with Details and Context tabs
+    - Created `BranchDetailsDialog.tsx` with Details and Context tabs
+    - Added "Copy JSON" button to all context tabs for easy data export
+    - Implemented consistent hierarchical JSON viewer across all dialogs
+    - Added expand/collapse functionality for nested JSON data
+    - Color-coded data types with appropriate icons in JSON viewer
+  - **UI Changes**:
+    - Consolidated project view buttons from two (Details, Context) to one unified View button
+    - Consolidated branch view buttons from two (Details, Context) to one unified View button
+    - Removed separate context dialogs in favor of tabbed interface
+  - **Files Modified**:
+    - `dhafnck-frontend/src/components/ProjectDetailsDialog.tsx` - New unified project dialog component
+    - `dhafnck-frontend/src/components/BranchDetailsDialog.tsx` - New unified branch dialog component
+    - `dhafnck-frontend/src/components/TaskDetailsDialog.tsx` - Added Copy JSON button to context tab
+    - `dhafnck-frontend/src/components/ProjectList.tsx` - Updated to use new unified dialogs, removed old separate dialogs
+  - **Bug Fixes**:
+    - Fixed TypeScript compilation errors for undefined properties on Project type
+    - Properly handled dynamic properties with type casting for build compatibility
+  - **Testing**: Successfully builds with TypeScript compilation
+
 - **Delete Functionality for Tasks and Subtasks** - Added delete buttons with confirmation dialogs to frontend UI (2025-08-17)
   - **Feature**: Users can now delete tasks and subtasks directly from the UI
   - **Implementation**:
