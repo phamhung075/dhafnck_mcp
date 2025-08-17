@@ -8,6 +8,118 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Delete Functionality for Tasks and Subtasks** - Added delete buttons with confirmation dialogs to frontend UI (2025-08-17)
+  - **Feature**: Users can now delete tasks and subtasks directly from the UI
+  - **Implementation**:
+    - Added delete button (trash icon) to task rows in LazyTaskList component
+    - Added delete button (trash icon) to subtask rows in LazySubtaskList component
+    - Integrated DeleteConfirmDialog for confirmation before deletion
+    - Delete handlers update UI state immediately after successful deletion
+    - Implemented proper error handling and logging for delete operations
+  - **Files Modified**:
+    - `dhafnck-frontend/src/components/LazyTaskList.tsx` - Added delete button, handler, and dialog for tasks
+    - `dhafnck-frontend/src/components/LazySubtaskList.tsx` - Added delete button, handler, and dialog for subtasks
+  - **User Experience**: Confirmation dialog prevents accidental deletions and shows task/subtask title
+  - **Testing**: Successfully builds with TypeScript compilation (warnings only, no errors)
+
+- **Fixed Context Data Extraction and Display** - Corrected context retrieval from API response (2025-08-17)
+  - **Problem**: Context tab was showing "No Context Available" even when context existed
+  - **Root Cause**: The API returns a wrapped response with context data nested inside `data.resolved_context`
+  - **Solution**: Added logic to extract context from various response formats:
+    - Checks for `data.resolved_context` (primary format)
+    - Falls back to `resolved_context` at root level
+    - Uses `data` object if neither exists
+    - Uses full response as last resort
+  - **Debugging**: Added console.log statements to track context extraction
+  - **Files Modified**:
+    - `dhafnck-frontend/src/components/TaskDetailsDialog.tsx` - Added context extraction logic
+  - **Result**: Context tab now properly displays hierarchical context data when available
+
+- **Enhanced Context Display with Hierarchical JSON Viewer** - Beautiful nested JSON presentation in Context tab (2025-08-17)
+  - **Feature**: Replaced raw JSON display with interactive hierarchical viewer
+  - **Visual Improvements**:
+    - Expandable/collapsible nested sections with chevron indicators
+    - Color-coded data types (strings, numbers, booleans, dates, UUIDs)
+    - Icons for special fields (Hash for IDs, Calendar for dates, Tag for status)
+    - Gradient background header with Layers icon
+    - Empty values shown with reduced opacity
+    - Main sections highlighted with bordered containers
+  - **Interactive Features**:
+    - Click to expand/collapse any nested object or array
+    - "Expand All" and "Collapse All" buttons for quick navigation
+    - Default expansion of important sections (data, resolved_context, task_data, progress)
+    - Array items numbered with index display
+    - Object properties counted in collapse state
+  - **Data Type Handling**:
+    - Dates formatted with locale string and calendar icon
+    - UUIDs displayed in monospace font with hash icon
+    - Booleans color-coded (green for true, red for false)
+    - Empty objects/arrays shown as grayed italic text
+    - Numbers in blue for easy identification
+  - **Files Modified**:
+    - `dhafnck-frontend/src/components/TaskDetailsDialog.tsx` - Added renderNestedJson function
+  - **Also Removed**: "Missing Task Context" warning from Details tab (context now in separate tab)
+
+- **Tabbed Interface for Task Details Dialog** - Added context tab alongside details in task view (2025-08-17)
+  - **Feature**: Task Details dialog now has tabbed interface with Details and Context tabs
+  - **Implementation**:
+    - Added tab navigation with Details and Context buttons
+    - Details tab shows all existing task information
+    - Context tab displays task context data from backend
+    - Separate loading states for task details and context
+    - Visual indicator when context is available
+  - **Context Tab Features**:
+    - Task information from context
+    - Branch ID reference
+    - Insights with timestamps
+    - Progress updates with timestamps
+    - Raw JSON view of complete context data
+    - Empty state when no context exists
+  - **Visual Design**:
+    - Blue theme for active tab with border indicator
+    - Color-coded sections for different context types
+    - Loading spinner while fetching data
+    - Badge showing context availability
+  - **Files Modified**:
+    - `dhafnck-frontend/src/components/TaskDetailsDialog.tsx` - Complete refactor with tabs
+  - **User Experience**: Users can now easily switch between task details and context information
+
+- **Fixed Subtask Action Buttons** - Corrected functionality for View Details, Edit, and Complete buttons (2025-08-17)
+  - **Problem**: Subtask action buttons were not properly connected to their handlers
+  - **Implementation**:
+    - Added `handleSubtaskAction` function to manage all subtask button clicks
+    - Implemented expandable details view showing description, assignees, and progress notes
+    - Connected Complete button to SubtaskCompleteDialog for proper completion flow
+    - Added temporary Edit dialog placeholder (full implementation pending)
+    - Fixed button state management and loading indicators
+  - **Features Added**:
+    - View Details: Toggles expandable row showing subtask information
+    - Edit: Opens edit dialog (disabled for completed subtasks)
+    - Complete: Opens completion dialog with summary fields
+    - All buttons properly load full subtask data on demand
+  - **Files Modified**:
+    - `dhafnck-frontend/src/components/LazySubtaskList.tsx` - Added action handlers and dialog integration
+  - **Testing**: Successfully builds with TypeScript compilation
+
+- **Visual Differentiation for Subtasks** - Enhanced UI to clearly distinguish subtasks from main tasks (2025-08-17)
+  - **Design Changes**: Applied distinct visual styling to subtask sections for better hierarchy
+  - **Implementation**:
+    - Added blue-themed gradient background for subtask sections
+    - Applied left border indicator (4px blue border) to subtask container
+    - Added "SUBTASKS" header with decorative lines for clear section identification
+    - Implemented blue dot indicators for each subtask row
+    - Enhanced progress bar with gradient blue colors
+    - Applied hover effects with blue tints for better interactivity
+    - Used rounded corners and subtle shadows for modern appearance
+  - **Color Scheme**:
+    - Light mode: Blue-50 to Blue-400 gradients with white/blue backgrounds
+    - Dark mode: Blue-950 to Blue-600 gradients with appropriate contrast
+  - **Files Modified**:
+    - `dhafnck-frontend/src/components/LazyTaskList.tsx` - Added container styling for subtask section
+    - `dhafnck-frontend/src/components/LazySubtaskList.tsx` - Complete visual overhaul with blue theme
+  - **User Experience**: Clear visual hierarchy makes it immediately obvious when viewing subtasks vs main tasks
+  - **Accessibility**: Maintained proper color contrast ratios for both light and dark modes
+
 - **Branch Task Count Performance Optimization** - Implemented single-query optimization for sidebar branch loading (2025-08-17)
   - **Problem**: Loading branches with task counts in sidebar triggered N+1 query problem causing slow performance
   - **Root Cause**: Each branch required separate queries to count tasks by status

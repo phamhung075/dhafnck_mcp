@@ -3,9 +3,10 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Separator } from "./ui/separator";
-import { Task, Subtask, getTask } from "../api";
+import { Task, Subtask, getTask, getTaskContext } from "../api";
 import ClickableAssignees from "./ClickableAssignees";
 import { formatContextDisplay } from "../utils/contextHelpers";
+import { FileText, Info, ChevronDown, ChevronRight, Hash, Calendar, Tag, Layers, Copy, Check as CheckIcon } from "lucide-react";
 
 interface TaskDetailsDialogProps {
   open: boolean;
@@ -23,12 +24,20 @@ export const TaskDetailsDialog: React.FC<TaskDetailsDialogProps> = ({
   onAgentClick
 }) => {
   const [fullTask, setFullTask] = useState<Task | null>(null);
+  const [taskContext, setTaskContext] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [contextLoading, setContextLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'details' | 'context'>('details');
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['data', 'resolved_context', 'task_data', 'progress']));
+  const [jsonCopied, setJsonCopied] = useState(false);
 
   // Fetch full task with context when dialog opens
   useEffect(() => {
     if (open && task?.id) {
       setLoading(true);
+      setContextLoading(true);
+      
+      // Fetch task details
       getTask(task.id, true) // Include context
         .then(fetchedTask => {
           if (fetchedTask) {
@@ -46,9 +55,48 @@ export const TaskDetailsDialog: React.FC<TaskDetailsDialogProps> = ({
         .finally(() => {
           setLoading(false);
         });
+      
+      // Fetch task context separately
+      getTaskContext(task.id)
+        .then(context => {
+          console.log('Raw context response:', context);
+          
+          // Extract the actual context data from the response
+          if (context) {
+            if (context.data && context.data.resolved_context) {
+              // New format: data.resolved_context contains the actual context
+              console.log('Using resolved_context from data:', context.data.resolved_context);
+              setTaskContext(context.data.resolved_context);
+            } else if (context.resolved_context) {
+              // Alternative format: resolved_context at root level
+              console.log('Using resolved_context from root:', context.resolved_context);
+              setTaskContext(context.resolved_context);
+            } else if (context.data) {
+              // Fallback: use data object if it exists
+              console.log('Using data object:', context.data);
+              setTaskContext(context.data);
+            } else {
+              // Last resort: use the whole response
+              console.log('Using full response:', context);
+              setTaskContext(context);
+            }
+          } else {
+            console.log('No context data received');
+            setTaskContext(null);
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching task context:', error);
+          setTaskContext(null);
+        })
+        .finally(() => {
+          setContextLoading(false);
+        });
     } else if (!open) {
-      // Clear full task when dialog closes
+      // Clear data when dialog closes
       setFullTask(null);
+      setTaskContext(null);
+      setActiveTab('details');
     }
   }, [open, task?.id, task]);
 
@@ -57,6 +105,181 @@ export const TaskDetailsDialog: React.FC<TaskDetailsDialogProps> = ({
   
   // Format context data using helper functions
   const contextDisplay = formatContextDisplay(displayTask?.context_data);
+  
+  // Toggle section expansion
+  const toggleSection = (path: string) => {
+    setExpandedSections(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(path)) {
+        newSet.delete(path);
+      } else {
+        newSet.add(path);
+      }
+      return newSet;
+    });
+  };
+
+  // Copy JSON to clipboard
+  const copyJsonToClipboard = () => {
+    if (taskContext) {
+      const jsonString = JSON.stringify(taskContext, null, 2);
+      navigator.clipboard.writeText(jsonString).then(() => {
+        setJsonCopied(true);
+        setTimeout(() => setJsonCopied(false), 2000);
+      }).catch(err => {
+        console.error('Failed to copy JSON:', err);
+      });
+    }
+  };
+
+  // Render nested JSON beautifully
+  const renderNestedJson = (data: any, path: string = '', depth: number = 0): React.ReactElement => {
+    if (data === null || data === undefined) {
+      return <span className="text-gray-400 italic">null</span>;
+    }
+
+    if (typeof data === 'boolean') {
+      return <span className={`font-medium ${data ? 'text-green-600' : 'text-red-600'}`}>{String(data)}</span>;
+    }
+
+    if (typeof data === 'string') {
+      // Check if it's a date string
+      if (data.match(/^\d{4}-\d{2}-\d{2}/) || data.includes('T')) {
+        try {
+          const date = new Date(data);
+          if (!isNaN(date.getTime())) {
+            return (
+              <span className="text-blue-600">
+                <Calendar className="inline w-3 h-3 mr-1" />
+                {date.toLocaleString()}
+              </span>
+            );
+          }
+        } catch {}
+      }
+      // Check if it's a UUID
+      if (data.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+        return (
+          <span className="font-mono text-xs text-purple-600">
+            <Hash className="inline w-3 h-3 mr-1" />
+            {data}
+          </span>
+        );
+      }
+      return <span className="text-gray-700 dark:text-gray-300">"{data}"</span>;
+    }
+
+    if (typeof data === 'number') {
+      return <span className="text-blue-600 font-medium">{data}</span>;
+    }
+
+    if (Array.isArray(data)) {
+      if (data.length === 0) {
+        return <span className="text-gray-400 italic">[]</span>;
+      }
+      
+      const isExpanded = expandedSections.has(path);
+      
+      return (
+        <div className="inline-block">
+          <button
+            onClick={() => toggleSection(path)}
+            className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1"
+          >
+            {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+            <span className="font-medium">[{data.length} items]</span>
+          </button>
+          {isExpanded && (
+            <div className="ml-4 mt-1 space-y-1">
+              {data.map((item, index) => (
+                <div key={index} className="flex items-start">
+                  <span className="text-gray-400 text-xs mr-2">{index}:</span>
+                  {renderNestedJson(item, `${path}[${index}]`, depth + 1)}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (typeof data === 'object') {
+      const keys = Object.keys(data);
+      if (keys.length === 0) {
+        return <span className="text-gray-400 italic">{'{}'}</span>;
+      }
+
+      const isExpanded = expandedSections.has(path);
+      const isMainSection = depth === 0 || depth === 1;
+      
+      return (
+        <div className={depth === 0 ? '' : 'inline-block'}>
+          {path && (
+            <button
+              onClick={() => toggleSection(path)}
+              className={`text-xs hover:text-gray-700 flex items-center gap-1 mb-1 ${
+                isMainSection ? 'text-gray-700 font-semibold' : 'text-gray-500'
+              }`}
+            >
+              {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+              <Layers className="w-3 h-3" />
+              <span>{keys.length} properties</span>
+            </button>
+          )}
+          {(!path || isExpanded) && (
+            <div className={`${path ? 'ml-4 mt-1' : ''} space-y-1`}>
+              {keys.map(key => {
+                const value = data[key];
+                const currentPath = path ? `${path}.${key}` : key;
+                const isEmpty = value === null || value === undefined || 
+                               (typeof value === 'object' && Object.keys(value).length === 0) ||
+                               (Array.isArray(value) && value.length === 0);
+                
+                // Get appropriate icon and color for known keys
+                let keyIcon = null;
+                let keyColor = 'text-gray-600';
+                
+                if (key.includes('id') || key.includes('uuid')) {
+                  keyIcon = <Hash className="inline w-3 h-3 mr-1" />;
+                  keyColor = 'text-purple-600';
+                } else if (key.includes('date') || key.includes('time') || key.includes('_at')) {
+                  keyIcon = <Calendar className="inline w-3 h-3 mr-1" />;
+                  keyColor = 'text-blue-600';
+                } else if (key.includes('status') || key.includes('state')) {
+                  keyIcon = <Tag className="inline w-3 h-3 mr-1" />;
+                  keyColor = 'text-green-600';
+                }
+                
+                return (
+                  <div 
+                    key={key} 
+                    className={`flex items-start ${
+                      isEmpty ? 'opacity-50' : ''
+                    } ${
+                      isMainSection && typeof value === 'object' && !Array.isArray(value) 
+                        ? 'p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700' 
+                        : ''
+                    }`}
+                  >
+                    <span className={`${keyColor} text-sm font-medium mr-2 min-w-[120px]`}>
+                      {keyIcon}
+                      {key}:
+                    </span>
+                    <div className="flex-1">
+                      {renderNestedJson(value, currentPath, depth + 1)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return <span className="text-gray-500">{String(data)}</span>;
+  };
+  
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'urgent': return 'destructive';
@@ -86,35 +309,69 @@ export const TaskDetailsDialog: React.FC<TaskDetailsDialogProps> = ({
       <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl text-left">
-            Task Details - Complete Information
-            {loading && <span className="text-sm font-normal text-muted-foreground ml-2">(Loading context...)</span>}
+            {displayTask?.title || 'Task Details'}
           </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          {/* Task Information Header */}
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="text-lg font-semibold">{displayTask?.title}</h3>
-            {displayTask?.description && (
-              <p className="text-sm text-muted-foreground mt-2">{displayTask.description}</p>
-            )}
-            <div className="flex gap-2 mt-3 flex-wrap">
-              <Badge variant={getStatusColor(displayTask?.status || 'pending')} className="px-3 py-1">
-                Status: {displayTask?.status?.replace('_', ' ') || 'pending'}
-              </Badge>
-              <Badge variant={getPriorityColor(displayTask?.priority || 'medium')} className="px-3 py-1">
-                Priority: {displayTask?.priority || 'medium'}
-              </Badge>
-            </div>
-            {displayTask?.assignees && displayTask.assignees.length > 0 && (
-              <div className="mt-3">
-                <span className="text-sm text-muted-foreground">Assigned to: </span>
-                <span className="text-sm font-medium">{displayTask.assignees.join(', ')}</span>
-              </div>
-            )}
+          
+          {/* Tab Navigation */}
+          <div className="flex gap-1 mt-4 border-b">
+            <button
+              onClick={() => setActiveTab('details')}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+                activeTab === 'details' 
+                  ? 'text-blue-600 border-blue-600' 
+                  : 'text-gray-500 border-transparent hover:text-gray-700'
+              }`}
+            >
+              <Info className="w-4 h-4" />
+              Details
+              {loading && <span className="text-xs">(Loading...)</span>}
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('context')}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+                activeTab === 'context' 
+                  ? 'text-blue-600 border-blue-600' 
+                  : 'text-gray-500 border-transparent hover:text-gray-700'
+              }`}
+            >
+              <FileText className="w-4 h-4" />
+              Context
+              {contextLoading && <span className="text-xs">(Loading...)</span>}
+              {!contextLoading && taskContext && Object.keys(taskContext).length > 0 && (
+                <Badge variant="secondary" className="text-xs">Available</Badge>
+              )}
+            </button>
           </div>
+        </DialogHeader>
+        
+        <div className="mt-4">
+          {/* Details Tab Content */}
+          {activeTab === 'details' && (
+            <div className="space-y-4">
+              {/* Task Information Header */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="flex gap-2 mt-3 flex-wrap">
+                  <Badge variant={getStatusColor(displayTask?.status || 'pending')} className="px-3 py-1">
+                    Status: {displayTask?.status?.replace('_', ' ') || 'pending'}
+                  </Badge>
+                  <Badge variant={getPriorityColor(displayTask?.priority || 'medium')} className="px-3 py-1">
+                    Priority: {displayTask?.priority || 'medium'}
+                  </Badge>
+                </div>
+                {displayTask?.description && (
+                  <p className="text-sm text-muted-foreground mt-2">{displayTask.description}</p>
+                )}
+                {displayTask?.assignees && displayTask.assignees.length > 0 && (
+                  <div className="mt-3">
+                    <span className="text-sm text-muted-foreground">Assigned to: </span>
+                    <span className="text-sm font-medium">{displayTask.assignees.join(', ')}</span>
+                  </div>
+                )}
+              </div>
 
-          {/* All Task Details */}
-          {displayTask && (
+              {/* All Task Details */}
+              {displayTask && (
             <div className="space-y-4">
               {/* IDs and References */}
               <div>
@@ -276,25 +533,7 @@ export const TaskDetailsDialog: React.FC<TaskDetailsDialogProps> = ({
                 </>
               )}
 
-              {/* Context Data */}
-              {displayTask.status === 'done' && !displayTask.context_data && (
-                <>
-                  <Separator />
-                  <div>
-                    <h4 className="font-semibold text-sm mb-3 text-amber-700">⚠️ Missing Task Context</h4>
-                    <div className="bg-amber-50 border border-amber-200 p-3 rounded">
-                      <p className="text-sm text-amber-900">
-                        This task was completed but no context or completion summary was stored.
-                      </p>
-                      <p className="text-xs text-amber-700 mt-2">
-                        This is a known issue where the backend doesn't automatically create context when tasks are completed.
-                        Future tasks should be completed with proper context storage.
-                      </p>
-                    </div>
-                  </div>
-                </>
-              )}
-              
+              {/* Context Data - Moved to Context Tab */}
               {displayTask.context_data && (
                 <>
                   <Separator />
@@ -378,6 +617,99 @@ export const TaskDetailsDialog: React.FC<TaskDetailsDialogProps> = ({
                   </pre>
                 </div>
               </details>
+            </div>
+              )}
+            </div>
+          )}
+          
+          {/* Context Tab Content */}
+          {activeTab === 'context' && (
+            <div className="space-y-4">
+              {contextLoading ? (
+                <div className="text-center py-8">
+                  <div className="inline-block w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  <p className="mt-2 text-sm text-gray-500">Loading context...</p>
+                </div>
+              ) : taskContext ? (
+                <>
+                  {/* Context Header */}
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <h3 className="text-lg font-semibold text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                      <Layers className="w-5 h-5" />
+                      Task Context - Hierarchical View
+                    </h3>
+                    <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+                      Interactive nested view of context data - click to expand/collapse sections
+                    </p>
+                  </div>
+                  
+                  {/* Beautiful Nested JSON Display */}
+                  <div className="bg-white dark:bg-gray-900 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                    {renderNestedJson(taskContext)}
+                  </div>
+                  
+                  {/* Expand/Collapse All Controls */}
+                  <div className="flex gap-2 justify-end mt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={copyJsonToClipboard}
+                      className="flex items-center gap-2"
+                    >
+                      {jsonCopied ? (
+                        <>
+                          <CheckIcon className="w-4 h-4" />
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4" />
+                          Copy JSON
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        // Expand all sections
+                        const allPaths = new Set<string>();
+                        const traverse = (obj: any, path: string = '') => {
+                          if (obj && typeof obj === 'object') {
+                            allPaths.add(path);
+                            Object.keys(obj).forEach(key => {
+                              const newPath = path ? `${path}.${key}` : key;
+                              traverse(obj[key], newPath);
+                            });
+                          }
+                        };
+                        traverse(taskContext);
+                        setExpandedSections(allPaths);
+                      }}
+                    >
+                      Expand All
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setExpandedSections(new Set(['data', 'resolved_context', 'task_data', 'progress']))}
+                    >
+                      Collapse All
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8 bg-gray-50 rounded-lg">
+                  <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <h3 className="text-lg font-medium text-gray-900">No Context Available</h3>
+                  <p className="text-sm text-gray-500 mt-2">
+                    This task doesn't have any context data yet.
+                  </p>
+                  <p className="text-xs text-gray-400 mt-4">
+                    Context is created when tasks are updated or completed with additional information.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>

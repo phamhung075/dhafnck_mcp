@@ -277,6 +277,32 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
     setActiveDialog({ type: null });
   }, []);
 
+  // Delete task handler
+  const handleDeleteTask = useCallback(async (taskId: string) => {
+    try {
+      const success = await deleteTask(taskId);
+      if (success) {
+        // Remove from summaries
+        setTaskSummaries(prev => prev.filter(t => t.id !== taskId));
+        // Remove from full tasks
+        setFullTasks(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(taskId);
+          return newMap;
+        });
+        // Update total count
+        setTotalTasks(prev => Math.max(0, prev - 1));
+        // Notify parent
+        if (onTasksChanged) {
+          onTasksChanged();
+        }
+      }
+    } catch (error) {
+      console.error('Failed to delete task:', error);
+    }
+    closeDialog();
+  }, [onTasksChanged]);
+
   // Load more tasks (pagination)
   const loadMoreTasks = useCallback(async () => {
     if (!hasMore || loading) return;
@@ -394,20 +420,31 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
               >
                 <Pencil className="w-4 h-4" />
               </Button>
+              
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => openDialog('delete', summary.id)}
+                title="Delete task"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
             </div>
           </TableCell>
         </TableRow>
         
         {isExpanded && fullTask && (
-          <TableRow>
-            <TableCell colSpan={7}>
-              <Suspense fallback={<div className="p-4 text-center">Loading subtasks...</div>}>
-                <LazySubtaskList 
-                  projectId={projectId} 
-                  taskTreeId={taskTreeId} 
-                  parentTaskId={summary.id}
-                />
-              </Suspense>
+          <TableRow className="bg-gray-50/50 dark:bg-gray-900/50">
+            <TableCell colSpan={7} className="p-0">
+              <div className="border-l-4 border-blue-400 dark:border-blue-600 ml-8">
+                <Suspense fallback={<div className="p-4 text-center text-sm text-muted-foreground">Loading subtasks...</div>}>
+                  <LazySubtaskList 
+                    projectId={projectId} 
+                    taskTreeId={taskTreeId} 
+                    parentTaskId={summary.id}
+                  />
+                </Suspense>
+              </div>
             </TableCell>
           </TableRow>
         )}
@@ -539,6 +576,17 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
             context={taskContexts.get(activeDialog.taskId) || null}
             onClose={closeDialog}
             loading={loadedContexts.has(activeDialog.taskId) && !taskContexts.has(activeDialog.taskId)}
+          />
+        )}
+        
+        {activeDialog.type === 'delete' && activeDialog.taskId && (
+          <DeleteConfirmDialog
+            open={true}
+            onOpenChange={closeDialog}
+            onConfirm={() => handleDeleteTask(activeDialog.taskId!)}
+            title="Delete Task"
+            description="Are you sure you want to delete this task? This action cannot be undone."
+            itemName={fullTasks.get(activeDialog.taskId)?.title || taskSummaries.find(t => t.id === activeDialog.taskId)?.title}
           />
         )}
       </Suspense>
