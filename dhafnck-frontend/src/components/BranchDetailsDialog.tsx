@@ -37,25 +37,29 @@ export const BranchDetailsDialog: React.FC<BranchDetailsDialogProps> = ({
         .then(context => {
           console.log('Raw branch context response:', context);
           
-          // Extract the actual context data from the response
+          // Store the full response to ensure we capture ALL data including custom fields
           if (context) {
-            if (context.data && context.data.resolved_context) {
-              // New format: data.resolved_context contains the actual context
-              console.log('Using resolved_context from data:', context.data.resolved_context);
-              setBranchContext(context.data.resolved_context);
-            } else if (context.resolved_context) {
-              // Alternative format: resolved_context at root level
-              console.log('Using resolved_context from root:', context.resolved_context);
-              setBranchContext(context.resolved_context);
-            } else if (context.data) {
-              // Fallback: use data object if it exists
-              console.log('Using data object:', context.data);
-              setBranchContext(context.data);
-            } else {
-              // Last resort: use the whole response
-              console.log('Using full response:', context);
-              setBranchContext(context);
-            }
+            // Keep the entire response structure to preserve all nested data
+            // This ensures custom fields like dependencies_to_install, risk_mitigation, etc. are preserved
+            const fullContext = {
+              // First priority: resolved_context which contains the actual merged data
+              ...(context.data?.resolved_context || context.resolved_context || {}),
+              
+              // Add any additional fields from the response that might not be in resolved_context
+              // This ensures we don't lose any custom data sent by the backend
+              ...Object.keys(context).reduce((acc: any, key) => {
+                if (key !== 'data' && key !== 'resolved_context' && key !== 'status' && key !== 'success') {
+                  acc[key] = context[key];
+                }
+                return acc;
+              }, {} as any),
+              
+              // Also preserve the original response structure for debugging
+              _originalResponse: context
+            };
+            
+            console.log('Processed full context with all nested data:', fullContext);
+            setBranchContext(fullContext);
           } else {
             console.log('No context data received');
             setBranchContext(null);
@@ -458,17 +462,180 @@ export const BranchDetailsDialog: React.FC<BranchDetailsDialogProps> = ({
                   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                     <h3 className="text-lg font-semibold text-blue-700 dark:text-blue-300 flex items-center gap-2">
                       <Layers className="w-5 h-5" />
-                      Branch Context - Hierarchical View
+                      Branch Context - Complete Hierarchical View
                     </h3>
                     <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
-                      Interactive nested view of context data - click to expand/collapse sections
+                      Interactive nested view showing ALL context data including custom fields - click to expand/collapse sections
                     </p>
                   </div>
                   
-                  {/* Beautiful Nested JSON Display */}
-                  <div className="bg-white dark:bg-gray-900 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                    {renderNestedJson(branchContext)}
-                  </div>
+                  {/* Key Implementation Details - Organized View */}
+                  {branchContext.branch_settings?.branch_workflow?.authentication_implementation && (
+                    <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+                      <h4 className="text-md font-semibold text-green-700 dark:text-green-300 mb-3">
+                        🎯 Authentication Implementation Overview
+                      </h4>
+                      
+                      {/* Timeline and Progress */}
+                      <div className="grid grid-cols-2 gap-4 mb-3">
+                        <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                          <span className="text-xs text-gray-500">Timeline</span>
+                          <p className="font-medium">{branchContext.branch_settings.branch_workflow.authentication_implementation.timeline || 'TBD'}</p>
+                        </div>
+                        <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                          <span className="text-xs text-gray-500">Current Phase</span>
+                          <p className="font-medium">{branchContext.branch_settings.branch_workflow.authentication_implementation.current_phase || 'Planning'}</p>
+                        </div>
+                      </div>
+                      
+                      {/* Dependencies Summary */}
+                      {branchContext.branch_settings.branch_workflow.authentication_implementation.dependencies_to_install && (
+                        <details className="mb-3">
+                          <summary className="cursor-pointer text-sm font-medium text-green-600 hover:text-green-700">
+                            📦 Dependencies ({Object.keys(branchContext.branch_settings.branch_workflow.authentication_implementation.dependencies_to_install).length} categories)
+                          </summary>
+                          <div className="mt-2 ml-4 text-sm">
+                            {renderNestedJson(branchContext.branch_settings.branch_workflow.authentication_implementation.dependencies_to_install)}
+                          </div>
+                        </details>
+                      )}
+                      
+                      {/* Implementation Phases Summary */}
+                      {branchContext.branch_settings.branch_workflow.authentication_implementation.implementation_plan && (
+                        <details className="mb-3">
+                          <summary className="cursor-pointer text-sm font-medium text-green-600 hover:text-green-700">
+                            📋 Implementation Phases ({branchContext.branch_settings.branch_workflow.authentication_implementation.phases} phases)
+                          </summary>
+                          <div className="mt-2 ml-4 text-sm max-h-60 overflow-y-auto">
+                            {renderNestedJson(branchContext.branch_settings.branch_workflow.authentication_implementation.implementation_plan)}
+                          </div>
+                        </details>
+                      )}
+                      
+                      {/* Risk Mitigation Summary */}
+                      {branchContext.branch_settings.branch_workflow.authentication_implementation.risk_mitigation && (
+                        <details className="mb-3">
+                          <summary className="cursor-pointer text-sm font-medium text-green-600 hover:text-green-700">
+                            ⚠️ Risk Mitigation Strategies
+                          </summary>
+                          <div className="mt-2 ml-4 text-sm">
+                            {renderNestedJson(branchContext.branch_settings.branch_workflow.authentication_implementation.risk_mitigation)}
+                          </div>
+                        </details>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Branch Settings Section */}
+                  {branchContext.branch_settings && (
+                    <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <h4 className="text-md font-semibold text-blue-700 dark:text-blue-300 mb-3">
+                        ⚙️ Branch Settings & Standards
+                      </h4>
+                      
+                      {/* Security Standards */}
+                      {branchContext.branch_settings.branch_standards?.security && (
+                        <details className="mb-3">
+                          <summary className="cursor-pointer text-sm font-medium text-blue-600 hover:text-blue-700">
+                            🔒 Security Standards
+                          </summary>
+                          <div className="mt-2 ml-4 text-sm bg-white dark:bg-gray-800 p-2 rounded">
+                            {renderNestedJson(branchContext.branch_settings.branch_standards.security)}
+                          </div>
+                        </details>
+                      )}
+                      
+                      {/* API Design Standards */}
+                      {branchContext.branch_settings.branch_standards?.api_design && (
+                        <details className="mb-3">
+                          <summary className="cursor-pointer text-sm font-medium text-blue-600 hover:text-blue-700">
+                            🔌 API Design Standards
+                          </summary>
+                          <div className="mt-2 ml-4 text-sm bg-white dark:bg-gray-800 p-2 rounded">
+                            {renderNestedJson(branchContext.branch_settings.branch_standards.api_design)}
+                          </div>
+                        </details>
+                      )}
+                      
+                      {/* Agent Assignments */}
+                      {branchContext.branch_settings.agent_assignments && (
+                        <details className="mb-3">
+                          <summary className="cursor-pointer text-sm font-medium text-blue-600 hover:text-blue-700">
+                            🤖 Agent Assignments ({Object.keys(branchContext.branch_settings.agent_assignments).length} agents)
+                          </summary>
+                          <div className="mt-2 ml-4 text-sm bg-white dark:bg-gray-800 p-2 rounded">
+                            {renderNestedJson(branchContext.branch_settings.agent_assignments)}
+                          </div>
+                        </details>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Metadata Section */}
+                  {branchContext.metadata && (
+                    <div className="bg-purple-50 dark:bg-purple-950/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+                      <h4 className="text-md font-semibold text-purple-700 dark:text-purple-300 mb-3">
+                        📊 Metadata & System Information
+                      </h4>
+                      
+                      <div className="grid grid-cols-2 gap-4 mb-3">
+                        {branchContext.metadata.created_at && (
+                          <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                            <span className="text-xs text-gray-500">Created</span>
+                            <p className="font-medium text-sm">{new Date(branchContext.metadata.created_at).toLocaleDateString()}</p>
+                          </div>
+                        )}
+                        {branchContext.metadata.updated_at && (
+                          <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                            <span className="text-xs text-gray-500">Last Updated</span>
+                            <p className="font-medium text-sm">{new Date(branchContext.metadata.updated_at).toLocaleDateString()}</p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Other Metadata */}
+                      <details>
+                        <summary className="cursor-pointer text-sm font-medium text-purple-600 hover:text-purple-700">
+                          View All Metadata
+                        </summary>
+                        <div className="mt-2 ml-4 text-sm bg-white dark:bg-gray-800 p-2 rounded max-h-40 overflow-y-auto">
+                          {renderNestedJson(branchContext.metadata)}
+                        </div>
+                      </details>
+                    </div>
+                  )}
+                  
+                  {/* Inheritance Information */}
+                  {branchContext._inheritance && (
+                    <div className="bg-orange-50 dark:bg-orange-950/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
+                      <h4 className="text-md font-semibold text-orange-700 dark:text-orange-300 mb-3">
+                        🔗 Context Inheritance
+                      </h4>
+                      <div className="text-sm">
+                        <p className="mb-2">
+                          <span className="font-medium">Inheritance Chain:</span> {branchContext._inheritance.chain?.join(' → ') || 'N/A'}
+                        </p>
+                        <p className="mb-2">
+                          <span className="font-medium">Inheritance Depth:</span> {branchContext._inheritance.inheritance_depth || 0}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Debug Information - Collapsed by Default */}
+                  <details className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <summary className="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-700">
+                      🐛 Debug: View Raw Context Data
+                    </summary>
+                    <div className="mt-3">
+                      <p className="text-xs text-gray-500 mb-2">Complete context structure for debugging purposes</p>
+                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto max-h-96 overflow-y-auto">
+                        <code className="text-xs font-mono">
+                          {JSON.stringify(branchContext, null, 2)}
+                        </code>
+                      </pre>
+                    </div>
+                  </details>
                   
                   {/* Expand/Collapse All Controls */}
                   <div className="flex gap-2 justify-end mt-2">
@@ -494,7 +661,7 @@ export const BranchDetailsDialog: React.FC<BranchDetailsDialogProps> = ({
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        // Expand all sections
+                        // Expand all sections including HTML details elements
                         const allPaths = new Set<string>();
                         const traverse = (obj: any, path: string = '') => {
                           if (obj && typeof obj === 'object') {
@@ -507,6 +674,12 @@ export const BranchDetailsDialog: React.FC<BranchDetailsDialogProps> = ({
                         };
                         traverse(branchContext);
                         setExpandedSections(allPaths);
+                        
+                        // Also expand all HTML details elements
+                        const detailsElements = document.querySelectorAll('details');
+                        detailsElements.forEach(details => {
+                          details.open = true;
+                        });
                       }}
                     >
                       Expand All
@@ -514,7 +687,16 @@ export const BranchDetailsDialog: React.FC<BranchDetailsDialogProps> = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setExpandedSections(new Set(['data', 'resolved_context', 'branch_data', 'metadata']))}
+                      onClick={() => {
+                        // Collapse all sections
+                        setExpandedSections(new Set(['data', 'resolved_context', 'branch_data', 'metadata']));
+                        
+                        // Also collapse all HTML details elements
+                        const detailsElements = document.querySelectorAll('details');
+                        detailsElements.forEach(details => {
+                          details.open = false;
+                        });
+                      }}
                     >
                       Collapse All
                     </Button>
