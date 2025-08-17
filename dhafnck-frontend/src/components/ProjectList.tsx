@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronRight, Eye, FileText, Folder, GitBranchPlus, Globe, Pencil, Plus, Trash2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { createBranch, createProject, deleteBranch, deleteProject, getGlobalContext, getProjectContext, getBranchContext, getTaskCount, listProjects, Project, updateProject } from "../api";
+import { getBranchSummaries, BranchSummary } from "../api-lazy";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
@@ -33,9 +34,32 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect, refreshKey }) => {
   const [saving, setSaving] = useState(false);
   const [openProjects, setOpenProjects] = useState<Record<string, boolean>>({});
   const [taskCounts, setTaskCounts] = useState<Record<string, number>>({});
+  const [branchSummaries, setBranchSummaries] = useState<Record<string, BranchSummary[]>>({});
+  const [loadingBranches, setLoadingBranches] = useState<Record<string, boolean>>({});
 
-  const toggleProject = (projectId: string) => {
-    setOpenProjects(prev => ({ ...prev, [projectId]: !prev[projectId] }));
+  const toggleProject = async (projectId: string) => {
+    const isOpening = !openProjects[projectId];
+    setOpenProjects(prev => ({ ...prev, [projectId]: isOpening }));
+    
+    // Load branch summaries with optimized endpoint when opening
+    if (isOpening && !branchSummaries[projectId]) {
+      setLoadingBranches(prev => ({ ...prev, [projectId]: true }));
+      try {
+        const summaries = await getBranchSummaries(projectId);
+        setBranchSummaries(prev => ({ ...prev, [projectId]: summaries.branches }));
+        
+        // Update task counts from the optimized response
+        const counts: Record<string, number> = {};
+        for (const branch of summaries.branches) {
+          counts[branch.id] = branch.task_counts.total;
+        }
+        setTaskCounts(prev => ({ ...prev, ...counts }));
+      } catch (error) {
+        console.error('Error loading branch summaries:', error);
+      } finally {
+        setLoadingBranches(prev => ({ ...prev, [projectId]: false }));
+      }
+    }
   };
 
   const refreshTaskCounts = async () => {
@@ -280,70 +304,147 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect, refreshKey }) => {
                   </Button>
                 </div>
               </div>
-              {openProjects[project.id] && project.git_branchs && (
+              {openProjects[project.id] && (
                 <ul className="flex flex-col gap-1 ml-8 mt-1">
-                  {Object.values(project.git_branchs).map((tree) => (
-                    <li key={tree.id}>
-                      <div className="group relative flex items-center gap-1">
-                        <span className="text-muted-foreground">—</span>
-                        <Button
-                          size="sm"
-                          variant={selected === `${project.id}:${tree.id}` ? "secondary" : "ghost"}
-                          className="flex-1 justify-start text-xs text-left"
-                          onClick={() => {
-                            setSelected(`${project.id}:${tree.id}`);
-                            onSelect && onSelect(project.id, tree.id);
-                          }}
-                        >
-                          <span className="truncate text-left flex-1">{tree.name}</span>
-                          <Badge variant="secondary" className="text-xs ml-2">
-                            {tree.task_count !== undefined ? tree.task_count : (taskCounts[tree.id] ?? 0)}
-                          </Badge>
-                        </Button>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">
-                          <Button 
-                            size="icon" 
-                            variant="ghost" 
-                            className="h-6 w-6"
-                            onClick={() => setShowBranchDetails({ project, branch: tree })}
-                            aria-label="View Branch Details"
-                          >
-                            <Eye className="w-3 h-3" />
-                          </Button>
-                          <Button 
-                            size="icon" 
-                            variant="ghost" 
-                            className="h-6 w-6"
-                            onClick={async () => {
-                              setLoadingContext(true);
-                              try {
-                                const context = await getBranchContext(tree.id);
-                                setShowBranchContext({ project, branch: tree, context });
-                              } catch (e) {
-                                console.error('Error fetching branch context:', e);
-                              } finally {
-                                setLoadingContext(false);
-                              }
+                  {loadingBranches[project.id] ? (
+                    <li className="text-xs text-muted-foreground pl-4">Loading branches...</li>
+                  ) : branchSummaries[project.id] ? (
+                    // Use optimized branch summaries if available
+                    branchSummaries[project.id].map((branch) => (
+                      <li key={branch.id}>
+                        <div className="group relative flex items-center gap-1">
+                          <span className="text-muted-foreground">—</span>
+                          <Button
+                            size="sm"
+                            variant={selected === `${project.id}:${branch.id}` ? "secondary" : "ghost"}
+                            className="flex-1 justify-start text-xs text-left"
+                            onClick={() => {
+                              setSelected(`${project.id}:${branch.id}`);
+                              onSelect && onSelect(project.id, branch.id);
                             }}
-                            aria-label="View Branch Context"
                           >
-                            <FileText className="w-3 h-3" />
+                            <span className="truncate text-left flex-1">{branch.name}</span>
+                            <div className="flex items-center gap-1">
+                              <Badge variant="secondary" className="text-xs">
+                                {branch.task_counts.total}
+                              </Badge>
+                              {branch.has_urgent_tasks && (
+                                <Badge variant="destructive" className="text-xs">!</Badge>
+                              )}
+                              {branch.is_completed && (
+                                <Badge variant="secondary" className="text-xs text-green-600">✓</Badge>
+                              )}
+                            </div>
                           </Button>
-                          {tree.name !== 'main' && (
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">
                             <Button 
                               size="icon" 
                               variant="ghost" 
                               className="h-6 w-6"
-                              onClick={() => setShowDeleteBranch({ project, branch: tree })}
-                              aria-label="Delete Branch"
+                              onClick={() => setShowBranchDetails({ project, branch })}
+                              aria-label="View Branch Details"
                             >
-                              <Trash2 className="w-3 h-3 text-destructive" />
+                              <Eye className="w-3 h-3" />
                             </Button>
-                          )}
+                            <Button 
+                              size="icon" 
+                              variant="ghost" 
+                              className="h-6 w-6"
+                              onClick={async () => {
+                                setLoadingContext(true);
+                                try {
+                                  const context = await getBranchContext(branch.id);
+                                  setShowBranchContext({ project, branch, context });
+                                } catch (e) {
+                                  console.error('Error fetching branch context:', e);
+                                } finally {
+                                  setLoadingContext(false);
+                                }
+                              }}
+                              aria-label="View Branch Context"
+                            >
+                              <FileText className="w-3 h-3" />
+                            </Button>
+                            {branch.name !== 'main' && (
+                              <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                className="h-6 w-6"
+                                onClick={() => setShowDeleteBranch({ project, branch })}
+                                aria-label="Delete Branch"
+                              >
+                                <Trash2 className="w-3 h-3 text-destructive" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </li>
-                  ))}
+                      </li>
+                    ))
+                  ) : project.git_branchs ? (
+                    // Fallback to original branch data if optimized not loaded
+                    Object.values(project.git_branchs).map((tree) => (
+                      <li key={tree.id}>
+                        <div className="group relative flex items-center gap-1">
+                          <span className="text-muted-foreground">—</span>
+                          <Button
+                            size="sm"
+                            variant={selected === `${project.id}:${tree.id}` ? "secondary" : "ghost"}
+                            className="flex-1 justify-start text-xs text-left"
+                            onClick={() => {
+                              setSelected(`${project.id}:${tree.id}`);
+                              onSelect && onSelect(project.id, tree.id);
+                            }}
+                          >
+                            <span className="truncate text-left flex-1">{tree.name}</span>
+                            <Badge variant="secondary" className="text-xs ml-2">
+                              {tree.task_count !== undefined ? tree.task_count : (taskCounts[tree.id] ?? 0)}
+                            </Badge>
+                          </Button>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">
+                            <Button 
+                              size="icon" 
+                              variant="ghost" 
+                              className="h-6 w-6"
+                              onClick={() => setShowBranchDetails({ project, branch: tree })}
+                              aria-label="View Branch Details"
+                            >
+                              <Eye className="w-3 h-3" />
+                            </Button>
+                            <Button 
+                              size="icon" 
+                              variant="ghost" 
+                              className="h-6 w-6"
+                              onClick={async () => {
+                                setLoadingContext(true);
+                                try {
+                                  const context = await getBranchContext(tree.id);
+                                  setShowBranchContext({ project, branch: tree, context });
+                                } catch (e) {
+                                  console.error('Error fetching branch context:', e);
+                                } finally {
+                                  setLoadingContext(false);
+                                }
+                              }}
+                              aria-label="View Branch Context"
+                            >
+                              <FileText className="w-3 h-3" />
+                            </Button>
+                            {tree.name !== 'main' && (
+                              <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                className="h-6 w-6"
+                                onClick={() => setShowDeleteBranch({ project, branch: tree })}
+                                aria-label="Delete Branch"
+                              >
+                                <Trash2 className="w-3 h-3 text-destructive" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </li>
+                    ))
+                  ) : null}
                 </ul>
               )}
             </li>

@@ -682,6 +682,14 @@ const TaskList: React.FC<TaskListProps> = ({ projectId, taskTreeId, onTasksChang
                   <Check className="h-4 w-4" />
                 </Button>
               )}
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => openDeleteDialog(task)}
+                title="Delete task"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
 
             {expandedTasks[task.id] && (

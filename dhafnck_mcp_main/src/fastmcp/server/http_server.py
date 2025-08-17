@@ -451,6 +451,14 @@ def create_streamable_http_app(
         logger.info("Task summary routes registered for streamable HTTP optimization")
     except ImportError as e:
         logger.warning(f"Could not import task summary routes: {e}")
+    
+    # Add branch summary routes for sidebar optimization
+    try:
+        from .routes.branch_summary_routes import branch_summary_routes
+        server_routes.extend(branch_summary_routes)
+        logger.info("Branch summary routes registered for sidebar performance optimization")
+    except ImportError as e:
+        logger.warning(f"Could not import branch summary routes: {e}")
 
     if middleware:
         server_middleware.extend(middleware)

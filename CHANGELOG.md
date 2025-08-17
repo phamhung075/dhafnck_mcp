@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Branch Task Count Performance Optimization** - Implemented single-query optimization for sidebar branch loading (2025-08-17)
+  - **Problem**: Loading branches with task counts in sidebar triggered N+1 query problem causing slow performance
+  - **Root Cause**: Each branch required separate queries to count tasks by status
+  - **Solution Strategy**: Applied same single-query optimization used for task listing
+  - **Implementation**:
+    - Created `OptimizedBranchRepository` with single SQL query using subqueries for counts
+    - Added `/api/branches/summaries` endpoint for optimized branch data retrieval
+    - Enhanced frontend `ProjectList` component to use optimized endpoint when expanding projects
+    - Added visual indicators for urgent tasks and completed branches
+  - **Issues Fixed During Implementation**:
+    - Fixed incorrect import path for `BaseRepository` (should inherit from `BaseORMRepository`)
+    - Fixed UUID serialization error in JSON responses (UUIDs must be converted to strings)
+    - Resolved module import errors preventing route registration in Docker container
+  - **Files Created/Modified**:
+    - Created `src/fastmcp/task_management/infrastructure/repositories/orm/optimized_branch_repository.py`
+    - Created `src/fastmcp/server/routes/branch_summary_routes.py`
+    - Modified `src/fastmcp/server/http_server.py` - Added branch summary route registration
+    - Modified `dhafnck-frontend/src/api-lazy.ts` - Added `getBranchSummaries` function
+    - Modified `dhafnck-frontend/src/components/ProjectList.tsx` - Integrated optimized loading
+  - **Performance Target**: 95% reduction in query time (100+ queries → 1 query)
+  - **Features Added**:
+    - Task counts by status (todo, in_progress, done, blocked)
+    - Task counts by priority (urgent, high)
+    - Completion percentage calculation
+    - Visual indicators for branch status
+    - Loading state while fetching branch data
+  - **Endpoint Response**: Successfully returns branches with comprehensive task statistics
+  - **Impact**: Dramatically improved sidebar responsiveness when clicking on projects
+
 ### Fixed
 - **NoneType Comparison Error in SupabaseOptimizedRepository** - Fixed critical error preventing task listing (2025-08-16)
   - **Error**: `"'<' not supported between instances of 'NoneType' and 'int'"`

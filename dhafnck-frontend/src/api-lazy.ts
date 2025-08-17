@@ -63,7 +63,99 @@ export interface AgentSummariesResponse {
   total_assigned: number;
 }
 
+export interface BranchSummary {
+  id: string;
+  name: string;
+  description?: string;
+  status?: string;
+  priority?: string;
+  created_at?: string;
+  updated_at?: string;
+  assigned_agent_id?: string;
+  task_counts: {
+    total: number;
+    by_status: {
+      todo: number;
+      in_progress: number;
+      done: number;
+      blocked: number;
+    };
+    by_priority: {
+      urgent: number;
+      high: number;
+    };
+    completion_percentage: number;
+  };
+  has_tasks: boolean;
+  has_urgent_tasks: boolean;
+  is_active: boolean;
+  is_completed: boolean;
+}
+
+export interface BranchSummariesResponse {
+  branches: BranchSummary[];
+  project_summary: {
+    branches: {
+      total: number;
+      active: number;
+      inactive: number;
+    };
+    tasks: {
+      total: number;
+      todo: number;
+      in_progress: number;
+      done: number;
+      urgent: number;
+    };
+    completion_percentage: number;
+  };
+  total_branches: number;
+  cache_status: string;
+}
+
 // --- Lazy Loading API Functions ---
+
+/**
+ * Get lightweight branch summaries with task counts for sidebar
+ * Uses single optimized query to avoid N+1 problem
+ */
+export async function getBranchSummaries(project_id: string): Promise<BranchSummariesResponse> {
+  try {
+    const response = await fetch(`${API_BASE}/branches/summaries`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ project_id })
+    });
+
+    if (response.ok) {
+      return await response.json();
+    }
+    
+    // Fallback to empty response if endpoint not available
+    return {
+      branches: [],
+      project_summary: {
+        branches: { total: 0, active: 0, inactive: 0 },
+        tasks: { total: 0, todo: 0, in_progress: 0, done: 0, urgent: 0 },
+        completion_percentage: 0
+      },
+      total_branches: 0,
+      cache_status: 'uncached'
+    };
+  } catch (error) {
+    console.warn('Branch summaries endpoint not available:', error);
+    return {
+      branches: [],
+      project_summary: {
+        branches: { total: 0, active: 0, inactive: 0 },
+        tasks: { total: 0, todo: 0, in_progress: 0, done: 0, urgent: 0 },
+        completion_percentage: 0
+      },
+      total_branches: 0,
+      cache_status: 'error'
+    };
+  }
+}
 
 /**
  * Get lightweight task summaries for list views
