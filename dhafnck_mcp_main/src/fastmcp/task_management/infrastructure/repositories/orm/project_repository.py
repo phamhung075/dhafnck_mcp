@@ -145,13 +145,33 @@ class ORMProjectRepository(BaseORMRepository[Project], ProjectRepository):
             return self._model_to_entity(project) if project else None
     
     async def find_all(self) -> List[ProjectEntity]:
-        """Find all projects"""
+        """Find all projects - optimized to avoid N+1 queries"""
         with self.get_db_session() as session:
-            # Just load branches with their task_count field
-            projects = session.query(Project).options(
-                joinedload(Project.git_branchs)
-            ).order_by(desc(Project.created_at)).all()
+            # Step 1: Get all projects in a single query without joins
+            projects = session.query(Project).order_by(desc(Project.created_at)).all()
             
+            if not projects:
+                return []
+            
+            # Step 2: Get all project IDs
+            project_ids = [p.id for p in projects]
+            
+            # Step 3: Get all branches for these projects in a single query
+            branches = session.query(ProjectGitBranch).filter(
+                ProjectGitBranch.project_id.in_(project_ids)
+            ).all()
+            
+            # Step 4: Group branches by project_id for efficient assignment
+            from collections import defaultdict
+            branches_by_project = defaultdict(list)
+            for branch in branches:
+                branches_by_project[branch.project_id].append(branch)
+            
+            # Step 5: Manually assign branches to projects
+            for project in projects:
+                project.git_branchs = branches_by_project.get(project.id, [])
+            
+            # Step 6: Convert to entities
             return [self._model_to_entity(project) for project in projects]
     
     async def delete(self, project_id: str) -> bool:

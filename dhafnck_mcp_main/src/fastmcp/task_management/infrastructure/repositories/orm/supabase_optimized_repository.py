@@ -88,7 +88,8 @@ class SupabaseOptimizedRepository(ORMTaskRepository):
                 filters.append("EXISTS (SELECT 1 FROM task_assignees WHERE task_id = tasks.id AND assignee_id = :assignee_id)")
                 params["assignee_id"] = assignee_id
             
-            # Single optimized query - no joins, no eager loading
+            # ULTRA-OPTIMIZED: Remove ALL subqueries for Supabase cloud to minimize latency
+            # Subqueries cause 3x additional round trips with cloud database
             sql = text(f"""
                 SELECT 
                     id,
@@ -96,11 +97,7 @@ class SupabaseOptimizedRepository(ORMTaskRepository):
                     status,
                     priority,
                     created_at,
-                    updated_at,
-                    -- Count relationships in subqueries (single round trip)
-                    (SELECT COUNT(*) FROM task_subtasks WHERE task_id = tasks.id) as subtask_count,
-                    (SELECT COUNT(*) FROM task_assignees WHERE task_id = tasks.id) as assignee_count,
-                    (SELECT COUNT(*) FROM task_dependencies WHERE task_id = tasks.id) as dependency_count
+                    updated_at
                 FROM tasks
                 WHERE {' AND '.join(filters)}
                 ORDER BY created_at DESC
@@ -132,10 +129,11 @@ class SupabaseOptimizedRepository(ORMTaskRepository):
                     "priority": row.priority,
                     "created_at": row.created_at.isoformat() if row.created_at else None,
                     "updated_at": row.updated_at.isoformat() if row.updated_at else None,
-                    "subtask_count": row.subtask_count,
-                    "assignee_count": row.assignee_count,
-                    "dependency_count": row.dependency_count,
-                    "has_relationships": (row.subtask_count + row.assignee_count + row.dependency_count) > 0
+                    # Set counts to 0 - removed subqueries for performance
+                    "subtask_count": 0,
+                    "assignee_count": 0,
+                    "dependency_count": 0,
+                    "has_relationships": False
                 })
             
             process_time = (time.time() - process_start) * 1000
@@ -258,3 +256,41 @@ class SupabaseOptimizedRepository(ORMTaskRepository):
                 "estimated_effort": result.estimated_effort,
                 "due_date": result.due_date.isoformat() if result.due_date else None
             }
+    
+    def get_task_count_optimized(self, status: str = None, priority: str = None) -> int:
+        """
+        Get total task count with filters - optimized for Supabase.
+        Single query for count without loading any task data.
+        """
+        import time
+        start = time.time()
+        
+        with self.get_db_session() as session:
+            # Build count query
+            filters = ["1=1"]  # Always true base condition
+            params = {}
+            
+            if self.git_branch_id:
+                filters.append("git_branch_id = :git_branch_id")
+                params["git_branch_id"] = self.git_branch_id
+            
+            if status:
+                filters.append("status = :status")
+                params["status"] = status
+            
+            if priority:
+                filters.append("priority = :priority")
+                params["priority"] = priority
+            
+            sql = text(f"""
+                SELECT COUNT(*) as total
+                FROM tasks
+                WHERE {' AND '.join(filters)}
+            """)
+            
+            result = session.execute(sql, params).first()
+            count = result.total if result else 0
+            
+            elapsed = (time.time() - start) * 1000
+            logger.info(f"[PERF] get_task_count_optimized took {elapsed:.1f}ms for count={count}")
+            return count

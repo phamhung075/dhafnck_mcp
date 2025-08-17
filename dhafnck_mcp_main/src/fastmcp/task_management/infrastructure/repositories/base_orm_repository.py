@@ -12,6 +12,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from contextlib import contextmanager
 
 from ..database.database_config import get_session
+from ..database.connection_manager import get_connection_manager
 from ...domain.exceptions.base_exceptions import (
     DatabaseException,
     ResourceNotFoundException,
@@ -48,27 +49,30 @@ class BaseORMRepository(Generic[ModelType]):
         Get a database session context manager.
         
         If a session is already active (from a transaction),
-        use it. Otherwise, create a new session.
+        use it. Otherwise, get a session from the connection pool.
+        
+        PRODUCTION OPTIMIZATION: Uses ConnectionManager to reuse connections
+        from the pool instead of creating new ones each time.
         """
         if self._session:
             # Use existing session from transaction
             yield self._session
         else:
-            # Create new session
-            session = get_session()
-            try:
-                yield session
-                session.commit()
-            except SQLAlchemyError as e:
-                session.rollback()
-                logger.error(f"Database error: {e}")
-                raise DatabaseException(
-                    message=f"Database operation failed: {str(e)}",
-                    operation=self.__class__.__name__,
-                    table=self.model_class.__tablename__
-                )
-            finally:
-                session.close()
+            # Get session from connection pool (reuses connections)
+            manager = get_connection_manager()
+            with manager.get_session() as session:
+                try:
+                    yield session
+                    # Commit is handled by connection manager
+                except SQLAlchemyError as e:
+                    # Rollback is handled by connection manager
+                    logger.error(f"Database error: {e}")
+                    raise DatabaseException(
+                        message=f"Database operation failed: {str(e)}",
+                        operation=self.__class__.__name__,
+                        table=self.model_class.__tablename__
+                    )
+                # Note: session.close() removed - connection manager handles cleanup
     
     @contextmanager
     def transaction(self):
@@ -77,23 +81,27 @@ class BaseORMRepository(Generic[ModelType]):
         
         All operations within this context will be part of
         the same transaction.
+        
+        PRODUCTION OPTIMIZATION: Uses ConnectionManager for proper
+        connection pooling with cloud databases.
         """
-        session = get_session()
-        self._session = session
-        try:
-            yield self
-            session.commit()
-        except SQLAlchemyError as e:
-            session.rollback()
-            logger.error(f"Transaction failed: {e}")
-            raise DatabaseException(
-                message=f"Transaction failed: {str(e)}",
-                operation="transaction",
-                table=self.model_class.__tablename__
-            )
-        finally:
-            self._session = None
-            session.close()
+        manager = get_connection_manager()
+        with manager.get_transactional_session() as session:
+            self._session = session
+            try:
+                yield self
+                session.commit()
+            except SQLAlchemyError as e:
+                session.rollback()
+                logger.error(f"Transaction failed: {e}")
+                raise DatabaseException(
+                    message=f"Transaction failed: {str(e)}",
+                    operation="transaction",
+                    table=self.model_class.__tablename__
+                )
+            finally:
+                self._session = None
+                # Note: session cleanup handled by connection manager
     
     def create(self, **kwargs) -> ModelType:
         """

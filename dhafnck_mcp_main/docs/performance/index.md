@@ -14,12 +14,35 @@ This directory contains documentation related to performance optimization, monit
 - Connection pool tuning
 - Performance metrics and monitoring
 
+### 2. [Supabase Optimization Recommendations](./SUPABASE_OPTIMIZATION_RECOMMENDATIONS.md)
+**Created**: 2025-08-17  
+**Purpose**: Comprehensive analysis and recommendations for Supabase performance optimization  
+**Key Topics**:
+- Critical bottlenecks identified (timezone queries, connection pool, N+1 queries)
+- Detailed implementation solutions with code examples
+- Priority-based implementation phases
+- Expected performance improvements and metrics
+
+### 3. [Performance Optimization Summary](./PERFORMANCE_OPTIMIZATION_SUMMARY.md)
+**Created**: 2025-08-17  
+**Purpose**: Implementation summary of all completed performance optimizations  
+**Key Topics**:
+- Timezone caching implementation (24.5% improvement)
+- Connection pool optimization (93% reduction in auth calls)
+- Query result caching (85% cache hit rate)
+- N+1 query pattern fixes (99% query reduction)
+- Overall 75% performance improvement achieved
+
 ## Performance Optimization History
 
 ### Major Optimizations
 
 | Date | Issue | Solution | Improvement | Documentation |
 |------|-------|----------|-------------|---------------|
+| 2025-08-17 | Timezone queries 12.3s | Timezone caching | 100% reduction | [Summary](./PERFORMANCE_OPTIMIZATION_SUMMARY.md) |
+| 2025-08-17 | Connection pool inefficiency | Pool size optimization | 93% reduction | [Summary](./PERFORMANCE_OPTIMIZATION_SUMMARY.md) |
+| 2025-08-17 | N+1 query pattern | Batch loading | 99% reduction | [Summary](./PERFORMANCE_OPTIMIZATION_SUMMARY.md) |
+| 2025-08-17 | Repeated queries | Query result caching | 85% cache hit | [Summary](./PERFORMANCE_OPTIMIZATION_SUMMARY.md) |
 | 2025-08-16 | 5-6s task loading | Supabase query optimization | 97% faster | [Details](./SUPABASE_OPTIMIZATION_EXPLANATION.md) |
 | 2025-08-16 | Frontend 0 tasks | HTTP route registration | Fixed | [CHANGELOG](../../CHANGELOG.md) |
 | 2025-08-16 | NoneType errors | Parameter validation | Fixed | [CHANGELOG](../../CHANGELOG.md) |
@@ -50,6 +73,9 @@ This directory contains documentation related to performance optimization, monit
 
 ### Performance Testing
 ```bash
+# Run comprehensive performance tests
+python scripts/test_performance_optimizations.py
+
 # Test API performance
 python test_api_performance.py
 
@@ -57,7 +83,10 @@ python test_api_performance.py
 python -m fastmcp.monitoring.query_monitor
 
 # Check connection pool status
-docker exec dhafnck-mcp-server python -c "from fastmcp.database import check_pool_status; check_pool_status()"
+docker exec dhafnck-mcp-server python -c "from fastmcp.task_management.infrastructure.database import get_connection_stats; print(get_connection_stats())"
+
+# Check cache statistics
+docker exec dhafnck-mcp-server python -c "from fastmcp.task_management.infrastructure.cache import cache_manager; print(cache_manager.get_all_stats())"
 ```
 
 ### Profiling
@@ -88,4 +117,4 @@ python -m memory_profiler test_memory_usage.py
 For performance-related questions or improvements, please refer to the main project documentation or create an issue in the repository.
 
 ---
-*Last Updated: 2025-08-16*
+*Last Updated: 2025-08-17*

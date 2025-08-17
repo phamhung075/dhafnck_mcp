@@ -66,46 +66,75 @@ async def get_task_summaries(request: Request) -> JSONResponse:
         
         logger.info(f"Loading task summaries for branch {git_branch_id}, page {page}")
         
-        # Initialize repository factories
-        task_repository_factory = TaskRepositoryFactory()
-        subtask_repository_factory = SubtaskRepositoryFactory()
-        
-        # Initialize facades using proper factory pattern
-        task_facade_factory = TaskFacadeFactory(task_repository_factory, subtask_repository_factory)
-        task_facade = task_facade_factory.create_task_facade("default_project", git_branch_id, "default_user")
-        
-        context_factory = UnifiedContextFacadeFactory()
-        context_facade = context_factory.create_facade()
+        # PERFORMANCE FIX: Use direct repository access like branch endpoint
+        # This avoids creating 5+ factories/facades on every request
+        # DATABASE TYPE DETECTION: Use appropriate repository based on DATABASE_TYPE
+        import os
+        database_type = os.getenv("DATABASE_TYPE", "supabase").lower()
         
         # Calculate offset for pagination
         offset = (page - 1) * limit
         
-        # Build filters
-        filters = {"git_branch_id": git_branch_id}
-        if status_filter:
-            filters["status"] = status_filter
-        if priority_filter:
-            filters["priority"] = priority_filter
+        # Select the appropriate optimized repository based on database type
+        if database_type == "supabase":
+            # Validate Supabase configuration before attempting to use it
+            from fastmcp.task_management.infrastructure.database.supabase_config import is_supabase_configured
+            
+            if not is_supabase_configured():
+                logger.warning("Supabase not configured, falling back to PostgreSQL repository")
+                # Fall back to standard repository if Supabase is not configured
+                from fastmcp.task_management.infrastructure.repositories.orm.optimized_task_repository import OptimizedTaskRepository
+                optimized_repo = OptimizedTaskRepository(git_branch_id)
+                database_type = "postgresql"  # Update type for response handling
+            else:
+                # Use SINGLE-QUERY optimized repository for Supabase cloud
+                from fastmcp.task_management.infrastructure.repositories.orm.supabase_single_query_repository import SupabaseSingleQueryRepository
+                optimized_repo = SupabaseSingleQueryRepository(git_branch_id)
+                logger.info("Using single-query Supabase repository for minimal latency")
+        else:
+            # Use standard optimized repository for PostgreSQL/SQLite
+            from fastmcp.task_management.infrastructure.repositories.orm.optimized_task_repository import OptimizedTaskRepository
+            optimized_repo = OptimizedTaskRepository(git_branch_id)
+            logger.info(f"Using standard optimized repository for {database_type} database")
         
-        # Get total count first (for pagination calculation)
-        total_result = task_facade.count_tasks(filters)
-        total_count = total_result.get("count", 0) if total_result.get("success") else 0
-        
-        # Get paginated task list with minimal data
-        task_result = task_facade.list_tasks_summary(
-            filters=filters,
-            offset=offset,
-            limit=limit,
-            include_counts=include_counts
-        )
-        
-        if not task_result.get("success"):
-            return JSONResponse(
-                {"error": task_result.get("error", "Failed to fetch tasks")},
-                status_code=500
+        # PERFORMANCE OPTIMIZATION: Use single-query method for Supabase
+        if database_type == "supabase" and hasattr(optimized_repo, 'get_tasks_with_total_single_query'):
+            # Use single-query method that gets both tasks and count in one round-trip
+            logger.info("[PERF] Using single-query optimization for Supabase")
+            result = optimized_repo.get_tasks_with_total_single_query(
+                status=status_filter,
+                priority=priority_filter,
+                assignee_id=None,
+                limit=limit,
+                offset=offset
             )
-        
-        tasks_data = task_result.get("tasks", [])
+            tasks_data = result["tasks"]
+            total_count = result["total"]
+        else:
+            # Fallback to traditional two-query approach
+            logger.info("[PERF] Using traditional two-query approach")
+            # Get paginated task list with minimal data
+            tasks_data = optimized_repo.list_tasks_minimal(
+                status=status_filter,
+                priority=priority_filter,
+                assignee_id=None,  # Not filtering by assignee for now
+                limit=limit,
+                offset=offset
+            )
+            
+            # Get total count for pagination
+            # Use appropriate count method based on repository type
+            if database_type == "supabase":
+                total_count = optimized_repo.get_task_count_optimized(
+                    status=status_filter,
+                    priority=priority_filter
+                )
+            else:
+                # OptimizedTaskRepository uses get_task_count
+                total_count = optimized_repo.get_task_count(
+                    status=status_filter,
+                    use_cache=True
+                )
         
         # Convert to task summaries
         task_summaries = []
@@ -117,6 +146,12 @@ async def get_task_summaries(request: Request) -> JSONResponse:
         import time
         
         for task_data in tasks_data:
+            # Check if data is already in the new format from single-query
+            if isinstance(task_data, dict) and "subtask_count" in task_data:
+                # Data is already formatted from single-query method
+                task_summaries.append(task_data)
+                continue
+                
             # Check if task has context - DISABLED FOR PERFORMANCE
             has_context = False
             # PERFORMANCE ISSUE: This was causing 5+ second delays
@@ -127,19 +162,37 @@ async def get_task_summaries(request: Request) -> JSONResponse:
             #     logger.warning(f"[PERF] Context lookup for task {task_data.get('id')} took {context_time:.1f}ms")
             #     has_context = context_result.get("success", False) and context_result.get("has_context", False)
             
-            summary = {
-                "id": task_data["id"],
-                "title": task_data["title"],
-                "status": task_data["status"],
-                "priority": task_data["priority"],
-                # Use the pre-calculated count if available, otherwise fallback to array length
-                "subtask_count": task_data.get("subtask_count", len(task_data.get("subtasks", []))),
-                "assignees_count": task_data.get("assignee_count", len(task_data.get("assignees", []))),
-                "has_dependencies": bool(task_data.get("dependencies")) or task_data.get("dependency_count", 0) > 0,
-                "has_context": has_context,  # Always False for now due to performance
-                "created_at": task_data.get("created_at"),
-                "updated_at": task_data.get("updated_at")
-            }
+            # Handle field name differences between repositories
+            if database_type == "supabase":
+                # Supabase repository returns different field names
+                summary = {
+                    "id": task_data["id"],
+                    "title": task_data["title"],
+                    "status": task_data["status"],
+                    "priority": task_data["priority"],
+                    # Use the pre-calculated count if available, otherwise fallback to array length
+                    "subtask_count": task_data.get("subtask_count", len(task_data.get("subtasks", []))),
+                    "assignees_count": task_data.get("assignee_count", len(task_data.get("assignees", []))),
+                    "has_dependencies": bool(task_data.get("dependencies")) or task_data.get("dependency_count", 0) > 0,
+                    "has_context": has_context,  # Always False for now due to performance
+                    "created_at": task_data.get("created_at"),
+                    "updated_at": task_data.get("updated_at")
+                }
+            else:
+                # Standard optimized repository returns different field names
+                summary = {
+                    "id": task_data["id"],
+                    "title": task_data["title"],
+                    "status": task_data["status"],
+                    "priority": task_data["priority"],
+                    # Standard repository doesn't provide subtask_count
+                    "subtask_count": 0,  # Would need separate query
+                    "assignees_count": task_data.get("assignees_count", 0),
+                    "has_dependencies": False,  # Would need separate query
+                    "has_context": has_context,  # Always False for now due to performance
+                    "created_at": task_data.get("created_at", task_data.get("updated_at")),
+                    "updated_at": task_data.get("updated_at")
+                }
             task_summaries.append(summary)
         
         # Calculate pagination info

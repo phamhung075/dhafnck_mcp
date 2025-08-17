@@ -160,18 +160,23 @@ class DatabaseConfig:
         logger.info("🔧 Creating PostgreSQL engine with cloud-optimized settings")
         engine = create_engine(
             database_url,
-            pool_size=15,  # Optimized for Supabase
-            max_overflow=25,
+            pool_size=20,  # Increased from 15 for better Supabase performance
+            max_overflow=30,  # Increased from 25 to reduce authentication overhead
             pool_pre_ping=True,  # Enable connection health checks
-            pool_recycle=1800,  # Recycle connections after 30 minutes (good for cloud)
+            pool_recycle=3600,  # Recycle connections after 60 minutes (increased from 30)
             pool_timeout=30,  # Connection timeout
             echo=os.getenv("SQL_DEBUG", "false").lower() == "true",  # SQL debugging
             future=True,  # Use SQLAlchemy 2.0 style
-            # Cloud-optimized connection settings
+            # Cloud-optimized connection settings with keepalive for connection reuse
             connect_args={
                 "connect_timeout": 10,
                 "application_name": "dhafnck_mcp_supabase",
                 "options": "-c timezone=UTC",
+                "keepalives": 1,
+                "keepalives_idle": 30,
+                "keepalives_interval": 10,
+                "keepalives_count": 5
+                # Note: prepare_threshold removed - not supported by psycopg2 with Supabase
             }
         )
         
