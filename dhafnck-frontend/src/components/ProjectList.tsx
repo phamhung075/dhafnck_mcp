@@ -10,6 +10,7 @@ import { Separator } from "./ui/separator";
 import { RefreshButton } from "./ui/refresh-button";
 import BranchDetailsDialog from "./BranchDetailsDialog";
 import ProjectDetailsDialog from "./ProjectDetailsDialog";
+import GlobalContextDialog from "./GlobalContextDialog";
 
 interface ProjectListProps {
   onSelect?: (projectId: string, branchId: string) => void;
@@ -28,7 +29,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect, refreshKey }) => {
   const [showCreateBranch, setShowCreateBranch] = useState<Project | null>(null);
   const [showProjectDetails, setShowProjectDetails] = useState<Project | null>(null);
   const [showBranchDetails, setShowBranchDetails] = useState<{ project: Project; branch: any } | null>(null);
-  const [showGlobalContext, setShowGlobalContext] = useState<{ context: any } | null>(null);
+  const [showGlobalContext, setShowGlobalContext] = useState(false);
   const [loadingContext, setLoadingContext] = useState(false);
   const [form, setForm] = useState<{ name: string; description: string }>({ name: "", description: "" });
   const [saving, setSaving] = useState(false);
@@ -226,18 +227,9 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect, refreshKey }) => {
           <Button 
             size="sm" 
             variant="outline" 
-            onClick={async () => {
-              setLoadingContext(true);
-              try {
-                const context = await getGlobalContext();
-                setShowGlobalContext({ context });
-              } catch (e) {
-                console.error('Error fetching global context:', e);
-              } finally {
-                setLoadingContext(false);
-              }
-            }}
-            aria-label="View Global Context"
+            onClick={() => setShowGlobalContext(true)}
+            aria-label="View/Edit Global Context"
+            title="View and Edit Global Context"
           >
             <Globe className="w-4 h-4 mr-1" /> Global
           </Button>
@@ -564,178 +556,12 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect, refreshKey }) => {
 
 
 
-      {/* Global Context Dialog */}
-      <Dialog open={!!showGlobalContext} onOpenChange={(v) => { if (!v) setShowGlobalContext(null); }}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-xl text-left">Global Context</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {loadingContext ? (
-              <div className="text-center py-8">
-                <div className="text-sm text-muted-foreground">Loading global context...</div>
-              </div>
-            ) : showGlobalContext?.context ? (
-              <>
-                {/* Context Resolution Info */}
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-semibold mb-2">Context Resolution</h3>
-                  <div className="space-y-2 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Level:</span>
-                      <Badge className="ml-2" variant="default">Global</Badge>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Context ID:</span>
-                      <span className="ml-2 font-mono text-xs">global_singleton</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Scope:</span>
-                      <span className="ml-2">Organization-wide settings and capabilities</span>
-                    </div>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Inheritance Chain */}
-                {showGlobalContext.context.inheritance_chain && (
-                  <>
-                    <div>
-                      <h4 className="font-semibold text-sm mb-3 text-blue-700">Inheritance Chain</h4>
-                      <div className="bg-blue-50 p-3 rounded">
-                        <div className="flex items-center gap-2">
-                          {showGlobalContext.context.inheritance_chain.map((level: string, index: number) => (
-                            <React.Fragment key={level}>
-                              <Badge variant={level === 'global' ? 'default' : 'outline'}>
-                                {level.toUpperCase()}
-                              </Badge>
-                              {index < showGlobalContext.context.inheritance_chain.length - 1 && (
-                                <span className="text-muted-foreground">→</span>
-                              )}
-                            </React.Fragment>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    <Separator />
-                  </>
-                )}
-
-                {/* Context Data */}
-                {showGlobalContext.context.data && (
-                  <>
-                    <div>
-                      <h4 className="font-semibold text-sm mb-3 text-green-700">Global Context Data</h4>
-                      <div className="bg-green-50 p-3 rounded">
-                        <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                          {JSON.stringify(showGlobalContext.context.data, null, 2)}
-                        </pre>
-                      </div>
-                    </div>
-                    <Separator />
-                  </>
-                )}
-
-                {/* Metadata */}
-                {showGlobalContext.context.metadata && (
-                  <>
-                    <div>
-                      <h4 className="font-semibold text-sm mb-3 text-purple-700">Metadata</h4>
-                      <div className="bg-purple-50 p-3 rounded">
-                        <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                          {JSON.stringify(showGlobalContext.context.metadata, null, 2)}
-                        </pre>
-                      </div>
-                    </div>
-                    <Separator />
-                  </>
-                )}
-
-                {/* Platform Capabilities */}
-                {showGlobalContext.context.platform_capabilities && (
-                  <>
-                    <div>
-                      <h4 className="font-semibold text-sm mb-3 text-orange-700">Platform Capabilities</h4>
-                      <div className="bg-orange-50 p-3 rounded">
-                        <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                          {JSON.stringify(showGlobalContext.context.platform_capabilities, null, 2)}
-                        </pre>
-                      </div>
-                    </div>
-                    <Separator />
-                  </>
-                )}
-
-                {/* Organizational Standards */}
-                {showGlobalContext.context.organizational_standards && (
-                  <>
-                    <div>
-                      <h4 className="font-semibold text-sm mb-3 text-indigo-700">Organizational Standards</h4>
-                      <div className="bg-indigo-50 p-3 rounded">
-                        <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                          {JSON.stringify(showGlobalContext.context.organizational_standards, null, 2)}
-                        </pre>
-                      </div>
-                    </div>
-                    <Separator />
-                  </>
-                )}
-
-                {/* Additional Fields - Display any other fields */}
-                {showGlobalContext.context && (
-                  <>
-                    {Object.entries(showGlobalContext.context).filter(([key]) => 
-                      !['inheritance_chain', 'data', 'metadata', 'platform_capabilities', 'organizational_standards', 'context_id'].includes(key)
-                    ).map(([key, value]) => {
-                      if (value === null || value === undefined) return null;
-                      
-                      return (
-                        <React.Fragment key={key}>
-                          <div className="bg-gray-50 p-4 rounded-lg">
-                            <h3 className="text-lg font-semibold mb-3 capitalize">{key.replace(/_/g, ' ')}</h3>
-                            <div className="bg-white p-3 rounded border border-gray-200">
-                              {typeof value === 'object' ? (
-                                <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                                  {JSON.stringify(value, null, 2)}
-                                </pre>
-                              ) : (
-                                <span className="text-sm">{String(value)}</span>
-                              )}
-                            </div>
-                          </div>
-                          <Separator />
-                        </React.Fragment>
-                      );
-                    })}
-                  </>
-                )}
-
-                {/* Raw Context Data */}
-                <details className="cursor-pointer">
-                  <summary className="font-semibold text-sm text-gray-700 hover:text-gray-900">
-                    View Complete Raw Global Context Data (JSON)
-                  </summary>
-                  <div className="mt-3 bg-gray-100 p-3 rounded">
-                    <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                      {JSON.stringify(showGlobalContext.context, null, 2)}
-                    </pre>
-                  </div>
-                </details>
-              </>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-sm text-muted-foreground">No global context data available</p>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowGlobalContext(null)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Global Context Dialog with Edit Capability */}
+      <GlobalContextDialog
+        open={showGlobalContext}
+        onOpenChange={setShowGlobalContext}
+        onClose={() => setShowGlobalContext(false)}
+      />
     </div>
   );
 };

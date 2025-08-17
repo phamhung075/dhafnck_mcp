@@ -316,8 +316,142 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
     loadTaskSummaries(1);
   }, [projectId, taskTreeId, loadTaskSummaries]);
 
-  // Render task row with lazy loading indicators
-  const renderTaskRow = useCallback((summary: TaskSummary) => {
+  // Check if we're on a small screen
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Render task row for mobile (card view)
+  const renderMobileTaskCard = useCallback((summary: TaskSummary) => {
+    const isExpanded = expandedTasks.has(summary.id);
+    const isLoading = loadingTasks.has(summary.id);
+    const fullTask = fullTasks.get(summary.id) || null;
+    
+    return (
+      <div key={summary.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border mb-3">
+        <div className="p-4">
+          {/* Task Header */}
+          <div className="flex items-start justify-between mb-3">
+            <div className="flex-1">
+              <h3 className="font-medium text-base mb-2 pr-2">{summary.title}</h3>
+              <div className="flex flex-wrap gap-2">
+                <Badge className="text-xs">{summary.status}</Badge>
+                <Badge variant="secondary" className="text-xs">{summary.priority}</Badge>
+                {summary.subtask_count > 0 && (
+                  <Badge variant="outline" className="text-xs">
+                    {summary.subtask_count} subtasks
+                  </Badge>
+                )}
+                {summary.has_dependencies && (
+                  <Badge variant="outline" className="text-xs">
+                    Has deps
+                  </Badge>
+                )}
+                {summary.assignees_count > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    {summary.assignees_count} assigned
+                  </Badge>
+                )}
+              </div>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8"
+              onClick={() => toggleTaskExpansion(summary.id)}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
+              ) : isExpanded ? (
+                <ChevronDown className="w-4 h-4" />
+              ) : (
+                <ChevronRight className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-1 flex-wrap">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => openDialog('details', summary.id)}
+              className="flex-1 min-w-[60px]"
+            >
+              <Eye className="w-3 h-3 mr-1" />
+              View
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => openDialog('edit', summary.id)}
+              className="flex-1 min-w-[60px]"
+            >
+              <Pencil className="w-3 h-3 mr-1" />
+              Edit
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => openDialog('assign', summary.id)}
+              className="flex-1 min-w-[60px]"
+            >
+              <Users className="w-3 h-3 mr-1" />
+              Assign
+            </Button>
+            
+            {summary.has_context && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => openDialog('context', summary.id)}
+                title="View context"
+              >
+                <FileText className="w-3 h-3" />
+              </Button>
+            )}
+            
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => openDialog('delete', summary.id)}
+              title="Delete task"
+            >
+              <Trash2 className="w-3 h-3" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Expanded Content */}
+        {isExpanded && fullTask && (
+          <div className="border-t border-gray-200 dark:border-gray-700">
+            <div className="border-l-4 border-blue-400 dark:border-blue-600">
+              <Suspense fallback={<div className="p-4 text-center text-sm text-muted-foreground">Loading subtasks...</div>}>
+                <LazySubtaskList 
+                  projectId={projectId} 
+                  taskTreeId={taskTreeId} 
+                  parentTaskId={summary.id}
+                />
+              </Suspense>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }, [expandedTasks, loadingTasks, fullTasks, toggleTaskExpansion, openDialog, projectId, taskTreeId]);
+
+  // Render task row for desktop (table view)
+  const renderDesktopTaskRow = useCallback((summary: TaskSummary) => {
     const isExpanded = expandedTasks.has(summary.id);
     const isLoading = loadingTasks.has(summary.id);
     const fullTask = fullTasks.get(summary.id) || null;
@@ -325,7 +459,7 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
     return (
       <React.Fragment key={summary.id}>
         <TableRow>
-          <TableCell style={{ width: '50px' }}>
+          <TableCell className="w-[50px]">
             <Button 
               variant="ghost" 
               size="icon" 
@@ -353,15 +487,15 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
             </div>
           </TableCell>
           
-          <TableCell>
+          <TableCell className="hidden sm:table-cell">
             <Badge>{summary.status}</Badge>
           </TableCell>
           
-          <TableCell>
+          <TableCell className="hidden md:table-cell">
             <Badge variant="secondary">{summary.priority}</Badge>
           </TableCell>
           
-          <TableCell>
+          <TableCell className="hidden lg:table-cell">
             {summary.has_dependencies ? (
               <Badge variant="outline" className="text-xs">
                 Has dependencies
@@ -371,7 +505,7 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
             )}
           </TableCell>
           
-          <TableCell>
+          <TableCell className="hidden xl:table-cell">
             {summary.assignees_count > 0 ? (
               <Badge variant="secondary" className="text-xs">
                 {summary.assignees_count} assigned
@@ -388,6 +522,7 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
                 size="icon"
                 onClick={() => openDialog('details', summary.id)}
                 title="View details"
+                className="h-8 w-8"
               >
                 <Eye className="w-4 h-4" />
               </Button>
@@ -398,6 +533,7 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
                   size="icon"
                   onClick={() => openDialog('context', summary.id)}
                   title="View context"
+                  className="h-8 w-8 hidden sm:inline-flex"
                 >
                   <FileText className="w-4 h-4" />
                 </Button>
@@ -408,6 +544,7 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
                 size="icon"
                 onClick={() => openDialog('assign', summary.id)}
                 title="Assign agents"
+                className="h-8 w-8 hidden sm:inline-flex"
               >
                 <Users className="w-4 h-4" />
               </Button>
@@ -417,6 +554,7 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
                 size="icon"
                 onClick={() => openDialog('edit', summary.id)}
                 title="Edit task"
+                className="h-8 w-8"
               >
                 <Pencil className="w-4 h-4" />
               </Button>
@@ -426,6 +564,7 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
                 size="icon"
                 onClick={() => openDialog('delete', summary.id)}
                 title="Delete task"
+                className="h-8 w-8"
               >
                 <Trash2 className="w-4 h-4" />
               </Button>
@@ -475,49 +614,58 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
           </Suspense>
         </div>
         
-        {/* Header */}
-        <div className="flex justify-between items-center">
+        {/* Header - Responsive */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
           <h2 className="text-lg font-semibold">
             Tasks ({totalTasks})
           </h2>
           <div className="flex gap-2">
             <Button
               onClick={() => openDialog('create')}
-              size="sm"
+              size={isMobile ? "default" : "sm"}
               variant="default"
-              className="flex items-center gap-1"
+              className="flex items-center gap-1 flex-1 sm:flex-initial"
             >
               <Plus className="w-4 h-4" />
-              New Task
+              <span className="hidden sm:inline">New Task</span>
+              <span className="sm:hidden">New</span>
             </Button>
             <RefreshButton 
               onClick={() => loadTaskSummaries(1)} 
               loading={loading}
-              size="sm"
+              size={isMobile ? "default" : "sm"}
             />
           </div>
         </div>
       </div>
 
-      {/* Task Table */}
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead style={{ width: '50px' }}></TableHead>
-              <TableHead>Title</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Priority</TableHead>
-              <TableHead>Dependencies</TableHead>
-              <TableHead>Assignees</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {displayTasks.map(renderTaskRow)}
-          </TableBody>
-        </Table>
-      </div>
+      {/* Task List - Responsive View */}
+      {isMobile ? (
+        // Mobile Card View
+        <div className="space-y-3">
+          {displayTasks.map(renderMobileTaskCard)}
+        </div>
+      ) : (
+        // Desktop Table View
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[50px]"></TableHead>
+                <TableHead>Title</TableHead>
+                <TableHead className="hidden sm:table-cell">Status</TableHead>
+                <TableHead className="hidden md:table-cell">Priority</TableHead>
+                <TableHead className="hidden lg:table-cell">Dependencies</TableHead>
+                <TableHead className="hidden xl:table-cell">Assignees</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {displayTasks.map(renderDesktopTaskRow)}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
       {/* Load More Button */}
       {hasMore && (

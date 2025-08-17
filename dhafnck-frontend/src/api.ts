@@ -1620,4 +1620,41 @@ export async function callAgent(name_agent: string): Promise<any> {
   }
   
   return { success: false, error: 'No response from server' };
-} 
+}
+
+export async function updateGlobalContext(data: any): Promise<any> {
+  const body = {
+    jsonrpc: "2.0",
+    method: "tools/call",
+    params: {
+      name: "manage_context",
+      arguments: { 
+        action: "update",
+        level: "global",
+        context_id: "global_singleton",
+        data: data,
+        propagate_changes: true
+      }
+    },
+    id: getRpcId(),
+  };
+
+  const res = await fetch(`${API_BASE}`, {
+    method: "POST",
+    headers: withMcpHeaders(),
+    body: JSON.stringify(body),
+  });
+  const responseData = await res.json();
+  
+  if (responseData.result && responseData.result.content && Array.isArray(responseData.result.content) && responseData.result.content.length > 0) {
+    try {
+      const toolResult = JSON.parse(responseData.result.content[0].text);
+      return toolResult;
+    } catch (e) {
+      console.error('Error parsing update global context response:', e);
+      throw new Error('Failed to parse response');
+    }
+  }
+  
+  throw new Error('Failed to update global context');
+}
