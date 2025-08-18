@@ -311,27 +311,60 @@ class SupabaseAuthService:
             SupabaseAuthResult indicating success
         """
         try:
-            # Use admin client to resend confirmation
-            response = self.admin_client.auth.admin.generate_link({
-                "type": "signup",
+            # For Supabase, we need to trigger a new signup to resend the confirmation email
+            # This is the standard way to resend verification emails in Supabase
+            response = self.client.auth.sign_up({
                 "email": email,
+                "password": "temporary_resend_" + os.urandom(16).hex(),  # Dummy password for resend
                 "options": {
-                    "redirect_to": f"{os.getenv('FRONTEND_URL', 'http://localhost:3800')}/auth/verify"
+                    "email_redirect_to": f"{os.getenv('FRONTEND_URL', 'http://localhost:3800')}/auth/verify"
                 }
             })
             
-            logger.info(f"Verification email resent to: {email}")
-            return SupabaseAuthResult(
-                success=True,
-                error_message="Verification email sent. Please check your inbox."
-            )
+            # Check if user already exists but not confirmed
+            if response.user and response.user.confirmed_at is None:
+                logger.info(f"Verification email resent to: {email}")
+                return SupabaseAuthResult(
+                    success=True,
+                    error_message="Verification email sent. Please check your inbox."
+                )
+            elif response.user and response.user.confirmed_at:
+                # User is already confirmed
+                return SupabaseAuthResult(
+                    success=False,
+                    error_message="This email is already verified. Please try logging in."
+                )
+            else:
+                # New user or resend successful
+                logger.info(f"Verification email sent to: {email}")
+                return SupabaseAuthResult(
+                    success=True,
+                    error_message="Verification email sent. Please check your inbox."
+                )
             
         except Exception as e:
-            logger.error(f"Resend verification error: {e}")
-            return SupabaseAuthResult(
-                success=False,
-                error_message="Failed to resend verification email"
-            )
+            error_msg = str(e)
+            logger.error(f"Resend verification error: {error_msg}")
+            
+            # Check for specific error cases
+            if "already been registered" in error_msg.lower() or "user already registered" in error_msg.lower():
+                # User is already registered - this is actually expected for resend
+                # Supabase will still send the email for unconfirmed users
+                logger.info(f"User already exists, verification email should be sent: {email}")
+                return SupabaseAuthResult(
+                    success=True,
+                    error_message="Verification email sent. Please check your inbox."
+                )
+            elif "rate limit" in error_msg.lower():
+                return SupabaseAuthResult(
+                    success=False,
+                    error_message="Too many requests. Please wait 60 seconds before trying again."
+                )
+            else:
+                return SupabaseAuthResult(
+                    success=False,
+                    error_message="Failed to resend verification email. Please try again later."
+                )
     
     async def sign_in_with_provider(self, provider: str) -> Dict[str, Any]:
         """

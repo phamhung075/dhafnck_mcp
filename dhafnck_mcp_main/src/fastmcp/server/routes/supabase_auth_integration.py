@@ -23,14 +23,21 @@ def create_supabase_auth_app() -> Starlette:
     try:
         # Import the Supabase auth router
         from ...auth.api.supabase_endpoints import router as supabase_router
+        from ...auth.api.dev_endpoints import router as dev_router
         from fastapi import FastAPI
         from fastapi.routing import APIRoute
+        import os
         
         # Create a minimal FastAPI app just for the auth endpoints
         auth_app = FastAPI()
         
         # Add the Supabase router
         auth_app.include_router(supabase_router)
+        
+        # Add dev router if in development mode
+        if os.getenv("ENVIRONMENT", "development") == "development":
+            auth_app.include_router(dev_router)
+            logger.warning("⚠️  Development auth endpoints enabled at /auth/dev/*")
         
         # Convert FastAPI app to Starlette app for mounting
         # We'll manually convert the routes

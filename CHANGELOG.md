@@ -6,6 +6,38 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Fixed
+- **Documented Supabase Email Delivery Issues** (2025-08-18)
+  - Created comprehensive troubleshooting guide for email not being sent
+  - Documented root causes: Free tier rate limits (3-4 emails/hour), SMTP not configured
+  - Provided 6 solution options including:
+    - Custom SMTP configuration (Gmail, SendGrid)
+    - Inbucket for local development
+    - Manual user confirmation for testing
+    - Dashboard configuration checks
+  - Added verification steps and best practices
+  - Created: `dhafnck_mcp_main/docs/troubleshooting-guides/supabase-email-not-sending.md`
+  - Created quick guide for manual user confirmation: `dhafnck_mcp_main/docs/quick-guides/manual-user-confirmation.md`
+  - Attempted to add development endpoints but encountered integration issues with Starlette mounting
+
+- **Fixed Supabase Resend Verification Email Endpoint** (2025-08-18)
+  - Fixed `/auth/supabase/resend-verification` endpoint returning 400 errors
+  - Root cause: Incorrect Supabase API method usage
+  - Solution: Use `sign_up` method with dummy password to trigger resend for existing unconfirmed users
+  - Improved error handling for already verified users and rate limiting
+  - Files modified: `dhafnck_mcp_main/src/fastmcp/auth/infrastructure/supabase_auth.py`
+
+- **Fixed TypeScript Compilation Error in Frontend Tests** (2025-08-18)
+  - Fixed build failure in `dhafnck-frontend/src/tests/components/auth/SignupForm.test.tsx`
+  - Root cause: Test used @testing-library/user-event v14+ API (`userEvent.setup()`) while package.json specified v13.5.0
+  - Solution: Modified test to use v13 API pattern
+    - Removed `const user = userEvent.setup()` initialization
+    - Replaced all `await user.type()` with direct `userEvent.type()` calls
+    - Replaced all `await user.click()` with direct `userEvent.click()` calls
+    - Replaced all `await user.clear()` with direct `userEvent.clear()` calls
+  - Impact: Docker build now succeeds without TypeScript errors
+  - Files modified: `dhafnck-frontend/src/tests/components/auth/SignupForm.test.tsx`
+
 ### Added
 - **Supabase Authentication Integration** (2025-08-18)
   - Integrated Supabase's built-in authentication system for automatic email verification
@@ -79,6 +111,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
     - Improved UX flow: Expired link → Enter email → Resend → Success message
     - Handles common scenarios: expired links, lost emails, re-registration attempts
     - Integrated with `/auth/supabase/resend-verification` endpoint
+- **Frontend Auth Component Tests** (2025-08-18)
+  - Created comprehensive test suite for `EmailVerification.tsx` component
+    - File: `dhafnck-frontend/src/tests/components/auth/EmailVerification.test.tsx`
+    - 25+ test cases covering all component behaviors
+    - Tests: processing states, successful verification flows, error handling, resend functionality
+    - Mock implementations for React Router, useAuth hook, and fetch API
+    - Timer manipulation for navigation delay testing
+  - Created comprehensive test suite for `SignupForm.tsx` component
+    - File: `dhafnck-frontend/src/tests/components/auth/SignupForm.test.tsx`
+    - 30+ test cases covering all form interactions
+    - Tests: form validation, password strength indicator, email verification flow, error handling
+    - Real-time password strength calculation testing
+    - User interaction simulation with @testing-library/user-event
+  - Both test files ensure frontend auth components work correctly with Supabase integration
+  - Updated TEST-CHANGELOG.md with detailed test documentation
 
 ### Added
 - **Automated Test Synchronization for WSL Ubuntu** (2025-08-18)

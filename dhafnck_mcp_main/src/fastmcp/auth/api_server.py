@@ -21,6 +21,7 @@ import uvicorn
 # Import the auth routers
 from fastmcp.auth.interface.auth_endpoints import router as auth_router
 from fastmcp.auth.api.supabase_endpoints import router as supabase_router
+from fastmcp.auth.api.dev_endpoints import router as dev_router
 
 # Configure logging
 logging.basicConfig(
@@ -48,6 +49,11 @@ app.add_middleware(
 # Include auth routers
 app.include_router(auth_router)  # Custom auth endpoints (legacy)
 app.include_router(supabase_router)  # Supabase auth endpoints (new)
+
+# Include development endpoints if in dev mode
+if os.getenv("ENVIRONMENT", "development") == "development":
+    app.include_router(dev_router)  # Development-only endpoints
+    logger.warning("⚠️  Development endpoints enabled at /auth/dev/*")
 
 # Health check endpoint
 @app.get("/health")
