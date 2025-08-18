@@ -139,12 +139,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       const data = await response.json();
       
-      // If registration returns tokens, set them
-      if (data.access_token && data.refresh_token) {
-        setTokens({
-          access_token: data.access_token,
-          refresh_token: data.refresh_token
-        });
+      // Backend returns MessageResponse {message, success} not tokens
+      // Auto-login after successful registration
+      if (data.success) {
+        // Automatically log in after successful registration
+        await login(email, password);
+      } else {
+        throw new Error(data.message || 'Registration failed');
       }
     } catch (error) {
       console.error('Signup error:', error);

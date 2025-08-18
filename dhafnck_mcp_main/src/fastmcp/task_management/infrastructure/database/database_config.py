@@ -29,11 +29,43 @@ class DatabaseConfig:
     
     Uses DATABASE_TYPE and DATABASE_URL environment variables to configure
     PostgreSQL connection (local or Supabase).
+    
+    Implements singleton pattern and connection caching for performance.
     """
     
+    # Class-level singleton instance
+    _instance = None
+    _initialized = False
+    _connection_verified = False
+    _connection_info = None
+    
+    def __new__(cls, *args, **kwargs):
+        """Implement singleton pattern"""
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+    
+    @classmethod
+    def get_instance(cls):
+        """
+        Get the singleton instance of DatabaseConfig.
+        
+        This is the preferred way to get the database configuration.
+        
+        Returns:
+            DatabaseConfig: The singleton instance
+        """
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+    
     def __init__(self):
+        # Skip initialization if already done (singleton pattern)
+        if self._initialized:
+            return
+            
         self.database_type = os.getenv("DATABASE_TYPE", "supabase").lower()
-        self.database_url = os.getenv("DATABASE_URL")
+        self.database_url = self._get_secure_database_url()
         self.engine: Optional[Engine] = None
         self.SessionLocal: Optional[sessionmaker] = None
         
@@ -71,6 +103,63 @@ class DatabaseConfig:
         
         # Initialize database connection
         self._initialize_database()
+        
+        # Mark as initialized for singleton pattern
+        DatabaseConfig._initialized = True
+    
+    def _get_secure_database_url(self) -> Optional[str]:
+        """
+        Get database URL securely from environment variables.
+        
+        Priority:
+        1. DATABASE_URL if set (for backward compatibility)
+        2. Construct from individual components (more secure)
+        
+        Returns:
+            str: The database connection URL
+        """
+        import urllib.parse
+        
+        # First check if DATABASE_URL is explicitly set
+        database_url = os.getenv("DATABASE_URL")
+        if database_url:
+            # Log warning if it contains plaintext password
+            if ":" in database_url and "@" in database_url:
+                logger.warning("⚠️ DATABASE_URL contains credentials. Consider using individual environment variables for better security.")
+            return database_url
+        
+        # Construct from individual components (more secure approach)
+        if self.database_type == "supabase":
+            # For Supabase, use the SUPABASE_* variables
+            db_host = os.getenv("SUPABASE_DB_HOST")
+            db_port = os.getenv("SUPABASE_DB_PORT", "5432")
+            db_name = os.getenv("SUPABASE_DB_NAME", "postgres")
+            db_user = os.getenv("SUPABASE_DB_USER", "postgres")
+            db_password = os.getenv("SUPABASE_DB_PASSWORD")
+            
+            if db_host and db_password:
+                # URL-encode the password to handle special characters
+                encoded_password = urllib.parse.quote(db_password)
+                database_url = f"postgresql://{db_user}:{encoded_password}@{db_host}:{db_port}/{db_name}?sslmode=require"
+                logger.info("✅ Database URL constructed from secure environment variables")
+                return database_url
+        
+        elif self.database_type == "postgresql":
+            # For local PostgreSQL
+            db_host = os.getenv("DATABASE_HOST", "localhost")
+            db_port = os.getenv("DATABASE_PORT", "5432")
+            db_name = os.getenv("DATABASE_NAME", "dhafnck_mcp")
+            db_user = os.getenv("DATABASE_USER", "dhafnck_user")
+            db_password = os.getenv("DATABASE_PASSWORD")
+            
+            if db_password:
+                encoded_password = urllib.parse.quote(db_password)
+                database_url = f"postgresql://{db_user}:{encoded_password}@{db_host}:{db_port}/{db_name}"
+                logger.info("✅ Database URL constructed from secure environment variables")
+                return database_url
+        
+        # No valid configuration found
+        return None
     
     def _get_database_url(self) -> str:
         """Get the appropriate database URL based on configuration"""
@@ -204,26 +293,36 @@ class DatabaseConfig:
                 expire_on_commit=False  # Don't expire objects after commit
             )
             
-            # Test connection
-            with self.engine.connect() as conn:
-                if self.database_type == "sqlite":
-                    # SQLite test query
-                    result = conn.execute(text("SELECT sqlite_version()"))
-                    version = result.scalar()
-                    logger.info(f"📦 Connected to SQLite: {version}")
-                else:
-                    # PostgreSQL/Supabase test query
-                    result = conn.execute(text("SELECT version()"))
-                    version = result.scalar()
-                    logger.info(f"🎯 Connected to PostgreSQL: {version}")
-                    
-                    # Check if this is Supabase
-                    if "supabase" in database_url.lower():
-                        result = conn.execute(text("SELECT current_database()"))
-                        db_name = result.scalar()
-                        logger.info(f"🚀 SUPABASE CONNECTION SUCCESSFUL! Database: {db_name}")
+            # Test connection only if not already verified (caching for performance)
+            if not DatabaseConfig._connection_verified:
+                with self.engine.connect() as conn:
+                    if self.database_type == "sqlite":
+                        # SQLite test query
+                        result = conn.execute(text("SELECT sqlite_version()"))
+                        version = result.scalar()
+                        logger.info(f"📦 Connected to SQLite: {version}")
+                        DatabaseConfig._connection_info = f"SQLite {version}"
                     else:
-                        logger.info("✅ PostgreSQL connection established")
+                        # PostgreSQL/Supabase test query
+                        result = conn.execute(text("SELECT version()"))
+                        version = result.scalar()
+                        logger.info(f"🎯 Connected to PostgreSQL: {version}")
+                        
+                        # Check if this is Supabase
+                        if "supabase" in database_url.lower():
+                            result = conn.execute(text("SELECT current_database()"))
+                            db_name = result.scalar()
+                            logger.info(f"🚀 SUPABASE CONNECTION SUCCESSFUL! Database: {db_name}")
+                            DatabaseConfig._connection_info = f"Supabase PostgreSQL - Database: {db_name}"
+                        else:
+                            logger.info("✅ PostgreSQL connection established")
+                            DatabaseConfig._connection_info = f"PostgreSQL {version}"
+                
+                # Mark connection as verified
+                DatabaseConfig._connection_verified = True
+            else:
+                # Use cached connection info
+                logger.info(f"✅ Using cached connection: {DatabaseConfig._connection_info}")
             
         except Exception as e:
             logger.error(f"Failed to initialize database: {e}")
@@ -275,7 +374,8 @@ def get_db_config() -> DatabaseConfig:
     global _db_config
     if _db_config is None:
         try:
-            _db_config = DatabaseConfig()
+            # Use singleton instance
+            _db_config = DatabaseConfig.get_instance()
         except Exception as e:
             logger.error(f"Failed to initialize database configuration: {e}")
             raise

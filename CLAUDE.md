@@ -423,3 +423,4 @@ Currently, contexts are NOT automatically created when:
 ---
 
 **Remember**: The key to multi-session collaboration is updating context. Every AI agent and session can access shared context, making your work persistent and discoverable.
+    - Do not EXPOSED PASSWORD: All password need store in .env file on root (single file)

@@ -29,7 +29,36 @@ class UnifiedContextFacadeFactory:
     
     Manages dependency injection and ensures proper initialization
     of all required services and repositories.
+    
+    Implements singleton pattern to avoid expensive repeated initialization.
     """
+    
+    # Class-level singleton instance
+    _instance = None
+    _initialized = False
+    
+    def __new__(cls, *args, **kwargs):
+        """Implement singleton pattern"""
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+    
+    @classmethod
+    def get_instance(cls, session_factory=None):
+        """
+        Get the singleton instance of the factory.
+        
+        This is the preferred way to get the factory instance.
+        
+        Args:
+            session_factory: Optional session factory (only used on first call)
+            
+        Returns:
+            UnifiedContextFacadeFactory: The singleton instance
+        """
+        if cls._instance is None:
+            cls._instance = cls(session_factory)
+        return cls._instance
     
     def __init__(self, session_factory=None):
         """
@@ -38,6 +67,10 @@ class UnifiedContextFacadeFactory:
         Args:
             session_factory: SQLAlchemy session factory for database access
         """
+        # Skip initialization if already done (singleton pattern)
+        if self._initialized:
+            return
+            
         self.session_factory = None
         self.unified_service = None
         
@@ -50,6 +83,8 @@ class UnifiedContextFacadeFactory:
                 logger.warning(f"Database not available, using mock context service: {e}")
                 # Create a minimal mock unified service
                 self._create_mock_service()
+                # Mark as initialized even with mock service
+                UnifiedContextFacadeFactory._initialized = True
                 return
         
         self.session_factory = session_factory
@@ -89,9 +124,13 @@ class UnifiedContextFacadeFactory:
             )
             
             logger.info("UnifiedContextFacadeFactory initialized with database")
+            # Mark as initialized for singleton pattern
+            UnifiedContextFacadeFactory._initialized = True
         except Exception as e:
             logger.warning(f"Failed to initialize with database, using mock service: {e}")
             self._create_mock_service()
+            # Mark as initialized even with mock service
+            UnifiedContextFacadeFactory._initialized = True
     
     def _create_mock_service(self):
         """Create a mock unified service for database-less operation"""

@@ -246,6 +246,16 @@ def create_sse_app(
     # Add server's additional HTTP routes
     server_routes.extend(server._additional_http_routes)
     
+    # Add auth integration routes for SSE app
+    try:
+        from .routes.auth_integration import create_auth_integration_routes
+        auth_routes = create_auth_integration_routes()
+        if auth_routes:
+            server_routes.extend(auth_routes)
+            logger.info("Auth API routes integrated into SSE server at /api/auth/*")
+    except ImportError as e:
+        logger.warning(f"Could not import auth integration routes: {e}")
+    
     # Add task summary routes for lazy loading optimization
     try:
         from .routes.task_summary_routes import task_summary_routes
@@ -253,6 +263,18 @@ def create_sse_app(
         logger.info("Task summary routes registered for lazy loading optimization")
     except ImportError as e:
         logger.warning(f"Could not import task summary routes: {e}")
+    
+    # Add OAuth2 auth endpoints using bridge pattern
+    try:
+        from fastmcp.auth.bridge.fastapi_mount import integrate_auth_with_mcp_server
+        server_routes, server_middleware = integrate_auth_with_mcp_server(
+            server_routes,
+            server_middleware,
+            enable_bridge=True
+        )
+        logger.info("OAuth2 auth endpoints mounted via bridge pattern")
+    except ImportError as e:
+        logger.warning(f"Could not mount OAuth2 auth endpoints: {e}")
 
     # Set up SSE transport
     sse = SseServerTransport(message_path)
@@ -443,6 +465,16 @@ def create_streamable_http_app(
     if routes:
         server_routes.extend(routes)
     server_routes.extend(server._additional_http_routes)
+    
+    # Add auth integration routes
+    try:
+        from .routes.auth_integration import create_auth_integration_routes
+        auth_routes = create_auth_integration_routes()
+        if auth_routes:
+            server_routes.extend(auth_routes)
+            logger.info("Auth API routes integrated into MCP server at /api/auth/*")
+    except ImportError as e:
+        logger.warning(f"Could not import auth integration routes: {e}")
     
     # Add task summary routes for lazy loading optimization
     try:

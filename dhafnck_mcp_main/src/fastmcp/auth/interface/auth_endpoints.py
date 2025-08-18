@@ -16,7 +16,6 @@ from ..application.services.auth_service import AuthService
 from ..domain.services.jwt_service import JWTService
 from ..domain.entities.user import User
 from ..infrastructure.repositories.user_repository import UserRepository
-from ...task_management.infrastructure.database.database_config import DatabaseConfig
 from .fastapi_auth import (
     get_current_user as get_auth_user,
     get_current_active_user,
@@ -33,12 +32,21 @@ router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
 jwt_service = JWTService(JWT_SECRET_KEY)
 
-# Database configuration
-db_config = DatabaseConfig()
+# Database configuration - lazy loaded
+_db_config = None
+
+def get_db_config():
+    """Get database config (lazy loaded)"""
+    global _db_config
+    if _db_config is None:
+        from ...task_management.infrastructure.database.database_config import DatabaseConfig
+        _db_config = DatabaseConfig()
+    return _db_config
 
 
 def get_db() -> Session:
     """Get database session"""
+    db_config = get_db_config()
     db = db_config.SessionLocal()
     try:
         yield db

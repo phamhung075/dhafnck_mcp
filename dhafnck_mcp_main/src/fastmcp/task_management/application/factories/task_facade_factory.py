@@ -15,7 +15,40 @@ class TaskFacadeFactory:
     
     This factory encapsulates the creation logic for task facades, ensuring
     proper dependency injection and separation of concerns.
+    
+    Implements singleton pattern to avoid expensive repeated initialization.
     """
+    
+    # Class-level singleton instance
+    _instance = None
+    _initialized = False
+    
+    def __new__(cls, *args, **kwargs):
+        """Implement singleton pattern"""
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+    
+    @classmethod
+    def get_instance(cls, repository_factory: TaskRepositoryFactory = None, 
+                    subtask_repository_factory: SubtaskRepositoryFactory = None):
+        """
+        Get the singleton instance of the factory.
+        
+        This is the preferred way to get the factory instance.
+        
+        Args:
+            repository_factory: Factory for creating task repositories (only used on first call)
+            subtask_repository_factory: Factory for creating subtask repositories (only used on first call)
+            
+        Returns:
+            TaskFacadeFactory: The singleton instance
+        """
+        if cls._instance is None:
+            if repository_factory is None:
+                raise ValueError("repository_factory is required for first initialization")
+            cls._instance = cls(repository_factory, subtask_repository_factory)
+        return cls._instance
     
     def __init__(self, repository_factory: TaskRepositoryFactory, subtask_repository_factory: SubtaskRepositoryFactory = None):
         """
@@ -25,18 +58,26 @@ class TaskFacadeFactory:
             repository_factory: Factory for creating task repositories
             subtask_repository_factory: Factory for creating subtask repositories (optional)
         """
+        # Skip initialization if already done (singleton pattern)
+        if self._initialized:
+            return
+            
         self._repository_factory = repository_factory
         self._subtask_repository_factory = subtask_repository_factory
         
         # Try to initialize context service factory, but handle database unavailability
         try:
-            self._context_service_factory = ContextServiceFactory()
+            # Use singleton instance of ContextServiceFactory
+            self._context_service_factory = ContextServiceFactory.get_instance()
         except Exception as e:
             import logging
             logger = logging.getLogger(__name__)
             logger.warning(f"Could not initialize ContextServiceFactory: {e}")
             logger.warning("Context operations will not be available")
             self._context_service_factory = None
+        
+        # Mark as initialized for singleton pattern
+        TaskFacadeFactory._initialized = True
     
     from typing import TYPE_CHECKING, Any
     if TYPE_CHECKING:
