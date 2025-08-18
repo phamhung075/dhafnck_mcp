@@ -61,17 +61,44 @@ class UserRepository:
             
             # Don't commit here - let the service/endpoint handle transactions
             self.session.flush()  # Flush to get the ID but don't commit
-            # Note: Removed session.refresh(db_user) to avoid transaction abort issues
-            # The ID is available after flush(), and refresh() can fail if transaction is aborted
             
-            # Instead of converting db_user back to domain (which might trigger database access),
-            # update the original domain object with the generated ID and ensure all attributes
-            # are properly set to avoid any potential database queries during subsequent access
-            user.id = str(db_user.id)  # Ensure ID is string to prevent any type coercion issues
-            # Ensure all basic attributes are properly accessible without database access
-            user.created_at = user.created_at or db_user.created_at
-            user.updated_at = user.updated_at or db_user.updated_at
-            return user
+            # CRITICAL FIX: Capture the ID immediately and detach from session
+            generated_id = db_user.id
+            
+            # Expunge the object from the session to prevent any future database access
+            self.session.expunge(db_user)
+            
+            # Create a completely new domain object with no database ties
+            # using only the original user data and the generated ID
+            from ...domain.entities.user import User as DomainUser
+            
+            created_user = DomainUser(
+                id=str(generated_id),  # Use captured ID
+                email=user.email,      # Use original data to avoid database access
+                username=user.username,
+                password_hash=user.password_hash,
+                full_name=user.full_name,
+                status=user.status,
+                roles=user.roles,
+                email_verified=user.email_verified,
+                email_verified_at=user.email_verified_at,
+                last_login_at=user.last_login_at,
+                failed_login_attempts=user.failed_login_attempts,
+                locked_until=user.locked_until,
+                password_changed_at=user.password_changed_at,
+                password_reset_token=user.password_reset_token,
+                password_reset_expires=user.password_reset_expires,
+                refresh_token_family=user.refresh_token_family,
+                refresh_token_version=user.refresh_token_version,
+                created_at=user.created_at,
+                updated_at=user.updated_at,
+                created_by=user.created_by,
+                project_ids=user.project_ids,
+                default_project_id=user.default_project_id,
+                metadata=user.metadata
+            )
+            
+            return created_user
             
         except IntegrityError as e:
             # Don't rollback here - let the service/endpoint handle it
@@ -111,7 +138,37 @@ class UserRepository:
         """
         try:
             db_user = self.session.query(UserModel).filter_by(email=email.lower()).first()
-            return db_user.to_domain() if db_user else None
+            if not db_user:
+                return None
+            
+            # Create domain object directly to avoid any potential database access from to_domain()
+            from ...domain.entities.user import User as DomainUser, UserStatus, UserRole
+            
+            return DomainUser(
+                id=str(db_user.id),
+                email=db_user.email,
+                username=db_user.username,
+                password_hash=db_user.password_hash,
+                full_name=db_user.full_name,
+                status=UserStatus(db_user.status) if isinstance(db_user.status, str) else db_user.status,
+                roles=[UserRole(role) if isinstance(role, str) else role for role in (db_user.roles or [])],
+                email_verified=db_user.email_verified,
+                email_verified_at=db_user.email_verified_at,
+                last_login_at=db_user.last_login_at,
+                failed_login_attempts=db_user.failed_login_attempts or 0,
+                locked_until=db_user.locked_until,
+                password_changed_at=db_user.password_changed_at,
+                password_reset_token=db_user.password_reset_token,
+                password_reset_expires=db_user.password_reset_expires,
+                refresh_token_family=db_user.refresh_token_family,
+                refresh_token_version=db_user.refresh_token_version or 0,
+                created_at=db_user.created_at,
+                updated_at=db_user.updated_at,
+                created_by=db_user.created_by,
+                project_ids=db_user.project_ids or [],
+                default_project_id=db_user.default_project_id,
+                metadata=db_user.metadata or {}
+            )
         except Exception as e:
             logger.error(f"Error getting user by email: {e}")
             return None
@@ -128,7 +185,37 @@ class UserRepository:
         """
         try:
             db_user = self.session.query(UserModel).filter_by(username=username).first()
-            return db_user.to_domain() if db_user else None
+            if not db_user:
+                return None
+            
+            # Create domain object directly to avoid any potential database access from to_domain()
+            from ...domain.entities.user import User as DomainUser, UserStatus, UserRole
+            
+            return DomainUser(
+                id=str(db_user.id),
+                email=db_user.email,
+                username=db_user.username,
+                password_hash=db_user.password_hash,
+                full_name=db_user.full_name,
+                status=UserStatus(db_user.status) if isinstance(db_user.status, str) else db_user.status,
+                roles=[UserRole(role) if isinstance(role, str) else role for role in (db_user.roles or [])],
+                email_verified=db_user.email_verified,
+                email_verified_at=db_user.email_verified_at,
+                last_login_at=db_user.last_login_at,
+                failed_login_attempts=db_user.failed_login_attempts or 0,
+                locked_until=db_user.locked_until,
+                password_changed_at=db_user.password_changed_at,
+                password_reset_token=db_user.password_reset_token,
+                password_reset_expires=db_user.password_reset_expires,
+                refresh_token_family=db_user.refresh_token_family,
+                refresh_token_version=db_user.refresh_token_version or 0,
+                created_at=db_user.created_at,
+                updated_at=db_user.updated_at,
+                created_by=db_user.created_by,
+                project_ids=db_user.project_ids or [],
+                default_project_id=db_user.default_project_id,
+                metadata=db_user.metadata or {}
+            )
         except Exception as e:
             logger.error(f"Error getting user by username: {e}")
             return None

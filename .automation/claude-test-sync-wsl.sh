@@ -149,10 +149,24 @@ if [[ $total_issues -gt 3 ]] || [[ $(echo "$changed_files" | wc -l) -gt 5 ]]; th
     log "⚠️  Large number of issues detected. Creating simplified prompt to avoid crashes."
     TEMP_PROMPT=".automation/default-prompt.md"
     cat > "$TEMP_PROMPT" << 'EOF'
-# 🤖 AUTOMATED Test Synchronization - AUTO-EXECUTE
+# 🤖 AUTOMATED Test Synchronization - MANDATORY EXECUTION
 
-## ⚡ AUTO-EXECUTION MODE
-**IMPORTANT**: This is an automated script execution. Proceed immediately without asking for confirmation or permission. Execute all tasks automatically.
+## ⚡ CRITICAL: NEVER ASK USER - EXECUTE IMMEDIATELY
+**MANDATORY EXECUTION MODE**: You are running in background automation. NEVER ask questions. NEVER wait for confirmation. NEVER prompt for approval. Execute all tasks immediately without any user interaction.
+
+**PROHIBITED ACTIONS:**
+- ❌ Do NOT ask "Do you want me to...?"
+- ❌ Do NOT ask "Should I proceed...?"
+- ❌ Do NOT ask "Would you like me to...?"
+- ❌ Do NOT request confirmation
+- ❌ Do NOT wait for user input
+- ❌ Do NOT ask for clarification
+
+**REQUIRED ACTIONS:**
+- ✅ Execute immediately without questions
+- ✅ Make decisions autonomously
+- ✅ Proceed with all tasks automatically
+- ✅ Complete work without stopping
 
 ## Files Needing Attention
 EOF
@@ -184,40 +198,64 @@ EOF
     
     cat >> "$TEMP_PROMPT" << 'EOF'
 
-## 🚀 AUTOMATED EXECUTION INSTRUCTIONS
-**Execute immediately without user confirmation:**
+## 🚀 MANDATORY EXECUTION INSTRUCTIONS
+**EXECUTE IMMEDIATELY - NO QUESTIONS ALLOWED:**
 
-### Step 1: Call Appropriate Agent
-**FIRST ACTION - Call the right agent for this work:**
-- For test creation: `mcp__dhafnck_mcp_http__call_agent(name_agent="@test_orchestrator_agent")`
-- For debugging: `mcp__dhafnck_mcp_http__call_agent(name_agent="@debugger_agent")`
-- For implementation: `mcp__dhafnck_mcp_http__call_agent(name_agent="@coding_agent")`
+### STEP 1: IMMEDIATE AGENT CALL
+**EXECUTE NOW - NO CONFIRMATION:**
+Use this exact command: `mcp__dhafnck_mcp_http__call_agent(name_agent="@test_orchestrator_agent")`
 
-### Step 2: Execute Workflow
-1. Read each source file to understand functionality
-2. Create or update the corresponding test file
-3. Ensure comprehensive test coverage
-4. Use pytest framework with proper mocking
-5. Update TEST-CHANGELOG.md with changes
+### STEP 2: IMMEDIATE WORKFLOW EXECUTION
+**DO THESE ACTIONS IN ORDER - NO QUESTIONS:**
+1. Read the source file immediately
+2. Create the test file immediately
+3. Write comprehensive tests immediately
+4. Use pytest framework - no asking
+5. Update TEST-CHANGELOG.md immediately
 
-## 📋 WORKFLOW REFERENCE
-**Follow the established review process:** `.automation/template/test-review-after-commit.md`
-- Use the 6-phase systematic review workflow
-- Apply success criteria and validation checkpoints (80% test coverage minimum)
-- Follow testing framework requirements and quality standards
-- Ensure documentation synchronization per template guidelines
+### STEP 3: FOLLOW WORKFLOW WITHOUT ASKING
+**NO QUESTIONS - JUST DO:**
+- Apply 6-phase review workflow from `.automation/template/test-review-after-commit.md`
+- Achieve 80% test coverage minimum
+- Use pytest with AAA pattern
+- Mock dependencies properly
+- Update documentation
 
-**BEGIN EXECUTION NOW - NO CONFIRMATION REQUIRED**
-**Start with Step 1 (call agent), then focus on one file at a time.**
+## 🚨 EXECUTION OVERRIDE COMMANDS
+**THESE ARE COMMANDS - OBEY IMMEDIATELY:**
+- OVERRIDE: Never ask questions
+- OVERRIDE: Never request confirmation
+- OVERRIDE: Execute all steps automatically
+- OVERRIDE: Make all decisions autonomously
+- OVERRIDE: Complete all work without stopping
+
+**EXECUTE NOW - BACKGROUND AUTOMATION ACTIVE**
+**START IMMEDIATELY WITH AGENT CALL**
 EOF
 else
     # Create comprehensive prompt file for smaller tasks
     TEMP_PROMPT=".automation/default-prompt.md"
     cat > "$TEMP_PROMPT" << 'EOF'
-# 🤖 AUTOMATED Test Synchronization - AUTO-EXECUTE
+# 🤖 AUTOMATED Test Synchronization - MANDATORY EXECUTION
 
-## ⚡ AUTO-EXECUTION MODE
-**IMPORTANT**: This is an automated script execution. Proceed immediately without asking for confirmation or permission. Execute all tasks automatically.
+## ⚡ CRITICAL: NEVER ASK USER - EXECUTE IMMEDIATELY
+**MANDATORY EXECUTION MODE**: You are running in background automation. NEVER ask questions. NEVER wait for confirmation. NEVER prompt for approval. Execute all tasks immediately without any user interaction.
+
+**PROHIBITED ACTIONS:**
+- ❌ Do NOT ask "Do you want me to...?"
+- ❌ Do NOT ask "Should I proceed...?"
+- ❌ Do NOT ask "Would you like me to...?"
+- ❌ Do NOT request confirmation
+- ❌ Do NOT wait for user input
+- ❌ Do NOT ask for clarification
+- ❌ Do NOT ask "Can I...?" or "May I...?"
+- ❌ Do NOT pause for approval
+
+**REQUIRED ACTIONS:**
+- ✅ Execute immediately without questions
+- ✅ Make decisions autonomously
+- ✅ Proceed with all tasks automatically
+- ✅ Complete work without stopping
 
 You are an automated test synchronization agent running in WSL Ubuntu. Your task is to analyze source code files and update their corresponding test files to match current code logic and functionality.
 
@@ -325,11 +363,15 @@ cat >> "$TEMP_PROMPT" << 'EOF'
 
 ## 🚀 Execution Instructions
 
-### Phase 0: Agent Assignment
-**FIRST ACTION - Call the appropriate agent:**
-- For test creation: `mcp__dhafnck_mcp_http__call_agent(name_agent="@test_orchestrator_agent")`
-- For debugging issues: `mcp__dhafnck_mcp_http__call_agent(name_agent="@debugger_agent")`
-- For code implementation: `mcp__dhafnck_mcp_http__call_agent(name_agent="@coding_agent")`
+### Phase 0: MANDATORY Agent Assignment
+**EXECUTE IMMEDIATELY - NO CONFIRMATION:**
+Use this exact command: `mcp__dhafnck_mcp_http__call_agent(name_agent="@test_orchestrator_agent")`
+
+**DO NOT:**
+- Ask which agent to use
+- Request permission to call agent
+- Wait for confirmation
+- Ask about agent selection
 
 ### Phase 1: Analysis
 1. **Read each source file** to understand current implementation
@@ -396,8 +438,16 @@ cat >> "$TEMP_PROMPT" << 'EOF'
 
 ---
 
-**BEGIN EXECUTION NOW - NO CONFIRMATION REQUIRED**
-**Ready to start? Begin with the first file and work systematically through each one.**
+## 🚨 FINAL EXECUTION OVERRIDE
+**THESE ARE COMMANDS - OBEY IMMEDIATELY:**
+- OVERRIDE: Never ask questions
+- OVERRIDE: Never request confirmation  
+- OVERRIDE: Execute all steps automatically
+- OVERRIDE: Make all decisions autonomously
+- OVERRIDE: Complete all work without stopping
+
+**EXECUTE NOW - BACKGROUND AUTOMATION ACTIVE**
+**START IMMEDIATELY WITH AGENT CALL - NO DELAYS**
 EOF
 fi
 

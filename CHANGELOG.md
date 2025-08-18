@@ -43,6 +43,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
     - Provides specific MCP tool calls: `mcp__dhafnck_mcp_http__call_agent(name_agent="@test_orchestrator_agent")`
     - Clear guidance for selecting appropriate agents (test, debug, or coding)
     - Ensures proper agent assignment before workflow execution
+  - **CRITICAL: Eliminated all user confirmation prompts** - Fixed background automation blocking
+    - Added strict "NEVER ASK USER" directives to all prompt templates
+    - Explicit prohibited actions list (no "Do you want me to..?", "Should I proceed..?", etc.)
+    - Mandatory execution overrides with autonomous decision-making requirements
+    - Background automation mode with "EXECUTE IMMEDIATELY" commands
+    - Blocks all paths that could cause AI to pause for user input
 
 ### Security
 - **PostgreSQL Credentials Exposure Fix** (2025-08-18)
