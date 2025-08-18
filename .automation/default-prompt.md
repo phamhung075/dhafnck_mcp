@@ -27,6 +27,24 @@ REQUIRED BEHAVIORS:
 ## Missing Test Files - CREATE IMMEDIATELY:
 
 ## Missing Test Files
+- **Source**: `dhafnck-frontend/src/App.tsx`
+  - **Create test at**: `dhafnck-frontend/src/tests/App.test.tsx`
+
+- **Source**: `dhafnck-frontend/src/components/auth/EmailVerification.tsx`
+  - **Create test at**: `dhafnck-frontend/src/tests/components/auth/EmailVerification.test.tsx`
+
+- **Source**: `dhafnck-frontend/src/components/auth/SignupForm.tsx`
+  - **Create test at**: `dhafnck-frontend/src/tests/components/auth/SignupForm.test.tsx`
+
+- **Source**: `dhafnck-frontend/src/components/auth/index.ts`
+  - **Create test at**: `dhafnck-frontend/src/tests/components/auth/index.test.ts`
+
+- **Source**: `dhafnck-frontend/src/components/ui/card.tsx`
+  - **Create test at**: `dhafnck-frontend/src/tests/components/ui/card.test.tsx`
+
+- **Source**: `dhafnck-frontend/src/contexts/AuthContext.tsx`
+  - **Create test at**: `dhafnck-frontend/src/tests/contexts/AuthContext.test.tsx`
+
 - **Source**: `dhafnck_mcp_main/src/fastmcp/auth/api/supabase_endpoints.py`
   - **Create test at**: `dhafnck_mcp_main/src/tests/auth/api/supabase_endpoints_test.py`
 
@@ -41,6 +59,12 @@ REQUIRED BEHAVIORS:
 
 - **Source**: `dhafnck_mcp_main/src/fastmcp/auth/infrastructure/supabase_auth.py`
   - **Create test at**: `dhafnck_mcp_main/src/tests/auth/infrastructure/supabase_auth_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/http_server.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/server/http_server_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/supabase_auth_integration.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/server/routes/supabase_auth_integration_test.py`
 
 
 ## EXECUTION COMMANDS - DO NOW:

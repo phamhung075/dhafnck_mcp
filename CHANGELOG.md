@@ -69,6 +69,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
     - Created comprehensive documentation at `docs/operations/supabase-redirect-url-configuration.md`
     - Users now see proper verification page instead of 404 error
     - Verification flow: Email link → `/auth/verify` → Token extraction → Dashboard redirect
+  - **Enhanced Email Verification with Resend Functionality** (2025-08-18):
+    - Added resend verification email feature for expired or missing verification emails
+    - Updated `SignupForm.tsx` to detect when user tries to register with unverified email
+    - Shows "Resend Verification Email" button when signup fails due to existing unverified account
+    - Enhanced `EmailVerification.tsx` with resend form for expired verification links
+    - Users can now enter their email to request a new verification link directly from error page
+    - Added loading states and error messages for better user feedback
+    - Improved UX flow: Expired link → Enter email → Resend → Success message
+    - Handles common scenarios: expired links, lost emails, re-registration attempts
+    - Integrated with `/auth/supabase/resend-verification` endpoint
 
 ### Added
 - **Automated Test Synchronization for WSL Ubuntu** (2025-08-18)

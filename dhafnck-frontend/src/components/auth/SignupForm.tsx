@@ -49,6 +49,8 @@ export const SignupForm: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [emailVerificationRequired, setEmailVerificationRequired] = useState(false);
+  const [showResendOption, setShowResendOption] = useState(false);
+  const [resendEmail, setResendEmail] = useState<string>('');
   const [passwordStrength, setPasswordStrength] = useState<PasswordStrength>({
     score: 0,
     message: '',
@@ -114,10 +116,41 @@ export const SignupForm: React.FC = () => {
     setPasswordStrength({ score, message, color });
   }, [password]);
 
+  const handleResendVerification = async () => {
+    setError(null);
+    setSuccess(null);
+    setIsLoading(true);
+    
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/auth/supabase/resend-verification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: resendEmail }),
+      });
+
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        setSuccess('Verification email sent! Please check your inbox.');
+        setShowResendOption(false);
+        setEmailVerificationRequired(true);
+      } else {
+        setError(data.detail || 'Failed to resend verification email');
+      }
+    } catch (err) {
+      setError('Failed to resend verification email. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const onSubmit = async (data: SignupFormData) => {
     setError(null);
     setSuccess(null);
     setIsLoading(true);
+    setShowResendOption(false);
 
     try {
       const result = await signup(data.email, data.username, data.password);
@@ -127,6 +160,7 @@ export const SignupForm: React.FC = () => {
         setEmailVerificationRequired(true);
         setSuccess(result.message || 'Registration successful! Please check your email to verify your account.');
         setError(null);
+        setResendEmail(data.email); // Store email for resend option
         // Don't navigate away - let user see the success message
       } else if (result?.success) {
         // If somehow email verification is not required, navigate to dashboard
@@ -137,7 +171,16 @@ export const SignupForm: React.FC = () => {
       }
     } catch (err) {
       if (err instanceof Error) {
-        setError(err.message);
+        // Check if error is about existing unverified user
+        if (err.message.includes('already registered') || 
+            err.message.includes('already exists') || 
+            err.message.includes('User already registered')) {
+          setError('This email is already registered but not verified.');
+          setShowResendOption(true);
+          setResendEmail(data.email);
+        } else {
+          setError(err.message);
+        }
       } else {
         setError('An unexpected error occurred during registration');
       }
@@ -196,8 +239,27 @@ export const SignupForm: React.FC = () => {
           </Box>
 
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+            <Alert severity="error" sx={{ mb: 2 }} onClose={() => {
+              setError(null);
+              setShowResendOption(false);
+            }}>
               {error}
+              {showResendOption && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    Would you like to resend the verification email?
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={handleResendVerification}
+                    disabled={isLoading}
+                    startIcon={isLoading ? <CircularProgress size={16} /> : <Email />}
+                  >
+                    {isLoading ? 'Sending...' : 'Resend Verification Email'}
+                  </Button>
+                </Box>
+              )}
             </Alert>
           )}
 
@@ -219,6 +281,19 @@ export const SignupForm: React.FC = () => {
                   <Typography variant="body2" sx={{ mt: 0.5 }}>
                     🔐 After verification, you can sign in
                   </Typography>
+                  <Divider sx={{ my: 2 }} />
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    Didn't receive the email?
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={handleResendVerification}
+                    disabled={isLoading}
+                    startIcon={isLoading ? <CircularProgress size={16} /> : <Email />}
+                  >
+                    {isLoading ? 'Sending...' : 'Resend Verification Email'}
+                  </Button>
                 </Box>
               )}
             </Alert>
