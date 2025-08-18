@@ -119,13 +119,32 @@ class User(Base):
     @classmethod
     def from_domain(cls, domain_user: "User") -> "User":
         """Create SQLAlchemy model from domain entity"""
+        # Ensure status is converted to string value
+        if hasattr(domain_user.status, 'value'):
+            status_value = domain_user.status.value
+        elif isinstance(domain_user.status, str):
+            # If it's already a string, check if it needs conversion
+            if domain_user.status in ['PENDING_VERIFICATION', 'ACTIVE', 'INACTIVE', 'SUSPENDED']:
+                # Convert enum name to enum value
+                status_mapping = {
+                    'PENDING_VERIFICATION': 'pending_verification',
+                    'ACTIVE': 'active',
+                    'INACTIVE': 'inactive', 
+                    'SUSPENDED': 'suspended'
+                }
+                status_value = status_mapping.get(domain_user.status, domain_user.status.lower())
+            else:
+                status_value = domain_user.status
+        else:
+            status_value = str(domain_user.status).lower()
+        
         return cls(
             id=domain_user.id or str(uuid.uuid4()),
             email=domain_user.email,
             username=domain_user.username,
             password_hash=domain_user.password_hash,
             full_name=domain_user.full_name,
-            status=domain_user.status.value if hasattr(domain_user.status, 'value') else domain_user.status,
+            status=status_value,
             roles=[r.value if hasattr(r, 'value') else r for r in domain_user.roles],
             email_verified=domain_user.email_verified,
             email_verified_at=domain_user.email_verified_at,

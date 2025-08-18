@@ -7,6 +7,70 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 ## [Unreleased]
 
 ### Added
+- **Supabase Authentication Integration** (2025-08-18)
+  - Integrated Supabase's built-in authentication system for automatic email verification
+  - Created `src/fastmcp/auth/infrastructure/supabase_auth.py` - SupabaseAuthService implementation
+  - Added new API endpoints in `src/fastmcp/auth/api/supabase_endpoints.py`:
+    - `/auth/supabase/signup` - User registration with automatic email verification
+    - `/auth/supabase/signin` - User login with email verification check
+    - `/auth/supabase/signout` - User logout with token invalidation
+    - `/auth/supabase/password-reset` - Password reset email request
+    - `/auth/supabase/update-password` - Password update with access token
+    - `/auth/supabase/resend-verification` - Resend email verification
+    - `/auth/supabase/oauth/{provider}` - OAuth provider URL generation
+    - `/auth/supabase/me` - Get current authenticated user
+    - `/auth/supabase/verify-token` - Token verification endpoint
+  - Updated `src/fastmcp/auth/api_server.py` to include both legacy and Supabase auth routers
+  - Added Supabase Python client dependency (`supabase==2.18.1`)
+  - Created comprehensive migration guide at `docs/migration-guides/supabase-auth-migration.md`
+  - Benefits achieved:
+    - Automatic email verification without custom email service
+    - Built-in password reset flow with email templates
+    - OAuth provider support (Google, GitHub, etc.)
+    - Session management with automatic token refresh
+    - Enhanced security with battle-tested authentication
+  - Tested with real user registration and email verification flow
+  - Created comprehensive email template configuration guides:
+    - `docs/operations/supabase-email-template-configuration.md` - Step-by-step setup guide
+    - `docs/operations/supabase-email-quick-reference.md` - Quick reference and troubleshooting
+  - Provided complete HTML email templates for all auth flows:
+    - Confirm signup template with branding
+    - Password reset template with security notices
+    - Magic link template for passwordless auth
+    - User invitation template with feature highlights
+  - Documented SMTP configuration for production deployment
+  - Added monitoring queries and best practices for email delivery
+  - **Fixed Frontend Authentication Integration** - Updated to use Supabase endpoints:
+    - Changed `/api/auth/register` to `/auth/supabase/signup` in AuthContext
+    - Changed `/api/auth/login` to `/auth/supabase/signin` in AuthContext
+    - Updated SignupForm to handle email verification requirements
+    - Added success messages for email verification instructions
+    - Form disables after successful registration requiring email verification
+    - Shows clear instructions: "Check your email", "Click verification link", "Then sign in"
+  - Fixed the root cause of "Registration failed" - frontend was using old endpoints
+  - **Fixed TypeScript Compilation Error**:
+    - Added `SignupResult` interface to properly type the signup function return
+    - Updated `AuthContextType` interface to use `Promise<SignupResult>` for signup
+    - Fixed TypeScript error: "Property 'requires_email_verification' does not exist on type 'never'"
+    - Frontend now builds successfully with proper type safety
+  - **Fixed 404 Error for Supabase Auth Endpoints** (2025-08-18):
+    - Created `src/fastmcp/server/routes/supabase_auth_integration.py` to integrate Supabase auth into MCP server
+    - Updated `src/fastmcp/server/http_server.py` to include Supabase auth routes in both SSE and streamable HTTP apps
+    - Auth endpoints now properly served on port 8000 at `/auth/supabase/*`
+    - Converted FastAPI endpoints to Starlette-compatible routes for seamless integration
+    - Maintained user requirement: "do not fuking move server to 8001 my server use supabase cloud on port 8000"
+    - All 6 endpoints now accessible: signup, signin, signout, password-reset, resend-verification, health
+  - **Fixed Email Verification Redirect Handling** (2025-08-18):
+    - Created `dhafnck-frontend/src/components/auth/EmailVerification.tsx` to handle email verification callbacks
+    - Added `/auth/verify` route in `dhafnck-frontend/src/App.tsx` to capture Supabase redirect
+    - Component extracts tokens from URL hash fragment (`#access_token=...`)
+    - Automatically stores tokens and redirects to dashboard on successful verification
+    - Added `CardDescription` component to `dhafnck-frontend/src/components/ui/card.tsx`
+    - Created comprehensive documentation at `docs/operations/supabase-redirect-url-configuration.md`
+    - Users now see proper verification page instead of 404 error
+    - Verification flow: Email link → `/auth/verify` → Token extraction → Dashboard redirect
+
+### Added
 - **Automated Test Synchronization for WSL Ubuntu** (2025-08-18)
   - Created `.git/hooks/post-commit` hook for automatic test sync detection
   - Implemented `.automation/claude-test-sync-wsl.sh` - WSL-optimized test analysis script

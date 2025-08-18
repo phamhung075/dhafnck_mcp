@@ -18,8 +18,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
-# Import the auth router
+# Import the auth routers
 from fastmcp.auth.interface.auth_endpoints import router as auth_router
+from fastmcp.auth.api.supabase_endpoints import router as supabase_router
 
 # Configure logging
 logging.basicConfig(
@@ -44,8 +45,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include auth router
-app.include_router(auth_router)
+# Include auth routers
+app.include_router(auth_router)  # Custom auth endpoints (legacy)
+app.include_router(supabase_router)  # Supabase auth endpoints (new)
 
 # Health check endpoint
 @app.get("/health")

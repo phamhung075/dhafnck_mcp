@@ -436,6 +436,9 @@ EOF
 fi
 
 log "📝 Created prompt file: $TEMP_PROMPT"
+log "🔍 DEBUG: CLI command that will be executed:"
+log "    claude chat --append-system-prompt \"$TEMP_PROMPT\" --dangerously-skip-permissions"
+log ""
 
 # WSL-specific terminal handling with forced popup windows
 open_claude_terminal() {
@@ -479,8 +482,18 @@ open_claude_terminal() {
             echo '⚡ Starting Claude Code with forced execution...'
             echo ''
             cd '$REPO_ROOT'
-            # Use the forced execution script instead
-            .automation/claude-execute.sh
+            # Execute Claude with prompt content
+            echo '🚀 Executing Claude with automation prompt as system prompt...'
+            echo ''
+            echo '📋 Prompt file location: $TEMP_PROMPT'
+            echo '📊 Prompt file size: '\$(wc -c < '$TEMP_PROMPT')' bytes'
+            echo ''
+            echo '🔍 DEBUG: Executing Claude with system prompt from file...'
+            # Use the prompt file directly with proper syntax
+            echo 'Command: claude chat --append-system-prompt \"$TEMP_PROMPT\" --dangerously-skip-permissions'
+            echo ''
+            # Execute Claude using the file path directly (Claude will read it)
+            claude chat --append-system-prompt '$TEMP_PROMPT' --dangerously-skip-permissions
             echo ''
             echo '✅ Claude Code session completed!'
             echo '📊 Check $LOG_FILE for details'
@@ -504,7 +517,18 @@ open_claude_terminal() {
             echo '⚡ Starting Claude Code with forced execution...'
             echo ''
             cd '$REPO_ROOT'
-            .automation/claude-execute.sh
+            # Execute Claude with prompt file
+            echo '🚀 Executing Claude Code automation...'
+            echo '📋 Using prompt file as system prompt for forced execution'
+            echo ''
+            echo '📋 Prompt file: $TEMP_PROMPT'
+            echo '📊 File size: '\$(wc -c < \"$TEMP_PROMPT\")' bytes'
+            echo ''
+            echo '🔍 DEBUG: Executing Claude with prompt file...'
+            echo 'Command: claude chat --append-system-prompt \"$TEMP_PROMPT\" --dangerously-skip-permissions'
+            echo ''
+            # Use the prompt file path directly (Claude will read it)
+            claude chat --append-system-prompt \"$TEMP_PROMPT\" --dangerously-skip-permissions
             echo ''
             echo '✅ Claude Code session completed!'
             echo 'Press Enter to close...'
@@ -525,7 +549,18 @@ open_claude_terminal() {
             echo \"⚡ Starting Claude Code with forced execution...\"
             echo \"\"
             cd \"$REPO_ROOT\"
-            .automation/claude-execute.sh
+            # Execute Claude with prompt file
+            echo '🚀 Executing Claude Code automation...'
+            echo '📋 Using prompt file as system prompt for forced execution'
+            echo ''
+            echo '📋 Prompt file: $TEMP_PROMPT'
+            echo '📊 File size: '\$(wc -c < \"$TEMP_PROMPT\")' bytes'
+            echo ''
+            echo '🔍 DEBUG: Executing Claude with prompt file...'
+            echo 'Command: claude chat --append-system-prompt \"$TEMP_PROMPT\" --dangerously-skip-permissions'
+            echo ''
+            # Use the prompt file path directly (Claude will read it)
+            claude chat --append-system-prompt \"$TEMP_PROMPT\" --dangerously-skip-permissions
             echo \"\"
             echo \"✅ Session completed! Press Enter to close...\"
             read
@@ -545,7 +580,18 @@ open_claude_terminal() {
             echo '⚡ Starting Claude Code with forced execution...'
             echo ''
             cd '$REPO_ROOT'
-            .automation/claude-execute.sh
+            # Execute Claude with prompt file
+            echo '🚀 Executing Claude Code automation...'
+            echo '📋 Using prompt file as system prompt for forced execution'
+            echo ''
+            echo '📋 Prompt file: $TEMP_PROMPT'
+            echo '📊 File size: '\$(wc -c < \"$TEMP_PROMPT\")' bytes'
+            echo ''
+            echo '🔍 DEBUG: Executing Claude with prompt file...'
+            echo 'Command: claude chat --append-system-prompt \"$TEMP_PROMPT\" --dangerously-skip-permissions'
+            echo ''
+            # Use the prompt file path directly (Claude will read it)
+            claude chat --append-system-prompt \"$TEMP_PROMPT\" --dangerously-skip-permissions
             echo ''
             echo '✅ Session completed! Press Enter to close...'
             read
@@ -565,7 +611,7 @@ open_claude_terminal() {
                 Write-Host '';
                 Write-Host '⚡ Starting Claude Code...' -ForegroundColor Cyan;
                 Write-Host '';
-                wsl.exe -d '$WSL_DISTRO_NAME' -e bash -c 'cd $REPO_ROOT && .automation/claude-execute.sh';
+                wsl.exe -d '$WSL_DISTRO_NAME' -e bash -c 'cd $REPO_ROOT && echo \"🚀 Executing Claude Code automation...\" && echo \"📋 Using prompt file as system prompt for forced execution\" && echo \"\" && echo \"🔍 DEBUG: Executing Claude with prompt file...\" && echo \"Command: claude chat --append-system-prompt \\\"$TEMP_PROMPT\\\" --dangerously-skip-permissions\" && echo \"\" && claude chat --append-system-prompt \"$TEMP_PROMPT\" --dangerously-skip-permissions';
                 Write-Host '';
                 Write-Host '✅ Claude Code session completed!' -ForegroundColor Green;
                 Write-Host 'Press Enter to close...' -ForegroundColor Yellow;
@@ -592,7 +638,9 @@ open_claude_terminal() {
         echo "3. Manual execution:"
         echo "   Open a new terminal window and run:"
         echo "   cd $REPO_ROOT"
-        echo "   ${CLAUDE_CMD:-claude} ${CLAUDE_FLAGS:---dangerously-skip-permissions} $TEMP_PROMPT"
+        echo ""
+        echo "   🔍 DEBUG: Full CLI command to run manually:"
+        echo "   ${CLAUDE_CMD:-claude} chat --append-system-prompt \"$TEMP_PROMPT\" ${CLAUDE_FLAGS:---dangerously-skip-permissions}"
         echo ""
         echo "📁 Prompt file saved at: $TEMP_PROMPT"
         echo ""

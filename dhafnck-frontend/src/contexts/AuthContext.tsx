@@ -15,6 +15,14 @@ export interface AuthTokens {
   refresh_token: string;
 }
 
+export interface SignupResult {
+  success: boolean;
+  requires_email_verification?: boolean;
+  message?: string;
+  access_token?: string;
+  refresh_token?: string;
+}
+
 export interface JWTPayload {
   sub: string;
   email: string;
@@ -31,7 +39,7 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, username: string, password: string) => Promise<void>;
+  signup: (email: string, username: string, password: string) => Promise<SignupResult>;
   logout: () => void;
   refreshToken: () => Promise<void>;
   setTokens: (tokens: AuthTokens) => void;
@@ -94,10 +102,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(userData);
   };
 
-  // Login function
+  // Login function - Updated to use Supabase Auth
   const login = async (email: string, password: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      const response = await fetch(`${API_BASE_URL}/auth/supabase/signin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -107,29 +115,53 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (!response.ok) {
         const error = await response.json();
+        // Check if it's an email verification issue
+        if (response.status === 403) {
+          throw new Error('Please verify your email before signing in. Check your inbox for the verification link.');
+        }
         throw new Error(error.detail || 'Login failed');
       }
 
       const data = await response.json();
-      setTokens({
-        access_token: data.access_token,
-        refresh_token: data.refresh_token
-      });
+      
+      // Check if email verification is required
+      if (data.requires_email_verification) {
+        throw new Error('Please verify your email before signing in. Check your inbox for the verification link.');
+      }
+      
+      if (data.access_token && data.refresh_token) {
+        setTokens({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token
+        });
+        // Decode and set user from token
+        const userData = decodeToken(data.access_token);
+        if (userData) {
+          setUser(userData);
+        }
+      } else {
+        throw new Error('No tokens received from server');
+      }
     } catch (error) {
       console.error('Login error:', error);
       throw error;
     }
   };
 
-  // Signup function
-  const signup = async (email: string, username: string, password: string) => {
+  // Signup function - Updated to use Supabase Auth
+  const signup = async (email: string, username: string, password: string): Promise<SignupResult> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+      const response = await fetch(`${API_BASE_URL}/auth/supabase/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, username, password }),
+        body: JSON.stringify({ 
+          email, 
+          password,
+          username,  // Will be stored in user metadata
+          full_name: username  // Optional: can be different from username
+        }),
       });
 
       if (!response.ok) {
@@ -139,14 +171,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       const data = await response.json();
       
-      // Backend returns MessageResponse {message, success} not tokens
-      // Auto-login after successful registration
-      if (data.success) {
-        // Automatically log in after successful registration
-        await login(email, password);
-      } else {
-        throw new Error(data.message || 'Registration failed');
+      // Check if email verification is required
+      if (data.requires_email_verification) {
+        // Don't auto-login, user needs to verify email first
+        return {
+          success: true,
+          requires_email_verification: true,
+          message: data.message || 'Please check your email to verify your account'
+        };
       }
+      
+      // If email verification is not required (unlikely with Supabase)
+      if (data.success && data.access_token) {
+        setTokens({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token
+        });
+        // Decode and set user from token
+        const userData = decodeToken(data.access_token);
+        if (userData) {
+          setUser(userData);
+        }
+      }
+      
+      return data;
     } catch (error) {
       console.error('Signup error:', error);
       throw error;

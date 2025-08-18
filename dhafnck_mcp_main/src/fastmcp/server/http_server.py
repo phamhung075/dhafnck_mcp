@@ -256,6 +256,16 @@ def create_sse_app(
     except ImportError as e:
         logger.warning(f"Could not import auth integration routes: {e}")
     
+    # Add Supabase auth integration routes
+    try:
+        from .routes.supabase_auth_integration import create_supabase_auth_integration_routes
+        supabase_auth_routes = create_supabase_auth_integration_routes()
+        if supabase_auth_routes:
+            server_routes.extend(supabase_auth_routes)
+            logger.info(f"Supabase auth routes integrated into SSE server at /auth/supabase/* ({len(supabase_auth_routes)} routes)")
+    except ImportError as e:
+        logger.warning(f"Could not import Supabase auth integration routes: {e}")
+    
     # Add task summary routes for lazy loading optimization
     try:
         from .routes.task_summary_routes import task_summary_routes
@@ -475,6 +485,16 @@ def create_streamable_http_app(
             logger.info("Auth API routes integrated into MCP server at /api/auth/*")
     except ImportError as e:
         logger.warning(f"Could not import auth integration routes: {e}")
+    
+    # Add Supabase auth integration routes
+    try:
+        from .routes.supabase_auth_integration import create_supabase_auth_integration_routes
+        supabase_auth_routes = create_supabase_auth_integration_routes()
+        if supabase_auth_routes:
+            server_routes.extend(supabase_auth_routes)
+            logger.info(f"Supabase auth routes integrated into MCP server at /auth/supabase/* ({len(supabase_auth_routes)} routes)")
+    except ImportError as e:
+        logger.warning(f"Could not import Supabase auth integration routes: {e}")
     
     # Add task summary routes for lazy loading optimization
     try:

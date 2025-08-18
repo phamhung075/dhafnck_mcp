@@ -65,6 +65,9 @@ class User:
     project_ids: List[str] = field(default_factory=list)
     default_project_id: Optional[str] = None
     
+    # Additional metadata
+    metadata: dict = field(default_factory=dict)
+    
     def __post_init__(self):
         """Initialize timestamps and validate data"""
         if not self.created_at:
@@ -198,6 +201,7 @@ class User:
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "project_ids": self.project_ids,
             "default_project_id": self.default_project_id,
+            "metadata": self.metadata,
             # Never expose password_hash, tokens, or security-related fields
         }
     

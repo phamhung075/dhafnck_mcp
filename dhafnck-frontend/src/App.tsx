@@ -4,7 +4,7 @@ import './App.css';
 import ProjectList from './components/ProjectList';
 import { Button } from './components/ui/button';
 import { Menu, X } from 'lucide-react';
-import { AuthWrapper, LoginForm, SignupForm, ProtectedRoute } from './components/auth';
+import { AuthWrapper, LoginForm, SignupForm, ProtectedRoute, EmailVerification } from './components/auth';
 
 // Use lazy loading for TaskList component for better performance
 const LazyTaskList = lazy(() => import('./components/LazyTaskList'));
@@ -132,6 +132,7 @@ function App() {
         {/* Public routes */}
         <Route path="/login" element={<LoginForm />} />
         <Route path="/signup" element={<SignupForm />} />
+        <Route path="/auth/verify" element={<EmailVerification />} />
         
         {/* Protected routes */}
         <Route

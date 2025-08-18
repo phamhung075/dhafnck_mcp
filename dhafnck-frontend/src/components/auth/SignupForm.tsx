@@ -46,7 +46,9 @@ export const SignupForm: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [emailVerificationRequired, setEmailVerificationRequired] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState<PasswordStrength>({
     score: 0,
     message: '',
@@ -114,11 +116,25 @@ export const SignupForm: React.FC = () => {
 
   const onSubmit = async (data: SignupFormData) => {
     setError(null);
+    setSuccess(null);
     setIsLoading(true);
 
     try {
-      await signup(data.email, data.username, data.password);
-      navigate('/dashboard');
+      const result = await signup(data.email, data.username, data.password);
+      
+      // Check if email verification is required
+      if (result?.requires_email_verification) {
+        setEmailVerificationRequired(true);
+        setSuccess(result.message || 'Registration successful! Please check your email to verify your account.');
+        setError(null);
+        // Don't navigate away - let user see the success message
+      } else if (result?.success) {
+        // If somehow email verification is not required, navigate to dashboard
+        navigate('/dashboard');
+      } else {
+        // Handle unexpected response format
+        setError('Registration completed but response was unexpected. Please try signing in.');
+      }
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
@@ -182,6 +198,29 @@ export const SignupForm: React.FC = () => {
           {error && (
             <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
               {error}
+            </Alert>
+          )}
+
+          {success && (
+            <Alert 
+              severity="success" 
+              sx={{ mb: 2 }}
+              icon={<CheckCircle />}
+            >
+              {success}
+              {emailVerificationRequired && (
+                <Box sx={{ mt: 1 }}>
+                  <Typography variant="body2">
+                    📧 Check your inbox for the verification email
+                  </Typography>
+                  <Typography variant="body2" sx={{ mt: 0.5 }}>
+                    ✅ Click the link in the email to verify your account
+                  </Typography>
+                  <Typography variant="body2" sx={{ mt: 0.5 }}>
+                    🔐 After verification, you can sign in
+                  </Typography>
+                </Box>
+              )}
             </Alert>
           )}
 
@@ -374,10 +413,12 @@ export const SignupForm: React.FC = () => {
               fullWidth
               variant="contained"
               sx={{ mt: 3, mb: 2 }}
-              disabled={isLoading}
+              disabled={isLoading || emailVerificationRequired}
             >
               {isLoading ? (
                 <CircularProgress size={24} color="inherit" />
+              ) : emailVerificationRequired ? (
+                'Check Your Email'
               ) : (
                 'Sign Up'
               )}

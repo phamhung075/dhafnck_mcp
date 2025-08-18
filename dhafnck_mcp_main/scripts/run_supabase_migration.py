@@ -37,15 +37,21 @@ def get_database_url():
 
 def load_migration_sql():
     """Load the authentication migration SQL."""
-    script_dir = Path(__file__).parent
-    migration_file = script_dir.parent / "database" / "migrations" / "002_add_authentication_tables.sql"
+    # Try multiple possible locations for the migration file
+    possible_paths = [
+        Path("/app/002_add_authentication_tables.sql"),  # Copied to container
+        Path(__file__).parent.parent / "database" / "migrations" / "002_add_authentication_tables.sql",
+        Path("/app/src/database/migrations/002_add_authentication_tables.sql"),
+    ]
     
-    if not migration_file.exists():
-        logger.error(f"Migration file not found: {migration_file}")
-        return None
+    for migration_file in possible_paths:
+        if migration_file.exists():
+            logger.info(f"Found migration file: {migration_file}")
+            with open(migration_file, 'r') as f:
+                return f.read()
     
-    with open(migration_file, 'r') as f:
-        return f.read()
+    logger.error(f"Migration file not found in any of: {possible_paths}")
+    return None
 
 def run_migration():
     """Connect to Supabase and run the authentication migration."""
