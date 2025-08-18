@@ -54,11 +54,13 @@ def create_auth_integration_routes():
                     )
                     
                     if result.success and result.user:
+                        db.commit()  # Commit successful registration
                         return JSONResponse({
                             "message": f"User {result.user.username} registered successfully",
                             "success": True
                         })
                     else:
+                        db.rollback()  # Rollback on registration failure
                         return JSONResponse({
                             "message": result.error_message or "Registration failed",
                             "success": False
@@ -66,6 +68,7 @@ def create_auth_integration_routes():
                     
                 except Exception as e:
                     logger.error(f"Registration error: {e}")
+                    db.rollback()  # Rollback on exception
                     return JSONResponse({
                         "detail": str(e),
                         "success": False
@@ -103,18 +106,21 @@ def create_auth_integration_routes():
                     )
                     
                     if result.success:
+                        db.commit()  # Commit successful login
                         return JSONResponse({
                             "access_token": result.access_token,
                             "refresh_token": result.refresh_token,
                             "token_type": "bearer"
                         })
                     else:
+                        db.rollback()  # Rollback on login failure
                         return JSONResponse({
                             "detail": result.error_message or "Invalid credentials"
                         }, status_code=401)
                         
                 except Exception as e:
                     logger.error(f"Login error: {e}")
+                    db.rollback()  # Rollback on exception
                     return JSONResponse({
                         "detail": str(e)
                     }, status_code=400)

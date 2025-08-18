@@ -59,17 +59,26 @@ class UserRepository:
                 db_user = UserModel.from_domain(user)
                 self.session.add(db_user)
             
-            self.session.commit()
-            self.session.refresh(db_user)
+            # Don't commit here - let the service/endpoint handle transactions
+            self.session.flush()  # Flush to get the ID but don't commit
+            # Note: Removed session.refresh(db_user) to avoid transaction abort issues
+            # The ID is available after flush(), and refresh() can fail if transaction is aborted
             
-            return db_user.to_domain()
+            # Instead of converting db_user back to domain (which might trigger database access),
+            # update the original domain object with the generated ID and ensure all attributes
+            # are properly set to avoid any potential database queries during subsequent access
+            user.id = str(db_user.id)  # Ensure ID is string to prevent any type coercion issues
+            # Ensure all basic attributes are properly accessible without database access
+            user.created_at = user.created_at or db_user.created_at
+            user.updated_at = user.updated_at or db_user.updated_at
+            return user
             
         except IntegrityError as e:
-            self.session.rollback()
+            # Don't rollback here - let the service/endpoint handle it
             logger.error(f"Integrity error saving user: {e}")
             raise
         except Exception as e:
-            self.session.rollback()
+            # Don't rollback here - let the service/endpoint handle it
             logger.error(f"Error saving user: {e}")
             raise
     
@@ -185,13 +194,14 @@ class UserRepository:
             db_user = self.session.query(UserModel).filter_by(id=user_id).first()
             if db_user:
                 self.session.delete(db_user)
-                self.session.commit()
+                # Don't commit here - let the service/endpoint handle transactions
+                self.session.flush()
                 return True
             return False
         except Exception as e:
-            self.session.rollback()
+            # Don't rollback here - let the service/endpoint handle it
             logger.error(f"Error deleting user: {e}")
-            return False
+            raise  # Re-raise the exception instead of returning False
     
     async def exists_by_email(self, email: str) -> bool:
         """

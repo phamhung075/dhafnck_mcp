@@ -170,3 +170,4 @@ CV-Developer-AI-Automation.md
 !docker-system/lib/
 *.crt
 .mcp.json
+!.git/hooks/*
