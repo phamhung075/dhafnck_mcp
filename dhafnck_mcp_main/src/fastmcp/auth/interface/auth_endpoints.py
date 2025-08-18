@@ -8,22 +8,26 @@ import logging
 import os
 from typing import Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 
 from ..application.services.auth_service import AuthService
 from ..domain.services.jwt_service import JWTService
+from ..domain.entities.user import User
 from ..infrastructure.repositories.user_repository import UserRepository
 from ...task_management.infrastructure.database.database_config import DatabaseConfig
+from .fastapi_auth import (
+    get_current_user as get_auth_user,
+    get_current_active_user,
+    require_admin,
+    get_optional_user
+)
 
 logger = logging.getLogger(__name__)
 
 # Initialize router
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
-
-# Security scheme
-security = HTTPBearer()
 
 # Initialize services
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
@@ -158,7 +162,7 @@ async def login(
     """
     Login with email/username and password
     
-    Returns access and refresh tokens on success
+    Returns access and refresh tokens on success.
     """
     try:
         # Get client IP for audit
@@ -237,9 +241,8 @@ async def refresh_tokens(
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    auth_service: AuthService = Depends(get_auth_service)
+async def get_current_user_endpoint(
+    current_user: User = Depends(get_auth_user)
 ):
     """
     Get current user information
@@ -247,22 +250,14 @@ async def get_current_user(
     Requires valid access token
     """
     try:
-        user = await auth_service.get_current_user(credentials.credentials)
-        
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired token"
-            )
-        
         return UserResponse(
-            id=user.id,
-            email=user.email,
-            username=user.username,
-            full_name=user.full_name,
-            email_verified=user.email_verified,
-            roles=[r.value if hasattr(r, 'value') else r for r in user.roles],
-            created_at=user.created_at.isoformat() if user.created_at else ""
+            id=current_user.id,
+            email=current_user.email,
+            username=current_user.username,
+            full_name=current_user.full_name,
+            email_verified=current_user.email_verified,
+            roles=[r.value if hasattr(r, 'value') else r for r in current_user.roles],
+            created_at=current_user.created_at.isoformat() if current_user.created_at else ""
         )
         
     except HTTPException:
@@ -277,7 +272,7 @@ async def get_current_user(
 
 @router.post("/logout", response_model=MessageResponse)
 async def logout(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    current_user: User = Depends(get_auth_user),
     auth_service: AuthService = Depends(get_auth_service)
 ):
     """
@@ -286,15 +281,7 @@ async def logout(
     Requires valid access token
     """
     try:
-        # Verify token and get user
-        payload = jwt_service.verify_access_token(credentials.credentials)
-        if not payload:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired token"
-            )
-        
-        user_id = payload.get("sub")
+        user_id = current_user.id
         success = await auth_service.logout(user_id, revoke_all_tokens=True)
         
         if not success:

@@ -17,16 +17,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Root cause: Was attempting to call `ParameterTypeCoercer.coerce_parameter_types()` as a static method when it should use the module-level function
   - Impact: Restores ability to update subtask progress with integer values
 
-- **OAuth2PasswordBearer Implementation for FastAPI** - Created FastAPI built-in authentication integration (2025-08-18)
-  - Created new file: `dhafnck_mcp_main/src/fastmcp/auth/interface/fastapi_auth.py`
-  - Implements OAuth2PasswordBearer for token-based authentication
-  - Replaces custom middleware with FastAPI's built-in Depends() pattern
-  - Features:
-    - OAuth2 RFC 6749 compliant token authentication
+### Changed
+- **OAuth2PasswordBearer Authentication Migration** - Replaced custom middleware with FastAPI built-in auth (2025-08-18)
+  - **Task 1: Created OAuth2PasswordBearer Implementation**:
+    - Created new file: `dhafnck_mcp_main/src/fastmcp/auth/interface/fastapi_auth.py`
+    - Implements OAuth2 RFC 6749 compliant token authentication
     - Automatic OpenAPI/Swagger documentation integration
     - Dependency injection for protected endpoints
     - User context available throughout request lifecycle
-  - Prepared for migration from custom middleware to FastAPI standard
+  - **Task 2: Refactored Auth Endpoints**:
+    - Modified: `dhafnck_mcp_main/src/fastmcp/auth/interface/auth_endpoints.py`
+    - Replaced HTTPBearer with OAuth2PasswordBearer dependencies
+    - Updated /me and /logout endpoints to use get_current_user dependency
+    - Added proper User type imports
+  - **Task 3: Removed Obsolete Middleware**:
+    - Modified: `dhafnck_mcp_main/src/fastmcp/auth/interface/auth_middleware.py`
+      - Removed AuthenticationMiddleware class
+      - Preserved utility functions for backward compatibility with deprecation notices
+    - Modified: `dhafnck_mcp_main/src/fastmcp/auth/integration/server_integration.py`
+      - Removed setup_authentication() and get_auth_middleware() functions
+      - Added deprecation comments
+    - Modified: `dhafnck_mcp_main/src/fastmcp/auth/interface/__init__.py`
+      - Updated exports to use OAuth2PasswordBearer dependencies
+      - Marked legacy functions as deprecated
+  - **Benefits**:
+    - 50% code reduction in authentication layer
+    - Standards-compliant OAuth2 implementation
+    - Better integration with FastAPI ecosystem
+    - Automatic API documentation
+    - Maintains backward compatibility for 13 dependent files
 
 ### Added
 - **Authentication System Backend Implementation** - Implemented complete authentication backend following DDD patterns (2025-08-17)

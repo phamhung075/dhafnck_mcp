@@ -1,10 +1,18 @@
 """Authentication Interface Layer"""
 
 from .auth_endpoints import router as auth_router
-from .auth_middleware import (
-    AuthenticationMiddleware,
-    require_auth,
+
+# Import OAuth2PasswordBearer dependencies from fastapi_auth
+from .fastapi_auth import (
+    get_current_user,
+    get_current_active_user,
     require_roles,
+    require_admin,
+    get_optional_user
+)
+
+# Import legacy utility functions (DEPRECATED - for backward compatibility only)
+from .auth_middleware import (
     get_current_user_id,
     get_current_user_email,
     get_current_user_roles,
@@ -15,9 +23,13 @@ from .auth_middleware import (
 
 __all__ = [
     "auth_router",
-    "AuthenticationMiddleware",
-    "require_auth",
+    # OAuth2PasswordBearer dependencies (recommended)
+    "get_current_user",
+    "get_current_active_user",
     "require_roles",
+    "require_admin",
+    "get_optional_user",
+    # Legacy functions (deprecated)
     "get_current_user_id",
     "get_current_user_email", 
     "get_current_user_roles",
@@ -25,3 +37,6 @@ __all__ = [
     "has_role",
     "is_admin"
 ]
+
+# Note: AuthenticationMiddleware and require_auth have been removed.
+# Use OAuth2PasswordBearer dependencies from fastapi_auth instead.
