@@ -47,16 +47,22 @@ def create_auth_integration_routes():
                     auth_service = AuthService(user_repository, jwt_service)
                     
                     # Register user
-                    user = await auth_service.register_user(
+                    result = await auth_service.register_user(
                         email=data.get("email"),
                         username=data.get("username"),
                         password=data.get("password")
                     )
                     
-                    return JSONResponse({
-                        "message": f"User {user.username} registered successfully",
-                        "success": True
-                    })
+                    if result.success and result.user:
+                        return JSONResponse({
+                            "message": f"User {result.user.username} registered successfully",
+                            "success": True
+                        })
+                    else:
+                        return JSONResponse({
+                            "message": result.error_message or "Registration failed",
+                            "success": False
+                        }, status_code=400)
                     
                 except Exception as e:
                     logger.error(f"Registration error: {e}")
@@ -91,20 +97,20 @@ def create_auth_integration_routes():
                     auth_service = AuthService(user_repository, jwt_service)
                     
                     # Authenticate user
-                    tokens = await auth_service.authenticate(
-                        email=data.get("email"),
+                    result = await auth_service.login(
+                        email_or_username=data.get("email"),
                         password=data.get("password")
                     )
                     
-                    if tokens:
+                    if result.success:
                         return JSONResponse({
-                            "access_token": tokens.access_token,
-                            "refresh_token": tokens.refresh_token,
+                            "access_token": result.access_token,
+                            "refresh_token": result.refresh_token,
                             "token_type": "bearer"
                         })
                     else:
                         return JSONResponse({
-                            "detail": "Invalid credentials"
+                            "detail": result.error_message or "Invalid credentials"
                         }, status_code=401)
                         
                 except Exception as e:

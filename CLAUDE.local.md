@@ -56,9 +56,10 @@ dhafnck_mcp_main/docs/
   - Issue documentation → `dhafnck_mcp_main/docs/issues/`
   - Reports & status → `dhafnck_mcp_main/docs/reports-status/`
   - Operations guides → `dhafnck_mcp_main/docs/operations/`
-  - **ONLY 4 .md FILES ALLOWED IN PROJECT ROOT**: 
+  - **ONLY 5 .md FILES ALLOWED IN PROJECT ROOT**: 
     - README.md (project overview)
     - CHANGELOG.md (project-wide changes)
+    - TEST-CHANGELOG.md (tests changes)
     - CLAUDE.md (AI agent instructions - checked in)
     - CLAUDE.local.md (local AI rules - not checked in)
 
@@ -143,3 +144,4 @@ See CHANGELOG.md for version history and recent changes.
 - **NEVER** proactively create documentation unless explicitly requested
 - Do what has been asked; nothing more, nothing less
 - Rebuild Docker to view code changes in container mode
+- **TEST-CHANGELOG.md Updates**: AI agents MUST update TEST-CHANGELOG.md when making changes to test files. Document all test additions, modifications, or fixes in TEST-CHANGELOG.md (located in project root). This rule belongs in CLAUDE.local.md, NOT in CLAUDE.md.
