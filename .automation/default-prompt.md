@@ -13,18 +13,33 @@
 ## 🚀 AUTOMATED EXECUTION INSTRUCTIONS
 **Execute immediately without user confirmation:**
 
-1. Read each source file to understand functionality
-2. Create or update the corresponding test file
-3. Ensure comprehensive test coverage
-4. Use pytest framework with proper mocking
-5. Update TEST-CHANGELOG.md with changes
+### Step 1: Call Appropriate Agent
+**FIRST ACTION - Call the right agent for this work:**
+- For test creation and code analysis: `mcp__dhafnck_mcp_http__call_agent(name_agent="@test_orchestrator_agent")`
+- For complex debugging: `mcp__dhafnck_mcp_http__call_agent(name_agent="@debugger_agent")`
+- For code implementation: `mcp__dhafnck_mcp_http__call_agent(name_agent="@coding_agent")`
 
-## 📋 WORKFLOW REFERENCE
+### Step 2: Execute Review Workflow
 **Follow the established review process:** `.automation/template/test-review-after-commit.md`
-- Use the 6-phase systematic review workflow
-- Apply success criteria and validation checkpoints
-- Follow testing framework requirements and quality standards
-- Ensure documentation synchronization per template guidelines
+
+1. **Read each source file** to understand functionality and current implementation
+2. **Analyze existing tests** (if any) to understand current coverage and patterns
+3. **Create or update the corresponding test file** with comprehensive coverage
+4. **Use pytest framework** with proper mocking and AAA pattern (Arrange, Act, Assert)
+5. **Apply 6-phase systematic review workflow:**
+   - Commit Change Analysis
+   - Code Context Assessment
+   - Test Strategy Validation
+   - Documentation Synchronization
+   - Implementation & Validation
+   - Quality Assurance
+6. **Ensure 80% minimum test coverage** for new code
+7. **Update TEST-CHANGELOG.md** with detailed changes and rationale
+
+### Step 3: Validation
+- Run all tests to ensure they pass
+- Verify test coverage meets project standards
+- Check documentation is synchronized with code changes
 
 **BEGIN EXECUTION NOW - NO CONFIRMATION REQUIRED**
-Focus on one file at a time. Start with the first source file listed above.
+**Start with Step 1 (call agent), then proceed with the review workflow for each file.**

@@ -38,6 +38,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
     - Added 6-phase systematic workflow guidance to all prompt templates
     - Integrated quality standards and success criteria (80% test coverage minimum)
     - Ensures AI agents follow consistent review methodology across all executions
+  - **Fixed automation execution with explicit agent calling** - Resolved execution issues
+    - Added mandatory agent calling as Step 1 in all prompt templates
+    - Provides specific MCP tool calls: `mcp__dhafnck_mcp_http__call_agent(name_agent="@test_orchestrator_agent")`
+    - Clear guidance for selecting appropriate agents (test, debug, or coding)
+    - Ensures proper agent assignment before workflow execution
 
 ### Security
 - **PostgreSQL Credentials Exposure Fix** (2025-08-18)

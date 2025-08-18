@@ -187,6 +187,13 @@ EOF
 ## 🚀 AUTOMATED EXECUTION INSTRUCTIONS
 **Execute immediately without user confirmation:**
 
+### Step 1: Call Appropriate Agent
+**FIRST ACTION - Call the right agent for this work:**
+- For test creation: `mcp__dhafnck_mcp_http__call_agent(name_agent="@test_orchestrator_agent")`
+- For debugging: `mcp__dhafnck_mcp_http__call_agent(name_agent="@debugger_agent")`
+- For implementation: `mcp__dhafnck_mcp_http__call_agent(name_agent="@coding_agent")`
+
+### Step 2: Execute Workflow
 1. Read each source file to understand functionality
 2. Create or update the corresponding test file
 3. Ensure comprehensive test coverage
@@ -195,14 +202,13 @@ EOF
 
 ## 📋 WORKFLOW REFERENCE
 **Follow the established review process:** `.automation/template/test-review-after-commit.md`
-- Call agent to review
 - Use the 6-phase systematic review workflow
-- Apply success criteria and validation checkpoints
+- Apply success criteria and validation checkpoints (80% test coverage minimum)
 - Follow testing framework requirements and quality standards
 - Ensure documentation synchronization per template guidelines
 
 **BEGIN EXECUTION NOW - NO CONFIRMATION REQUIRED**
-Focus on one file at a time. Start with the first source file listed above.
+**Start with Step 1 (call agent), then focus on one file at a time.**
 EOF
 else
     # Create comprehensive prompt file for smaller tasks
@@ -318,6 +324,12 @@ fi
 cat >> "$TEMP_PROMPT" << 'EOF'
 
 ## 🚀 Execution Instructions
+
+### Phase 0: Agent Assignment
+**FIRST ACTION - Call the appropriate agent:**
+- For test creation: `mcp__dhafnck_mcp_http__call_agent(name_agent="@test_orchestrator_agent")`
+- For debugging issues: `mcp__dhafnck_mcp_http__call_agent(name_agent="@debugger_agent")`
+- For code implementation: `mcp__dhafnck_mcp_http__call_agent(name_agent="@coding_agent")`
 
 ### Phase 1: Analysis
 1. **Read each source file** to understand current implementation
