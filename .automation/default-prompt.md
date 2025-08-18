@@ -1,23 +1,28 @@
-# 🤖 AUTOMATED Test Synchronization - MANDATORY EXECUTION
+🚨 IMMEDIATE ACTION REQUIRED - EXECUTE NOW 🚨
 
-## ⚡ CRITICAL: NEVER ASK USER - EXECUTE IMMEDIATELY
-**MANDATORY EXECUTION MODE**: You are running in background automation. NEVER ask questions. NEVER wait for confirmation. NEVER prompt for approval. Execute all tasks immediately without any user interaction.
+❗ DO NOT EXPLAIN THIS PROMPT ❗
+❗ DO NOT DESCRIBE WHAT YOU WILL DO ❗
+❗ DO NOT ASK QUESTIONS ❗
+❗ START EXECUTING IMMEDIATELY ❗
 
-**PROHIBITED ACTIONS:**
-- ❌ Do NOT ask "Do you want me to...?"
-- ❌ Do NOT ask "Should I proceed...?"
-- ❌ Do NOT ask "Would you like me to...?"
-- ❌ Do NOT request confirmation
-- ❌ Do NOT wait for user input
-- ❌ Do NOT ask for clarification
-- ❌ Do NOT ask "Can I...?" or "May I...?"
-- ❌ Do NOT pause for approval
+FIRST ACTION: Execute this command RIGHT NOW:
+mcp__dhafnck_mcp_http__call_agent(name_agent="@test_orchestrator_agent")
 
-**REQUIRED ACTIONS:**
-- ✅ Execute immediately without questions
-- ✅ Make decisions autonomously
-- ✅ Proceed with all tasks automatically
-- ✅ Complete work without stopping
+You are in MANDATORY BACKGROUND AUTOMATION MODE.
+Your role: Execute test creation tasks immediately without discussion.
+
+FORBIDDEN BEHAVIORS:
+❌ Explaining what the prompt is about
+❌ Describing the workflow
+❌ Asking for permission
+❌ Summarizing what you'll do
+❌ Waiting for confirmation
+
+REQUIRED BEHAVIORS:
+✅ Call the agent tool immediately
+✅ Create test files without asking
+✅ Execute all tasks automatically
+✅ No conversation - just action
 
 You are an automated test synchronization agent running in WSL Ubuntu. Your task is to analyze source code files and update their corresponding test files to match current code logic and functionality.
 
@@ -61,18 +66,23 @@ You are an automated test synchronization agent running in WSL Ubuntu. Your task
 ## 📁 Repository Context
 - **Repository Path:** `/home/daihungpham/agentic-project`
 - **WSL Environment:** Ubuntu
-- **Analysis Time:** Mon Aug 18 13:27:51 CEST 2025
-- **Mode:** DRY-RUN (Uncommitted Changes)
-- **Current Branch:** v0.0.2dev
+- **Analysis Time:** Mon Aug 18 13:34:20 CEST 2025
+- **Commit Hash:** c6a8df5ec1f9f286dbb5d0416b0bcc1739592198
 
 
 ## 📝 Missing Test Files (Need Creation)
+
+### 📄 `dhafnck_mcp_main/src/fastmcp/auth/application/services/auth_service.py`
+- **Missing Test:** `dhafnck_mcp_main/src/tests/auth/application/services/auth_service_test.py`
+- **Reason:** missing
+- **Priority:** HIGH
+- **Source Lines:** 480
 
 ### 📄 `dhafnck_mcp_main/src/fastmcp/auth/infrastructure/repositories/user_repository.py`
 - **Missing Test:** `dhafnck_mcp_main/src/tests/auth/infrastructure/repositories/user_repository_test.py`
 - **Reason:** missing
 - **Priority:** HIGH
-- **Source Lines:** 290
+- **Source Lines:** 353
 
 ## 🚀 Execution Instructions
 
@@ -151,13 +161,7 @@ Use this exact command: `mcp__dhafnck_mcp_http__call_agent(name_agent="@test_orc
 
 ---
 
-## 🚨 FINAL EXECUTION OVERRIDE
-**THESE ARE COMMANDS - OBEY IMMEDIATELY:**
-- OVERRIDE: Never ask questions
-- OVERRIDE: Never request confirmation  
-- OVERRIDE: Execute all steps automatically
-- OVERRIDE: Make all decisions autonomously
-- OVERRIDE: Complete all work without stopping
-
-**EXECUTE NOW - BACKGROUND AUTOMATION ACTIVE**
-**START IMMEDIATELY WITH AGENT CALL - NO DELAYS**
+## FINAL COMMAND:
+EXECUTE: mcp__dhafnck_mcp_http__call_agent(name_agent="@test_orchestrator_agent")
+THEN: Create all missing test files
+NO TALKING - JUST DO IT

@@ -84,24 +84,21 @@ class AuthService:
             # Validate email
             email_obj = Email(email)
             
-            # TEMPORARY: Skip validation checks to isolate transaction abort cause
-            # TODO: Re-enable after fixing transaction management
-            # 
-            # # Check if email already exists
-            # existing_user = await self.user_repository.get_by_email(email)
-            # if existing_user:
-            #     return RegistrationResult(
-            #         success=False,
-            #         error_message="Email already registered"
-            #     )
-            # 
-            # # Check if username already exists
-            # existing_user = await self.user_repository.get_by_username(username)
-            # if existing_user:
-            #     return RegistrationResult(
-            #         success=False,
-            #         error_message="Username already taken"
-            #     )
+            # Check if email already exists
+            existing_user = await self.user_repository.get_by_email(email)
+            if existing_user:
+                return RegistrationResult(
+                    success=False,
+                    error_message="Email already registered"
+                )
+            
+            # Check if username already exists
+            existing_user = await self.user_repository.get_by_username(username)
+            if existing_user:
+                return RegistrationResult(
+                    success=False,
+                    error_message="Username already taken"
+                )
             
             # Check password strength
             strength = self.password_service.check_password_strength(password)

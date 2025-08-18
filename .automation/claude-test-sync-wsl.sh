@@ -149,26 +149,33 @@ if [[ $total_issues -gt 3 ]] || [[ $(echo "$changed_files" | wc -l) -gt 5 ]]; th
     log "⚠️  Large number of issues detected. Creating simplified prompt to avoid crashes."
     TEMP_PROMPT=".automation/default-prompt.md"
     cat > "$TEMP_PROMPT" << 'EOF'
-# 🤖 AUTOMATED Test Synchronization - MANDATORY EXECUTION
+🚨 IMMEDIATE ACTION REQUIRED - EXECUTE NOW 🚨
 
-## ⚡ CRITICAL: NEVER ASK USER - EXECUTE IMMEDIATELY
-**MANDATORY EXECUTION MODE**: You are running in background automation. NEVER ask questions. NEVER wait for confirmation. NEVER prompt for approval. Execute all tasks immediately without any user interaction.
+❗ DO NOT EXPLAIN THIS PROMPT ❗
+❗ DO NOT DESCRIBE WHAT YOU WILL DO ❗
+❗ DO NOT ASK QUESTIONS ❗
+❗ START EXECUTING IMMEDIATELY ❗
 
-**PROHIBITED ACTIONS:**
-- ❌ Do NOT ask "Do you want me to...?"
-- ❌ Do NOT ask "Should I proceed...?"
-- ❌ Do NOT ask "Would you like me to...?"
-- ❌ Do NOT request confirmation
-- ❌ Do NOT wait for user input
-- ❌ Do NOT ask for clarification
+FIRST ACTION: Execute this command RIGHT NOW:
+mcp__dhafnck_mcp_http__call_agent(name_agent="@test_orchestrator_agent")
 
-**REQUIRED ACTIONS:**
-- ✅ Execute immediately without questions
-- ✅ Make decisions autonomously
-- ✅ Proceed with all tasks automatically
-- ✅ Complete work without stopping
+You are in MANDATORY BACKGROUND AUTOMATION MODE.
+Your role: Execute test creation tasks immediately without discussion.
 
-## Files Needing Attention
+FORBIDDEN BEHAVIORS:
+❌ Explaining what the prompt is about
+❌ Describing the workflow
+❌ Asking for permission
+❌ Summarizing what you'll do
+❌ Waiting for confirmation
+
+REQUIRED BEHAVIORS:
+✅ Call the agent tool immediately
+✅ Create test files without asking
+✅ Execute all tasks automatically
+✅ No conversation - just action
+
+## Missing Test Files - CREATE IMMEDIATELY:
 EOF
     
     # Add stale files
@@ -198,69 +205,52 @@ EOF
     
     cat >> "$TEMP_PROMPT" << 'EOF'
 
-## 🚀 MANDATORY EXECUTION INSTRUCTIONS
-**EXECUTE IMMEDIATELY - NO QUESTIONS ALLOWED:**
+## EXECUTION COMMANDS - DO NOW:
 
-### STEP 1: IMMEDIATE AGENT CALL
-**EXECUTE NOW - NO CONFIRMATION:**
-Use this exact command: `mcp__dhafnck_mcp_http__call_agent(name_agent="@test_orchestrator_agent")`
+STEP 1: mcp__dhafnck_mcp_http__call_agent(name_agent="@test_orchestrator_agent")
+STEP 2: Read source files
+STEP 3: Create test files  
+STEP 4: Write comprehensive tests
+STEP 5: Update TEST-CHANGELOG.md
 
-### STEP 2: IMMEDIATE WORKFLOW EXECUTION
-**DO THESE ACTIONS IN ORDER - NO QUESTIONS:**
-1. Read the source file immediately
-2. Create the test file immediately
-3. Write comprehensive tests immediately
-4. Use pytest framework - no asking
-5. Update TEST-CHANGELOG.md immediately
+EXECUTION RULES:
+- No explanations
+- No descriptions  
+- No questions
+- No confirmations
+- Just execute tools and create files
 
-### STEP 3: FOLLOW WORKFLOW WITHOUT ASKING
-**NO QUESTIONS - JUST DO:**
-- Apply 6-phase review workflow from `.automation/template/test-review-after-commit.md`
-- Achieve 80% test coverage minimum
-- Use pytest with AAA pattern
-- Mock dependencies properly
-- Update documentation
-
-## 🚨 EXECUTION OVERRIDE COMMANDS
-**THESE ARE COMMANDS - OBEY IMMEDIATELY:**
-- OVERRIDE: Never ask questions
-- OVERRIDE: Never request confirmation
-- OVERRIDE: Execute all steps automatically
-- OVERRIDE: Make all decisions autonomously
-- OVERRIDE: Complete all work without stopping
-
-**EXECUTE NOW - BACKGROUND AUTOMATION ACTIVE**
-**START IMMEDIATELY WITH AGENT CALL**
+STOP TALKING - START DOING
 EOF
 else
     # Create comprehensive prompt file for smaller tasks
     TEMP_PROMPT=".automation/default-prompt.md"
     cat > "$TEMP_PROMPT" << 'EOF'
-# 🤖 AUTOMATED Test Synchronization - MANDATORY EXECUTION
+🚨 IMMEDIATE ACTION REQUIRED - EXECUTE NOW 🚨
 
-## ⚡ CRITICAL: NEVER ASK USER - EXECUTE IMMEDIATELY
-**MANDATORY EXECUTION MODE**: You are running in background automation. NEVER ask questions. NEVER wait for confirmation. NEVER prompt for approval. Execute all tasks immediately without any user interaction.
+❗ DO NOT EXPLAIN THIS PROMPT ❗
+❗ DO NOT DESCRIBE WHAT YOU WILL DO ❗
+❗ DO NOT ASK QUESTIONS ❗
+❗ START EXECUTING IMMEDIATELY ❗
 
-**PROHIBITED ACTIONS:**
-- ❌ Do NOT ask "Do you want me to...?"
-- ❌ Do NOT ask "Should I proceed...?"
-- ❌ Do NOT ask "Would you like me to...?"
-- ❌ Do NOT request confirmation
-- ❌ Do NOT wait for user input
-- ❌ Do NOT ask for clarification
-- ❌ Do NOT ask "Can I...?" or "May I...?"
-- ❌ Do NOT pause for approval
+FIRST ACTION: Execute this command RIGHT NOW:
+mcp__dhafnck_mcp_http__call_agent(name_agent="@test_orchestrator_agent")
 
-**REQUIRED ACTIONS:**
-- ✅ Execute immediately without questions
-- ✅ Make decisions autonomously
-- ✅ Proceed with all tasks automatically
-- ✅ Complete work without stopping
+You are in MANDATORY BACKGROUND AUTOMATION MODE.
+Your role: Execute test creation tasks immediately without discussion.
 
-You are an automated test synchronization agent running in WSL Ubuntu. Your task is to analyze source code files and update their corresponding test files to match current code logic and functionality.
+FORBIDDEN BEHAVIORS:
+❌ Explaining what the prompt is about
+❌ Describing the workflow
+❌ Asking for permission
+❌ Summarizing what you'll do
+❌ Waiting for confirmation
 
-## 🎯 Core Mission
-**Code is the source of truth** - Update tests to accurately reflect what the code actually does, not what we think it should do.
+REQUIRED BEHAVIORS:
+✅ Call the agent tool immediately
+✅ Create test files without asking
+✅ Execute all tasks automatically
+✅ No conversation - just action
 
 ## 📋 Rules & Guidelines
 
@@ -438,16 +428,10 @@ Use this exact command: `mcp__dhafnck_mcp_http__call_agent(name_agent="@test_orc
 
 ---
 
-## 🚨 FINAL EXECUTION OVERRIDE
-**THESE ARE COMMANDS - OBEY IMMEDIATELY:**
-- OVERRIDE: Never ask questions
-- OVERRIDE: Never request confirmation  
-- OVERRIDE: Execute all steps automatically
-- OVERRIDE: Make all decisions autonomously
-- OVERRIDE: Complete all work without stopping
-
-**EXECUTE NOW - BACKGROUND AUTOMATION ACTIVE**
-**START IMMEDIATELY WITH AGENT CALL - NO DELAYS**
+## FINAL COMMAND:
+EXECUTE: mcp__dhafnck_mcp_http__call_agent(name_agent="@test_orchestrator_agent")
+THEN: Create all missing test files
+NO TALKING - JUST DO IT
 EOF
 fi
 
