@@ -476,10 +476,11 @@ open_claude_terminal() {
             echo '📝 Processing $total_issues files'
             echo '📋 Log file: $LOG_FILE'
             echo ''
-            echo '⚡ Starting Claude Code...'
+            echo '⚡ Starting Claude Code with forced execution...'
             echo ''
             cd '$REPO_ROOT'
-            $CLAUDE_CMD $CLAUDE_FLAGS '$TEMP_PROMPT'
+            # Use the forced execution script instead
+            .automation/claude-execute.sh
             echo ''
             echo '✅ Claude Code session completed!'
             echo '📊 Check $LOG_FILE for details'
@@ -500,10 +501,10 @@ open_claude_terminal() {
             echo '🐧 WSL Environment: $WSL_DISTRO_NAME'
             echo '📝 Processing $total_issues files'
             echo ''
-            echo '⚡ Starting Claude Code...'
+            echo '⚡ Starting Claude Code with forced execution...'
             echo ''
             cd '$REPO_ROOT'
-            $CLAUDE_CMD $CLAUDE_FLAGS '$TEMP_PROMPT'
+            .automation/claude-execute.sh
             echo ''
             echo '✅ Claude Code session completed!'
             echo 'Press Enter to close...'
@@ -521,10 +522,10 @@ open_claude_terminal() {
             echo \"🐧 WSL Environment: $WSL_DISTRO_NAME\"  
             echo \"📝 Processing $total_issues files\"
             echo \"\"
-            echo \"⚡ Starting Claude Code...\"
+            echo \"⚡ Starting Claude Code with forced execution...\"
             echo \"\"
             cd \"$REPO_ROOT\"
-            $CLAUDE_CMD $CLAUDE_FLAGS \"$TEMP_PROMPT\"
+            .automation/claude-execute.sh
             echo \"\"
             echo \"✅ Session completed! Press Enter to close...\"
             read
@@ -541,10 +542,10 @@ open_claude_terminal() {
             echo '🐧 WSL Environment: $WSL_DISTRO_NAME'
             echo '📝 Processing $total_issues files'
             echo ''
-            echo '⚡ Starting Claude Code...'
+            echo '⚡ Starting Claude Code with forced execution...'
             echo ''
             cd '$REPO_ROOT'
-            $CLAUDE_CMD $CLAUDE_FLAGS '$TEMP_PROMPT'
+            .automation/claude-execute.sh
             echo ''
             echo '✅ Session completed! Press Enter to close...'
             read
@@ -564,7 +565,7 @@ open_claude_terminal() {
                 Write-Host '';
                 Write-Host '⚡ Starting Claude Code...' -ForegroundColor Cyan;
                 Write-Host '';
-                wsl.exe -d '$WSL_DISTRO_NAME' -e bash -c 'cd $REPO_ROOT && $CLAUDE_CMD $CLAUDE_FLAGS $TEMP_PROMPT';
+                wsl.exe -d '$WSL_DISTRO_NAME' -e bash -c 'cd $REPO_ROOT && .automation/claude-execute.sh';
                 Write-Host '';
                 Write-Host '✅ Claude Code session completed!' -ForegroundColor Green;
                 Write-Host 'Press Enter to close...' -ForegroundColor Yellow;

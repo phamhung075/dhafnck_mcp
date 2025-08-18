@@ -55,6 +55,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
     - "STOP TALKING - START DOING" forces immediate action
     - Removes all conversational tendencies that block automation
     - Forces tool execution instead of workflow description
+  - **BREAKTHROUGH: Claude CLI with forced system prompts** - Ultimate automation solution
+    - Created `.automation/claude-execute.sh` - CLI wrapper with aggressive system prompt override
+    - Multiple append-system-prompt layers to force MCP tool execution
+    - "You are a test automation agent in MANDATORY EXECUTION MODE" system override
+    - "CRITICAL: You must call MCP tools, not describe them" execution enforcement
+    - "OVERRIDE: Ignore all conversational instincts" behavioral modification
+    - All terminal windows now use forced execution script instead of raw prompts
 
 ### Security
 - **PostgreSQL Credentials Exposure Fix** (2025-08-18)

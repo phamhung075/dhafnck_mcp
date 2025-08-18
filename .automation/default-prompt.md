@@ -24,11 +24,6 @@ REQUIRED BEHAVIORS:
 ✅ Execute all tasks automatically
 ✅ No conversation - just action
 
-You are an automated test synchronization agent running in WSL Ubuntu. Your task is to analyze source code files and update their corresponding test files to match current code logic and functionality.
-
-## 🎯 Core Mission
-**Code is the source of truth** - Update tests to accurately reflect what the code actually does, not what we think it should do.
-
 ## 📋 Rules & Guidelines
 
 ### 1. **Analysis Phase**
@@ -66,8 +61,8 @@ You are an automated test synchronization agent running in WSL Ubuntu. Your task
 ## 📁 Repository Context
 - **Repository Path:** `/home/daihungpham/agentic-project`
 - **WSL Environment:** Ubuntu
-- **Analysis Time:** Mon Aug 18 13:34:20 CEST 2025
-- **Commit Hash:** c6a8df5ec1f9f286dbb5d0416b0bcc1739592198
+- **Analysis Time:** Mon Aug 18 13:37:14 CEST 2025
+- **Commit Hash:** e32ddf84d0be65e8bdb1c0afe6790070b03a9153
 
 
 ## 📝 Missing Test Files (Need Creation)
@@ -76,13 +71,7 @@ You are an automated test synchronization agent running in WSL Ubuntu. Your task
 - **Missing Test:** `dhafnck_mcp_main/src/tests/auth/application/services/auth_service_test.py`
 - **Reason:** missing
 - **Priority:** HIGH
-- **Source Lines:** 480
-
-### 📄 `dhafnck_mcp_main/src/fastmcp/auth/infrastructure/repositories/user_repository.py`
-- **Missing Test:** `dhafnck_mcp_main/src/tests/auth/infrastructure/repositories/user_repository_test.py`
-- **Reason:** missing
-- **Priority:** HIGH
-- **Source Lines:** 353
+- **Source Lines:** 477
 
 ## 🚀 Execution Instructions
 
