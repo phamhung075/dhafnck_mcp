@@ -86,3 +86,88 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
     - Async/await pattern testing
   - **Dependencies**: Uses pytest, unittest.mock for comprehensive mocking
   - **Rationale**: Ensures auth API integration reliability, proper error handling, and database transaction safety
+
+- **Auth Dev Endpoints Tests** (2025-08-18)
+  - Created comprehensive test suite for `dev_endpoints.py` at `dhafnck_mcp_main/src/tests/auth/api/dev_endpoints_test.py`
+  - **Test Coverage**:
+    - Router disabled in production environment
+    - User confirmation endpoint: success, already confirmed, not found, error handling
+    - List unconfirmed users endpoint: success, error handling
+    - Email status check endpoint: with/without configuration, error handling
+    - Environment-based router inclusion logic
+  - **Test Features**:
+    - 12 comprehensive test cases
+    - Environment variable mocking for development/production modes
+    - Full mocking of Supabase admin client operations
+    - Module reload testing for environment changes
+    - Request/response validation
+  - **Dependencies**: pytest, unittest.mock, FastAPI TestClient
+  - **Rationale**: Ensures development-only endpoints are properly secured and functional for testing
+
+- **Auth API Server Tests** (2025-08-18)
+  - Created comprehensive test suite for `api_server.py` at `dhafnck_mcp_main/src/tests/auth/api_server_test.py`
+  - **Test Coverage**:
+    - FastAPI app configuration and metadata
+    - CORS middleware configuration and preflight requests
+    - Health check and root endpoints
+    - Router inclusion logic for development/production
+    - Main function with default/custom host and port
+    - Logging configuration
+    - Development endpoint warning logging
+    - OpenAPI schema availability
+    - Credential handling with CORS
+  - **Test Features**:
+    - 15 comprehensive test cases
+    - Environment variable mocking
+    - Module reload testing for environment changes
+    - Uvicorn run parameter verification
+    - CORS header validation
+    - Mock router integration testing
+  - **Dependencies**: pytest, unittest.mock, FastAPI TestClient, uvicorn
+  - **Rationale**: Ensures authentication API server is properly configured for all environments
+
+- **Supabase Auth Service Tests** (2025-08-18)
+  - Created comprehensive test suite for `supabase_auth.py` at `dhafnck_mcp_main/src/tests/auth/infrastructure/supabase_auth_test.py`
+  - **Test Coverage**:
+    - Service initialization with/without credentials
+    - User signup: success, email verification required, existing user, weak password
+    - User signin: success, unverified email, invalid credentials
+    - User signout: success and error handling
+    - Password reset request: success and error handling
+    - Password update: success and error handling
+    - Token verification: valid and invalid tokens
+    - Email verification resend: success, already verified, rate limiting
+    - OAuth provider integration: success and error handling
+  - **Test Features**:
+    - 20+ comprehensive test cases
+    - Mock implementations of Supabase User and Session objects
+    - Full mocking of Supabase client and admin client
+    - Async/await pattern testing with pytest.mark.asyncio
+    - Error message parsing and handling
+    - Environment variable configuration testing
+  - **Dependencies**: pytest, unittest.mock, AsyncMock for async operations
+  - **Rationale**: Ensures Supabase authentication service handles all auth flows correctly
+
+- **Supabase Auth Integration Tests** (2025-08-18)
+  - Created comprehensive test suite for `supabase_auth_integration.py` at `dhafnck_mcp_main/src/tests/server/routes/supabase_auth_integration_test.py`
+  - **Test Coverage**:
+    - Starlette app creation with/without import errors
+    - Development mode router inclusion
+    - Route creation and path verification
+    - Signup endpoint: success, failure, exception handling
+    - Signin endpoint: success, unverified email, invalid credentials
+    - Signout endpoint: success, missing authorization
+    - Password reset endpoint: success and error handling
+    - Email verification resend: success and error handling
+    - Health check endpoint
+    - Exception handling across all endpoints
+  - **Test Features**:
+    - 15+ comprehensive test cases
+    - Starlette TestClient for HTTP testing
+    - Mock auth result dataclass implementation
+    - Full endpoint integration testing
+    - Authorization header validation
+    - JSON request/response validation
+    - Import error simulation and handling
+  - **Dependencies**: pytest, unittest.mock, Starlette TestClient, AsyncMock
+  - **Rationale**: Ensures Supabase auth endpoints integrate properly with MCP server
