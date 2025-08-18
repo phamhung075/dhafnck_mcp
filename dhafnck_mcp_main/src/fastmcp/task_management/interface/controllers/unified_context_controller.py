@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 from .desc import description_loader
 from ..utils.error_handler import UserFriendlyErrorHandler
 from ..utils.response_formatter import StandardResponseFormatter, ResponseStatus
-from ..utils.parameter_validation_fix import ParameterTypeCoercer
+from ..utils.parameter_validation_fix import coerce_parameter_types
 from ..utils.json_parameter_parser import JSONParameterParser
 
 from ...application.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
@@ -185,7 +185,7 @@ class UnifiedContextMCPController:
                 }
                 
                 try:
-                    coerced_params = ParameterTypeCoercer.coerce_parameter_types(boolean_params)
+                    coerced_params = coerce_parameter_types(boolean_params)
                     force_refresh = coerced_params.get('force_refresh', force_refresh)
                     include_inherited = coerced_params.get('include_inherited', include_inherited)
                     propagate_changes = coerced_params.get('propagate_changes', propagate_changes)

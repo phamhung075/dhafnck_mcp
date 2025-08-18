@@ -21,7 +21,7 @@ from ...application.facades.subtask_application_facade import SubtaskApplication
 from ...application.factories.subtask_facade_factory import SubtaskFacadeFactory
 from .workflow_guidance.subtask import SubtaskWorkflowFactory
 from ..utils.response_formatter import StandardResponseFormatter, ResponseStatus, ErrorCodes
-from ..utils.parameter_validation_fix import ParameterTypeCoercer
+from ..utils.parameter_validation_fix import coerce_parameter_types
 from ..utils.schema_monkey_patch import apply_all_schema_patches
 
 logger = logging.getLogger(__name__)
@@ -166,7 +166,7 @@ class SubtaskMCPController:
                 k: v for k, v in locals().items() 
                 if k not in ['self', 'action', 'task_id'] and v is not None
             }
-            coerced_params = ParameterTypeCoercer.coerce_parameter_types(params)
+            coerced_params = coerce_parameter_types(params)
             
             # Apply coerced values back to local variables
             for param_name, coerced_value in coerced_params.items():

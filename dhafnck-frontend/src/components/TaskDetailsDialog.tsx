@@ -636,17 +636,173 @@ export const TaskDetailsDialog: React.FC<TaskDetailsDialogProps> = ({
                   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                     <h3 className="text-lg font-semibold text-blue-700 dark:text-blue-300 flex items-center gap-2">
                       <Layers className="w-5 h-5" />
-                      Task Context - Hierarchical View
+                      Task Context - Complete Hierarchical View
                     </h3>
                     <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
-                      Interactive nested view of context data - click to expand/collapse sections
+                      Interactive nested view showing ALL context data - click to expand/collapse sections
                     </p>
                   </div>
                   
-                  {/* Beautiful Nested JSON Display */}
-                  <div className="bg-white dark:bg-gray-900 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                    {renderNestedJson(taskContext)}
-                  </div>
+                  {/* Task Data Section */}
+                  {(taskContext.task_data || taskContext.execution_context || taskContext.discovered_patterns) && (
+                    <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+                      <h4 className="text-md font-semibold text-green-700 dark:text-green-300 mb-3">
+                        🎯 Task Execution Details
+                      </h4>
+                      
+                      {/* Task Data */}
+                      {taskContext.task_data && Object.keys(taskContext.task_data).length > 0 && (
+                        <details className="mb-3">
+                          <summary className="cursor-pointer text-sm font-medium text-green-600 hover:text-green-700">
+                            📋 Task Data
+                          </summary>
+                          <div className="mt-2 ml-4 text-sm bg-white dark:bg-gray-800 p-2 rounded">
+                            {renderNestedJson(taskContext.task_data)}
+                          </div>
+                        </details>
+                      )}
+                      
+                      {/* Execution Context */}
+                      {taskContext.execution_context && Object.keys(taskContext.execution_context).length > 0 && (
+                        <details className="mb-3">
+                          <summary className="cursor-pointer text-sm font-medium text-green-600 hover:text-green-700">
+                            ⚡ Execution Context
+                          </summary>
+                          <div className="mt-2 ml-4 text-sm bg-white dark:bg-gray-800 p-2 rounded max-h-60 overflow-y-auto">
+                            {renderNestedJson(taskContext.execution_context)}
+                          </div>
+                        </details>
+                      )}
+                      
+                      {/* Discovered Patterns */}
+                      {taskContext.discovered_patterns && Object.keys(taskContext.discovered_patterns).length > 0 && (
+                        <details className="mb-3">
+                          <summary className="cursor-pointer text-sm font-medium text-green-600 hover:text-green-700">
+                            🔍 Discovered Patterns
+                          </summary>
+                          <div className="mt-2 ml-4 text-sm bg-white dark:bg-gray-800 p-2 rounded">
+                            {renderNestedJson(taskContext.discovered_patterns)}
+                          </div>
+                        </details>
+                      )}
+                      
+                      {/* Local Decisions */}
+                      {taskContext.local_decisions && Object.keys(taskContext.local_decisions).length > 0 && (
+                        <details className="mb-3">
+                          <summary className="cursor-pointer text-sm font-medium text-green-600 hover:text-green-700">
+                            🎯 Local Decisions
+                          </summary>
+                          <div className="mt-2 ml-4 text-sm bg-white dark:bg-gray-800 p-2 rounded">
+                            {renderNestedJson(taskContext.local_decisions)}
+                          </div>
+                        </details>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Implementation Notes Section */}
+                  {taskContext.implementation_notes && Object.keys(taskContext.implementation_notes).length > 0 && (
+                    <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <h4 className="text-md font-semibold text-blue-700 dark:text-blue-300 mb-3">
+                        📝 Implementation Notes
+                      </h4>
+                      <details open className="mb-3">
+                        <summary className="cursor-pointer text-sm font-medium text-blue-600 hover:text-blue-700">
+                          View Implementation Details
+                        </summary>
+                        <div className="mt-2 ml-4 text-sm bg-white dark:bg-gray-800 p-2 rounded max-h-60 overflow-y-auto">
+                          {renderNestedJson(taskContext.implementation_notes)}
+                        </div>
+                      </details>
+                    </div>
+                  )}
+                  
+                  {/* Metadata Section */}
+                  {taskContext.metadata && (
+                    <div className="bg-purple-50 dark:bg-purple-950/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+                      <h4 className="text-md font-semibold text-purple-700 dark:text-purple-300 mb-3">
+                        📊 Metadata & System Information
+                      </h4>
+                      
+                      <div className="grid grid-cols-2 gap-4 mb-3">
+                        {taskContext.metadata.created_at && (
+                          <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                            <span className="text-xs text-gray-500">Created</span>
+                            <p className="font-medium text-sm">{new Date(taskContext.metadata.created_at).toLocaleDateString()}</p>
+                          </div>
+                        )}
+                        {taskContext.metadata.updated_at && (
+                          <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                            <span className="text-xs text-gray-500">Last Updated</span>
+                            <p className="font-medium text-sm">{new Date(taskContext.metadata.updated_at).toLocaleDateString()}</p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <details>
+                        <summary className="cursor-pointer text-sm font-medium text-purple-600 hover:text-purple-700">
+                          View All Metadata
+                        </summary>
+                        <div className="mt-2 ml-4 text-sm bg-white dark:bg-gray-800 p-2 rounded max-h-40 overflow-y-auto">
+                          {renderNestedJson(taskContext.metadata)}
+                        </div>
+                      </details>
+                    </div>
+                  )}
+                  
+                  {/* Inheritance Information */}
+                  {(taskContext._inheritance || taskContext.inheritance_metadata || taskContext.inheritance_disabled !== undefined) && (
+                    <div className="bg-orange-50 dark:bg-orange-950/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
+                      <h4 className="text-md font-semibold text-orange-700 dark:text-orange-300 mb-3">
+                        🔗 Context Inheritance
+                      </h4>
+                      <div className="text-sm">
+                        {(taskContext._inheritance || taskContext.inheritance_metadata) && (
+                          <>
+                            <p className="mb-2">
+                              <span className="font-medium">Inheritance Chain:</span> {
+                                (taskContext._inheritance?.chain || 
+                                 taskContext.inheritance_metadata?.inheritance_chain)?.join(' → ') || 'N/A'
+                              }
+                            </p>
+                            <p className="mb-2">
+                              <span className="font-medium">Inheritance Depth:</span> {
+                                taskContext._inheritance?.inheritance_depth || 
+                                taskContext.inheritance_metadata?.inheritance_depth || 0
+                              }
+                            </p>
+                          </>
+                        )}
+                        {taskContext.inheritance_disabled !== undefined && (
+                          <p className="mb-2">
+                            <span className="font-medium">Inheritance Status:</span> {
+                              taskContext.inheritance_disabled ? 'Disabled' : 'Enabled'
+                            }
+                          </p>
+                        )}
+                        {taskContext.force_local_only && (
+                          <p className="text-xs text-orange-600 italic">
+                            ⚠️ This task uses local context only (inheritance bypassed)
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Debug Information - Collapsed by Default */}
+                  <details className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <summary className="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-700">
+                      🐛 Debug: View Raw Context Data
+                    </summary>
+                    <div className="mt-3">
+                      <p className="text-xs text-gray-500 mb-2">Complete context structure for debugging purposes</p>
+                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto max-h-96 overflow-y-auto">
+                        <code className="text-xs font-mono">
+                          {JSON.stringify(taskContext, null, 2)}
+                        </code>
+                      </pre>
+                    </div>
+                  </details>
                   
                   {/* Expand/Collapse All Controls */}
                   <div className="flex gap-2 justify-end mt-2">
@@ -672,7 +828,7 @@ export const TaskDetailsDialog: React.FC<TaskDetailsDialogProps> = ({
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        // Expand all sections
+                        // Expand all sections including HTML details elements
                         const allPaths = new Set<string>();
                         const traverse = (obj: any, path: string = '') => {
                           if (obj && typeof obj === 'object') {
@@ -685,6 +841,12 @@ export const TaskDetailsDialog: React.FC<TaskDetailsDialogProps> = ({
                         };
                         traverse(taskContext);
                         setExpandedSections(allPaths);
+                        
+                        // Also expand all HTML details elements
+                        const detailsElements = document.querySelectorAll('details');
+                        detailsElements.forEach(details => {
+                          details.open = true;
+                        });
                       }}
                     >
                       Expand All
@@ -692,7 +854,16 @@ export const TaskDetailsDialog: React.FC<TaskDetailsDialogProps> = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setExpandedSections(new Set(['data', 'resolved_context', 'task_data', 'progress']))}
+                      onClick={() => {
+                        // Collapse all sections
+                        setExpandedSections(new Set(['data', 'resolved_context', 'task_data', 'progress']));
+                        
+                        // Also collapse all HTML details elements
+                        const detailsElements = document.querySelectorAll('details');
+                        detailsElements.forEach(details => {
+                          details.open = false;
+                        });
+                      }}
                     >
                       Collapse All
                     </Button>

@@ -21,7 +21,7 @@ WORKDIR /app
 RUN pip install uv
 
 # Copy dependency files and README (needed for package build)
-# Build context is workspace root, so paths include dhafnck_mcp_main/
+# Build context is project root, so prefix with dhafnck_mcp_main/
 COPY dhafnck_mcp_main/pyproject.toml dhafnck_mcp_main/uv.lock* dhafnck_mcp_main/README.md ./
 
 # Copy source code BEFORE creating virtual environment
@@ -34,10 +34,11 @@ COPY dhafnck_mcp_main/database/ database/
 COPY dhafnck_mcp_main/agent-library/ agent-library/
 
 # Copy rule files (needed for runtime)
-COPY 00_RULES/ ./00_RULES/
+COPY dhafnck_mcp_main/00_RULES/ ./00_RULES/
 
-# Copy resource files (needed for MCP resources)
-COPY 00_RESOURCES/ ./00_RESOURCES/
+# Copy resource files (needed for MCP resources) - create empty dir if not exists
+# Note: 00_RESOURCES doesn't exist in repo, so we create an empty directory
+RUN mkdir -p ./00_RESOURCES/
 
 # Create virtual environment and install dependencies
 RUN uv venv .venv
@@ -95,7 +96,7 @@ COPY --from=builder /app/00_RESOURCES /data/resources
 # Remove /data/rules directory first, then create the symbolic link
 RUN rm -rf /data/rules && ln -sf /app/rules /data/rules
 
-# Copy startup scripts from scripts directory
+# Copy startup scripts from scripts directory (paths relative to project root)
 COPY dhafnck_mcp_main/scripts/docker-entrypoint.sh /usr/local/bin/
 COPY dhafnck_mcp_main/scripts/dev-entrypoint.sh /app/scripts/
 COPY dhafnck_mcp_main/scripts/init_database.py /app/scripts/

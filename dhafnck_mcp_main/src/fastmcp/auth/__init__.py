@@ -1,18 +1,47 @@
 """
-Authentication module for DhafnckMCP server.
+Authentication Module for DhafnckMCP
 
-This module provides token validation, rate limiting, and security features
-for the MCP server MVP implementation.
+This module provides complete authentication functionality including:
+- User registration and login
+- JWT token management
+- Password hashing and reset
+- Email verification
+- Session management
 """
 
-from .token_validator import TokenValidator, TokenValidationError, RateLimitError
+from .domain.entities.user import User, UserStatus, UserRole
+from .domain.value_objects.email import Email
+from .domain.value_objects.user_id import UserId
+from .domain.services.password_service import PasswordService
+from .domain.services.jwt_service import JWTService
+from .application.services.auth_service import AuthService, LoginResult, RegistrationResult
 from .middleware import AuthMiddleware
-from .supabase_client import SupabaseTokenClient
+from .token_validator import TokenValidator, TokenValidationError, RateLimitError
 
 __all__ = [
+    # Domain Entities
+    "User",
+    "UserStatus",
+    "UserRole",
+    
+    # Value Objects
+    "Email",
+    "UserId",
+    
+    # Domain Services
+    "PasswordService",
+    "JWTService",
+    
+    # Application Services
+    "AuthService",
+    "LoginResult",
+    "RegistrationResult",
+    
+    # Middleware
+    "AuthMiddleware",
+    
+    # Validators
     "TokenValidator",
     "TokenValidationError", 
     "RateLimitError",
-    "AuthMiddleware",
-    "SupabaseTokenClient"
-] 
+]

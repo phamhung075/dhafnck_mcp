@@ -1,13 +1,15 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import ProjectList from './components/ProjectList';
 import { Button } from './components/ui/button';
 import { Menu, X } from 'lucide-react';
+import { AuthWrapper, LoginForm, SignupForm, ProtectedRoute } from './components/auth';
 
 // Use lazy loading for TaskList component for better performance
 const LazyTaskList = lazy(() => import('./components/LazyTaskList'));
 
-function App() {
+function Dashboard() {
   const [selection, setSelection] = useState<{ projectId: string, branchId: string } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isLargeScreen, setIsLargeScreen] = useState(false);
@@ -121,6 +123,31 @@ function App() {
       </div>
     </div>
   )
+}
+
+function App() {
+  return (
+    <AuthWrapper>
+      <Routes>
+        {/* Public routes */}
+        <Route path="/login" element={<LoginForm />} />
+        <Route path="/signup" element={<SignupForm />} />
+        
+        {/* Protected routes */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        
+        {/* Default redirect */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </AuthWrapper>
+  );
 }
 
 export default App;

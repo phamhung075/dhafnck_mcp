@@ -7,6 +7,113 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Parameter Type Coercion Bug in manage_subtask** - Fixed critical type validation error (2025-08-18)
+  - Fixed incorrect import of `ParameterTypeCoercer` class instead of `coerce_parameter_types` function
+  - Affected files:
+    - `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/subtask_mcp_controller.py`
+    - `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/unified_context_controller.py`
+  - Error fixed: "Invalid progress_percentage value: 10. Must be integer between 0-100"
+  - Root cause: Was attempting to call `ParameterTypeCoercer.coerce_parameter_types()` as a static method when it should use the module-level function
+  - Impact: Restores ability to update subtask progress with integer values
+
+- **OAuth2PasswordBearer Implementation for FastAPI** - Created FastAPI built-in authentication integration (2025-08-18)
+  - Created new file: `dhafnck_mcp_main/src/fastmcp/auth/interface/fastapi_auth.py`
+  - Implements OAuth2PasswordBearer for token-based authentication
+  - Replaces custom middleware with FastAPI's built-in Depends() pattern
+  - Features:
+    - OAuth2 RFC 6749 compliant token authentication
+    - Automatic OpenAPI/Swagger documentation integration
+    - Dependency injection for protected endpoints
+    - User context available throughout request lifecycle
+  - Prepared for migration from custom middleware to FastAPI standard
+
+### Added
+- **Authentication System Backend Implementation** - Implemented complete authentication backend following DDD patterns (2025-08-17)
+  - **Phase 1: Database Layer**:
+    - Created User domain entity with authentication business logic (UserStatus, UserRole, email verification, account locking)
+    - Added SQLAlchemy User and UserSession models with PostgreSQL support
+    - Created database migration scripts (SQL and Python/Alembic)
+    - Location: `dhafnck_mcp_main/src/fastmcp/auth/`
+  - **Phase 2: Authentication Service Layer**:
+    - Implemented PasswordService with bcrypt for secure password hashing and strength validation
+    - Created JWTService for access/refresh token management with token families and rotation
+    - Implemented comprehensive AuthService with:
+      - User registration with email verification
+      - Login with account locking after failed attempts
+      - Password reset with secure tokens
+      - Token refresh with rotation
+      - Session management
+  - **Architecture**:
+    - Follows Domain-Driven Design (DDD) patterns
+    - Clear separation between domain, application, and infrastructure layers
+    - Value objects for Email and UserId with validation
+    - Proper error handling and logging throughout
+  - **Files Created**:
+    - `dhafnck_mcp_main/src/fastmcp/auth/domain/entities/user.py` - User domain entity
+    - `dhafnck_mcp_main/src/fastmcp/auth/domain/value_objects/` - Email and UserId value objects
+    - `dhafnck_mcp_main/src/fastmcp/auth/domain/services/` - PasswordService and JWTService
+    - `dhafnck_mcp_main/src/fastmcp/auth/application/services/auth_service.py` - Main authentication orchestration
+    - `dhafnck_mcp_main/src/fastmcp/auth/infrastructure/database/models.py` - SQLAlchemy models
+    - `dhafnck_mcp_main/database/migrations/002_add_authentication_tables.sql` - Database migration
+  - **Security Features**:
+    - Bcrypt password hashing with configurable rounds
+    - JWT tokens with short-lived access tokens (15 min) and long-lived refresh tokens (30 days)
+    - Account locking after 5 failed login attempts
+    - Password strength validation
+    - Token family tracking for secure refresh token rotation
+  - **Testing**: Ready for integration testing once Phase 3 API endpoints are implemented
+  - **Phase 3: Backend Authentication Endpoints**:
+    - Created FastAPI authentication endpoints:
+      - POST /api/auth/register - User registration
+      - POST /api/auth/login - User login with JWT tokens
+      - POST /api/auth/logout - User logout with token revocation
+      - POST /api/auth/refresh - Refresh access and refresh tokens
+      - GET /api/auth/me - Get current user information
+      - POST /api/auth/verify-email/{token} - Email verification
+      - POST /api/auth/password-reset - Request password reset
+      - POST /api/auth/password-reset/confirm - Confirm password reset
+      - GET /api/auth/health - Health check endpoint
+    - Implemented authentication middleware with JWT validation
+    - Created UserRepository for database operations
+    - Added server integration module for FastMCP
+    - Updated pyproject.toml with bcrypt and PyJWT dependencies
+  - **Files Created**:
+    - `dhafnck_mcp_main/src/fastmcp/auth/interface/auth_endpoints.py` - FastAPI authentication endpoints
+    - `dhafnck_mcp_main/src/fastmcp/auth/interface/auth_middleware.py` - JWT authentication middleware
+    - `dhafnck_mcp_main/src/fastmcp/auth/infrastructure/repositories/user_repository.py` - User persistence
+    - `dhafnck_mcp_main/src/fastmcp/auth/integration/server_integration.py` - Server integration helpers
+  - **Security Features**:
+    - Bearer token authentication with JWT
+    - Role-based access control with require_roles decorator
+    - Request state management for authenticated users
+    - Configurable path exclusions for public endpoints
+
+### Added
+- **Applied Organized Context Display to All Context Tabs** - Extended the responsible context display style to Project and Task dialogs (2025-08-17)
+  - **Consistency**: Applied the same organized structure to all three dialogs (Branch, Project, Task)
+  - **Project Context Sections**:
+    - 🎯 Project Configuration (green) - Team preferences, technology stack, workflow, standards
+    - 🌍 Global Settings (blue) - Inherited global configuration
+    - 📊 Metadata & System Information (purple) - Timestamps and metadata
+    - 🔗 Context Inheritance (orange) - Inheritance chain and depth
+    - 🐛 Debug section (gray) - Raw JSON in proper code block format
+  - **Task Context Sections**:
+    - 🎯 Task Execution Details (green) - Task data, execution context, discovered patterns, local decisions
+    - 📝 Implementation Notes (blue) - Implementation details and notes
+    - 📊 Metadata & System Information (purple) - Timestamps and metadata
+    - 🔗 Context Inheritance (orange) - Inheritance chain, depth, and status
+    - 🐛 Debug section (gray) - Raw JSON in proper code block format
+  - **UI Improvements**:
+    - All sections use collapsible `<details>` elements
+    - Empty sections are automatically hidden
+    - Debug section shows raw JSON in syntax-highlighted code block
+    - Fixed Expand/Collapse All buttons to work with HTML details elements
+  - **Files Modified**:
+    - `dhafnck-frontend/src/components/ProjectDetailsDialog.tsx` - Applied organized context display
+    - `dhafnck-frontend/src/components/TaskDetailsDialog.tsx` - Applied organized context display
+  - **Testing**: Successfully built frontend with npm run build
+
 ### Added
 - **Enhanced Frontend Context Display for Nested Data** - Modified BranchDetailsDialog to preserve and display ALL nested context data responsibly (2025-08-17)
   - **Problem**: Custom fields in branch context were not being displayed in frontend

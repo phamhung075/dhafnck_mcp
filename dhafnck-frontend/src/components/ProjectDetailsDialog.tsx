@@ -453,17 +453,168 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                     <h3 className="text-lg font-semibold text-blue-700 dark:text-blue-300 flex items-center gap-2">
                       <Layers className="w-5 h-5" />
-                      Project Context - Hierarchical View
+                      Project Context - Complete Hierarchical View
                     </h3>
                     <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
-                      Interactive nested view of context data - click to expand/collapse sections
+                      Interactive nested view showing ALL context data - click to expand/collapse sections
                     </p>
                   </div>
                   
-                  {/* Beautiful Nested JSON Display */}
-                  <div className="bg-white dark:bg-gray-900 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                    {renderNestedJson(projectContext)}
-                  </div>
+                  {/* Project Settings Section */}
+                  {(projectContext.project_settings || projectContext.team_preferences || projectContext.technology_stack || projectContext.project_workflow) && (
+                    <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+                      <h4 className="text-md font-semibold text-green-700 dark:text-green-300 mb-3">
+                        🎯 Project Configuration
+                      </h4>
+                      
+                      {/* Team Preferences */}
+                      {projectContext.team_preferences && Object.keys(projectContext.team_preferences).length > 0 && (
+                        <details className="mb-3">
+                          <summary className="cursor-pointer text-sm font-medium text-green-600 hover:text-green-700">
+                            👥 Team Preferences
+                          </summary>
+                          <div className="mt-2 ml-4 text-sm bg-white dark:bg-gray-800 p-2 rounded">
+                            {renderNestedJson(projectContext.team_preferences)}
+                          </div>
+                        </details>
+                      )}
+                      
+                      {/* Technology Stack */}
+                      {projectContext.technology_stack && Object.keys(projectContext.technology_stack).length > 0 && (
+                        <details className="mb-3">
+                          <summary className="cursor-pointer text-sm font-medium text-green-600 hover:text-green-700">
+                            🔧 Technology Stack
+                          </summary>
+                          <div className="mt-2 ml-4 text-sm bg-white dark:bg-gray-800 p-2 rounded">
+                            {renderNestedJson(projectContext.technology_stack)}
+                          </div>
+                        </details>
+                      )}
+                      
+                      {/* Project Workflow */}
+                      {projectContext.project_workflow && Object.keys(projectContext.project_workflow).length > 0 && (
+                        <details className="mb-3">
+                          <summary className="cursor-pointer text-sm font-medium text-green-600 hover:text-green-700">
+                            📋 Project Workflow
+                          </summary>
+                          <div className="mt-2 ml-4 text-sm bg-white dark:bg-gray-800 p-2 rounded max-h-60 overflow-y-auto">
+                            {renderNestedJson(projectContext.project_workflow)}
+                          </div>
+                        </details>
+                      )}
+                      
+                      {/* Local Standards */}
+                      {projectContext.local_standards && Object.keys(projectContext.local_standards).length > 0 && (
+                        <details className="mb-3">
+                          <summary className="cursor-pointer text-sm font-medium text-green-600 hover:text-green-700">
+                            📏 Local Standards
+                          </summary>
+                          <div className="mt-2 ml-4 text-sm bg-white dark:bg-gray-800 p-2 rounded">
+                            {renderNestedJson(projectContext.local_standards)}
+                          </div>
+                        </details>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Global Settings Section */}
+                  {projectContext.global_settings && (
+                    <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <h4 className="text-md font-semibold text-blue-700 dark:text-blue-300 mb-3">
+                        🌍 Global Settings (Inherited)
+                      </h4>
+                      
+                      {Object.entries(projectContext.global_settings).map(([key, value]) => {
+                        if (!value || (typeof value === 'object' && Object.keys(value as any).length === 0)) return null;
+                        
+                        return (
+                          <details key={key} className="mb-3">
+                            <summary className="cursor-pointer text-sm font-medium text-blue-600 hover:text-blue-700">
+                              {key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                            </summary>
+                            <div className="mt-2 ml-4 text-sm bg-white dark:bg-gray-800 p-2 rounded">
+                              {renderNestedJson(value)}
+                            </div>
+                          </details>
+                        );
+                      })}
+                    </div>
+                  )}
+                  
+                  {/* Metadata Section */}
+                  {projectContext.metadata && (
+                    <div className="bg-purple-50 dark:bg-purple-950/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+                      <h4 className="text-md font-semibold text-purple-700 dark:text-purple-300 mb-3">
+                        📊 Metadata & System Information
+                      </h4>
+                      
+                      <div className="grid grid-cols-2 gap-4 mb-3">
+                        {projectContext.metadata.created_at && (
+                          <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                            <span className="text-xs text-gray-500">Created</span>
+                            <p className="font-medium text-sm">{new Date(projectContext.metadata.created_at).toLocaleDateString()}</p>
+                          </div>
+                        )}
+                        {projectContext.metadata.updated_at && (
+                          <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                            <span className="text-xs text-gray-500">Last Updated</span>
+                            <p className="font-medium text-sm">{new Date(projectContext.metadata.updated_at).toLocaleDateString()}</p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <details>
+                        <summary className="cursor-pointer text-sm font-medium text-purple-600 hover:text-purple-700">
+                          View All Metadata
+                        </summary>
+                        <div className="mt-2 ml-4 text-sm bg-white dark:bg-gray-800 p-2 rounded max-h-40 overflow-y-auto">
+                          {renderNestedJson(projectContext.metadata)}
+                        </div>
+                      </details>
+                    </div>
+                  )}
+                  
+                  {/* Inheritance Information */}
+                  {(projectContext._inheritance || projectContext.inheritance_metadata) && (
+                    <div className="bg-orange-50 dark:bg-orange-950/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
+                      <h4 className="text-md font-semibold text-orange-700 dark:text-orange-300 mb-3">
+                        🔗 Context Inheritance
+                      </h4>
+                      <div className="text-sm">
+                        {(projectContext._inheritance || projectContext.inheritance_metadata) && (
+                          <>
+                            <p className="mb-2">
+                              <span className="font-medium">Inheritance Chain:</span> {
+                                (projectContext._inheritance?.chain || 
+                                 projectContext.inheritance_metadata?.inheritance_chain)?.join(' → ') || 'N/A'
+                              }
+                            </p>
+                            <p className="mb-2">
+                              <span className="font-medium">Inheritance Depth:</span> {
+                                projectContext._inheritance?.inheritance_depth || 
+                                projectContext.inheritance_metadata?.inheritance_depth || 0
+                              }
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Debug Information - Collapsed by Default */}
+                  <details className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <summary className="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-700">
+                      🐛 Debug: View Raw Context Data
+                    </summary>
+                    <div className="mt-3">
+                      <p className="text-xs text-gray-500 mb-2">Complete context structure for debugging purposes</p>
+                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto max-h-96 overflow-y-auto">
+                        <code className="text-xs font-mono">
+                          {JSON.stringify(projectContext, null, 2)}
+                        </code>
+                      </pre>
+                    </div>
+                  </details>
                   
                   {/* Expand/Collapse All Controls */}
                   <div className="flex gap-2 justify-end mt-2">
@@ -489,7 +640,7 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        // Expand all sections
+                        // Expand all sections including HTML details elements
                         const allPaths = new Set<string>();
                         const traverse = (obj: any, path: string = '') => {
                           if (obj && typeof obj === 'object') {
@@ -502,6 +653,12 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                         };
                         traverse(projectContext);
                         setExpandedSections(allPaths);
+                        
+                        // Also expand all HTML details elements
+                        const detailsElements = document.querySelectorAll('details');
+                        detailsElements.forEach(details => {
+                          details.open = true;
+                        });
                       }}
                     >
                       Expand All
@@ -509,7 +666,16 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setExpandedSections(new Set(['data', 'resolved_context', 'project_data', 'metadata']))}
+                      onClick={() => {
+                        // Collapse all sections
+                        setExpandedSections(new Set(['data', 'resolved_context', 'project_data', 'metadata']));
+                        
+                        // Also collapse all HTML details elements
+                        const detailsElements = document.querySelectorAll('details');
+                        detailsElements.forEach(details => {
+                          details.open = false;
+                        });
+                      }}
                     >
                       Collapse All
                     </Button>

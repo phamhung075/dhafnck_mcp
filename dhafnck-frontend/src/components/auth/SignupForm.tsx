@@ -1,0 +1,417 @@
+import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { useNavigate, Link } from 'react-router-dom';
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Alert,
+  Container,
+  Paper,
+  IconButton,
+  InputAdornment,
+  CircularProgress,
+  Divider,
+  LinearProgress,
+  FormHelperText
+} from '@mui/material';
+import {
+  Visibility,
+  VisibilityOff,
+  Email,
+  Lock,
+  Person,
+  CheckCircle,
+  Cancel
+} from '@mui/icons-material';
+import { useAuth } from '../../hooks/useAuth';
+
+interface SignupFormData {
+  email: string;
+  username: string;
+  password: string;
+  confirmPassword: string;
+}
+
+interface PasswordStrength {
+  score: number;
+  message: string;
+  color: 'error' | 'warning' | 'success';
+}
+
+export const SignupForm: React.FC = () => {
+  const { signup } = useAuth();
+  const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState<PasswordStrength>({
+    score: 0,
+    message: '',
+    color: 'error'
+  });
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = useForm<SignupFormData>({
+    defaultValues: {
+      email: '',
+      username: '',
+      password: '',
+      confirmPassword: '',
+    },
+  });
+
+  const password = watch('password');
+
+  // Calculate password strength
+  React.useEffect(() => {
+    if (!password) {
+      setPasswordStrength({ score: 0, message: '', color: 'error' });
+      return;
+    }
+
+    let score = 0;
+    const checks = {
+      length: password.length >= 8,
+      lowercase: /[a-z]/.test(password),
+      uppercase: /[A-Z]/.test(password),
+      numbers: /\d/.test(password),
+      special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+    };
+
+    Object.values(checks).forEach(passed => {
+      if (passed) score += 20;
+    });
+
+    let message = '';
+    let color: 'error' | 'warning' | 'success' = 'error';
+
+    if (score <= 20) {
+      message = 'Very Weak';
+      color = 'error';
+    } else if (score <= 40) {
+      message = 'Weak';
+      color = 'error';
+    } else if (score <= 60) {
+      message = 'Fair';
+      color = 'warning';
+    } else if (score <= 80) {
+      message = 'Good';
+      color = 'warning';
+    } else {
+      message = 'Strong';
+      color = 'success';
+    }
+
+    setPasswordStrength({ score, message, color });
+  }, [password]);
+
+  const onSubmit = async (data: SignupFormData) => {
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      await signup(data.email, data.username, data.password);
+      navigate('/dashboard');
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unexpected error occurred during registration');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleTogglePassword = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const handleToggleConfirmPassword = () => {
+    setShowConfirmPassword(!showConfirmPassword);
+  };
+
+  return (
+    <Container component="main" maxWidth="xs">
+      <Box
+        sx={{
+          marginTop: 8,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+        }}
+      >
+        <Paper
+          elevation={3}
+          sx={{
+            padding: 4,
+            width: '100%',
+            borderRadius: 2,
+          }}
+        >
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              mb: 3,
+            }}
+          >
+            <Person
+              sx={{
+                fontSize: 40,
+                color: 'primary.main',
+                mb: 1,
+              }}
+            />
+            <Typography component="h1" variant="h5">
+              Sign Up
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Create your account to get started
+            </Typography>
+          </Box>
+
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+              {error}
+            </Alert>
+          )}
+
+          <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
+            <TextField
+              {...register('email', {
+                required: 'Email is required',
+                pattern: {
+                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                  message: 'Invalid email address',
+                },
+              })}
+              margin="normal"
+              required
+              fullWidth
+              id="email"
+              label="Email Address"
+              name="email"
+              autoComplete="email"
+              autoFocus
+              error={!!errors.email}
+              helperText={errors.email?.message}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Email />
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <TextField
+              {...register('username', {
+                required: 'Username is required',
+                minLength: {
+                  value: 3,
+                  message: 'Username must be at least 3 characters',
+                },
+                maxLength: {
+                  value: 20,
+                  message: 'Username must not exceed 20 characters',
+                },
+                pattern: {
+                  value: /^[a-zA-Z0-9_]+$/,
+                  message: 'Username can only contain letters, numbers, and underscores',
+                },
+              })}
+              margin="normal"
+              required
+              fullWidth
+              id="username"
+              label="Username"
+              name="username"
+              autoComplete="username"
+              error={!!errors.username}
+              helperText={errors.username?.message}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Person />
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <TextField
+              {...register('password', {
+                required: 'Password is required',
+                minLength: {
+                  value: 8,
+                  message: 'Password must be at least 8 characters',
+                },
+                validate: value => {
+                  if (passwordStrength.score < 40) {
+                    return 'Password is too weak. Use a mix of uppercase, lowercase, numbers, and special characters';
+                  }
+                  return true;
+                }
+              })}
+              margin="normal"
+              required
+              fullWidth
+              name="password"
+              label="Password"
+              type={showPassword ? 'text' : 'password'}
+              id="password"
+              autoComplete="new-password"
+              error={!!errors.password}
+              helperText={errors.password?.message}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Lock />
+                  </InputAdornment>
+                ),
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle password visibility"
+                      onClick={handleTogglePassword}
+                      edge="end"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            {password && (
+              <Box sx={{ mt: 1, mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <LinearProgress
+                    variant="determinate"
+                    value={passwordStrength.score}
+                    sx={{
+                      flexGrow: 1,
+                      height: 8,
+                      borderRadius: 4,
+                      backgroundColor: 'grey.300',
+                      '& .MuiLinearProgress-bar': {
+                        backgroundColor: 
+                          passwordStrength.color === 'error' ? 'error.main' :
+                          passwordStrength.color === 'warning' ? 'warning.main' :
+                          'success.main',
+                      },
+                    }}
+                  />
+                  <Typography
+                    variant="caption"
+                    sx={{ 
+                      ml: 2,
+                      color: 
+                        passwordStrength.color === 'error' ? 'error.main' :
+                        passwordStrength.color === 'warning' ? 'warning.main' :
+                        'success.main',
+                    }}
+                  >
+                    {passwordStrength.message}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                  <PasswordRequirement met={password.length >= 8} text="At least 8 characters" />
+                  <PasswordRequirement met={/[a-z]/.test(password)} text="One lowercase letter" />
+                  <PasswordRequirement met={/[A-Z]/.test(password)} text="One uppercase letter" />
+                  <PasswordRequirement met={/\d/.test(password)} text="One number" />
+                  <PasswordRequirement met={/[!@#$%^&*(),.?":{}|<>]/.test(password)} text="One special character" />
+                </Box>
+              </Box>
+            )}
+
+            <TextField
+              {...register('confirmPassword', {
+                required: 'Please confirm your password',
+                validate: value =>
+                  value === password || 'Passwords do not match',
+              })}
+              margin="normal"
+              required
+              fullWidth
+              name="confirmPassword"
+              label="Confirm Password"
+              type={showConfirmPassword ? 'text' : 'password'}
+              id="confirmPassword"
+              autoComplete="new-password"
+              error={!!errors.confirmPassword}
+              helperText={errors.confirmPassword?.message}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Lock />
+                  </InputAdornment>
+                ),
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle confirm password visibility"
+                      onClick={handleToggleConfirmPassword}
+                      edge="end"
+                    >
+                      {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              sx={{ mt: 3, mb: 2 }}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                'Sign Up'
+              )}
+            </Button>
+
+            <Divider sx={{ my: 2 }}>OR</Divider>
+
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+              <Link to="/login" style={{ textDecoration: 'none' }}>
+                <Typography variant="body2" color="primary">
+                  Already have an account? Sign In
+                </Typography>
+              </Link>
+            </Box>
+          </Box>
+        </Paper>
+      </Box>
+    </Container>
+  );
+};
+
+// Password requirement indicator component
+const PasswordRequirement: React.FC<{ met: boolean; text: string }> = ({ met, text }) => (
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+    {met ? (
+      <CheckCircle sx={{ fontSize: 16, color: 'success.main' }} />
+    ) : (
+      <Cancel sx={{ fontSize: 16, color: 'text.disabled' }} />
+    )}
+    <Typography
+      variant="caption"
+      sx={{ color: met ? 'success.main' : 'text.disabled' }}
+    >
+      {text}
+    </Typography>
+  </Box>
+);
