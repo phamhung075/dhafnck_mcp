@@ -6,7 +6,87 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Fixed
+- **🔧 MCP SERVER IMPORT ERROR FIX** (2025-08-19)
+  - Fixed circular import issues in JWT Bearer authentication provider
+  - Moved APIToken import to runtime to avoid circular dependency
+  - Used lazy imports in mcp_auth_config to prevent import errors
+  - Files affected:
+    - `dhafnck_mcp_main/src/fastmcp/server/auth/providers/jwt_bearer.py` - Fixed circular imports
+    - `dhafnck_mcp_main/src/fastmcp/server/auth/mcp_auth_config.py` - Added lazy imports
+  - Impact: MCP server can now import authentication modules without errors
+
+- **🔧 FRONTEND BUILD DEPENDENCY FIX** (2025-08-19)
+  - Fixed Docker build failure by adding missing `date-fns` dependency
+  - The TokenManagement component requires date-fns for date formatting
+  - Added `date-fns@^3.6.0` to package.json dependencies
+  - Fixed `authenticatedFetch` export issue in useAuthenticatedFetch hook
+  - Fixed TypeScript error in TokenManagement component
+  - Files affected:
+    - `dhafnck-frontend/package.json` - Added date-fns dependency
+    - `dhafnck-frontend/package-lock.json` - Updated with date-fns
+    - `dhafnck-frontend/src/hooks/useAuthenticatedFetch.ts` - Added standalone authenticatedFetch export
+    - `dhafnck-frontend/src/pages/TokenManagement.tsx` - Fixed TypeScript null handling
+  - Impact: Docker builds now complete successfully for the frontend
+
+- **🌙 GLOBAL CONTEXT DIALOG DARK MODE VISIBILITY** (2025-08-19)
+  - Fixed visibility issues in GlobalContextDialog component for dark mode
+  - Added dark mode classes to "View Complete JSON Context" section
+  - Updated background and text colors for proper contrast in dark theme
+  - Applied dark mode styles to:
+    - JSON context viewer background and text
+    - Summary text and hover states
+    - Loading indicators
+    - Empty state messages
+    - Code blocks and inline code
+    - Info boxes and borders
+  - Files modified:
+    - `dhafnck-frontend/src/components/GlobalContextDialog.tsx` - Added comprehensive dark mode support
+  - Impact: JSON context is now clearly visible in both light and dark modes
+
 ### Added
+- **🔐 MCP BEARER TOKEN AUTHENTICATION** (2025-08-19)
+  - Integrated JWT Bearer token authentication for MCP server connections
+  - Created JWT Bearer auth provider that validates tokens from token management system
+  - Automatic authentication type detection based on environment configuration
+  - Support for both API tokens and user JWT tokens for MCP access
+  - Features:
+    - JWT token validation with shared secret
+    - Database validation for token status and usage tracking
+    - Scope mapping from API tokens to MCP permissions
+    - Rate limiting and token expiration enforcement
+    - Automatic token usage statistics collection
+  - Backend changes:
+    - `dhafnck_mcp_main/src/fastmcp/server/auth/providers/jwt_bearer.py` - JWT Bearer auth provider
+    - `dhafnck_mcp_main/src/fastmcp/server/auth/mcp_auth_config.py` - Auth configuration helper
+    - `dhafnck_mcp_main/src/fastmcp/server/server.py` - Auto-detect JWT authentication
+  - Documentation:
+    - `dhafnck_mcp_main/docs/MCP_TOKEN_AUTHENTICATION.md` - Complete authentication guide
+    - `dhafnck_mcp_main/examples/mcp-client-config.json` - Example client configurations
+  - Impact: MCP clients can now authenticate using Bearer tokens generated from the token management system
+
+- **🔑 API TOKEN MANAGEMENT SYSTEM** (2025-08-19)
+  - Created comprehensive token management page for generating and managing API tokens
+  - Implemented secure token generation with JWT-based authentication for MCP access
+  - Added token scopes system for fine-grained permission control
+  - Features:
+    - Token generation with customizable name, scopes, expiry, and rate limits
+    - Token list view with usage statistics and management actions
+    - Token revocation and rotation capabilities
+    - Scope-based permissions (read/write for tasks, context, agents, etc.)
+    - Material-UI tabbed interface for Generate, Active Tokens, and Settings
+    - Copy-to-clipboard functionality for generated tokens
+    - Token usage tracking and analytics
+  - Frontend changes:
+    - `dhafnck-frontend/src/pages/TokenManagement.tsx` - New token management page
+    - `dhafnck-frontend/src/services/tokenService.ts` - API service for token operations
+    - `dhafnck-frontend/src/App.tsx` - Added /tokens route
+    - `dhafnck-frontend/src/components/Header.tsx` - Added API Tokens navigation link
+  - Backend changes:
+    - `dhafnck_mcp_main/src/fastmcp/server/routes/token_router.py` - Token CRUD endpoints
+    - `dhafnck_mcp_main/src/fastmcp/auth/api_server.py` - Registered token router
+  - Impact: Users can now generate limited-scope tokens for secure MCP authentication
+  
 - **🎨 PROFILE PAGE WITH HEADER NAVIGATION** (2025-08-19)
   - Created comprehensive user profile page (`dhafnck-frontend/src/pages/Profile.tsx`)
   - Added header component with user dropdown menu (`dhafnck-frontend/src/components/Header.tsx`)

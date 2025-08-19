@@ -7,6 +7,7 @@ import { Menu, X } from 'lucide-react';
 import { AuthWrapper, LoginForm, SignupForm, ProtectedRoute, EmailVerification } from './components/auth';
 import { Header } from './components/Header';
 import { Profile } from './pages/Profile';
+import { TokenManagement } from './pages/TokenManagement';
 import { AppLayout } from './components/AppLayout';
 import { ThemeProvider } from './contexts/ThemeContext';
 
@@ -150,6 +151,14 @@ function App() {
                 <AppLayout>
                   <Profile />
                 </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tokens"
+            element={
+              <ProtectedRoute>
+                <TokenManagement />
               </ProtectedRoute>
             }
           />

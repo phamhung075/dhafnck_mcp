@@ -49,6 +49,7 @@ from ..resources import Resource, ResourceManager
 from ..resources.template import ResourceTemplate
 from .auth.auth import OAuthProvider
 from .auth.providers.bearer_env import EnvBearerAuthProvider
+from .auth.mcp_auth_config import get_default_auth_provider
 from .http_server import (
     StarletteWithLifespan,
     create_sse_app,
@@ -239,8 +240,12 @@ class FastMCP(Generic[LifespanResultT]):
             lifespan=_lifespan_wrapper(self, lifespan),
         )
 
-        if auth is None and fastmcp.settings.default_auth_provider == "bearer_env":
-            auth = EnvBearerAuthProvider()
+        if auth is None:
+            # Try to get default auth provider (JWT if available, env Bearer, or None)
+            auth = get_default_auth_provider()
+            if auth is None and fastmcp.settings.default_auth_provider == "bearer_env":
+                # Fallback to env Bearer if configured in settings
+                auth = EnvBearerAuthProvider()
         self.auth = auth
 
         if tools:

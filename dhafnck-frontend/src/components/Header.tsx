@@ -2,7 +2,7 @@ import React, { useContext, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
 import { Button } from './ui/button';
-import { User, LogOut, ChevronDown, Settings, Home } from 'lucide-react';
+import { User, LogOut, ChevronDown, Settings, Home, Key } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 
 export const Header: React.FC = () => {
@@ -49,6 +49,12 @@ export const Header: React.FC = () => {
                 className="theme-nav-item transition-colors"
               >
                 <Home className="h-5 w-5" />
+              </Link>
+              <Link 
+                to="/tokens" 
+                className="theme-nav-item transition-colors"
+              >
+                <Key className="h-5 w-5" />
               </Link>
               <Link 
                 to="/profile" 
@@ -101,6 +107,15 @@ export const Header: React.FC = () => {
                       >
                         <User className="h-4 w-4" />
                         <span>Profile</span>
+                      </Link>
+                      
+                      <Link
+                        to="/tokens"
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center space-x-2 px-3 py-2 text-sm text-base-primary hover:bg-background-hover rounded-md transition-colors"
+                      >
+                        <Key className="h-4 w-4" />
+                        <span>API Tokens</span>
                       </Link>
                       
                       <Link

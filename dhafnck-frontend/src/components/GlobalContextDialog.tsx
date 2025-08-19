@@ -398,32 +398,32 @@ export const GlobalContextDialog: React.FC<GlobalContextDialogProps> = ({
           {loading ? (
             <div className="text-center py-8">
               <div className="inline-block w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-              <p className="mt-2 text-sm text-gray-500">Loading global context...</p>
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading global context...</p>
             </div>
           ) : globalContext ? (
             <div className="h-full flex flex-col p-4">
               {editMode ? (
                 // Edit Mode - Markdown Editor for active tab
                 <>
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                    <h3 className="font-semibold text-sm mb-2">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">
+                    <h3 className="font-semibold text-sm mb-2 dark:text-gray-200">
                       {activeTab === 'settings' && 'Organization Settings Format'}
                       {activeTab === 'patterns' && 'Global Patterns Format'}
                       {activeTab === 'capabilities' && 'Shared Capabilities Format'}
                       {activeTab === 'metadata' && 'Metadata Format'}
                     </h3>
-                    <div className="text-xs text-gray-600">
+                    <div className="text-xs text-gray-600 dark:text-gray-400">
                       {activeTab === 'settings' && (
-                        <p>Use <code className="bg-white px-1 rounded">key: value</code> format. Each setting on a new line.</p>
+                        <p>Use <code className="bg-white dark:bg-gray-700 px-1 rounded">key: value</code> format. Each setting on a new line.</p>
                       )}
                       {activeTab === 'patterns' && (
-                        <p>Use <code className="bg-white px-1 rounded">pattern_name:</code> followed by description/code on next lines.</p>
+                        <p>Use <code className="bg-white dark:bg-gray-700 px-1 rounded">pattern_name:</code> followed by description/code on next lines.</p>
                       )}
                       {activeTab === 'capabilities' && (
-                        <p>Use bullet points <code className="bg-white px-1 rounded">- capability</code> for each item.</p>
+                        <p>Use bullet points <code className="bg-white dark:bg-gray-700 px-1 rounded">- capability</code> for each item.</p>
                       )}
                       {activeTab === 'metadata' && (
-                        <p>Use <code className="bg-white px-1 rounded">key: value</code> format. Auto-generated fields will be preserved.</p>
+                        <p>Use <code className="bg-white dark:bg-gray-700 px-1 rounded">key: value</code> format. Auto-generated fields will be preserved.</p>
                       )}
                     </div>
                   </div>
@@ -437,7 +437,7 @@ export const GlobalContextDialog: React.FC<GlobalContextDialogProps> = ({
               ) : (
                 // View Mode - Display current tab content
                 <div className="space-y-4">
-                  <div className="bg-gray-50 rounded-lg p-6">
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
                     <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                       {activeTab === 'settings' && <><Settings className="w-5 h-5" /> Organization Settings</>}
                       {activeTab === 'patterns' && <><Layers className="w-5 h-5" /> Global Patterns</>}
@@ -445,11 +445,11 @@ export const GlobalContextDialog: React.FC<GlobalContextDialogProps> = ({
                       {activeTab === 'metadata' && <><Info className="w-5 h-5" /> Metadata</>}
                     </h3>
                     {getCurrentMarkdown() ? (
-                      <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800">
+                      <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800 dark:text-gray-200">
                         {getCurrentMarkdown()}
                       </pre>
                     ) : (
-                      <p className="text-sm text-gray-500 italic">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 italic">
                         No {activeTab === 'settings' && 'settings'}
                         {activeTab === 'patterns' && 'patterns'}
                         {activeTab === 'capabilities' && 'capabilities'}
@@ -460,11 +460,11 @@ export const GlobalContextDialog: React.FC<GlobalContextDialogProps> = ({
                   
                   {/* Show raw JSON at the bottom in view mode */}
                   <details className="cursor-pointer">
-                    <summary className="font-semibold text-sm text-gray-700 hover:text-gray-900">
+                    <summary className="font-semibold text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100">
                       View Complete JSON Context
                     </summary>
-                    <div className="mt-3 bg-gray-100 p-3 rounded">
-                      <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
+                    <div className="mt-3 bg-gray-100 dark:bg-gray-800 p-3 rounded">
+                      <pre className="text-xs overflow-x-auto whitespace-pre-wrap text-gray-800 dark:text-gray-200">
                         {JSON.stringify(globalContext, null, 2)}
                       </pre>
                     </div>
@@ -473,10 +473,10 @@ export const GlobalContextDialog: React.FC<GlobalContextDialogProps> = ({
               )}
             </div>
           ) : (
-            <div className="text-center py-8 bg-gray-50 rounded-lg">
-              <Globe className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <h3 className="text-lg font-medium text-gray-900">No Global Context Available</h3>
-              <p className="text-sm text-gray-500 mt-2">
+            <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <Globe className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-3" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">No Global Context Available</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                 Global context has not been initialized yet.
               </p>
               <Button 

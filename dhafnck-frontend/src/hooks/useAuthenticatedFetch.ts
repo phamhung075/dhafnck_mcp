@@ -5,6 +5,28 @@ interface FetchOptions extends RequestInit {
   skipAuth?: boolean;
 }
 
+// Standalone function for use outside of React components
+export const authenticatedFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
+  // Get tokens from localStorage or cookies
+  const tokensStr = localStorage.getItem('auth_tokens');
+  const tokens = tokensStr ? JSON.parse(tokensStr) : null;
+  
+  // Add authorization header if token exists
+  const fetchOptions = { ...options };
+  if (tokens?.access_token) {
+    fetchOptions.headers = {
+      ...fetchOptions.headers,
+      'Authorization': `Bearer ${tokens.access_token}`,
+    };
+  }
+  
+  const response = await fetch(url, fetchOptions);
+  
+  // If unauthorized, the hook version will handle refresh
+  // For the standalone version, just return the response
+  return response;
+};
+
 export const useAuthenticatedFetch = () => {
   const { tokens, refreshToken, logout } = useAuth();
 
