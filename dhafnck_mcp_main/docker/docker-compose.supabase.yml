@@ -56,6 +56,9 @@ services:
       - dhafnck_data:/data
       - dhafnck_logs:/app/logs
       
+      # Mount 00_RESOURCES for file serving
+      - ../../00_RESOURCES:/data/resources/00_RESOURCES:ro
+      
       # Configuration files (optional - for advanced users)
       - ./config:/app/config:ro
       

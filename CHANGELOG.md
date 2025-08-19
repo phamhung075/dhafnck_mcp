@@ -6,6 +6,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Added
+- **Claude Agent Generation Tool** (2025-08-18)
+  - MCP-based tool for generating Claude Code agent configuration files
+  - Created `dhafnck_mcp_main/src/fastmcp/task_management/application/facades/claude_agent_facade.py` with agent generation logic
+  - Created `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/claude_agent_controller.py` following DDD principles
+  - Pre-built templates for common agent types: code-reviewer, test-writer, documentation-writer, debugger, architect
+  - Support for custom agent creation with configurable expertise, tools, and prompts
+  - Agent files automatically generated in `.claude/agents/` directory for Claude Code discovery
+  - Successfully tested generation of multiple agent types
+
 ### Fixed
 - **Documented Supabase Email Delivery Issues** (2025-08-18)
   - Created comprehensive troubleshooting guide for email not being sent
