@@ -49,6 +49,51 @@ describe('TokenManagement', () => {
     mockTokenService.listTokens.mockResolvedValue(mockTokens);
   });
 
+  describe('Scope removal - admin scope', () => {
+    it('should not include admin scope in available scopes', () => {
+      renderWithTheme(<TokenManagement />);
+      
+      // Open new token dialog
+      const newTokenButton = screen.getByRole('button', { name: /new token/i });
+      fireEvent.click(newTokenButton);
+      
+      // Check that admin scope is not in the list
+      const scopeCheckboxes = screen.getAllByRole('checkbox');
+      const scopeLabels = scopeCheckboxes.map(checkbox => {
+        const label = checkbox.closest('label');
+        return label?.textContent || '';
+      });
+      
+      expect(scopeLabels).not.toContain('Admin');
+      expect(scopeLabels).toContain('Read Tasks');
+      expect(scopeLabels).toContain('Write Tasks');
+      expect(scopeLabels).toContain('Read Context');
+      expect(scopeLabels).toContain('Write Context');
+      expect(scopeLabels).toContain('Read Agents');
+      expect(scopeLabels).toContain('Write Agents');
+      expect(scopeLabels).toContain('Execute MCP');
+    });
+
+    it('should only have 7 available scopes after admin removal', () => {
+      renderWithTheme(<TokenManagement />);
+      
+      // Open new token dialog
+      const newTokenButton = screen.getByRole('button', { name: /new token/i });
+      fireEvent.click(newTokenButton);
+      
+      // Count scope checkboxes
+      const scopeCheckboxes = screen.getAllByRole('checkbox');
+      // Filter out any non-scope checkboxes
+      const scopeLabels = scopeCheckboxes.filter(checkbox => {
+        const label = checkbox.closest('label');
+        const labelText = label?.textContent || '';
+        return labelText.includes('Read') || labelText.includes('Write') || labelText.includes('Execute');
+      });
+      
+      expect(scopeLabels).toHaveLength(7);
+    });
+  });
+
   it('renders the page title and description', () => {
     renderWithTheme(<TokenManagement />);
     

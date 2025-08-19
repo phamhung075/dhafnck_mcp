@@ -274,6 +274,14 @@ def create_sse_app(
     except ImportError as e:
         logger.warning(f"Could not import task summary routes: {e}")
     
+    # Add token management routes
+    try:
+        from .routes.token_routes import token_routes
+        server_routes.extend(token_routes)
+        logger.info(f"Token management routes registered at /api/v2/tokens ({len(token_routes)} endpoints)")
+    except ImportError as e:
+        logger.warning(f"Could not import token management routes: {e}")
+    
     # Add OAuth2 auth endpoints using bridge pattern
     try:
         from fastmcp.auth.bridge.fastapi_mount import integrate_auth_with_mcp_server

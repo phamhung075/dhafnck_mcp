@@ -27,43 +27,9 @@ REQUIRED BEHAVIORS:
 ## Missing Test Files - CREATE IMMEDIATELY:
 
 ## Stale Test Files (Source Newer Than Test)
-- **Source**: `dhafnck-frontend/src/App.tsx`
-  - **Test**: `dhafnck-frontend/src/tests/App.test.tsx`
+- **Source**: `dhafnck-frontend/src/pages/Profile.tsx`
+  - **Test**: `dhafnck-frontend/src/tests/pages/Profile.test.tsx`
   - **Days stale**: 0
-
-- **Source**: `dhafnck-frontend/src/components/Header.tsx`
-  - **Test**: `dhafnck-frontend/src/tests/components/Header.test.tsx`
-  - **Days stale**: 0
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/api_server.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/auth/api_server_test.py`
-  - **Days stale**: 0
-
-
-## Missing Test Files
-- **Source**: `dhafnck-frontend/src/components/GlobalContextDialog.tsx`
-  - **Create test at**: `dhafnck-frontend/src/tests/components/GlobalContextDialog.test.tsx`
-
-- **Source**: `dhafnck-frontend/src/hooks/useAuthenticatedFetch.ts`
-  - **Create test at**: `dhafnck-frontend/src/tests/hooks/useAuthenticatedFetch.test.ts`
-
-- **Source**: `dhafnck-frontend/src/pages/TokenManagement.tsx`
-  - **Create test at**: `dhafnck-frontend/src/tests/pages/TokenManagement.test.tsx`
-
-- **Source**: `dhafnck-frontend/src/services/tokenService.ts`
-  - **Create test at**: `dhafnck-frontend/src/tests/services/tokenService.test.ts`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/auth/mcp_auth_config.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/server/auth/mcp_auth_config_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/auth/providers/jwt_bearer.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/server/auth/providers/jwt_bearer_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/token_router.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/server/routes/token_router_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/server.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/server/server_test.py`
 
 
 ## EXECUTION COMMANDS - DO NOW:

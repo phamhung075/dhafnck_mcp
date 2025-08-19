@@ -2,6 +2,11 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Profile } from '../../pages/Profile';
 import { AuthContext } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+
+// Mock react-router-dom
+jest.mock('react-router-dom');
+const mockNavigate = jest.fn();
 
 // Mock useTheme hook
 jest.mock('../../hooks/useTheme', () => ({
@@ -40,6 +45,8 @@ describe('Profile', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockNavigate.mockClear();
+    (useNavigate as jest.Mock).mockReturnValue(mockNavigate);
   });
 
   it('renders loading state when context is not available', () => {
@@ -166,9 +173,34 @@ describe('Profile', () => {
     
     fireEvent.click(screen.getByRole('button', { name: /Security/i }));
     
+    expect(screen.getByText('Manage API Tokens')).toBeInTheDocument();
     expect(screen.getByText('Change Password')).toBeInTheDocument();
     expect(screen.getByText('Enable Two-Factor Authentication')).toBeInTheDocument();
     expect(screen.getByText('Manage Sessions')).toBeInTheDocument();
+    expect(screen.getByText('About API Tokens')).toBeInTheDocument();
+    expect(screen.getByText(/API tokens allow you to authenticate/)).toBeInTheDocument();
+  });
+
+  it('navigates to token management page when Manage API Tokens is clicked', () => {
+    renderWithAuth();
+    
+    fireEvent.click(screen.getByRole('button', { name: /Security/i }));
+    
+    const manageTokensButton = screen.getByRole('button', { name: /Manage API Tokens/i });
+    fireEvent.click(manageTokensButton);
+    
+    expect(mockNavigate).toHaveBeenCalledWith('/tokens');
+  });
+
+  it('navigates to token management from the API tokens info section', () => {
+    renderWithAuth();
+    
+    fireEvent.click(screen.getByRole('button', { name: /Security/i }));
+    
+    const tokenLink = screen.getByRole('button', { name: /Go to Token Management/i });
+    fireEvent.click(tokenLink);
+    
+    expect(mockNavigate).toHaveBeenCalledWith('/tokens');
   });
 
   it('renders preferences tab content correctly', () => {
@@ -176,8 +208,11 @@ describe('Profile', () => {
     
     fireEvent.click(screen.getByRole('button', { name: /Preferences/i }));
     
-    expect(screen.getByLabelText('Theme')).toBeInTheDocument();
-    expect(screen.getByLabelText('Email Notifications')).toBeInTheDocument();
+    expect(screen.getByText('Appearance')).toBeInTheDocument();
+    expect(screen.getByText('Theme Preference')).toBeInTheDocument();
+    expect(screen.getByText('Light Mode')).toBeInTheDocument();
+    expect(screen.getByText('Dark Mode')).toBeInTheDocument();
+    expect(screen.getByText('Email Notifications')).toBeInTheDocument();
     expect(screen.getByText('Receive email notifications for important updates')).toBeInTheDocument();
   });
 
@@ -186,10 +221,8 @@ describe('Profile', () => {
     
     fireEvent.click(screen.getByRole('button', { name: /Preferences/i }));
     
-    const themeSelect = screen.getByLabelText('Theme') as HTMLSelectElement;
-    const notificationCheckbox = screen.getByLabelText('Receive email notifications for important updates') as HTMLInputElement;
+    const notificationCheckbox = screen.getByRole('checkbox', { name: /Receive email notifications for important updates/i }) as HTMLInputElement;
     
-    expect(themeSelect).toBeDisabled();
     expect(notificationCheckbox).toBeDisabled();
   });
 
@@ -202,11 +235,28 @@ describe('Profile', () => {
     // Switch to preferences tab
     fireEvent.click(screen.getByRole('button', { name: /Preferences/i }));
     
-    const themeSelect = screen.getByLabelText('Theme') as HTMLSelectElement;
-    const notificationCheckbox = screen.getByLabelText('Receive email notifications for important updates') as HTMLInputElement;
+    const notificationCheckbox = screen.getByRole('checkbox', { name: /Receive email notifications for important updates/i }) as HTMLInputElement;
     
-    expect(themeSelect).not.toBeDisabled();
     expect(notificationCheckbox).not.toBeDisabled();
+  });
+
+  it('allows switching between light and dark theme', () => {
+    const mockSetTheme = jest.fn();
+    jest.mocked(require('../../hooks/useTheme').useTheme).mockReturnValue({
+      theme: 'light',
+      setTheme: mockSetTheme,
+      toggleTheme: jest.fn(),
+    });
+
+    renderWithAuth();
+    
+    fireEvent.click(screen.getByRole('button', { name: /Preferences/i }));
+    
+    // Click dark mode button
+    const darkModeButton = screen.getByRole('button', { name: /Dark Mode/i });
+    fireEvent.click(darkModeButton);
+    
+    expect(mockSetTheme).toHaveBeenCalledWith('dark');
   });
 
   it('displays user ID correctly', () => {

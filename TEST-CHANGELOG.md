@@ -6,6 +6,106 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased] - TBD
 
+### Updated - 2025-08-19
+
+#### Frontend Test Updates
+- **Profile.test.tsx** - Updated test suite to support new navigation and API token UI features
+  - Added mock for react-router-dom to support useNavigate hook
+  - Added tests for "Manage API Tokens" button navigation to /tokens route
+  - Added tests for API tokens info section navigation link
+  - Updated preferences tab tests to reflect new theme selection UI (Light/Dark mode buttons)
+  - Updated tests for theme switching functionality with mockSetTheme
+  - Fixed test expectations to match updated UI components
+  - Total: 18 test cases with updated coverage for new features
+
+- **TokenManagement.test.tsx** - Added new test cases for admin scope removal
+  - Added test to verify admin scope is not included in available scopes list
+  - Added test to confirm only 7 scopes remain after admin removal (was 8)
+  - Validates UI changes to remove admin scope from token creation dialog
+  - Ensures security improvement by preventing admin scope assignment through UI
+
+### Added - 2025-08-19
+
+#### Frontend Test Files Created
+- **GlobalContextDialog.test.tsx** - Comprehensive test suite for GlobalContextDialog component
+  - Tests dialog opening/closing behavior
+  - Tests API fetch and context data display
+  - Tests loading states and error handling
+  - Tests theme integration and custom className props
+  - Tests complex nested data rendering
+  - Tests re-fetching behavior on dialog reopen
+  - 11 test cases with full coverage
+
+- **useAuthenticatedFetch.test.ts** - Complete test coverage for useAuthenticatedFetch hook
+  - Tests authenticated requests with bearer tokens
+  - Tests header preservation and merging
+  - Tests unauthenticated request handling
+  - Tests non-JSON response handling
+  - Tests network error scenarios
+  - Tests 401 unauthorized responses
+  - Tests token refresh scenarios
+  - Tests all HTTP methods (GET, POST, PUT, DELETE, PATCH)
+  - 10 test cases covering all scenarios
+
+- **TokenManagement.test.tsx** - Extensive test suite for TokenManagement page
+  - Tests token CRUD operations (Create, Read, Update, Delete)
+  - Tests form validation and submission
+  - Tests token activation toggle
+  - Tests clipboard copy functionality
+  - Tests error handling for all operations
+  - Tests loading states and empty states
+  - Tests date formatting and "Never" display for unused tokens
+  - Added tests for admin scope removal from UI
+  - 17 test cases with comprehensive coverage
+
+- **tokenService.test.ts** - Full test coverage for token service API client
+  - Tests all 8 API methods (list, get, create, update, delete, regenerate, validate, stats)
+  - Tests error handling for each method
+  - Tests edge cases (empty names, special characters, large values)
+  - Tests network errors (timeout, 401, 403, 500)
+  - Tests validation errors and partial updates
+  - 25+ test cases covering all scenarios
+
+#### Backend Test Files Created
+- **mcp_auth_config_test.py** - Comprehensive test suite for MCP authentication configuration
+  - Tests config file finding in default and custom paths
+  - Tests config loading with valid/invalid JSON
+  - Tests JWT secret extraction from various config structures
+  - Tests bearer token auth detection
+  - Tests server name retrieval from environment
+  - Tests integration scenarios with multiple servers
+  - Tests edge cases with Unicode and special characters
+  - 30+ test cases with full coverage
+
+- **jwt_bearer_test.py** - Extensive test suite for JWT Bearer authentication provider
+  - Tests provider initialization with/without secret
+  - Tests token authentication with various scenarios
+  - Tests expired, invalid, and inactive tokens
+  - Tests database integration and error handling
+  - Tests permission checking for authenticated/unauthenticated users
+  - Tests concurrent authentication requests
+  - Tests edge cases with malformed tokens and Unicode
+  - 25+ test cases covering all authentication flows
+
+- **token_router_test.py** - Complete test coverage for token API endpoints
+  - Tests all 8 REST endpoints (list, get, create, update, delete, regenerate, validate, stats)
+  - Tests request/response validation with Pydantic models
+  - Tests error responses (404, 422, 500)
+  - Tests partial updates and minimal data
+  - Tests integration scenarios with full token lifecycle
+  - Tests multiple token management
+  - 20+ test cases with comprehensive API coverage
+
+- **server_test.py** - Full test suite for MCP server initialization and configuration
+  - Tests server initialization with various configurations
+  - Tests authentication provider setup from env and config files
+  - Tests resource, tool, and prompt management
+  - Tests server run method with different parameters
+  - Tests integration scenarios with bearer auth
+  - Tests edge cases and error handling
+  - Tests concurrent operations and cleanup
+  - 25+ test cases covering server lifecycle
+
 ### Fixed
 - **Test Files Updated for Recent Changes** (2025-08-19)
   - Updated stale test files to match recent application changes

@@ -14,9 +14,9 @@ import hashlib
 import jwt
 from typing import Annotated
 
-from ...auth.interface.fastapi_auth import get_current_user, get_db
-from ...auth.domain.entities.user import User
-from ...auth.interface.jwt_auth_backend import JWTAuthBackend
+from fastmcp.auth.interface.fastapi_auth import get_current_user, get_db
+from fastmcp.auth.domain.entities.user import User
+from fastmcp.auth.interface.jwt_auth_backend import JWTAuthBackend
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
