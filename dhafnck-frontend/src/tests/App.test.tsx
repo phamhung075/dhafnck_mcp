@@ -51,6 +51,14 @@ jest.mock('../pages/Profile', () => ({
   Profile: () => <div>Profile Page</div>
 }));
 
+jest.mock('../pages/TokenManagement', () => ({
+  TokenManagement: () => <div>Token Management Page</div>
+}));
+
+jest.mock('../contexts/ThemeContext', () => ({
+  ThemeProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>
+}));
+
 jest.mock('../components/ProjectList', () => ({
   default: ({ onSelect }: any) => (
     <div data-testid="project-list">
@@ -136,5 +144,15 @@ describe('App', () => {
 
     expect(screen.getByTestId('app-layout')).toBeInTheDocument();
     expect(screen.getByText('Profile Page')).toBeInTheDocument();
+  });
+
+  it('renders token management page on /tokens route', () => {
+    window.history.pushState({}, '', '/tokens');
+    
+    render(
+      <App />
+    );
+
+    expect(screen.getByText('Token Management Page')).toBeInTheDocument();
   });
 });

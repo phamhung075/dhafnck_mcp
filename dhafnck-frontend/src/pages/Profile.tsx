@@ -1,13 +1,15 @@
 import React, { useContext, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { User, Mail, Shield, Calendar, Edit2, Save, X, Lock, Settings, Moon, Sun } from 'lucide-react';
+import { User, Mail, Shield, Calendar, Edit2, Save, X, Lock, Settings, Moon, Sun, Key } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 
 export const Profile: React.FC = () => {
   const authContext = useContext(AuthContext);
+  const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState<'account' | 'security' | 'preferences'>('account');
@@ -200,14 +202,43 @@ export const Profile: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-4">
-                <Button variant="outline" className="w-full">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => navigate('/tokens')}
+                >
+                  <Key className="mr-2 h-4 w-4" />
+                  Manage API Tokens
+                </Button>
+                <Button variant="outline" className="w-full justify-start">
+                  <Lock className="mr-2 h-4 w-4" />
                   Change Password
                 </Button>
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full justify-start">
+                  <Shield className="mr-2 h-4 w-4" />
                   Enable Two-Factor Authentication
                 </Button>
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full justify-start">
+                  <Settings className="mr-2 h-4 w-4" />
                   Manage Sessions
+                </Button>
+              </div>
+              
+              <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
+                <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2 flex items-center">
+                  <Key className="mr-2 h-4 w-4" />
+                  About API Tokens
+                </h4>
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  API tokens allow you to authenticate with the MCP server from external applications. 
+                  You can create tokens with specific scopes to limit access permissions.
+                </p>
+                <Button 
+                  variant="link" 
+                  className="p-0 h-auto text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 mt-2"
+                  onClick={() => navigate('/tokens')}
+                >
+                  Go to Token Management →
                 </Button>
               </div>
             </CardContent>

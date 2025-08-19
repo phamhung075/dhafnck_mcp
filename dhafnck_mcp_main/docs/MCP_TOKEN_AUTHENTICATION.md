@@ -106,13 +106,14 @@ services:
 | `read:agents` | View agent configurations | `mcp:read` |
 | `write:agents` | Configure agents | `mcp:write` |
 | `execute:mcp` | Execute MCP commands | `mcp:execute` |
-| `admin` | Full administrative access | `mcp:admin` |
+
+**Note:** Administrative privileges (`mcp:admin`) cannot be granted through the UI. Admin access must be configured directly in the database for security reasons.
 
 ### Scope Inheritance
 
-- `admin` scope includes all permissions
 - `write:*` scopes include corresponding `read:*` permissions
 - All tokens automatically get `mcp:access` for basic connectivity
+- Admin scope (when set directly in database) includes all permissions
 
 ## Programmatic Token Usage
 

@@ -12,6 +12,11 @@ jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
 }));
 
+// Mock ThemeToggle component
+jest.mock('../../components/ThemeToggle', () => ({
+  ThemeToggle: () => <div data-testid="theme-toggle">Theme Toggle</div>
+}));
+
 describe('Header', () => {
   const mockUser = {
     id: '123',
@@ -91,6 +96,7 @@ describe('Header', () => {
     // Dropdown should now be visible
     expect(screen.getByText('john@example.com')).toBeInTheDocument();
     expect(screen.getByText('Profile')).toBeInTheDocument();
+    expect(screen.getByText('API Tokens')).toBeInTheDocument();
     expect(screen.getByText('Sign Out')).toBeInTheDocument();
   });
 
@@ -144,12 +150,14 @@ describe('Header', () => {
   it('renders navigation icons on desktop', () => {
     renderWithAuth();
     
-    // Should have home and settings icons
+    // Should have home, tokens, and settings icons
     const navLinks = screen.getAllByRole('link');
     const homeLink = navLinks.find(link => link.getAttribute('href') === '/dashboard');
+    const tokensLink = navLinks.find(link => link.getAttribute('href') === '/tokens');
     const profileLink = navLinks.find(link => link.getAttribute('href') === '/profile');
     
     expect(homeLink).toBeInTheDocument();
+    expect(tokensLink).toBeInTheDocument();
     expect(profileLink).toBeInTheDocument();
   });
 
@@ -184,5 +192,29 @@ describe('Header', () => {
     // Should still show title but no user section
     expect(screen.getByText('DhafnckMCP')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /JD/i })).not.toBeInTheDocument();
+  });
+
+  it('renders theme toggle for authenticated users', () => {
+    renderWithAuth();
+    expect(screen.getByTestId('theme-toggle')).toBeInTheDocument();
+  });
+
+  it('renders theme toggle for non-authenticated users', () => {
+    render(
+      <BrowserRouter>
+        <AuthContext.Provider value={{
+          user: null,
+          isAuthenticated: false,
+          login: jest.fn(),
+          logout: mockLogout,
+          loading: false,
+          refreshUser: jest.fn(),
+        }}>
+          <Header />
+        </AuthContext.Provider>
+      </BrowserRouter>
+    );
+
+    expect(screen.getByTestId('theme-toggle')).toBeInTheDocument();
   });
 });

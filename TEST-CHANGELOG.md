@@ -7,6 +7,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 ## [Unreleased] - TBD
 
 ### Fixed
+- **Test Files Updated for Recent Changes** (2025-08-19)
+  - Updated stale test files to match recent application changes
+    - `dhafnck-frontend/src/tests/App.test.tsx`
+      - Added ThemeProvider mock for new theme context
+      - Added TokenManagement page mock for new route
+      - Added test for /tokens route rendering
+    - `dhafnck-frontend/src/tests/components/Header.test.tsx`
+      - Added ThemeToggle component mock
+      - Updated dropdown menu test to include "API Tokens" link
+      - Added test for tokens navigation link in desktop view
+      - Added tests for theme toggle rendering in both authenticated and non-authenticated states
+    - `dhafnck_mcp_main/src/tests/auth/api_server_test.py`
+      - Added token_router to mock routers fixture
+      - Updated all router mocking patterns to include token_router
+      - Added test_token_router_included() to verify token router inclusion
+      - Added test_token_router_info_logged() to verify logging message
+  - Impact: Test files now properly cover ThemeProvider integration, TokenManagement features, and token router endpoints
+
+### Fixed
 - **Frontend Test Suite Improvements** (2025-08-19)
   - Fixed remaining test compatibility issues with @testing-library/user-event v13
     - `dhafnck-frontend/src/tests/components/ui/input.test.tsx`

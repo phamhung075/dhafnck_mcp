@@ -35,60 +35,35 @@ REQUIRED BEHAVIORS:
   - **Test**: `dhafnck-frontend/src/tests/components/Header.test.tsx`
   - **Days stale**: 0
 
-- **Source**: `dhafnck-frontend/src/components/auth/SignupForm.tsx`
-  - **Test**: `dhafnck-frontend/src/tests/components/auth/SignupForm.test.tsx`
-  - **Days stale**: 0
-
-- **Source**: `dhafnck-frontend/src/pages/Profile.tsx`
-  - **Test**: `dhafnck-frontend/src/tests/pages/Profile.test.tsx`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/api_server.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/auth/api_server_test.py`
   - **Days stale**: 0
 
 
 ## Missing Test Files
-- **Source**: `dhafnck-frontend/src/components/ThemeToggle.tsx`
-  - **Create test at**: `dhafnck-frontend/src/tests/components/ThemeToggle.test.tsx`
+- **Source**: `dhafnck-frontend/src/components/GlobalContextDialog.tsx`
+  - **Create test at**: `dhafnck-frontend/src/tests/components/GlobalContextDialog.test.tsx`
 
-- **Source**: `dhafnck-frontend/src/components/auth/AuthWrapper.tsx`
-  - **Create test at**: `dhafnck-frontend/src/tests/components/auth/AuthWrapper.test.tsx`
+- **Source**: `dhafnck-frontend/src/hooks/useAuthenticatedFetch.ts`
+  - **Create test at**: `dhafnck-frontend/src/tests/hooks/useAuthenticatedFetch.test.ts`
 
-- **Source**: `dhafnck-frontend/src/components/auth/LoginForm.tsx`
-  - **Create test at**: `dhafnck-frontend/src/tests/components/auth/LoginForm.test.tsx`
+- **Source**: `dhafnck-frontend/src/pages/TokenManagement.tsx`
+  - **Create test at**: `dhafnck-frontend/src/tests/pages/TokenManagement.test.tsx`
 
-- **Source**: `dhafnck-frontend/src/components/ui/button.tsx`
-  - **Create test at**: `dhafnck-frontend/src/tests/components/ui/button.test.tsx`
+- **Source**: `dhafnck-frontend/src/services/tokenService.ts`
+  - **Create test at**: `dhafnck-frontend/src/tests/services/tokenService.test.ts`
 
-- **Source**: `dhafnck-frontend/src/components/ui/card.tsx`
-  - **Create test at**: `dhafnck-frontend/src/tests/components/ui/card.test.tsx`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/auth/mcp_auth_config.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/server/auth/mcp_auth_config_test.py`
 
-- **Source**: `dhafnck-frontend/src/components/ui/dialog.tsx`
-  - **Create test at**: `dhafnck-frontend/src/tests/components/ui/dialog.test.tsx`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/auth/providers/jwt_bearer.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/server/auth/providers/jwt_bearer_test.py`
 
-- **Source**: `dhafnck-frontend/src/components/ui/input.tsx`
-  - **Create test at**: `dhafnck-frontend/src/tests/components/ui/input.test.tsx`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/token_router.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/server/routes/token_router_test.py`
 
-- **Source**: `dhafnck-frontend/src/components/ui/table.tsx`
-  - **Create test at**: `dhafnck-frontend/src/tests/components/ui/table.test.tsx`
-
-- **Source**: `dhafnck-frontend/src/contexts/MuiThemeProvider.tsx`
-  - **Create test at**: `dhafnck-frontend/src/tests/contexts/MuiThemeProvider.test.tsx`
-
-- **Source**: `dhafnck-frontend/src/contexts/ThemeContext.tsx`
-  - **Create test at**: `dhafnck-frontend/src/tests/contexts/ThemeContext.test.tsx`
-
-- **Source**: `dhafnck-frontend/src/hooks/index.ts`
-  - **Create test at**: `dhafnck-frontend/src/tests/hooks/index.test.ts`
-
-- **Source**: `dhafnck-frontend/src/hooks/useTheme.ts`
-  - **Create test at**: `dhafnck-frontend/src/tests/hooks/useTheme.test.ts`
-
-- **Source**: `dhafnck-frontend/src/index.tsx`
-  - **Create test at**: `dhafnck-frontend/src/tests/index.test.tsx`
-
-- **Source**: `dhafnck-frontend/src/theme/muiTheme.ts`
-  - **Create test at**: `dhafnck-frontend/src/tests/theme/muiTheme.test.ts`
-
-- **Source**: `dhafnck-frontend/src/theme/themeConfig.ts`
-  - **Create test at**: `dhafnck-frontend/src/tests/theme/themeConfig.test.ts`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/server.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/server/server_test.py`
 
 
 ## EXECUTION COMMANDS - DO NOW:

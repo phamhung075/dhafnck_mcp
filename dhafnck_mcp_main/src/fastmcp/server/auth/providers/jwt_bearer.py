@@ -247,7 +247,7 @@ class JWTBearerAuthProvider(BearerAuthProvider):
             "read:agents": "mcp:read",
             "write:agents": "mcp:write",
             "execute:mcp": "mcp:execute",
-            "admin": "mcp:admin",
+            # Note: admin scope removed - admin privileges must be set directly in database
         }
         
         for scope in scopes:

@@ -82,8 +82,7 @@ const AVAILABLE_SCOPES = [
   { value: 'write:context', label: 'Write Context', description: 'Modify context data' },
   { value: 'read:agents', label: 'Read Agents', description: 'View agent configurations' },
   { value: 'write:agents', label: 'Write Agents', description: 'Configure and manage agents' },
-  { value: 'execute:mcp', label: 'Execute MCP', description: 'Run MCP commands' },
-  { value: 'admin', label: 'Admin', description: 'Full administrative access' }
+  { value: 'execute:mcp', label: 'Execute MCP', description: 'Run MCP commands' }
 ];
 
 export function TokenManagement() {

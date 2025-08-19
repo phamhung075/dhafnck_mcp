@@ -6,6 +6,30 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Changed
+- **🔒 REMOVED ADMIN SCOPE FROM TOKEN UI** (2025-08-19)
+  - Removed admin scope option from token generation interface
+  - Admin privileges now require direct database configuration for security
+  - Updated JWT Bearer provider to exclude admin scope mapping
+  - Modified documentation to clarify admin access restrictions
+  - Files affected:
+    - `dhafnck-frontend/src/pages/TokenManagement.tsx` - Removed admin from AVAILABLE_SCOPES
+    - `dhafnck_mcp_main/src/fastmcp/server/auth/providers/jwt_bearer.py` - Commented out admin scope mapping
+    - `dhafnck_mcp_main/docs/MCP_TOKEN_AUTHENTICATION.md` - Added admin scope security note
+  - Impact: Enhanced security by preventing UI-based admin token generation
+
+### Fixed
+- **🧪 UPDATED STALE TEST FILES** (2025-08-19)
+  - Updated frontend test files to match recent changes in the application
+  - Updated `App.test.tsx` to include ThemeProvider mock and new TokenManagement route test
+  - Updated `Header.test.tsx` to include ThemeToggle mock and API Tokens link tests
+  - Updated `api_server_test.py` to include token_router in mock routers and add tests for token router inclusion
+  - Files affected:
+    - `dhafnck-frontend/src/tests/App.test.tsx` - Added ThemeProvider and TokenManagement mocks
+    - `dhafnck-frontend/src/tests/components/Header.test.tsx` - Added ThemeToggle mock and updated dropdown tests
+    - `dhafnck_mcp_main/src/tests/auth/api_server_test.py` - Added token_router tests
+  - Impact: All test files now align with current application structure and features
+
 ### Fixed
 - **🔧 MCP SERVER IMPORT ERROR FIX** (2025-08-19)
   - Fixed circular import issues in JWT Bearer authentication provider
@@ -45,6 +69,38 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
   - Impact: JSON context is now clearly visible in both light and dark modes
 
 ### Added
+- **📋 TOKEN MANAGEMENT SYSTEM ANALYSIS** (2025-08-19)
+  - Created comprehensive analysis of token management system components
+  - Documented functionality and testing requirements for all token-related files
+  - Analyzed both frontend (React/TypeScript) and backend (Python/FastAPI) components
+  - Key findings:
+    - Frontend: TokenManagement.tsx page with Material-UI, tokenService.ts for API calls
+    - Backend: JWT Bearer auth provider, token router with 8 endpoints, MCP auth config
+    - Security: Token hashing, JWT validation, rate limiting, user isolation
+    - Integration points: RESTful API, JWT auth backend, MCP server, SQLAlchemy models
+  - Created detailed testing strategy covering unit, integration, and security tests
+  - Files analyzed:
+    - `dhafnck-frontend/src/pages/TokenManagement.tsx`
+    - `dhafnck-frontend/src/services/tokenService.ts`
+    - `dhafnck_mcp_main/src/fastmcp/server/auth/mcp_auth_config.py`
+    - `dhafnck_mcp_main/src/fastmcp/server/auth/providers/jwt_bearer.py`
+    - `dhafnck_mcp_main/src/fastmcp/server/routes/token_router.py`
+  - Documentation created:
+    - `dhafnck_mcp_main/docs/DEVELOPMENT GUIDES/token-management-analysis.md`
+  - Impact: Provides clear understanding of token management architecture and testing needs
+
+- **🔗 TOKEN MANAGEMENT LINK IN PROFILE** (2025-08-19)
+  - Added "Manage API Tokens" button to the Security tab in Profile page
+  - Added informational section about API tokens with quick link
+  - Improved security settings layout with icons for all options
+  - Features:
+    - Direct navigation to /tokens from Profile Security tab
+    - Clear explanation of API token functionality
+    - Consistent button styling with icons
+  - Files modified:
+    - `dhafnck-frontend/src/pages/Profile.tsx` - Added token management links
+  - Impact: Users can easily access token management from their profile security settings
+
 - **🔐 MCP BEARER TOKEN AUTHENTICATION** (2025-08-19)
   - Integrated JWT Bearer token authentication for MCP server connections
   - Created JWT Bearer auth provider that validates tokens from token management system
