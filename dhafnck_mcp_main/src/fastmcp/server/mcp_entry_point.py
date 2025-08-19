@@ -261,8 +261,9 @@ def create_dhafnck_mcp_server() -> FastMCP:
         logger.info("No Supabase configuration found - forcing auth_enabled=False")
         auth_enabled = False
     
-    # Initialize authentication middleware
-    auth_middleware = AuthMiddleware()
+    # Initialize authentication middleware with JWT secret key
+    jwt_secret_key = os.getenv("JWT_SECRET_KEY", "default-secret-key-change-in-production")
+    auth_middleware = AuthMiddleware(secret_key=jwt_secret_key)
     
     # Create FastMCP server with task management disabled (we'll register DDD tools manually)
     server = FastMCP(

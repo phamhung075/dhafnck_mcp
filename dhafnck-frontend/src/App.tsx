@@ -5,6 +5,9 @@ import ProjectList from './components/ProjectList';
 import { Button } from './components/ui/button';
 import { Menu, X } from 'lucide-react';
 import { AuthWrapper, LoginForm, SignupForm, ProtectedRoute, EmailVerification } from './components/auth';
+import { Header } from './components/Header';
+import { Profile } from './pages/Profile';
+import { AppLayout } from './components/AppLayout';
 
 // Use lazy loading for TaskList component for better performance
 const LazyTaskList = lazy(() => import('./components/LazyTaskList'));
@@ -37,12 +40,7 @@ function Dashboard() {
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
       {/* Header */}
-      <header className="border-b bg-white dark:bg-gray-900 px-4 py-3 shadow-sm">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">DhafnckMCP</h1>
-          <span className="text-sm text-gray-500 dark:text-gray-400">Multi-Project AI Orchestration Platform</span>
-        </div>
-      </header>
+      <Header />
       
       {/* Main content area */}
       <div className="flex flex-1 relative overflow-hidden">
@@ -140,6 +138,16 @@ function App() {
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <Profile />
+              </AppLayout>
             </ProtectedRoute>
           }
         />
