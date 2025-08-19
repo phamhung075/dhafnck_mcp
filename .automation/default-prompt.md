@@ -27,17 +27,14 @@ REQUIRED BEHAVIORS:
 ## Missing Test Files - CREATE IMMEDIATELY:
 
 ## Missing Test Files
-- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/api/dev_endpoints.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/auth/api/dev_endpoints_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/facades/claude_agent_facade.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/facades/claude_agent_facade_test.py`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/api_server.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/auth/api_server_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/claude_agent_controller.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/claude_agent_controller_test.py`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/infrastructure/supabase_auth.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/auth/infrastructure/supabase_auth_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/supabase_auth_integration.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/server/routes/supabase_auth_integration_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/ddd_compliant_mcp_tools.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/ddd_compliant_mcp_tools_test.py`
 
 
 ## EXECUTION COMMANDS - DO NOW:

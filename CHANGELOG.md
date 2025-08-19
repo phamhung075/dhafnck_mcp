@@ -7,6 +7,75 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 ## [Unreleased]
 
 ### Added
+- **Frontend User Isolation Integration Complete** (2025-08-19)
+  - Integrated frontend with user-isolated backend API endpoints
+  - Created API V2 service layer (`src/services/apiV2.ts`) with JWT authentication
+  - Updated all task/project/agent API calls to use V2 endpoints when authenticated
+  - Automatic JWT token inclusion in all authenticated requests
+  - Seamless fallback to V1 endpoints for backward compatibility
+  - Frontend now enforces complete data segregation between users
+  - Features implemented:
+    - User sees only their own tasks/projects/agents
+    - New data automatically assigned to authenticated user
+    - Token stored securely in cookies
+    - Automatic logout on authentication failure
+  - Files created/modified:
+    - `dhafnck-frontend/src/services/apiV2.ts` - New V2 API service layer
+    - `dhafnck-frontend/src/api.ts` - Enhanced with V2 API integration
+    - `docs/deployment/frontend-user-isolation-integration.md` - Integration guide
+  - Build and deployment successful to Docker container
+  - Live at http://localhost:3800 with full user isolation
+
+- **User Data Isolation System - Production Deployment Complete** (2025-08-19)
+  - Successfully deployed user isolation to Docker production environment (PostgreSQL)
+  - Executed database migration 003_add_user_isolation.sql
+  - Added user_id columns to 6 core tables (tasks, projects, agents, subtasks, task_dependencies, cursor_rules)
+  - Created user_access_log audit table with automatic logging
+  - Implemented performance indexes for all user_id columns
+  - Backfilled existing data with system user ID (00000000-0000-0000-0000-000000000000)
+  - Verified data isolation working correctly in production
+  - Created comprehensive monitoring queries for audit log analysis
+  - Documentation:
+    - `docs/deployment/user-isolation-deployment-report.md` - Full deployment report
+    - `docs/deployment/audit-log-monitoring-queries.sql` - 12+ monitoring queries
+  - Security features verified:
+    - Row-level isolation at database level
+    - Repository automatic filtering by user_id
+    - API authentication requirements enforced
+    - Audit trail capturing all data access
+  - Performance impact: Minimal (indexes optimized, filtering at DB level)
+  - Rollback plan documented for emergency scenarios
+
+- **Comprehensive User Data Isolation System - Phase 2 Complete** (2025-08-19)
+  - Implemented multi-tenant security with complete user-based data segregation
+  - Created `BaseUserScopedRepository` class for automatic user-based filtering
+  - Database migration (003_add_user_isolation.sql) adds user_id columns to all tables
+  - Implemented Row-Level Security (RLS) policies for Supabase compatibility
+  - Added audit logging table (user_access_log) for compliance tracking
+  - Updated ORMTaskRepository with full BaseUserScopedRepository integration
+  - Created user-scoped API routes (/api/v2/tasks/) with JWT authentication
+  - Integrated user-scoped routes into authentication API server
+  - Comprehensive test suite validates complete isolation (4/4 tests passing)
+  - Security documentation (user-data-isolation-implementation-guide.md) for deployment
+  - Successfully tested and deployed to development environment
+  - **Phase 2 Updates** - Extended user isolation to all repositories:
+    - Updated ProjectRepository with full BaseUserScopedRepository integration
+    - Updated AgentRepository with user-scoped data filtering
+    - All repository operations now automatically filter by user_id
+    - Added audit logging to all data access operations
+    - System mode available for administrative operations
+  - Files created/modified:
+    - `database/migrations/003_add_user_isolation.sql`
+    - `src/fastmcp/task_management/infrastructure/repositories/base_user_scoped_repository.py`
+    - `src/fastmcp/task_management/infrastructure/repositories/orm/task_repository.py`
+    - `src/fastmcp/task_management/infrastructure/repositories/orm/project_repository.py`
+    - `src/fastmcp/task_management/infrastructure/repositories/orm/agent_repository.py`
+    - `src/fastmcp/server/routes/user_scoped_task_routes.py`
+    - `src/tests/integration/test_user_data_isolation.py`
+    - `src/tests/integration/test_user_isolation_simple.py` (simplified test suite)
+    - `docs/security/user-data-isolation-implementation-guide.md`
+    - `src/fastmcp/auth/api_server.py` (added user-scoped routes)
+
 - **Claude Agent Generation Tool** (2025-08-18)
   - MCP-based tool for generating Claude Code agent configuration files
   - Created `dhafnck_mcp_main/src/fastmcp/task_management/application/facades/claude_agent_facade.py` with agent generation logic

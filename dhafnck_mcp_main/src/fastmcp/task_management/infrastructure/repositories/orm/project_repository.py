@@ -12,6 +12,7 @@ from sqlalchemy import and_, or_, desc
 from sqlalchemy.orm import joinedload
 
 from ..base_orm_repository import BaseORMRepository
+from ..base_user_scoped_repository import BaseUserScopedRepository
 from ...database.models import Project, ProjectGitBranch
 from ....domain.repositories.project_repository import ProjectRepository
 from ....domain.entities.project import Project as ProjectEntity
@@ -24,7 +25,7 @@ from ....domain.exceptions.base_exceptions import (
 logger = logging.getLogger(__name__)
 
 
-class ORMProjectRepository(BaseORMRepository[Project], ProjectRepository):
+class ORMProjectRepository(BaseORMRepository[Project], BaseUserScopedRepository, ProjectRepository):
     """
     Project repository implementation using SQLAlchemy ORM.
     
@@ -32,9 +33,17 @@ class ORMProjectRepository(BaseORMRepository[Project], ProjectRepository):
     using SQLAlchemy, supporting both SQLite and PostgreSQL.
     """
     
-    def __init__(self):
-        """Initialize ORM project repository."""
-        super().__init__(Project)
+    def __init__(self, session=None, user_id: Optional[str] = None):
+        """Initialize ORM project repository with user isolation.
+        
+        Args:
+            session: Database session
+            user_id: User ID for data isolation
+        """
+        # Initialize BaseORMRepository
+        BaseORMRepository.__init__(self, Project)
+        # Initialize BaseUserScopedRepository with user isolation
+        BaseUserScopedRepository.__init__(self, session or self.get_db_session(), user_id)
     
     def _model_to_entity(self, project: Project) -> ProjectEntity:
         """Convert SQLAlchemy model to domain entity"""
@@ -85,17 +94,21 @@ class ORMProjectRepository(BaseORMRepository[Project], ProjectRepository):
                     existing.status = getattr(project, 'status', 'active')
                     existing.metadata = getattr(project, 'metadata', {})
                 else:
-                    # Create new project
-                    new_project = Project(
-                        id=project.id,
-                        name=project.name,
-                        description=project.description,
-                        created_at=project.created_at,
-                        updated_at=project.updated_at,
-                        user_id="default_id",  # Default user ID
-                        status="active",
-                        metadata={}
-                    )
+                    # Create new project with user isolation
+                    project_data = {
+                        'id': project.id,
+                        'name': project.name,
+                        'description': project.description,
+                        'created_at': project.created_at,
+                        'updated_at': project.updated_at,
+                        'status': "active",
+                        'metadata': {}
+                    }
+                    
+                    # Add user_id for data isolation
+                    project_data = self.set_user_id(project_data)
+                    
+                    new_project = Project(**project_data)
                     session.add(new_project)
                     session.flush()  # Flush to get the project ID available for branches
                 
@@ -136,21 +149,36 @@ class ORMProjectRepository(BaseORMRepository[Project], ProjectRepository):
             )
     
     async def find_by_id(self, project_id: str) -> Optional[ProjectEntity]:
-        """Find a project by its ID"""
+        """Find a project by its ID with user isolation"""
         with self.get_db_session() as session:
-            project = session.query(Project).options(
+            query = session.query(Project).options(
                 joinedload(Project.git_branchs)
-            ).filter(Project.id == project_id).first()
+            )
+            
+            # Apply user filter for data isolation
+            query = self.apply_user_filter(query)
+            
+            project = query.filter(Project.id == project_id).first()
+            
+            # Log access for audit
+            self.log_access('read', 'project', project_id)
             
             return self._model_to_entity(project) if project else None
     
     async def find_all(self) -> List[ProjectEntity]:
-        """Find all projects"""
+        """Find all projects with user isolation"""
         with self.get_db_session() as session:
-            # Just load branches with their task_count field
-            projects = session.query(Project).options(
+            query = session.query(Project).options(
                 joinedload(Project.git_branchs)
-            ).order_by(desc(Project.created_at)).all()
+            )
+            
+            # Apply user filter for data isolation
+            query = self.apply_user_filter(query)
+            
+            projects = query.order_by(desc(Project.created_at)).all()
+            
+            # Log access for audit
+            self.log_access('list', 'project')
             
             return [self._model_to_entity(project) for project in projects]
     

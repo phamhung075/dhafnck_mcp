@@ -23,6 +23,9 @@ from fastmcp.auth.interface.auth_endpoints import router as auth_router
 from fastmcp.auth.api.supabase_endpoints import router as supabase_router
 from fastmcp.auth.api.dev_endpoints import router as dev_router
 
+# Import the user-scoped task routes
+from fastmcp.server.routes.user_scoped_task_routes import router as user_scoped_tasks_router
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -49,6 +52,10 @@ app.add_middleware(
 # Include auth routers
 app.include_router(auth_router)  # Custom auth endpoints (legacy)
 app.include_router(supabase_router)  # Supabase auth endpoints (new)
+
+# Include user-scoped task routes with authentication
+app.include_router(user_scoped_tasks_router)  # User-scoped task endpoints at /api/v2/tasks/
+logger.info("✅ User-scoped task routes enabled at /api/v2/tasks/")
 
 # Include development endpoints if in dev mode
 if os.getenv("ENVIRONMENT", "development") == "development":

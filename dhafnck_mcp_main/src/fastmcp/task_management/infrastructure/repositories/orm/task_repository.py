@@ -24,11 +24,12 @@ from ....domain.value_objects.task_id import TaskId
 from ....domain.value_objects.task_status import TaskStatus
 from ...database.models import Task, TaskAssignee, TaskDependency, TaskLabel
 from ..base_orm_repository import BaseORMRepository
+from ..base_user_scoped_repository import BaseUserScopedRepository
 
 logger = logging.getLogger(__name__)
 
 
-class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
+class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskRepository):
     """
     Task repository implementation using SQLAlchemy ORM.
     
@@ -36,22 +37,26 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
     using SQLAlchemy, supporting both SQLite and PostgreSQL.
     """
     
-    def __init__(self, git_branch_id: str | None = None, project_id: str | None = None,
+    def __init__(self, session=None, git_branch_id: str | None = None, project_id: str | None = None,
                  git_branch_name: str | None = None, user_id: str | None = None):
         """
-        Initialize ORM task repository.
+        Initialize ORM task repository with user isolation.
         
         Args:
+            session: Database session
             git_branch_id: Git branch ID for filtering tasks
             project_id: Project ID for context
             git_branch_name: Git branch name for context
-            user_id: User ID for context
+            user_id: User ID for data isolation
         """
-        super().__init__(Task)
+        # Initialize BaseORMRepository
+        BaseORMRepository.__init__(self, Task)
+        # Initialize BaseUserScopedRepository with user isolation
+        BaseUserScopedRepository.__init__(self, session or self.get_db_session(), user_id)
+        
         self.git_branch_id = git_branch_id
         self.project_id = project_id
         self.git_branch_name = git_branch_name
-        self.user_id = user_id
     
     def _model_to_entity(self, task: Task) -> TaskEntity:
         """Convert SQLAlchemy model to domain entity"""
@@ -115,19 +120,25 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
                     import uuid
                     task_id = str(uuid.uuid4())
                 
+                # Prepare task data with user_id
+                task_data = {
+                    'id': task_id,
+                    'title': title,
+                    'description': description,
+                    'git_branch_id': self.git_branch_id,
+                    'priority': priority,
+                    'status': kwargs.get('status', 'todo'),
+                    'details': kwargs.get('details', ''),
+                    'estimated_effort': kwargs.get('estimated_effort', ''),
+                    'due_date': kwargs.get('due_date'),
+                    'context_id': kwargs.get('context_id')
+                }
+                
+                # Add user_id for data isolation
+                task_data = self.set_user_id(task_data)
+                
                 # Create task
-                task = self.create(
-                    id=task_id,
-                    title=title,
-                    description=description,
-                    git_branch_id=self.git_branch_id,
-                    priority=priority,
-                    status=kwargs.get('status', 'todo'),
-                    details=kwargs.get('details', ''),
-                    estimated_effort=kwargs.get('estimated_effort', ''),
-                    due_date=kwargs.get('due_date'),
-                    context_id=kwargs.get('context_id')
-                )
+                task = self.create(**task_data)
                 
                 # Add assignees
                 if assignee_ids:
@@ -182,19 +193,27 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
             raise TaskCreationError(f"Failed to create task: {str(e)}")
     
     def get_task(self, task_id: str) -> TaskEntity | None:
-        """Get a task by ID"""
+        """Get a task by ID with user isolation"""
         with self.get_db_session() as session:
-            task = session.query(Task).options(
+            query = session.query(Task).options(
                 joinedload(Task.assignees),
                 joinedload(Task.labels).joinedload(TaskLabel.label),
                 joinedload(Task.subtasks),
                 joinedload(Task.dependencies)
-            ).filter(
-                and_(
-                    Task.id == task_id,
-                    Task.git_branch_id == self.git_branch_id if self.git_branch_id else True
-                )
-            ).first()
+            )
+            
+            # Apply user filter for data isolation
+            query = self.apply_user_filter(query)
+            
+            # Apply additional filters
+            filters = [Task.id == task_id]
+            if self.git_branch_id:
+                filters.append(Task.git_branch_id == self.git_branch_id)
+            
+            task = query.filter(and_(*filters)).first()
+            
+            # Log access for audit
+            self.log_access('read', 'task', task_id)
             
             return self._model_to_entity(task) if task else None
     
@@ -284,7 +303,7 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
     def list_tasks(self, status: str | None = None, priority: str | None = None,
                   assignee_id: str | None = None, limit: int = 100,
                   offset: int = 0) -> list[TaskEntity]:
-        """List tasks with filters"""
+        """List tasks with filters and user isolation"""
         with self.get_db_session() as session:
             query = session.query(Task).options(
                 joinedload(Task.assignees),
@@ -293,7 +312,10 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
                 joinedload(Task.dependencies)
             )
             
-            # Apply filters
+            # Apply user filter for data isolation
+            query = self.apply_user_filter(query)
+            
+            # Apply additional filters
             filters = []
             if self.git_branch_id:
                 filters.append(Task.git_branch_id == self.git_branch_id)
@@ -316,6 +338,10 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
             query = query.offset(offset).limit(limit)
             
             tasks = query.all()
+            
+            # Log access for audit
+            self.log_access('list', 'task')
+            
             return [self._model_to_entity(task) for task in tasks]
     
     def list_tasks_optimized(self, status: str | None = None, priority: str | None = None,
@@ -441,7 +467,7 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
             return result.scalar() or 0
     
     def search_tasks(self, query: str, limit: int = 50) -> list[TaskEntity]:
-        """Search tasks by title, description, and labels with multi-word support"""
+        """Search tasks by title, description, and labels with multi-word support and user isolation"""
         with self.get_db_session() as session:
             # Import Label model for label search
             from ...database.models import Label
@@ -450,6 +476,16 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
             search_words = [word.strip() for word in query.split() if word.strip()]
             if not search_words:
                 return []
+            
+            # Start with base query
+            base_query = session.query(Task).options(
+                joinedload(Task.assignees),
+                joinedload(Task.labels).joinedload(TaskLabel.label),
+                joinedload(Task.subtasks)
+            )
+            
+            # Apply user filter for data isolation FIRST
+            base_query = self.apply_user_filter(base_query)
             
             # Build search filters for each word - a task matches if ANY word matches ANY field
             all_search_filters = []
@@ -479,13 +515,12 @@ class ORMTaskRepository(BaseORMRepository[Task], TaskRepository):
             if self.git_branch_id:
                 filters.append(Task.git_branch_id == self.git_branch_id)
             
-            tasks = session.query(Task).options(
-                joinedload(Task.assignees),
-                joinedload(Task.labels).joinedload(TaskLabel.label),
-                joinedload(Task.subtasks)
-            ).filter(
+            tasks = base_query.filter(
                 and_(*filters)
             ).order_by(desc(Task.created_at)).limit(limit).all()
+            
+            # Log access for audit
+            self.log_access('search', 'task')
             
             return [self._model_to_entity(task) for task in tasks]
     

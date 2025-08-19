@@ -1,7 +1,13 @@
 // API service for MCP Task Management
 // Handles CRUD for tasks, subtasks, and dependencies
 
+import Cookies from 'js-cookie';
+import { taskApiV2, projectApiV2, agentApiV2, isAuthenticated } from './services/apiV2';
+
 const API_BASE = "http://localhost:8000/mcp/";
+
+// Check if user isolation is enabled (user is authenticated)
+const shouldUseV2Api = () => isAuthenticated();
 
 // --- Interfaces for Type Safety ---
 export interface Task {
@@ -118,6 +124,23 @@ export async function getTaskCount(git_branch_id: string): Promise<number> {
 
 // --- Task Management ---
 export async function listTasks(params: any = {}): Promise<Task[]> {
+  // Use V2 API if authenticated
+  if (shouldUseV2Api()) {
+    try {
+      const response: any = await taskApiV2.getTasks();
+      if (response && Array.isArray(response)) {
+        return response;
+      }
+      if (response && response.tasks && Array.isArray(response.tasks)) {
+        return response.tasks;
+      }
+      return [];
+    } catch (error) {
+      console.error('V2 API error, falling back to V1:', error);
+      // Fall through to V1 API
+    }
+  }
+  
   const { git_branch_id, project_id = "default_project", git_branch_name = "main", user_id = "default_id", ...rest } = params;
   const filteredParams = {
     action: "list",
@@ -197,6 +220,23 @@ export async function getTask(task_id: string, includeContext: boolean = true): 
 }
 
 export async function createTask(task: Partial<Task>): Promise<Task | null> {
+  // Use V2 API if authenticated
+  if (shouldUseV2Api()) {
+    try {
+      const response = await taskApiV2.createTask({
+        title: task.title || '',
+        description: task.description,
+        status: task.status,
+        priority: task.priority,
+        git_branch_id: task.git_branch_id,
+      });
+      return response as Task;
+    } catch (error) {
+      console.error('V2 API error, falling back to V1:', error);
+      // Fall through to V1 API
+    }
+  }
+  
   const body = {
     jsonrpc: "2.0",
     method: "tools/call",
@@ -231,6 +271,23 @@ export async function createTask(task: Partial<Task>): Promise<Task | null> {
 }
 
 export async function updateTask(task_id: string, updates: Partial<Task>): Promise<Task | null> {
+  // Use V2 API if authenticated
+  if (shouldUseV2Api()) {
+    try {
+      const response = await taskApiV2.updateTask(task_id, {
+        title: updates.title,
+        description: updates.description,
+        status: updates.status,
+        priority: updates.priority,
+        progress_percentage: updates.progress_percentage,
+      });
+      return response as Task;
+    } catch (error) {
+      console.error('V2 API error, falling back to V1:', error);
+      // Fall through to V1 API
+    }
+  }
+  
   const body = {
     jsonrpc: "2.0",
     method: "tools/call",
@@ -288,6 +345,17 @@ export async function updateTask(task_id: string, updates: Partial<Task>): Promi
 }
 
 export async function deleteTask(task_id: string): Promise<boolean> {
+  // Use V2 API if authenticated
+  if (shouldUseV2Api()) {
+    try {
+      await taskApiV2.deleteTask(task_id);
+      return true;
+    } catch (error) {
+      console.error('V2 API error, falling back to V1:', error);
+      // Fall through to V1 API
+    }
+  }
+  
   const body = {
     jsonrpc: "2.0",
     method: "tools/call",
@@ -316,6 +384,20 @@ export async function deleteTask(task_id: string): Promise<boolean> {
 
 // Complete a task with completion summary and testing notes
 export async function completeTask(task_id: string, completion_summary: string, testing_notes?: string): Promise<Task | null> {
+  // Use V2 API if authenticated
+  if (shouldUseV2Api()) {
+    try {
+      const response = await taskApiV2.completeTask(task_id, {
+        completion_summary,
+        testing_notes,
+      });
+      return response as Task;
+    } catch (error) {
+      console.error('V2 API error, falling back to V1:', error);
+      // Fall through to V1 API
+    }
+  }
+  
   const body = {
     jsonrpc: "2.0",
     method: "tools/call",
@@ -1004,6 +1086,23 @@ export async function listContexts(
 
 // --- Project Management ---
 export async function listProjects(): Promise<Project[]> {
+  // Use V2 API if authenticated
+  if (shouldUseV2Api()) {
+    try {
+      const response: any = await projectApiV2.getProjects();
+      if (Array.isArray(response)) {
+        return response;
+      }
+      if (response && response.projects) {
+        return response.projects;
+      }
+      return [];
+    } catch (error) {
+      console.error('V2 API error, falling back to V1:', error);
+      // Fall through to V1 API
+    }
+  }
+  
   const body = {
     jsonrpc: "2.0",
     method: "tools/call",

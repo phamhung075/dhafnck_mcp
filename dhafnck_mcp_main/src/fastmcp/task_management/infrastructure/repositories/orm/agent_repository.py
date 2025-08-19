@@ -11,6 +11,7 @@ from datetime import datetime
 from sqlalchemy import and_, desc
 
 from ..base_orm_repository import BaseORMRepository
+from ..base_user_scoped_repository import BaseUserScopedRepository
 from ...database.models import Agent
 from ....domain.repositories.agent_repository import AgentRepository
 from ....domain.entities.agent import Agent as AgentEntity, AgentStatus, AgentCapability
@@ -23,7 +24,7 @@ from ....domain.exceptions.base_exceptions import (
 logger = logging.getLogger(__name__)
 
 
-class ORMAgentRepository(BaseORMRepository[Agent], AgentRepository):
+class ORMAgentRepository(BaseORMRepository[Agent], BaseUserScopedRepository, AgentRepository):
     """
     Agent repository implementation using SQLAlchemy ORM.
     
@@ -31,17 +32,20 @@ class ORMAgentRepository(BaseORMRepository[Agent], AgentRepository):
     using SQLAlchemy, supporting both SQLite and PostgreSQL.
     """
     
-    def __init__(self, project_id: Optional[str] = None, user_id: Optional[str] = None):
+    def __init__(self, session=None, project_id: Optional[str] = None, user_id: Optional[str] = None):
         """
-        Initialize ORM agent repository.
+        Initialize ORM agent repository with user isolation.
         
         Args:
+            session: Database session
             project_id: Project ID for context
-            user_id: User ID for context
+            user_id: User ID for data isolation
         """
-        super().__init__(Agent)
+        # Initialize BaseORMRepository
+        BaseORMRepository.__init__(self, Agent)
+        # Initialize BaseUserScopedRepository with user isolation
+        BaseUserScopedRepository.__init__(self, session or self.get_db_session(), user_id)
         self.project_id = project_id
-        self.user_id = user_id or "default_id"
     
     def _model_to_entity(self, agent: Agent) -> AgentEntity:
         """Convert SQLAlchemy model to domain entity"""
@@ -175,6 +179,9 @@ class ORMAgentRepository(BaseORMRepository[Agent], AgentRepository):
             # Add call_agent to model_metadata if provided
             if call_agent:
                 model_dict["model_metadata"]["call_agent"] = call_agent
+            
+            # Add user_id for data isolation
+            model_dict = self.set_user_id(model_dict)
             
             # Create agent in database with better error handling
             try:
@@ -350,6 +357,9 @@ class ORMAgentRepository(BaseORMRepository[Agent], AgentRepository):
                         
                         # Add call_agent to model_metadata - use the name with @ prefix
                         model_dict["model_metadata"]["call_agent"] = f"@{agent_name}"
+                        
+                        # Add user_id for data isolation
+                        model_dict = self.set_user_id(model_dict)
                         
                         # Create agent in database with duplicate key handling
                         try:
