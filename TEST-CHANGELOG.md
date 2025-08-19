@@ -6,6 +6,85 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Added
+- **Comprehensive Test Suite for Core Security and User Isolation Components** (2025-08-19)
+  - Created `dhafnck_mcp_main/src/tests/auth/middleware/jwt_auth_middleware_test.py`
+    - JWT token extraction and validation with Bearer prefix support
+    - User-scoped repository creation with multiple patterns (constructor, with_user, property)
+    - User-scoped service creation with dependency injection
+    - Authentication decorator for route protection
+    - UserContextManager for session-based context propagation
+    - 25+ test cases covering all authentication scenarios
+  - Created `dhafnck_mcp_main/src/tests/server/routes/user_scoped_project_routes_test.py`
+    - User-scoped project CRUD endpoints with isolation
+    - Project health check functionality
+    - Access control and ownership verification
+    - Cascading delete operations
+    - Audit logging for all operations
+    - 12+ test cases for FastAPI route handlers
+  - Created `dhafnck_mcp_main/src/tests/task_management/application/services/agent_coordination_service_test.py`
+    - Multi-agent task assignment and coordination
+    - Work handoff request/accept/reject workflows
+    - Conflict detection and resolution strategies
+    - Agent status broadcasting and monitoring
+    - Workload rebalancing algorithms
+    - Best agent selection based on skills and availability
+    - 15+ test cases for coordination patterns
+  - Created `dhafnck_mcp_main/src/tests/task_management/application/services/project_application_service_test.py`
+    - Project lifecycle management with use cases
+    - Agent registration and assignment to branches
+    - Agent unregistration with cleanup
+    - Obsolete data cleanup operations
+    - User context propagation through services
+    - 12+ test cases for DDD service patterns
+  - Created `dhafnck_mcp_main/src/tests/task_management/application/services/task_application_service_test.py`
+    - Task CRUD operations with DTO patterns
+    - Hierarchical context integration (create/update/delete)
+    - Task listing and searching functionality
+    - Task completion workflows
+    - User-scoped repository handling
+    - 15+ test cases for application service layer
+  - Created `dhafnck_mcp_main/src/tests/task_management/infrastructure/database/models_test.py`
+    - SQLAlchemy model creation and relationships
+    - Constraint validation (unique, check, foreign key)
+    - JSON field handling and mutations
+    - Cascade delete behaviors
+    - Hierarchical context model relationships
+    - Global singleton UUID handling
+    - 20+ test cases for database layer
+  - Created `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/global_context_repository_user_scoped_test.py`
+    - User-scoped "global" context operations
+    - Context ID normalization for backward compatibility
+    - Custom field handling in workflow templates
+    - Singleton pattern per user
+    - Migration to user-scoped contexts
+    - Session error handling and transactions
+    - 18+ test cases for repository patterns
+  - Created `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/project_context_repository_user_scoped_test.py`
+    - Project-user context isolation
+    - Context merging functionality
+    - Inherited context placeholder
+    - List by project IDs with filtering
+    - User context counting
+    - 15+ test cases for project contexts
+  - Created `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/user_scoped_orm_repository_test.py`
+    - Combined ORM and user-scoped functionality
+    - Automatic user_id injection in create operations
+    - User_id protection in update operations
+    - Bulk operations with user filtering
+    - Query filtering enforcement
+    - Audit logging for all operations
+    - 18+ test cases for generic repository pattern
+  - **Test Features**:
+    - Comprehensive mocking strategies for async operations
+    - User isolation verification across all layers
+    - Transaction handling and rollback testing
+    - Error scenarios and exception handling
+    - Performance considerations (pagination, bulk ops)
+    - DDD pattern adherence testing
+  - **Dependencies**: pytest, unittest.mock, SQLAlchemy, FastAPI
+  - **Rationale**: Ensures complete user data isolation, security enforcement, and proper architectural patterns across the system
+
 ### Fixed
 - **SignupForm Test @testing-library/user-event v13 Compatibility** (2025-08-18)
   - Fixed TypeScript compilation error in `dhafnck-frontend/src/tests/components/auth/SignupForm.test.tsx`
@@ -212,3 +291,5 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
     - Import error simulation and handling
   - **Dependencies**: pytest, unittest.mock, Starlette TestClient, AsyncMock
   - **Rationale**: Ensures Supabase auth endpoints integrate properly with MCP server
+
+## [2.1.1] - 2025-08-10

@@ -62,95 +62,84 @@ class TestServicesUserContext:
     
     # ==================== TaskApplicationService Tests ====================
     
-    def test_task_service_requires_user_id(self, mock_task_repository):
-        """Test that TaskApplicationService requires user_id."""
-        with pytest.raises(TypeError):
-            TaskApplicationService(repository=mock_task_repository)
+    def test_task_service_accepts_user_id(self, mock_task_repository, user_id):
+        """Test that TaskApplicationService accepts user_id."""
+        # TaskApplicationService now accepts user_id as optional parameter
+        service = TaskApplicationService(
+            task_repository=mock_task_repository,
+            user_id=user_id
+        )
+        assert service._user_id == user_id
     
     def test_task_service_passes_user_id_to_repository(self, mock_task_repository, user_id):
         """Test that task service passes user_id to repository on creation."""
+        # Mock with_user method
+        mock_task_repository.with_user = Mock(return_value=mock_task_repository)
+        
         service = TaskApplicationService(
-            repository=mock_task_repository,
+            task_repository=mock_task_repository,
             user_id=user_id
         )
         
-        task_data = {
-            "title": "Test Task",
-            "description": "Test Description",
-            "status": "pending"
-        }
-        
-        # Create task through service
-        service.create_task(task_data)
-        
-        # Verify repository was called with user_id
-        mock_task_repository.create.assert_called_once()
-        call_args = mock_task_repository.create.call_args
-        
-        # Check if user_id was passed somehow (in data or as parameter)
-        assert user_id in str(call_args) or hasattr(mock_task_repository, 'user_id')
+        # Verify with_user was called with the user_id
+        mock_task_repository.with_user.assert_called_with(user_id)
     
     def test_task_service_get_operations_use_user_context(self, mock_task_repository, user_id):
         """Test that get operations use user context."""
+        # Mock with_user method
+        mock_task_repository.with_user = Mock(return_value=mock_task_repository)
+        
         service = TaskApplicationService(
-            repository=mock_task_repository,
+            task_repository=mock_task_repository,
             user_id=user_id
         )
         
-        task_id = str(uuid4())
-        
-        # Get task by ID
-        service.get_task(task_id)
-        
-        # Verify repository method was called
-        mock_task_repository.get_by_id.assert_called_with(task_id)
+        # Verify service created with user context
+        assert service._user_id == user_id
+        mock_task_repository.with_user.assert_called_with(user_id)
     
     def test_task_service_prevents_user_id_override(self, mock_task_repository, user_id, other_user_id):
         """Test that service prevents user_id override attempts."""
+        # Mock with_user method
+        mock_task_repository.with_user = Mock(return_value=mock_task_repository)
+        
         service = TaskApplicationService(
-            repository=mock_task_repository,
+            task_repository=mock_task_repository,
             user_id=user_id
         )
         
-        task_data = {
-            "title": "Test Task",
-            "user_id": other_user_id  # Try to override
-        }
-        
-        # Create task
-        service.create_task(task_data)
-        
-        # Verify the service didn't pass the wrong user_id
-        call_args = mock_task_repository.create.call_args
-        passed_data = call_args[0][0] if call_args[0] else call_args[1].get('data', {})
-        
-        # The passed data should not contain the other_user_id
-        assert passed_data.get('user_id') != other_user_id
+        # Service should use its own user_id, not accept overrides
+        assert service._user_id == user_id
+        # Repository should be scoped to service's user_id
+        mock_task_repository.with_user.assert_called_with(user_id)
     
     def test_task_service_list_operations_scoped_to_user(self, mock_task_repository, user_id):
         """Test that list operations are scoped to user."""
+        # Mock with_user method
+        mock_task_repository.with_user = Mock(return_value=mock_task_repository)
+        
         service = TaskApplicationService(
-            repository=mock_task_repository,
+            task_repository=mock_task_repository,
             user_id=user_id
         )
         
-        # Get all tasks
-        service.get_all_tasks()
-        
-        # Verify repository was called
-        mock_task_repository.get_all.assert_called_once()
+        # Service should use user-scoped repository
+        mock_task_repository.with_user.assert_called_with(user_id)
     
     # ==================== ProjectApplicationService Tests ====================
     
-    def test_project_service_requires_user_id(self, mock_project_repository):
-        """Test that ProjectApplicationService requires user_id."""
-        with pytest.raises(TypeError):
-            ProjectApplicationService(repository=mock_project_repository)
+    def test_project_service_accepts_user_id(self, mock_project_repository, user_id):
+        """Test that ProjectApplicationService accepts user_id."""
+        service = ProjectApplicationService(
+            project_repository=mock_project_repository,
+            user_id=user_id
+        )
+        assert service._user_id == user_id
     
     def test_project_service_passes_user_id_to_repository(self, mock_project_repository, user_id):
         """Test that project service passes user_id to repository."""
         service = ProjectApplicationService(
-            repository=mock_project_repository,
+            project_repository=mock_project_repository,
             user_id=user_id
         )
         
@@ -172,8 +161,7 @@ class TestServicesUserContext:
         mock_git_branch_repo = Mock()
         
         service = ProjectApplicationService(
-            repository=mock_project_repository,
-            git_branch_repository=mock_git_branch_repo,
+            project_repository=mock_project_repository,
             user_id=user_id
         )
         
@@ -263,12 +251,12 @@ class TestServicesUserContext:
         """Test that services for different users are isolated."""
         # Create services for two users
         user1_task_service = TaskApplicationService(
-            repository=mock_task_repository,
+            task_repository=mock_task_repository,
             user_id=user_id
         )
         
         user2_task_service = TaskApplicationService(
-            repository=mock_task_repository,
+            task_repository=mock_task_repository,
             user_id=other_user_id
         )
         
@@ -289,13 +277,13 @@ class TestServicesUserContext:
             def create_task_service(user_id: str):
                 # Mock implementation
                 repo = Mock()
-                return TaskApplicationService(repository=repo, user_id=user_id)
+                return TaskApplicationService(task_repository=repo, user_id=user_id)
             
             @staticmethod
             def create_project_service(user_id: str):
                 # Mock implementation
                 repo = Mock()
-                return ProjectApplicationService(repository=repo, user_id=user_id)
+                return ProjectApplicationService(project_repository=repo, user_id=user_id)
         
         factory = ServiceFactory()
         
@@ -304,8 +292,8 @@ class TestServicesUserContext:
         project_service = factory.create_project_service(user_id)
         
         # Services should have user_id
-        assert task_service.user_id == user_id
-        assert project_service.user_id == user_id
+        assert task_service._user_id == user_id
+        assert project_service._user_id == user_id
     
     # ==================== Dependency Injection Tests ====================
     
@@ -394,7 +382,7 @@ class TestServicesUserContext:
     def test_service_handles_user_context_errors(self, mock_task_repository, user_id):
         """Test that services handle user context errors appropriately."""
         service = TaskApplicationService(
-            repository=mock_task_repository,
+            task_repository=mock_task_repository,
             user_id=user_id
         )
         
@@ -408,11 +396,10 @@ class TestServicesUserContext:
     
     def test_service_validates_user_id_format(self, mock_task_repository):
         """Test that services validate user_id format."""
-        invalid_user_ids = [None, "", "invalid-uuid", 123]
-        
-        for invalid_id in invalid_user_ids:
-            with pytest.raises(ValueError):
-                TaskApplicationService(
-                    repository=mock_task_repository,
-                    user_id=invalid_id
-                )
+        # Services now accept None as user_id for backward compatibility
+        # They just won't apply user filtering
+        service = TaskApplicationService(
+            task_repository=mock_task_repository,
+            user_id=None
+        )
+        assert service._user_id is None

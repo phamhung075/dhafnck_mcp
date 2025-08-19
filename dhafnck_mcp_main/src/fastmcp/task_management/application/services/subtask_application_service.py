@@ -1,6 +1,6 @@
 """Subtask Application Service"""
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from ...application.dtos.subtask import (
     AddSubtaskRequest,
@@ -20,17 +20,53 @@ from ..use_cases.get_subtask import GetSubtaskUseCase
 
 class SubtaskApplicationService:
     """Application service for subtask operations with DDD support"""
-    def __init__(self, task_repository: TaskRepository, subtask_repository: SubtaskRepository = None):
+    def __init__(self, task_repository: TaskRepository, subtask_repository: SubtaskRepository = None, user_id: Optional[str] = None):
         self._task_repository = task_repository
         self._subtask_repository = subtask_repository
+        self._user_id = user_id  # Store user context
         
-        # Initialize use cases with both repositories
-        self._add_subtask_use_case = AddSubtaskUseCase(task_repository, subtask_repository)
-        self._update_subtask_use_case = UpdateSubtaskUseCase(task_repository, subtask_repository)
-        self._remove_subtask_use_case = RemoveSubtaskUseCase(task_repository, subtask_repository)
-        self._complete_subtask_use_case = CompleteSubtaskUseCase(task_repository, subtask_repository)
-        self._get_subtasks_use_case = GetSubtasksUseCase(task_repository, subtask_repository)
-        self._get_subtask_use_case = GetSubtaskUseCase(task_repository, subtask_repository)
+        # Initialize use cases with user-scoped repositories
+        self._add_subtask_use_case = AddSubtaskUseCase(
+            self._get_user_scoped_repository(task_repository),
+            self._get_user_scoped_repository(subtask_repository) if subtask_repository else None
+        )
+        self._update_subtask_use_case = UpdateSubtaskUseCase(
+            self._get_user_scoped_repository(task_repository),
+            self._get_user_scoped_repository(subtask_repository) if subtask_repository else None
+        )
+        self._remove_subtask_use_case = RemoveSubtaskUseCase(
+            self._get_user_scoped_repository(task_repository),
+            self._get_user_scoped_repository(subtask_repository) if subtask_repository else None
+        )
+        self._complete_subtask_use_case = CompleteSubtaskUseCase(
+            self._get_user_scoped_repository(task_repository),
+            self._get_user_scoped_repository(subtask_repository) if subtask_repository else None
+        )
+        self._get_subtasks_use_case = GetSubtasksUseCase(
+            self._get_user_scoped_repository(task_repository),
+            self._get_user_scoped_repository(subtask_repository) if subtask_repository else None
+        )
+        self._get_subtask_use_case = GetSubtaskUseCase(
+            self._get_user_scoped_repository(task_repository),
+            self._get_user_scoped_repository(subtask_repository) if subtask_repository else None
+        )
+    
+    def _get_user_scoped_repository(self, repository: Any) -> Any:
+        """Get a user-scoped version of the repository if it supports user context."""
+        if not repository:
+            return repository
+        if hasattr(repository, 'with_user') and self._user_id:
+            return repository.with_user(self._user_id)
+        elif hasattr(repository, 'user_id'):
+            if self._user_id and repository.user_id != self._user_id:
+                repo_class = type(repository)
+                if hasattr(repository, 'session'):
+                    return repo_class(repository.session, user_id=self._user_id)
+        return repository
+    
+    def with_user(self, user_id: str) -> 'SubtaskApplicationService':
+        """Create a new service instance scoped to a specific user."""
+        return SubtaskApplicationService(self._task_repository, self._subtask_repository, user_id)
 
     def add_subtask(self, request: AddSubtaskRequest) -> SubtaskResponse:
         return self._add_subtask_use_case.execute(request)

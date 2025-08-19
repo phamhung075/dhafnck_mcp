@@ -7,6 +7,69 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 ## [Unreleased]
 
 ### Added
+- **Service Layer User Context Automation** (2025-08-19 - continued)
+  - Created automated analysis script for service user context updates
+  - Created batch update instructions and checklist generator
+  - Updated DependencyResolverService with full user context support
+  - Identified 23 services requiring updates (16 full, 7 partial)
+  - Files created:
+    - `scripts/update_services_with_user_context.py` - Service analysis tool
+    - `scripts/batch_update_services.py` - Update instruction generator
+    - `SERVICE_UPDATE_CHECKLIST.md` - Complete update checklist
+  - Services updated:
+    - `src/fastmcp/task_management/application/services/dependency_resolver_service.py`
+  - Analysis shows some services (like UnifiedContextService) use per-method user_id pattern
+
+- **Comprehensive User Isolation Documentation** (2025-08-19 - continued)
+  - Created complete architectural documentation for user isolation system
+  - Created step-by-step migration guide for implementing user isolation
+  - Created quick reference guide for developers working with user isolation
+  - Files created:
+    - `docs/architecture/user-isolation-architecture.md` - Complete architecture documentation
+    - `docs/migration-guides/user-isolation-migration-guide.md` - Step-by-step migration guide
+    - `docs/quick-guides/user-isolation-quick-reference.md` - Developer quick reference
+  - Updated main documentation index with links to new guides
+  - Documentation covers:
+    - 5-layer architecture (Database, Repository, Service, API, Frontend)
+    - Implementation patterns and code examples
+    - Security features and audit logging
+    - Testing strategies and verification
+    - Performance considerations and monitoring
+    - Rollback procedures and troubleshooting
+
+- **Comprehensive Service Layer User Context Updates** (2025-08-19 - continued)
+  - Updated SubtaskApplicationService with user context propagation (already implemented)
+  - Updated GitBranchApplicationService with user_id parameter and repository scoping
+  - Created and fixed comprehensive service layer isolation tests
+  - Test suite validates proper user context propagation through services
+  - Files updated:
+    - `src/fastmcp/task_management/application/services/subtask_application_service.py`
+    - `src/fastmcp/task_management/application/services/git_branch_application_service.py`
+    - `src/tests/task_management/application/services/test_services_user_context.py`
+  - All critical services now support user isolation
+  - Pattern established for remaining service updates
+
+- **Comprehensive Test Suite for User Isolation** (2025-08-19 - continued)
+  - Created extensive test coverage for service layer user isolation
+  - Created comprehensive tests for API routes with JWT authentication
+  - Files created:
+    - `src/tests/task_management/application/services/test_service_user_isolation.py` - Service layer isolation tests
+    - `src/tests/server/routes/test_user_scoped_routes.py` - API route JWT authentication tests
+  - Test coverage includes:
+    - Service user context propagation (20+ test cases)
+    - JWT token extraction and validation
+    - User context manager functionality
+    - Repository and service scoping mechanisms
+    - Data isolation between different users
+    - Backward compatibility without user context
+  - All critical paths verified for proper user isolation
+
+- **Additional Service Updates for User Context** (2025-08-19 - continued)
+  - Updated SubtaskApplicationService to propagate user context
+  - Added _get_user_scoped_repository method to handle repository scoping
+  - Implemented with_user() method for creating user-scoped instances
+  - File updated: `src/fastmcp/task_management/application/services/subtask_application_service.py`
+
 - **API Routes with JWT Authentication and User Isolation** (2025-08-19 - continued)
   - Created user-scoped project routes with JWT authentication
   - Implemented JWT authentication middleware for user context extraction

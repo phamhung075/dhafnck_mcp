@@ -16,8 +16,24 @@ logger = logging.getLogger(__name__)
 class DependencyResolverService:
     """Service to resolve and analyze task dependency relationships"""
     
-    def __init__(self, task_repository: TaskRepository):
+    def __init__(self, task_repository: TaskRepository, user_id: Optional[str] = None):
         self.task_repository = task_repository
+        self._user_id = user_id  # Store user context
+    
+    def _get_user_scoped_repository(self) -> TaskRepository:
+        """Get a user-scoped version of the repository if it supports user context."""
+        if hasattr(self.task_repository, 'with_user') and self._user_id:
+            return self.task_repository.with_user(self._user_id)
+        elif hasattr(self.task_repository, 'user_id'):
+            if self._user_id and self.task_repository.user_id != self._user_id:
+                repo_class = type(self.task_repository)
+                if hasattr(self.task_repository, 'session'):
+                    return repo_class(self.task_repository.session, user_id=self._user_id)
+        return self.task_repository
+    
+    def with_user(self, user_id: str) -> 'DependencyResolverService':
+        """Create a new service instance scoped to a specific user."""
+        return DependencyResolverService(self.task_repository, user_id)
     
     def resolve_dependencies(self, task_id: str) -> DependencyRelationships:
         """
@@ -30,8 +46,11 @@ class DependencyResolverService:
             DependencyRelationships containing complete dependency information
         """
         try:
+            # Get user-scoped repository
+            repo = self._get_user_scoped_repository()
+            
             # Get the main task
-            main_task = self.task_repository.find_by_id(TaskId(task_id))
+            main_task = repo.find_by_id(TaskId(task_id))
             if not main_task:
                 raise TaskNotFoundError(f"Task {task_id} not found")
             

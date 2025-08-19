@@ -19,26 +19,48 @@ logger = logging.getLogger(__name__)
 class GitBranchApplicationService:
     """Application service for git branch lifecycle management"""
     
-    def __init__(self, git_branch_repo=None, project_repo=None):
+    def __init__(self, git_branch_repo=None, project_repo=None, user_id: Optional[str] = None):
         self._git_branch_repo = git_branch_repo or GitBranchRepositoryFactory.create()
         self._project_repo = project_repo or get_default_repository()
+        self._user_id = user_id  # Store user context
         logger.info("GitBranchApplicationService initialized")
+    
+    def _get_user_scoped_repository(self, repository: Any) -> Any:
+        """Get a user-scoped version of the repository if it supports user context."""
+        if not repository:
+            return repository
+        if hasattr(repository, 'with_user') and self._user_id:
+            return repository.with_user(self._user_id)
+        elif hasattr(repository, 'user_id'):
+            if self._user_id and repository.user_id != self._user_id:
+                repo_class = type(repository)
+                if hasattr(repository, 'session'):
+                    return repo_class(repository.session, user_id=self._user_id)
+        return repository
+    
+    def with_user(self, user_id: str) -> 'GitBranchApplicationService':
+        """Create a new service instance scoped to a specific user."""
+        return GitBranchApplicationService(self._git_branch_repo, self._project_repo, user_id)
     
     async def create_git_branch(self, project_id: str, git_branch_name: str, git_branch_description: str = "") -> Dict[str, Any]:
         """Create a new git branch within a project"""
         try:
+            # Get user-scoped repositories
+            project_repo = self._get_user_scoped_repository(self._project_repo)
+            git_branch_repo = self._get_user_scoped_repository(self._git_branch_repo)
+            
             # Verify project exists
-            project = await self._project_repo.find_by_id(project_id)
+            project = await project_repo.find_by_id(project_id)
             if not project:
                 return {"success": False, "error": f"Project {project_id} not found"}
             
             # Check if branch already exists
-            existing_branch = await self._git_branch_repo.find_by_name(project_id, git_branch_name)
+            existing_branch = await git_branch_repo.find_by_name(project_id, git_branch_name)
             if existing_branch:
                 return {"success": False, "error": f"Git branch {git_branch_name} already exists"}
             
             # Create new branch
-            git_branch = await self._git_branch_repo.create_branch(project_id, git_branch_name, git_branch_description)
+            git_branch = await git_branch_repo.create_branch(project_id, git_branch_name, git_branch_description)
             
             return {
                 "success": True,

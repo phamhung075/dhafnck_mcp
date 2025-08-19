@@ -19,11 +19,13 @@ Foundational design principles, architectural patterns, and technical decisions 
 - [Technical Architecture](architecture-design/Architecture_Technique.md) - Detailed technical architecture with DDD
 - [Domain-Driven Design](architecture-design/domain-driven-design.md) - DDD implementation patterns
 - [AI Context Realistic Approach](architecture-design/AI-CONTEXT-REALISTIC-APPROACH.md) - Practical AI context strategies
+- [**User Isolation Architecture**](architecture/user-isolation-architecture.md) - Multi-tenant data isolation architecture
 
 ### 🔄 Migration & Updates
 System migration guides for upgrading and transitioning between versions and configurations.
 
 - [**Migration Guides Overview**](migration-guides/README.md) - Complete migration documentation hub
+- [**User Isolation Migration Guide**](migration-guides/user-isolation-migration-guide.md) - Complete guide for multi-tenant migration
 - [Hierarchical Context Migration](migration-guides/HIERARCHICAL_CONTEXT_MIGRATION.md) - Basic to hierarchical context migration
 - [Unified Context Migration Guide](migration-guides/unified_context_migration_guide.md) - Unified context system migration
 - [Context Auto-Detection Fix](migration-guides/CONTEXT_AUTO_DETECTION_FIX.md) - Enhanced auto-detection with error handling
@@ -141,6 +143,7 @@ System status reports, documentation health checks, and implementation status up
 
 ## 🔗 Quick Links
 
+- **🔒 User Isolation**: See [User Isolation Quick Reference](quick-guides/user-isolation-quick-reference.md) for multi-tenant patterns
 - **🚨 Error Handling**: See [Error Handling and Logging](development-guides/error-handling-and-logging.md) for comprehensive error management
 - **💾 Database Setup**: See [Database Setup Guide](../DATABASE_SETUP.md) for PostgreSQL configuration
 - **📡 API Documentation**: See [API Reference](api-integration/api-reference.md) for MCP tools documentation
