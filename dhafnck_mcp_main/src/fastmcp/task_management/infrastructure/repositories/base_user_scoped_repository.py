@@ -62,10 +62,10 @@ class BaseUserScopedRepository:
     
     def apply_user_filter(self, query):
         """
-        Apply user filtering to a SQLAlchemy query.
+        Apply user filtering to a SQLAlchemy query or SQL string.
         
         Args:
-            query: SQLAlchemy query object
+            query: SQLAlchemy query object or SQL string
             
         Returns:
             Query with user filter applied
@@ -73,12 +73,29 @@ class BaseUserScopedRepository:
         if self._is_system_mode:
             return query
         
-        # Check if the model has user_id attribute
-        model = query.column_descriptions[0]['entity']
-        if hasattr(model, 'user_id'):
-            return query.filter(model.user_id == self.user_id)
-        else:
-            logger.warning(f"Model {model.__name__} does not have user_id attribute")
+        # Handle string queries (raw SQL)
+        if isinstance(query, str):
+            if "WHERE" in query.upper():
+                return f"{query} AND user_id = '{self.user_id}'"
+            else:
+                return f"{query} WHERE user_id = '{self.user_id}'"
+        
+        # Handle SQLAlchemy query objects
+        try:
+            # Check if the model has user_id attribute
+            if hasattr(query, 'column_descriptions'):
+                model = query.column_descriptions[0]['entity']
+                if hasattr(model, 'user_id'):
+                    return query.filter(model.user_id == self.user_id)
+                else:
+                    logger.warning(f"Model {model.__name__} does not have user_id attribute")
+                    return query
+            else:
+                # Fallback for other query types
+                logger.warning("Query type not recognized, attempting generic filter")
+                return query
+        except (AttributeError, IndexError, KeyError) as e:
+            logger.warning(f"Could not apply user filter: {e}")
             return query
     
     def ensure_user_ownership(self, entity) -> None:

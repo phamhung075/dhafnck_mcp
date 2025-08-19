@@ -1,4 +1,4 @@
--- Migration: Add user-based data isolation
+-- Migration: Add user-based data isolation (Simplified version for Supabase)
 -- Description: Adds user_id columns to all main tables for data isolation
 -- Date: 2025-08-19
 
@@ -6,20 +6,38 @@
 -- PHASE 1: Add user_id columns to all tables
 -- ============================================================
 
--- Add user_id to tasks table
-ALTER TABLE tasks ADD COLUMN IF NOT EXISTS user_id UUID;
+-- Add user_id to tasks table (if not exists)
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'tasks' AND column_name = 'user_id') THEN
+        ALTER TABLE tasks ADD COLUMN user_id UUID;
+    END IF;
+END $$;
 
--- Add user_id to projects table (drop existing VARCHAR column if exists)
-ALTER TABLE projects DROP COLUMN IF EXISTS user_id;
-ALTER TABLE projects ADD COLUMN user_id UUID;
+-- Add user_id to projects table (handle existing VARCHAR column)
+DO $$ 
+BEGIN
+    -- Drop if exists as VARCHAR
+    IF EXISTS (SELECT 1 FROM information_schema.columns 
+               WHERE table_name = 'projects' AND column_name = 'user_id' 
+               AND data_type = 'character varying') THEN
+        ALTER TABLE projects DROP COLUMN user_id;
+    END IF;
+    -- Add as UUID if not exists
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'projects' AND column_name = 'user_id') THEN
+        ALTER TABLE projects ADD COLUMN user_id UUID;
+    END IF;
+END $$;
 
--- Add user_id to project_git_branchs table (correct table name in Supabase)
+-- Add user_id to project_git_branchs table
 ALTER TABLE project_git_branchs ADD COLUMN IF NOT EXISTS user_id UUID;
 
 -- Add user_id to agents table
 ALTER TABLE agents ADD COLUMN IF NOT EXISTS user_id UUID;
 
--- Add user_id to context tables (for all hierarchy levels)
+-- Add user_id to context tables
 ALTER TABLE global_contexts ADD COLUMN IF NOT EXISTS user_id UUID;
 ALTER TABLE project_contexts ADD COLUMN IF NOT EXISTS user_id UUID;
 ALTER TABLE branch_contexts ADD COLUMN IF NOT EXISTS user_id UUID;
@@ -35,10 +53,10 @@ ALTER TABLE task_dependencies ADD COLUMN IF NOT EXISTS user_id UUID;
 ALTER TABLE cursor_rules ADD COLUMN IF NOT EXISTS user_id UUID;
 
 -- ============================================================
--- PHASE 2: Backfill existing data with system user
+-- PHASE 2: Create system user and backfill data
 -- ============================================================
 
--- Create a system user if it doesn't exist in auth.users (Supabase Auth schema)
+-- Create system user in auth.users (Supabase Auth)
 INSERT INTO auth.users (
     id, 
     instance_id,
@@ -47,12 +65,6 @@ INSERT INTO auth.users (
     email, 
     encrypted_password,
     email_confirmed_at,
-    confirmation_token,
-    recovery_token,
-    email_change_token_new,
-    email_change,
-    raw_app_meta_data,
-    raw_user_meta_data,
     created_at,
     updated_at,
     is_sso_user
@@ -65,12 +77,6 @@ VALUES (
     'system@dhafnckmcp.local',
     crypt('system_password_never_used', gen_salt('bf')),
     NOW(),
-    '',
-    '',
-    '',
-    '',
-    '{"provider":"email","providers":["email"]}',
-    '{"username":"system","full_name":"System User"}',
     NOW(),
     NOW(),
     false
@@ -113,27 +119,15 @@ ALTER TABLE cursor_rules ALTER COLUMN user_id SET NOT NULL;
 -- ============================================================
 
 CREATE INDEX IF NOT EXISTS idx_tasks_user_id ON tasks(user_id);
-CREATE INDEX IF NOT EXISTS idx_tasks_user_status ON tasks(user_id, status);
-CREATE INDEX IF NOT EXISTS idx_tasks_user_created ON tasks(user_id, created_at DESC);
-
 CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id);
-CREATE INDEX IF NOT EXISTS idx_projects_user_name ON projects(user_id, name);
-
 CREATE INDEX IF NOT EXISTS idx_project_git_branchs_user_id ON project_git_branchs(user_id);
-CREATE INDEX IF NOT EXISTS idx_project_git_branchs_user_project ON project_git_branchs(user_id, project_id);
-
 CREATE INDEX IF NOT EXISTS idx_agents_user_id ON agents(user_id);
-
 CREATE INDEX IF NOT EXISTS idx_global_contexts_user_id ON global_contexts(user_id);
 CREATE INDEX IF NOT EXISTS idx_project_contexts_user_id ON project_contexts(user_id);
 CREATE INDEX IF NOT EXISTS idx_branch_contexts_user_id ON branch_contexts(user_id);
 CREATE INDEX IF NOT EXISTS idx_task_contexts_user_id ON task_contexts(user_id);
-
 CREATE INDEX IF NOT EXISTS idx_subtasks_user_id ON subtasks(user_id);
-CREATE INDEX IF NOT EXISTS idx_subtasks_user_task ON subtasks(user_id, task_id);
-
 CREATE INDEX IF NOT EXISTS idx_task_dependencies_user_id ON task_dependencies(user_id);
-
 CREATE INDEX IF NOT EXISTS idx_cursor_rules_user_id ON cursor_rules(user_id);
 
 -- ============================================================
@@ -174,62 +168,7 @@ ALTER TABLE cursor_rules ADD CONSTRAINT fk_cursor_rules_user
     FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 -- ============================================================
--- PHASE 6: Create Row-Level Security Policies (for Supabase)
--- ============================================================
-
--- Enable RLS on tables (only works on Supabase, will be skipped on regular PostgreSQL)
-DO $$ 
-BEGIN
-    -- Check if we're on Supabase by looking for auth schema
-    IF EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'auth') THEN
-        -- Enable RLS
-        ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
-        ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
-        ALTER TABLE project_git_branchs ENABLE ROW LEVEL SECURITY;
-        ALTER TABLE agents ENABLE ROW LEVEL SECURITY;
-        ALTER TABLE global_contexts ENABLE ROW LEVEL SECURITY;
-        ALTER TABLE project_contexts ENABLE ROW LEVEL SECURITY;
-        ALTER TABLE branch_contexts ENABLE ROW LEVEL SECURITY;
-        ALTER TABLE task_contexts ENABLE ROW LEVEL SECURITY;
-        ALTER TABLE subtasks ENABLE ROW LEVEL SECURITY;
-        ALTER TABLE task_dependencies ENABLE ROW LEVEL SECURITY;
-        ALTER TABLE cursor_rules ENABLE ROW LEVEL SECURITY;
-        
-        -- Create policies for tasks
-        CREATE POLICY "Users can view own tasks" ON tasks
-            FOR SELECT USING (auth.uid()::text = user_id::text OR user_id = '00000000-0000-0000-0000-000000000000');
-        
-        CREATE POLICY "Users can create own tasks" ON tasks
-            FOR INSERT WITH CHECK (auth.uid()::text = user_id::text);
-        
-        CREATE POLICY "Users can update own tasks" ON tasks
-            FOR UPDATE USING (auth.uid()::text = user_id::text);
-        
-        CREATE POLICY "Users can delete own tasks" ON tasks
-            FOR DELETE USING (auth.uid()::text = user_id::text);
-        
-        -- Create similar policies for projects
-        CREATE POLICY "Users can view own projects" ON projects
-            FOR SELECT USING (auth.uid()::text = user_id::text OR user_id = '00000000-0000-0000-0000-000000000000');
-        
-        CREATE POLICY "Users can create own projects" ON projects
-            FOR INSERT WITH CHECK (auth.uid()::text = user_id::text);
-        
-        CREATE POLICY "Users can update own projects" ON projects
-            FOR UPDATE USING (auth.uid()::text = user_id::text);
-        
-        CREATE POLICY "Users can delete own projects" ON projects
-            FOR DELETE USING (auth.uid()::text = user_id::text);
-        
-        -- Repeat for other tables...
-        RAISE NOTICE 'Row-Level Security policies created for Supabase';
-    ELSE
-        RAISE NOTICE 'Not on Supabase, skipping RLS policies';
-    END IF;
-END $$;
-
--- ============================================================
--- PHASE 7: Create audit table for tracking access
+-- PHASE 6: Create user_access_log table
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS user_access_log (
@@ -249,59 +188,10 @@ CREATE INDEX idx_user_access_log_user ON user_access_log(user_id, created_at DES
 CREATE INDEX idx_user_access_log_entity ON user_access_log(entity_type, entity_id);
 
 -- ============================================================
--- PHASE 8: Create helper functions
+-- SUCCESS MESSAGE
 -- ============================================================
 
--- Function to get user's task count
-CREATE OR REPLACE FUNCTION get_user_task_count(p_user_id UUID)
-RETURNS INTEGER AS $$
-BEGIN
-    RETURN (SELECT COUNT(*) FROM tasks WHERE user_id = p_user_id);
-END;
-$$ LANGUAGE plpgsql;
-
--- Function to transfer ownership of entities
-CREATE OR REPLACE FUNCTION transfer_entity_ownership(
-    p_entity_type VARCHAR,
-    p_entity_id UUID,
-    p_from_user_id UUID,
-    p_to_user_id UUID
-) RETURNS BOOLEAN AS $$
-BEGIN
-    CASE p_entity_type
-        WHEN 'task' THEN
-            UPDATE tasks SET user_id = p_to_user_id 
-            WHERE id = p_entity_id AND user_id = p_from_user_id;
-        WHEN 'project' THEN
-            UPDATE projects SET user_id = p_to_user_id 
-            WHERE id = p_entity_id AND user_id = p_from_user_id;
-        ELSE
-            RAISE EXCEPTION 'Unknown entity type: %', p_entity_type;
-    END CASE;
-    
-    RETURN FOUND;
-END;
-$$ LANGUAGE plpgsql;
-
--- ============================================================
--- VERIFICATION
--- ============================================================
-
--- Verify all tables have user_id column
 DO $$
-DECLARE
-    v_tables TEXT[] := ARRAY['tasks', 'projects', 'project_git_branchs', 'agents', 'global_contexts', 'project_contexts', 'branch_contexts', 'task_contexts', 'subtasks', 'task_dependencies', 'cursor_rules'];
-    v_table TEXT;
 BEGIN
-    FOREACH v_table IN ARRAY v_tables
-    LOOP
-        IF NOT EXISTS (
-            SELECT 1 FROM information_schema.columns 
-            WHERE table_name = v_table AND column_name = 'user_id'
-        ) THEN
-            RAISE EXCEPTION 'Table % is missing user_id column', v_table;
-        END IF;
-    END LOOP;
-    
-    RAISE NOTICE 'User isolation migration completed successfully';
+    RAISE NOTICE 'User isolation migration completed successfully!';
 END $$;

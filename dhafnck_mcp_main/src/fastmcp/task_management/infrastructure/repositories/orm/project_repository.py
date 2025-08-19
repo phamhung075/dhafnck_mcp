@@ -223,11 +223,18 @@ class ORMProjectRepository(BaseORMRepository[Project], BaseUserScopedRepository,
             )
     
     async def find_by_name(self, name: str) -> Optional[ProjectEntity]:
-        """Find a project by its name"""
+        """Find a project by its name with user isolation"""
         with self.get_db_session() as session:
-            project = session.query(Project).filter(
-                Project.name == name
-            ).first()
+            query = session.query(Project)
+            
+            # Apply user filter for data isolation (CRITICAL)
+            query = self.apply_user_filter(query)
+            
+            project = query.filter(Project.name == name).first()
+            
+            # Log access for audit
+            if project:
+                self.log_access('read', 'project', project.id)
             
             return self._model_to_entity(project) if project else None
     
@@ -236,21 +243,37 @@ class ORMProjectRepository(BaseORMRepository[Project], BaseUserScopedRepository,
         return super().count()
     
     async def find_projects_with_agent(self, agent_id: str) -> List[ProjectEntity]:
-        """Find projects that have a specific agent registered"""
+        """Find projects that have a specific agent registered with user isolation"""
         with self.get_db_session() as session:
             # Find projects with git branches assigned to the agent
-            projects = session.query(Project).join(ProjectGitBranch).filter(
+            query = session.query(Project).join(ProjectGitBranch)
+            
+            # Apply user filter for data isolation (CRITICAL)
+            query = self.apply_user_filter(query)
+            
+            projects = query.filter(
                 ProjectGitBranch.assigned_agent_id == agent_id
             ).distinct().all()
+            
+            # Log access for audit
+            self.log_access('list', 'project', f'agent={agent_id}')
             
             return [self._model_to_entity(project) for project in projects]
     
     async def find_projects_by_status(self, status: str) -> List[ProjectEntity]:
-        """Find projects by their status"""
+        """Find projects by their status with user isolation"""
         with self.get_db_session() as session:
-            projects = session.query(Project).filter(
+            query = session.query(Project)
+            
+            # Apply user filter for data isolation (CRITICAL)
+            query = self.apply_user_filter(query)
+            
+            projects = query.filter(
                 Project.status == status
             ).order_by(desc(Project.created_at)).all()
+            
+            # Log access for audit
+            self.log_access('list', 'project', f'status={status}')
             
             return [self._model_to_entity(project) for project in projects]
     

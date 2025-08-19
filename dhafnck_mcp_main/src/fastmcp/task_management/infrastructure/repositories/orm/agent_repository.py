@@ -707,14 +707,14 @@ class ORMAgentRepository(BaseORMRepository[Agent], BaseUserScopedRepository, Age
             # Strip @ prefix if present
             clean_name = name.lstrip('@')
             
-            # Query for agent by name
-            agent = self.get_by_field("name", clean_name)
+            # Query for agent by name (with user isolation from BaseUserScopedRepository)
+            agent = self.find_one_by(name=clean_name)
             if agent:
                 logger.info(f"Found agent by name: {clean_name} -> ID: {agent.id}")
                 return agent
             
             # Also try with @ prefix in case it was stored that way
-            agent = self.get_by_field("name", f"@{clean_name}")
+            agent = self.find_one_by(name=f"@{clean_name}")
             if agent:
                 logger.info(f"Found agent by name with @: @{clean_name} -> ID: {agent.id}")
                 return agent

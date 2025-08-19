@@ -13,16 +13,35 @@ from ...domain.repositories.project_repository import ProjectRepository
 class ProjectApplicationService:
     """Application service for project management following DDD patterns"""
     
-    def __init__(self, project_repository: ProjectRepository):
+    def __init__(self, project_repository: ProjectRepository, user_id: Optional[str] = None):
         self._project_repository = project_repository
+        self._user_id = user_id  # Store user context
         
-        # Initialize use cases
-        self._create_project_use_case = CreateProjectUseCase(project_repository)
-        self._get_project_use_case = GetProjectUseCase(project_repository)
-        self._list_projects_use_case = ListProjectsUseCase(project_repository)
-        self._update_project_use_case = UpdateProjectUseCase(project_repository)
-        self._create_git_branch_use_case = CreateGitBranchUseCase(project_repository)
-        self._project_health_check_use_case = ProjectHealthCheckUseCase(project_repository)
+        # Initialize use cases with user-scoped repository
+        self._create_project_use_case = CreateProjectUseCase(self._get_user_scoped_repository())
+        self._get_project_use_case = GetProjectUseCase(self._get_user_scoped_repository())
+        self._list_projects_use_case = ListProjectsUseCase(self._get_user_scoped_repository())
+        self._update_project_use_case = UpdateProjectUseCase(self._get_user_scoped_repository())
+        self._create_git_branch_use_case = CreateGitBranchUseCase(self._get_user_scoped_repository())
+        self._project_health_check_use_case = ProjectHealthCheckUseCase(self._get_user_scoped_repository())
+    
+    def _get_user_scoped_repository(self) -> ProjectRepository:
+        """Get a user-scoped version of the repository if it supports user context."""
+        if hasattr(self._project_repository, 'with_user') and self._user_id:
+            # Repository supports user scoping
+            return self._project_repository.with_user(self._user_id)
+        elif hasattr(self._project_repository, 'user_id'):
+            # Repository has user_id property, set it if needed
+            if self._user_id and self._project_repository.user_id != self._user_id:
+                # Create new instance with user_id
+                repo_class = type(self._project_repository)
+                if hasattr(self._project_repository, 'session'):
+                    return repo_class(self._project_repository.session, user_id=self._user_id)
+        return self._project_repository
+    
+    def with_user(self, user_id: str) -> 'ProjectApplicationService':
+        """Create a new service instance scoped to a specific user."""
+        return ProjectApplicationService(self._project_repository, user_id)
     
     async def create_project(self, project_id: str, name: str, description: str = "") -> Dict[str, Any]:
         """Create a new project"""
@@ -54,7 +73,7 @@ class ProjectApplicationService:
         from ...domain.enums.agent_roles import AgentRole
         from datetime import datetime, timezone
         
-        project = await self._project_repository.find_by_id(project_id)
+        project = await self._get_user_scoped_repository().find_by_id(project_id)
         
         if not project:
             return {
@@ -82,7 +101,7 @@ class ProjectApplicationService:
         # Register agent to project
         try:
             project.register_agent(agent)
-            await self._project_repository.update(project)
+            await self._get_user_scoped_repository().update(project)
             
             return {
                 "success": True,
@@ -103,7 +122,7 @@ class ProjectApplicationService:
     
     async def assign_agent_to_tree(self, project_id: str, agent_id: str, git_branch_name: str) -> Dict[str, Any]:
         """Assign an agent to a task tree"""
-        project = await self._project_repository.find_by_id(project_id)
+        project = await self._get_user_scoped_repository().find_by_id(project_id)
         
         if not project:
             return {
@@ -113,7 +132,7 @@ class ProjectApplicationService:
         
         try:
             project.assign_agent_to_tree(agent_id, git_branch_name)
-            await self._project_repository.update(project)
+            await self._get_user_scoped_repository().update(project)
             
             return {
                 "success": True,
@@ -128,7 +147,7 @@ class ProjectApplicationService:
     
     async def unregister_agent(self, project_id: str, agent_id: str) -> Dict[str, Any]:
         """Unregister an agent from a project"""
-        project = await self._project_repository.find_by_id(project_id)
+        project = await self._get_user_scoped_repository().find_by_id(project_id)
         
         if not project:
             return {
@@ -192,7 +211,7 @@ class ProjectApplicationService:
     async def cleanup_obsolete(self, project_id: Optional[str] = None) -> Dict[str, Any]:
         """Clean up obsolete project data"""
         if project_id:
-            project = await self._project_repository.find_by_id(project_id)
+            project = await self._get_user_scoped_repository().find_by_id(project_id)
             
             if not project:
                 return {
@@ -203,7 +222,7 @@ class ProjectApplicationService:
             cleaned_items = self._cleanup_project_data(project)
             
             if cleaned_items:
-                await self._project_repository.update(project)
+                await self._get_user_scoped_repository().update(project)
             
             return {
                 "success": True,
@@ -214,7 +233,7 @@ class ProjectApplicationService:
         
         else:
             # Clean all projects
-            projects = await self._project_repository.find_all()
+            projects = await self._get_user_scoped_repository().find_all()
             total_cleaned = 0
             cleanup_results = {}
             
@@ -224,7 +243,7 @@ class ProjectApplicationService:
                 total_cleaned += len(cleaned_items)
                 
                 if cleaned_items:
-                    await self._project_repository.update(project)
+                    await self._get_user_scoped_repository().update(project)
             
             return {
                 "success": True,

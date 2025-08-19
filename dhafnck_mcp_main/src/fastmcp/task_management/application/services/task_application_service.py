@@ -24,20 +24,25 @@ from ..use_cases.complete_task import CompleteTaskUseCase
 
 class TaskApplicationService:
     """Application service for task CRUD, search, and completion"""
-    def __init__(self, task_repository: TaskRepository, context_service: Optional[Any] = None):
+    def __init__(self, task_repository: TaskRepository, context_service: Optional[Any] = None, user_id: Optional[str] = None):
         from ..factories.unified_context_facade_factory import UnifiedContextFacadeFactory
         from .unified_context_service import UnifiedContextService
         self._task_repository = task_repository
+        self._user_id = user_id  # Store user context
+        
         # Initialize hierarchical context service
         factory = UnifiedContextFacadeFactory()
         self._hierarchical_context_service = factory.create_unified_service()
         self._context_service = context_service
-        self._create_task_use_case = CreateTaskUseCase(task_repository)
-        self._get_task_use_case = GetTaskUseCase(task_repository, context_service)
-        self._update_task_use_case = UpdateTaskUseCase(task_repository)
-        self._list_tasks_use_case = ListTasksUseCase(task_repository)
-        self._search_tasks_use_case = SearchTasksUseCase(task_repository)
-        self._delete_task_use_case = DeleteTaskUseCase(task_repository)
+        
+        # Initialize use cases with user context if repository supports it
+        self._create_task_use_case = CreateTaskUseCase(self._get_user_scoped_repository())
+        self._get_task_use_case = GetTaskUseCase(self._get_user_scoped_repository(), context_service)
+        self._update_task_use_case = UpdateTaskUseCase(self._get_user_scoped_repository())
+        self._list_tasks_use_case = ListTasksUseCase(self._get_user_scoped_repository())
+        self._search_tasks_use_case = SearchTasksUseCase(self._get_user_scoped_repository())
+        self._delete_task_use_case = DeleteTaskUseCase(self._get_user_scoped_repository())
+        
         # Initialize task context repository for unified context system
         from ...infrastructure.repositories.task_context_repository import TaskContextRepository
         from ...infrastructure.database.database_config import get_db_config
@@ -46,7 +51,25 @@ class TaskApplicationService:
         
         # Pass task context repository to complete task use case
         # Note: subtask repository is not available here, so pass None
-        self._complete_task_use_case = CompleteTaskUseCase(task_repository, None, task_context_repository)
+        self._complete_task_use_case = CompleteTaskUseCase(self._get_user_scoped_repository(), None, task_context_repository)
+    
+    def _get_user_scoped_repository(self) -> TaskRepository:
+        """Get a user-scoped version of the repository if it supports user context."""
+        if hasattr(self._task_repository, 'with_user') and self._user_id:
+            # Repository supports user scoping
+            return self._task_repository.with_user(self._user_id)
+        elif hasattr(self._task_repository, 'user_id'):
+            # Repository has user_id property, set it if needed
+            if self._user_id and self._task_repository.user_id != self._user_id:
+                # Create new instance with user_id
+                repo_class = type(self._task_repository)
+                if hasattr(self._task_repository, 'session'):
+                    return repo_class(self._task_repository.session, user_id=self._user_id)
+        return self._task_repository
+    
+    def with_user(self, user_id: str) -> 'TaskApplicationService':
+        """Create a new service instance scoped to a specific user."""
+        return TaskApplicationService(self._task_repository, self._context_service, user_id)
 
     async def create_task(self, request: CreateTaskRequest) -> CreateTaskResponse:
         response = self._create_task_use_case.execute(request)

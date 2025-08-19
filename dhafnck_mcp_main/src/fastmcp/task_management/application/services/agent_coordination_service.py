@@ -59,12 +59,14 @@ class AgentCoordinationService:
         task_repository: TaskRepository,
         agent_repository: Optional[Any] = None,  # AgentRepository not implemented yet
         event_bus: Optional[Any] = None,  # EventBus not implemented yet
-        coordination_repository: Optional['AgentCoordinationRepository'] = None
+        coordination_repository: Optional['AgentCoordinationRepository'] = None,
+        user_id: Optional[str] = None
     ):
         self.task_repository = task_repository
         self.agent_repository = agent_repository
         self.event_bus = event_bus
         self.coordination_repository = coordination_repository
+        self._user_id = user_id  # Store user context
         
         # In-memory storage if no repository provided
         self.coordination_requests: Dict[str, CoordinationRequest] = {}
@@ -72,6 +74,29 @@ class AgentCoordinationService:
         self.handoffs: Dict[str, WorkHandoff] = {}
         self.conflicts: Dict[str, ConflictResolution] = {}
         self.communications: List[AgentCommunication] = []
+    
+    def _get_user_scoped_repository(self, repository: Any) -> Any:
+        """Get a user-scoped version of the repository if it supports user context."""
+        if not repository:
+            return repository
+        if hasattr(repository, 'with_user') and self._user_id:
+            return repository.with_user(self._user_id)
+        elif hasattr(repository, 'user_id'):
+            if self._user_id and repository.user_id != self._user_id:
+                repo_class = type(repository)
+                if hasattr(repository, 'session'):
+                    return repo_class(repository.session, user_id=self._user_id)
+        return repository
+    
+    def with_user(self, user_id: str) -> 'AgentCoordinationService':
+        """Create a new service instance scoped to a specific user."""
+        return AgentCoordinationService(
+            self.task_repository,
+            self.agent_repository,
+            self.event_bus,
+            self.coordination_repository,
+            user_id
+        )
     
     async def assign_agent_to_task(
         self,
@@ -85,12 +110,14 @@ class AgentCoordinationService:
     ) -> WorkAssignment:
         """Assign an agent to a task"""
         # Validate task exists
-        task = await self.task_repository.get(task_id)
+        task_repo = self._get_user_scoped_repository(self.task_repository)
+        task = await task_repo.get(task_id)
         if not task:
             raise AgentCoordinationException(f"Task {task_id} not found")
         
         # Validate agent exists and is available
-        agent = await self.agent_repository.get(agent_id)
+        agent_repo = self._get_user_scoped_repository(self.agent_repository)
+        agent = await agent_repo.get(agent_id)
         if not agent:
             raise AgentCoordinationException(f"Agent {agent_id} not found")
         

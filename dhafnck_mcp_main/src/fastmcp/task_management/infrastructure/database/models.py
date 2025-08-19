@@ -87,6 +87,7 @@ class Task(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
     context_id: Mapped[Optional[str]] = mapped_column(String)
     progress_percentage: Mapped[int] = mapped_column(Integer, default=0)
+    user_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # User isolation field
     
     # Relationships
     git_branch: Mapped[ProjectGitBranch] = relationship("ProjectGitBranch", back_populates="tasks")
@@ -191,6 +192,7 @@ class Agent(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
     model_metadata: Mapped[Dict[str, Any]] = mapped_column("metadata", JSON, default=dict)
+    user_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # User isolation field
     
     # Indexes
     __table_args__ = (
@@ -270,6 +272,9 @@ class GlobalContext(Base):
     workflow_templates: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     delegation_rules: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     
+    # User isolation
+    user_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    
     # Timestamps and versioning
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
@@ -305,6 +310,9 @@ class ProjectContext(Base):
     local_standards: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True, default=dict)
     global_overrides: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True, default=dict)
     delegation_rules: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True, default=dict)
+    
+    # User isolation
+    user_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     
     # Timestamps and versioning
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, server_default=func.now())
@@ -349,6 +357,9 @@ class BranchContext(Base):
     
     # Control flags
     inheritance_disabled: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True, default=False)
+    
+    # User isolation
+    user_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     
     # Timestamps and versioning
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, server_default=func.now())
@@ -402,6 +413,9 @@ class TaskContext(Base):
     # Control flags
     inheritance_disabled: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True, default=False)
     force_local_only: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True, default=False)
+    
+    # User isolation
+    user_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     
     # Timestamps and versioning
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, server_default=func.now())

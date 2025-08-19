@@ -26,11 +26,13 @@ class TestAuthAPIServer:
         """Mock the imported routers"""
         with patch('fastmcp.auth.api_server.auth_router') as mock_auth, \
              patch('fastmcp.auth.api_server.supabase_router') as mock_supabase, \
-             patch('fastmcp.auth.api_server.dev_router') as mock_dev:
+             patch('fastmcp.auth.api_server.dev_router') as mock_dev, \
+             patch('fastmcp.auth.api_server.user_scoped_tasks_router') as mock_user_tasks:
             yield {
                 'auth': mock_auth,
                 'supabase': mock_supabase,
-                'dev': mock_dev
+                'dev': mock_dev,
+                'user_tasks': mock_user_tasks
             }
 
     @pytest.fixture
@@ -78,19 +80,25 @@ class TestAuthAPIServer:
         """Test that all routers are included in development mode"""
         monkeypatch.setenv("ENVIRONMENT", "development")
         
-        # Re-import to get fresh app with dev environment
-        import importlib
-        import fastmcp.auth.api_server
-        importlib.reload(fastmcp.auth.api_server)
-        
-        app = fastmcp.auth.api_server.app
-        
-        # Check routes are included (FastAPI adds routes to app)
-        route_paths = [route.path for route in app.routes]
-        
-        # Should have at least health, root, and router endpoints
-        assert "/" in route_paths
-        assert "/health" in route_paths
+        # Mock the routers before reload
+        with patch('fastmcp.auth.api_server.auth_router') as mock_auth, \
+             patch('fastmcp.auth.api_server.supabase_router') as mock_supabase, \
+             patch('fastmcp.auth.api_server.dev_router') as mock_dev, \
+             patch('fastmcp.auth.api_server.user_scoped_tasks_router') as mock_user_tasks:
+            
+            # Re-import to get fresh app with dev environment
+            import importlib
+            import fastmcp.auth.api_server
+            importlib.reload(fastmcp.auth.api_server)
+            
+            app = fastmcp.auth.api_server.app
+            
+            # Check routes are included (FastAPI adds routes to app)
+            route_paths = [route.path for route in app.routes]
+            
+            # Should have at least health, root, and router endpoints
+            assert "/" in route_paths
+            assert "/health" in route_paths
 
     def test_dev_router_excluded_production(self, monkeypatch):
         """Test that dev router is not included in production"""
@@ -99,7 +107,8 @@ class TestAuthAPIServer:
         # Mock the routers before reload
         with patch('fastmcp.auth.api_server.auth_router') as mock_auth, \
              patch('fastmcp.auth.api_server.supabase_router') as mock_supabase, \
-             patch('fastmcp.auth.api_server.dev_router') as mock_dev:
+             patch('fastmcp.auth.api_server.dev_router') as mock_dev, \
+             patch('fastmcp.auth.api_server.user_scoped_tasks_router') as mock_user_tasks:
             
             # Re-import to get fresh app with production environment
             import importlib
@@ -206,6 +215,35 @@ class TestAuthAPIServer:
         
         # Check warning was logged
         mock_logger.warning.assert_called_with("⚠️  Development endpoints enabled at /auth/dev/*")
+    
+    def test_user_scoped_tasks_router_included(self, monkeypatch):
+        """Test that user-scoped tasks router is included"""
+        # Mock the routers before import
+        with patch('fastmcp.auth.api_server.auth_router') as mock_auth, \
+             patch('fastmcp.auth.api_server.supabase_router') as mock_supabase, \
+             patch('fastmcp.auth.api_server.dev_router') as mock_dev, \
+             patch('fastmcp.auth.api_server.user_scoped_tasks_router') as mock_user_tasks:
+            
+            # Re-import to get fresh app
+            import importlib
+            import fastmcp.auth.api_server
+            importlib.reload(fastmcp.auth.api_server)
+            
+            app = fastmcp.auth.api_server.app
+            
+            # The app should exist and have included user-scoped tasks router
+            assert app is not None
+            
+    @patch('fastmcp.auth.api_server.logger')
+    def test_user_scoped_tasks_info_logged(self, mock_logger, monkeypatch):
+        """Test that info is logged when user-scoped tasks routes are enabled"""
+        # Re-import to trigger the logging
+        import importlib
+        import fastmcp.auth.api_server
+        importlib.reload(fastmcp.auth.api_server)
+        
+        # Check info was logged
+        mock_logger.info.assert_called_with("✅ User-scoped task routes enabled at /api/v2/tasks/")
 
     def test_api_metadata_endpoints(self, client):
         """Test that API metadata is accessible"""

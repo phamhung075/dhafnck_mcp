@@ -26,15 +26,33 @@ REQUIRED BEHAVIORS:
 
 ## Missing Test Files - CREATE IMMEDIATELY:
 
+## Stale Test Files (Source Newer Than Test)
+- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/api_server.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/auth/api_server_test.py`
+  - **Days stale**: 0
+
+
 ## Missing Test Files
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/facades/claude_agent_facade.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/facades/claude_agent_facade_test.py`
+- **Source**: `dhafnck-frontend/src/api.ts`
+  - **Create test at**: `dhafnck-frontend/src/tests/api.test.ts`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/claude_agent_controller.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/claude_agent_controller_test.py`
+- **Source**: `dhafnck-frontend/src/services/apiV2.ts`
+  - **Create test at**: `dhafnck-frontend/src/tests/services/apiV2.test.ts`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/ddd_compliant_mcp_tools.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/ddd_compliant_mcp_tools_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/user_scoped_task_routes.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/server/routes/user_scoped_task_routes_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/base_user_scoped_repository.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/base_user_scoped_repository_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/agent_repository.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/agent_repository_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/project_repository.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/project_repository_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/task_repository.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/task_repository_test.py`
 
 
 ## EXECUTION COMMANDS - DO NOW:

@@ -21,6 +21,47 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
   - **Verification**: `npm run build` completes successfully without TypeScript errors
 
 ### Added
+- **JWT Authentication and User Data Isolation Tests** (2025-08-19)
+  - Updated `dhafnck_mcp_main/src/tests/auth/api_server_test.py`
+    - Added test for user_scoped_tasks_router inclusion
+    - Added test for router logging during registration
+    - Enhanced fixtures to include user_scoped_tasks_router mock
+  - Created `dhafnck-frontend/src/tests/api.test.ts`
+    - 50+ comprehensive tests for frontend API service
+    - V1/V2 API fallback logic testing
+    - Full CRUD operation coverage for tasks, projects, agents, context
+    - Authentication-based API selection logic
+    - Error handling and response validation
+  - Created `dhafnck-frontend/src/tests/services/apiV2.test.ts`
+    - Comprehensive V2 API service tests with JWT authentication
+    - Auth header injection and token handling
+    - Error response handling for 401/403 scenarios
+    - Environment configuration testing
+  - Created `dhafnck_mcp_main/src/tests/server/routes/user_scoped_task_routes_test.py`
+    - UserScopedRepositoryFactory testing
+    - All CRUD endpoints with user isolation
+    - Authentication and permission validation
+    - Task statistics endpoint coverage
+  - Created `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/base_user_scoped_repository_test.py`
+    - Base repository user filtering behavior
+    - Ownership validation and system mode
+    - Inheritance testing with concrete implementations
+    - Audit logging functionality
+  - Created `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/agent_repository_test.py`
+    - Agent registration and assignment operations
+    - Auto-registration during assignment
+    - Special agent ID format handling (uuid:name)
+    - Search and rebalancing functionality
+  - Created `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/project_repository_test.py`
+    - Project CRUD with git branches
+    - Async operation handling
+    - Health summary and statistics
+    - User isolation in project operations
+  - Created `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/task_repository_test.py`
+    - Task creation with assignees and labels
+    - Progress percentage mapping
+    - Model-to-entity conversion testing
+    - Relationship handling (subtasks, dependencies)
 - **Frontend Auth Component Tests** (2025-08-18)
   - Created comprehensive test suite for `EmailVerification.tsx` at `dhafnck-frontend/src/tests/components/auth/EmailVerification.test.tsx`
   - **Test Coverage**:

@@ -410,6 +410,9 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
                 selectinload(Task.dependencies)
             )
             
+            # Apply user filter for data isolation (CRITICAL)
+            query = self.apply_user_filter(query)
+            
             # Apply filters
             filters = []
             if self.git_branch_id:
@@ -436,9 +439,12 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
             return [self._model_to_entity(task) for task in tasks]
     
     def get_task_count(self, status: str | None = None) -> int:
-        """Get count of tasks"""
+        """Get count of tasks with user isolation"""
         with self.get_db_session() as session:
             query = session.query(Task)
+            
+            # Apply user filter for data isolation (CRITICAL)
+            query = self.apply_user_filter(query)
             
             if self.git_branch_id:
                 query = query.filter(Task.git_branch_id == self.git_branch_id)
@@ -448,10 +454,15 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
             return query.count()
     
     def get_task_count_optimized(self, status: str | None = None, priority: str | None = None) -> int:
-        """Optimized count query using direct SQL"""
+        """Optimized count query using direct SQL with user isolation"""
         with self.get_db_session() as session:
             query = "SELECT COUNT(*) FROM tasks WHERE 1=1"
             params = {}
+            
+            # Apply user filter for data isolation (CRITICAL)
+            if self.user_id:
+                query += " AND user_id = :user_id"
+                params["user_id"] = self.user_id
             
             if self.git_branch_id:
                 query += " AND git_branch_id = :git_branch_id"

@@ -7,6 +7,106 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 ## [Unreleased]
 
 ### Added
+- **API Routes with JWT Authentication and User Isolation** (2025-08-19 - continued)
+  - Created user-scoped project routes with JWT authentication
+  - Implemented JWT authentication middleware for user context extraction
+  - Added UserContextManager for efficient repository/service caching
+  - Files created:
+    - `src/fastmcp/server/routes/user_scoped_project_routes.py` - Example of user-isolated project endpoints
+    - `src/fastmcp/auth/middleware/jwt_auth_middleware.py` - JWT middleware and context management
+  - Features implemented:
+    - Automatic user_id extraction from JWT tokens
+    - User-scoped repository creation from routes
+    - User-scoped service instantiation with context
+    - Audit logging of user data access
+    - Proper error handling and access denial
+  - Pattern established for converting all existing routes to user-scoped versions
+
+- **Service Layer User Context Propagation** (2025-08-19 - continued)
+  - Updated TaskApplicationService to propagate user context through all operations
+  - Added user_id parameter and with_user() method to create user-scoped service instances
+  - Updated all use case initialization to use user-scoped repositories
+  - Files updated:
+    - `src/fastmcp/task_management/application/services/task_application_service.py`
+    - `src/fastmcp/task_management/application/services/project_application_service.py`
+    - `src/fastmcp/task_management/application/services/agent_coordination_service.py`
+  - Service layer changes ensure proper data isolation at application level
+  - All repository calls now automatically filtered by user context
+  - Pattern established for updating remaining 28 service files
+
+- **User Isolation Migration - Comprehensive Code Update Analysis** (2025-08-19)
+  - Created comprehensive migration for ALL tables including context tables
+  - Modified `run_supabase_migration.py` to accept migration file paths as parameters
+  - Updated migration to use `auth.users` instead of `public.users` for Supabase compatibility
+  - Added user_id to ALL context levels (global, project, branch, task) for complete isolation
+  - Created analysis scripts identifying 320 files requiring updates:
+    - 25 repository files need BaseUserScopedRepository implementation
+    - 31 service files need user context propagation
+    - 5 route files need JWT authentication middleware
+    - 11 schema/entity files need user_id field addition
+    - 233 test files need user isolation test coverage
+    - 15 frontend files need authentication header handling
+  - Generated comprehensive TDD implementation checklist with 8 phases
+  - Created test templates for repository, service, and route testing
+  - Files created:
+    - `database/migrations/003_add_user_isolation_simple.sql` - Simplified migration
+    - `scripts/create_migration_tasks.py` - Task generation for TDD workflow
+    - `scripts/update_code_for_user_isolation.py` - Codebase analysis tool
+    - `USER_ISOLATION_UPDATE_REPORT.md` - Complete update requirements
+  - Critical updates required for:
+    - BaseUserScopedRepository pattern implementation
+    - JWT authentication middleware creation
+    - User context propagation through all layers
+    - Complete test coverage for data isolation
+  - Created comprehensive TDD test files:
+    - `test_base_user_scoped_repository.py` - 500+ lines defining repository isolation behavior
+    - `test_project_repository_user_isolation.py` - Tests for project-level user isolation
+    - `test_context_repositories_user_isolation.py` - Tests ensuring ALL context levels are user-scoped
+    - `test_services_user_context.py` - Service layer user context propagation tests
+  - Test templates created for TDD workflow in `scripts/test_templates/`
+  - **User Isolation Implementation Progress** (2025-08-19 - continued)
+    - Created `BaseUserScopedRepository` with complete user data isolation logic
+    - Implemented user-scoped versions of GlobalContextRepository and ProjectContextRepository
+    - Successfully implemented and tested all 25 user isolation test cases
+    - Test coverage includes: CRUD operations, cross-user isolation, bulk operations, error handling
+    - Files updated:
+      - `src/fastmcp/task_management/infrastructure/repositories/base_user_scoped_repository.py`
+      - `src/fastmcp/task_management/infrastructure/repositories/global_context_repository_user_scoped.py`
+      - `src/fastmcp/task_management/infrastructure/repositories/project_context_repository_user_scoped.py`
+    - All tests passing with proper user_id filtering and data isolation
+  - **Critical Security Fixes for User Isolation** (2025-08-19 - continued)
+    - Fixed missing user filters in TaskRepository methods:
+      - `list_tasks_optimized` now applies user_id filter
+      - `get_task_count` now applies user_id filter
+      - `get_task_count_optimized` now includes user_id in SQL query
+    - Fixed missing user filters in ProjectRepository methods:
+      - `find_by_name` now applies user isolation
+      - `find_projects_with_agent` now applies user isolation
+      - `find_projects_by_status` now applies user isolation
+    - Fixed AgentRepository to use `find_one_by` instead of non-existent `get_by_field`
+    - Created `UserScopedORMRepository` class that ensures ALL ORM operations apply user filters
+      - Overrides all query methods to apply user_id filtering
+      - Prevents user_id from being changed in updates
+      - Adds automatic user_id injection on create operations
+      - File: `src/fastmcp/task_management/infrastructure/repositories/user_scoped_orm_repository.py`
+  - **Database Model Updates for User Isolation** (2025-08-19 - continued)
+    - Added user_id field to all database models:
+      - Task model now includes user_id for task isolation
+      - Agent model now includes user_id for agent isolation
+      - GlobalContext model now includes user_id (each user has their own "global" space)
+      - ProjectContext model now includes user_id for project context isolation
+      - BranchContext model now includes user_id for branch context isolation
+      - TaskContext model now includes user_id for task context isolation
+    - All models are now ready for user-based data isolation
+    - Migration 003_add_user_isolation.sql will add these columns to existing tables
+  - **Integration Tests for User Isolation** (2025-08-19 - continued)
+    - Created comprehensive integration test suite: `test_repository_user_isolation.py`
+    - Tests verify proper user isolation across all repository types
+    - Tests confirm that users cannot access each other's data
+    - Tests validate automatic user_id injection on create operations
+    - Note: Tests require migration to be run first (columns must exist in database)
+
+### Added
 - **Frontend User Isolation Integration Complete** (2025-08-19)
   - Integrated frontend with user-isolated backend API endpoints
   - Created API V2 service layer (`src/services/apiV2.ts`) with JWT authentication
