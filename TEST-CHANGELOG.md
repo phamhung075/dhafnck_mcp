@@ -6,7 +6,84 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased] - TBD
 
+### Fixed
+- **Frontend Test Framework Conversion** (2025-08-19)
+  - Converted all frontend test files from Vitest to Jest format for consistency with project testing framework
+  - Updated test imports to use Jest globals instead of vitest
+  - Replaced all `vi.mock()` calls with `jest.mock()`
+  - Replaced all `vi.fn()` calls with `jest.fn()`
+  - Replaced all `vi.clearAllMocks()` with `jest.clearAllMocks()`
+  - Replaced all `vi.resetModules()` with `jest.resetModules()`
+  - Replaced async `vi.importActual()` with `jest.requireActual()`
+  - Files converted:
+    - `dhafnck-frontend/src/tests/App.test.tsx`
+    - `dhafnck-frontend/src/tests/components/AppLayout.test.tsx`
+    - `dhafnck-frontend/src/tests/components/Header.test.tsx`
+    - `dhafnck-frontend/src/tests/pages/Profile.test.tsx`
+    - `dhafnck-frontend/src/tests/api.test.ts`
+    - `dhafnck-frontend/src/tests/services/apiV2.test.ts`
+  - Note: `EmailVerification.test.tsx`, `SignupForm.test.tsx`, and `api.context.test.ts` were already using Jest
+
 ### Added
+- **Frontend Component Test Coverage Enhancement** (2025-08-19)
+  - Created comprehensive test for App component (`dhafnck-frontend/src/tests/App.test.tsx`)
+    - Tests main application routing and component integration
+    - Authentication context mocking and route protection
+    - Dashboard rendering with header and project list
+    - Login, signup, and email verification route testing
+    - Profile page rendering with AppLayout wrapper
+    - Root path redirect to dashboard functionality
+    - Lazy loading implementation for TaskList component
+    - 8 test cases covering all major routes and functionality
+  - Created comprehensive test for AppLayout component (`dhafnck-frontend/src/tests/components/AppLayout.test.tsx`)
+    - Tests layout structure and wrapper functionality
+    - Header component integration and rendering
+    - Children content rendering and propagation
+    - CSS class application for layout styling
+    - Multiple children rendering scenarios
+    - Complex component hierarchy support
+    - 8 test cases covering all layout scenarios
+  - Created comprehensive test for Header component (`dhafnck-frontend/src/tests/components/Header.test.tsx`)
+    - Tests header navigation and user interface
+    - User dropdown menu toggle functionality
+    - User initials generation from username
+    - Navigation links for dashboard and profile
+    - Logout functionality with navigation
+    - Mobile responsive menu behavior
+    - Dropdown close on outside click
+    - AuthContext integration and null handling
+    - 15+ test cases covering all header interactions
+  - Created comprehensive test for Profile page (`dhafnck-frontend/src/tests/pages/Profile.test.tsx`)
+    - Tests user profile management interface
+    - Tab navigation between Account, Security, and Preferences
+    - Edit mode toggle with Save/Cancel functionality
+    - Form field enable/disable based on edit state
+    - User information display with roles
+    - Profile update with success/error handling
+    - Security settings placeholder buttons
+    - Preferences tab with theme and notification settings
+    - 20+ test cases covering all profile functionality
+  - Created comprehensive test for MCP Entry Point (`dhafnck_mcp_main/src/tests/server/mcp_entry_point_test.py`)
+    - Tests server initialization and configuration
+    - DebugLoggingMiddleware HTTP request/response logging
+    - Authentication tool registration based on environment
+    - Health endpoint functionality with connection stats
+    - DDD-compliant tool registration and error handling
+    - Main function with stdio and HTTP transport modes
+    - Command line argument parsing for transport override
+    - Exception handling and graceful shutdown
+    - 15+ test cases covering all server initialization scenarios
+  - **Test Features**:
+    - Comprehensive mocking of React contexts and hooks
+    - Router and navigation testing with React Router
+    - Component integration testing with proper isolation
+    - User interaction simulation with fireEvent
+    - Async operation handling with waitFor
+    - Environment variable configuration testing
+    - Middleware and health endpoint verification
+  - **Dependencies**: React Testing Library, Vitest, pytest, unittest.mock
+  - **Rationale**: Ensures frontend components and backend entry point maintain proper functionality and user experience
+
 - **Context Validation and Dependency Service Test Coverage** (2025-08-19)
   - Created comprehensive test for ContextValidationService (`dhafnck_mcp_main/src/tests/task_management/application/services/context_validation_service_test.py`)
     - Tests context validation, rule enforcement, and schema compliance functionality

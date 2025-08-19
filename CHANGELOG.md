@@ -26,6 +26,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
     - `dhafnck-frontend/src/components/Header.tsx` - New header with navigation
     - `dhafnck-frontend/src/components/AppLayout.tsx` - New layout wrapper
 
+### Fixed
+- **🔧 FRONTEND TEST FRAMEWORK CONVERSION** (2025-08-19)
+  - Converted all frontend test files from Vitest to Jest format for consistency
+  - Updated test imports to use Jest globals instead of vitest
+  - Replaced all `vi.mock()` calls with `jest.mock()`
+  - Replaced all `vi.fn()` calls with `jest.fn()`
+  - Replaced all `vi.clearAllMocks()` with `jest.clearAllMocks()`
+  - Replaced all `vi.resetModules()` with `jest.resetModules()`
+  - Files converted:
+    - `dhafnck-frontend/src/tests/App.test.tsx`
+    - `dhafnck-frontend/src/tests/components/AppLayout.test.tsx`
+    - `dhafnck-frontend/src/tests/components/Header.test.tsx`
+    - `dhafnck-frontend/src/tests/pages/Profile.test.tsx`
+    - `dhafnck-frontend/src/tests/api.test.ts`
+    - `dhafnck-frontend/src/tests/services/apiV2.test.ts`
+  - Note: `EmailVerification.test.tsx`, `SignupForm.test.tsx`, and `api.context.test.ts` were already using Jest
+
 ### Added
 - **💥 COMPLETE DATABASE RESET FOR USER ISOLATION** (2025-08-19 - EXECUTED)
   - **NUCLEAR WIPE**: Complete database reset executed on Supabase
