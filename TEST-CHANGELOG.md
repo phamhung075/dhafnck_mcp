@@ -7,6 +7,41 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 ## [Unreleased]
 
 ### Added
+- **Task Management Application Service Test Suite** (2025-08-19)
+  - Created `dhafnck_mcp_main/src/tests/task_management/application/services/dependency_resolver_service_test.py`
+    - Comprehensive testing for dependency resolution and analysis
+    - Task dependency graph building and traversal
+    - Upstream and downstream chain construction
+    - Circular dependency handling and protection
+    - Dependency status evaluation (can start, is blocked)
+    - User-scoped repository integration testing
+    - Blocking reasons generation and next action suggestions
+    - 20+ test cases covering all dependency resolution scenarios
+  - Created `dhafnck_mcp_main/src/tests/task_management/application/services/git_branch_application_service_test.py`
+    - Git branch lifecycle management testing
+    - Branch creation, update, deletion operations
+    - Agent assignment and unassignment workflows
+    - Branch statistics and archival functionality
+    - User-scoped service creation and repository handling
+    - Project existence validation and error handling
+    - 30+ test cases for all branch management operations
+  - Created `dhafnck_mcp_main/src/tests/task_management/application/services/subtask_application_service_test.py`
+    - Subtask CRUD operations with DTO pattern validation
+    - Use case orchestration and coordination testing
+    - Subtask management workflow with action routing
+    - Request object creation and validation
+    - User-scoped repository and service testing
+    - Error handling for missing required fields
+    - 25+ test cases covering all subtask operations and workflows
+  - **Test Features**:
+    - Comprehensive mocking of repositories and use cases
+    - Async operation testing with proper await patterns
+    - DTO validation and object mapping verification
+    - User context propagation and scoping validation
+    - Exception handling and error message validation
+    - DDD pattern adherence with use case separation
+  - **Dependencies**: pytest, unittest.mock, AsyncMock
+  - **Rationale**: Ensures application services properly coordinate domain logic and maintain clean separation of concerns
 - **Comprehensive Test Suite for Core Security and User Isolation Components** (2025-08-19)
   - Created `dhafnck_mcp_main/src/tests/auth/middleware/jwt_auth_middleware_test.py`
     - JWT token extraction and validation with Bearer prefix support

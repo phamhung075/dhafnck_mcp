@@ -5,7 +5,7 @@ Application layer service for managing audit trails and compliance monitoring.
 
 import logging
 import uuid
-from typing import Dict, Any, List, Union
+from typing import Dict, Any, List, Union, Optional
 from datetime import datetime
 
 from ...domain.enums.compliance_enums import ComplianceLevel, ValidationResult
@@ -17,7 +17,8 @@ logger = logging.getLogger(__name__)
 class AuditService:
     """Application service for audit trail and compliance monitoring"""
     
-    def __init__(self):
+    def __init__(self, user_id: Optional[str] = None):
+        self._user_id = user_id  # Store user context
         self._audit_log: List[Dict[str, Any]] = []
         self._compliance_metrics = {
             "total_operations": 0,
@@ -25,6 +26,23 @@ class AuditService:
             "violations": 0,
             "last_audit": None
         }
+
+    def _get_user_scoped_repository(self, repository: Any) -> Any:
+        """Get a user-scoped version of the repository if it supports user context."""
+        if not repository:
+            return repository
+        if hasattr(repository, 'with_user') and self._user_id:
+            return repository.with_user(self._user_id)
+        elif hasattr(repository, 'user_id'):
+            if self._user_id and repository.user_id != self._user_id:
+                repo_class = type(repository)
+                if hasattr(repository, 'session'):
+                    return repo_class(repository.session, user_id=self._user_id)
+        return repository
+
+    def with_user(self, user_id: str) -> 'AuditService':
+        """Create a new service instance scoped to a specific user."""
+        return AuditService(user_id)
         
     def log_operation(self, operation: str, result: Dict[str, Any], compliance_level: Union[ComplianceLevel, str]):
         """Log operation for audit trail

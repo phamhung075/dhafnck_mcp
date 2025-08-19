@@ -15,7 +15,7 @@ from .domain.value_objects.user_id import UserId
 from .domain.services.password_service import PasswordService
 from .domain.services.jwt_service import JWTService
 from .application.services.auth_service import AuthService, LoginResult, RegistrationResult
-from .middleware import AuthMiddleware
+from .middleware import JWTAuthMiddleware as AuthMiddleware
 from .token_validator import TokenValidator, TokenValidationError, RateLimitError
 
 __all__ = [

@@ -19,12 +19,23 @@ class TaskContextSyncService:
     out of the Domain layer while remaining easily testable.
     """
 
-    def __init__(self, task_repository: TaskRepository, context_service: Optional[Any] = None):
+    def __init__(self, task_repository: TaskRepository, context_service: Optional[Any] = None, user_id: Optional[str] = None):
+        self._user_id = user_id  # Store user context
         self._task_repository = task_repository
         # Initialize hierarchical context service
         factory = UnifiedContextFacadeFactory()
         self._hierarchical_context_service = factory.create_unified_service()
         self._get_task_use_case = GetTaskUseCase(task_repository, context_service)
+
+    def with_user(self, user_id: str) -> 'TaskContextSyncService':
+        """Create a new service instance scoped to a specific user."""
+        return TaskContextSyncService(self._task_repository, self._hierarchical_context_service, user_id)
+
+    def _get_user_scoped_repository(self, repository):
+        """Get user-scoped repository if user_id is available."""
+        if self._user_id and hasattr(repository, 'with_user'):
+            return repository.with_user(self._user_id)
+        return repository
 
     # ------------------------------------------------------------------
     # Public helpers
@@ -48,7 +59,8 @@ class TaskContextSyncService:
             # 1. Reload domain task and create/update its context
             # ------------------------------------------------------------------
             task_id_obj = TaskId.from_string(task_id)
-            domain_task = self._task_repository.find_by_id(task_id_obj)
+            repo = self._get_user_scoped_repository(self._task_repository)
+            domain_task = repo.find_by_id(task_id_obj)
             if domain_task is None:
                 logger.warning("[TaskContextSyncService] Task %s not found while syncing context", task_id)
                 return None

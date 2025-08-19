@@ -17,16 +17,35 @@ from ...domain.enums.rule_enums import RuleFormat, RuleType
 class RuleApplicationService:
     """Application service for rule management operations"""
     
-    def __init__(self, rule_repository: RuleRepository):
+    def __init__(self, rule_repository: RuleRepository, user_id: Optional[str] = None):
         self._rule_repository = rule_repository
+        self._user_id = user_id  # Store user context
         
-        # Initialize use cases
-        self._create_rule_use_case = CreateRuleUseCase(rule_repository)
-        self._get_rule_use_case = GetRuleUseCase(rule_repository)
-        self._list_rules_use_case = ListRulesUseCase(rule_repository)
-        self._update_rule_use_case = UpdateRuleUseCase(rule_repository)
-        self._delete_rule_use_case = DeleteRuleUseCase(rule_repository)
-        self._validate_rule_use_case = ValidateRuleUseCase(rule_repository)
+        # Initialize use cases with user-scoped repository
+        repo = self._get_user_scoped_repository(rule_repository)
+        self._create_rule_use_case = CreateRuleUseCase(repo)
+        self._get_rule_use_case = GetRuleUseCase(repo)
+        self._list_rules_use_case = ListRulesUseCase(repo)
+        self._update_rule_use_case = UpdateRuleUseCase(repo)
+        self._delete_rule_use_case = DeleteRuleUseCase(repo)
+        self._validate_rule_use_case = ValidateRuleUseCase(repo)
+
+    def _get_user_scoped_repository(self, repository: Any) -> Any:
+        """Get a user-scoped version of the repository if it supports user context."""
+        if not repository:
+            return repository
+        if hasattr(repository, 'with_user') and self._user_id:
+            return repository.with_user(self._user_id)
+        elif hasattr(repository, 'user_id'):
+            if self._user_id and repository.user_id != self._user_id:
+                repo_class = type(repository)
+                if hasattr(repository, 'session'):
+                    return repo_class(repository.session, user_id=self._user_id)
+        return repository
+
+    def with_user(self, user_id: str) -> 'RuleApplicationService':
+        """Create a new service instance scoped to a specific user."""
+        return RuleApplicationService(self._rule_repository, user_id)
     
     async def create_rule(
         self,
@@ -81,7 +100,8 @@ class RuleApplicationService:
     async def backup_rules(self, backup_path: str) -> Dict[str, Any]:
         """Backup all rules"""
         try:
-            success = await self._rule_repository.backup_rules(backup_path)
+            repo = self._get_user_scoped_repository(self._rule_repository)
+            success = await repo.backup_rules(backup_path)
             if success:
                 return {
                     "success": True,
@@ -102,7 +122,8 @@ class RuleApplicationService:
     async def restore_rules(self, backup_path: str) -> Dict[str, Any]:
         """Restore rules from backup"""
         try:
-            success = await self._rule_repository.restore_rules(backup_path)
+            repo = self._get_user_scoped_repository(self._rule_repository)
+            success = await repo.restore_rules(backup_path)
             if success:
                 return {
                     "success": True,
@@ -123,7 +144,8 @@ class RuleApplicationService:
     async def cleanup_obsolete_rules(self) -> Dict[str, Any]:
         """Clean up obsolete rules"""
         try:
-            cleaned_paths = await self._rule_repository.cleanup_obsolete_rules()
+            repo = self._get_user_scoped_repository(self._rule_repository)
+            cleaned_paths = await repo.cleanup_obsolete_rules()
             return {
                 "success": True,
                 "message": f"Cleaned up {len(cleaned_paths)} obsolete rules",
@@ -138,7 +160,8 @@ class RuleApplicationService:
     async def get_rule_statistics(self) -> Dict[str, Any]:
         """Get statistics about rules"""
         try:
-            stats = await self._rule_repository.get_rule_statistics()
+            repo = self._get_user_scoped_repository(self._rule_repository)
+            stats = await repo.get_rule_statistics()
             return {
                 "success": True,
                 "statistics": stats
@@ -152,7 +175,8 @@ class RuleApplicationService:
     async def get_rule_dependencies(self, rule_path: str) -> Dict[str, Any]:
         """Get dependencies for a rule"""
         try:
-            dependencies = await self._rule_repository.get_rule_dependencies(rule_path)
+            repo = self._get_user_scoped_repository(self._rule_repository)
+            dependencies = await repo.get_rule_dependencies(rule_path)
             return {
                 "success": True,
                 "rule_path": rule_path,
@@ -167,7 +191,8 @@ class RuleApplicationService:
     async def get_dependent_rules(self, rule_path: str) -> Dict[str, Any]:
         """Get rules that depend on the specified rule"""
         try:
-            dependent_rules = await self._rule_repository.get_dependent_rules(rule_path)
+            repo = self._get_user_scoped_repository(self._rule_repository)
+            dependent_rules = await repo.get_dependent_rules(rule_path)
             return {
                 "success": True,
                 "rule_path": rule_path,
@@ -182,7 +207,8 @@ class RuleApplicationService:
     async def get_rules_by_type(self, rule_type: str) -> Dict[str, Any]:
         """Get rules by type"""
         try:
-            rules = await self._rule_repository.get_rules_by_type(rule_type)
+            repo = self._get_user_scoped_repository(self._rule_repository)
+            rules = await repo.get_rules_by_type(rule_type)
             return {
                 "success": True,
                 "rule_type": rule_type,
@@ -206,7 +232,8 @@ class RuleApplicationService:
     async def get_rules_by_tag(self, tag: str) -> Dict[str, Any]:
         """Get rules by tag"""
         try:
-            rules = await self._rule_repository.get_rules_by_tag(tag)
+            repo = self._get_user_scoped_repository(self._rule_repository)
+            rules = await repo.get_rules_by_tag(tag)
             return {
                 "success": True,
                 "tag": tag,

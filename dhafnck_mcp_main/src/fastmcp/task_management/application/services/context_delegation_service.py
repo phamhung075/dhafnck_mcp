@@ -44,10 +44,28 @@ class ContextDelegationService:
     manual delegation initiated by users or AI agents.
     """
     
-    def __init__(self, repository=None):
+    def __init__(self, repository=None, user_id: Optional[str] = None):
         """Initialize delegation service"""
         self.repository = repository  # Will be injected
+        self._user_id = user_id  # Store user context
         logger.info("ContextDelegationService initialized")
+
+    def _get_user_scoped_repository(self, repository: Any) -> Any:
+        """Get a user-scoped version of the repository if it supports user context."""
+        if not repository:
+            return repository
+        if hasattr(repository, 'with_user') and self._user_id:
+            return repository.with_user(self._user_id)
+        elif hasattr(repository, 'user_id'):
+            if self._user_id and repository.user_id != self._user_id:
+                repo_class = type(repository)
+                if hasattr(repository, 'session'):
+                    return repo_class(repository.session, user_id=self._user_id)
+        return repository
+
+    def with_user(self, user_id: str) -> 'ContextDelegationService':
+        """Create a new service instance scoped to a specific user."""
+        return ContextDelegationService(self.repository, user_id)
     
     def delegate_context(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """

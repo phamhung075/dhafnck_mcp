@@ -6,7 +6,7 @@ and infrastructure components.
 
 import logging
 import uuid
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from datetime import datetime
 
 from ...domain.enums.compliance_enums import ComplianceLevel, ValidationResult, SecurityLevel
@@ -20,11 +20,20 @@ logger = logging.getLogger(__name__)
 class ComplianceService:
     """Application service for compliance validation and enforcement"""
     
-    def __init__(self, document_validator: DocumentValidator = None, access_controller: AccessController = None):
+    def __init__(self, document_validator: DocumentValidator = None, access_controller: AccessController = None, user_id: Optional[str] = None):
         """Initialize compliance service with injected dependencies"""
         self._document_validator = document_validator or DocumentValidator()
         self._access_controller = access_controller or AccessController()
+        self._user_id = user_id  # Store user context
         self._compliance_rules = self._initialize_compliance_rules()
+
+    def with_user(self, user_id: str) -> 'ComplianceService':
+        """Create a new service instance scoped to a specific user."""
+        return ComplianceService(
+            self._document_validator,
+            self._access_controller,
+            user_id
+        )
         
     def validate_operation(self, operation: str, **kwargs) -> Dict[str, Any]:
         """Validate operation against all applicable compliance rules"""

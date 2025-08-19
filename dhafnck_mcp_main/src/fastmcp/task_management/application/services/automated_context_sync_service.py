@@ -33,10 +33,36 @@ class AutomatedContextSyncService:
 
     def __init__(self, 
                  task_repository: TaskRepository,
-                 subtask_repository: Optional[SubtaskRepository] = None):
+                 subtask_repository: Optional[SubtaskRepository] = None,
+                 user_id: Optional[str] = None):
         self._task_repository = task_repository
         self._subtask_repository = subtask_repository
-        self._context_sync_service = TaskContextSyncService(task_repository)
+        self._user_id = user_id  # Store user context
+        
+        # Create user-scoped context sync service
+        task_repo = self._get_user_scoped_repository(task_repository)
+        self._context_sync_service = TaskContextSyncService(task_repo)
+
+    def _get_user_scoped_repository(self, repository: Any) -> Any:
+        """Get a user-scoped version of the repository if it supports user context."""
+        if not repository:
+            return repository
+        if hasattr(repository, 'with_user') and self._user_id:
+            return repository.with_user(self._user_id)
+        elif hasattr(repository, 'user_id'):
+            if self._user_id and repository.user_id != self._user_id:
+                repo_class = type(repository)
+                if hasattr(repository, 'session'):
+                    return repo_class(repository.session, user_id=self._user_id)
+        return repository
+
+    def with_user(self, user_id: str) -> 'AutomatedContextSyncService':
+        """Create a new service instance scoped to a specific user."""
+        return AutomatedContextSyncService(
+            self._task_repository,
+            self._subtask_repository,
+            user_id
+        )
 
     # ------------------------------------------------------------------
     # Task-level synchronization

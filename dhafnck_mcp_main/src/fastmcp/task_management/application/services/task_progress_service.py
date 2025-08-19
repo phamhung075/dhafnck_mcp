@@ -4,7 +4,7 @@ Handles automatic progress calculation and updates for tasks based on subtask co
 """
 
 import logging
-from typing import Optional
+from typing import Optional, Any
 from ...domain.repositories.task_repository import TaskRepository
 from ...domain.repositories.subtask_repository import SubtaskRepository
 from ...domain.value_objects.task_id import TaskId
@@ -15,10 +15,28 @@ logger = logging.getLogger(__name__)
 class TaskProgressService:
     """Service for managing task progress based on subtask completion."""
     
-    def __init__(self, task_repository: TaskRepository, subtask_repository: SubtaskRepository):
+    def __init__(self, task_repository: TaskRepository, subtask_repository: SubtaskRepository, user_id: Optional[str] = None):
         """Initialize with repositories."""
         self._task_repository = task_repository
         self._subtask_repository = subtask_repository
+        self._user_id = user_id  # Store user context
+
+    def _get_user_scoped_repository(self, repository: Any) -> Any:
+        """Get a user-scoped version of the repository if it supports user context."""
+        if not repository:
+            return repository
+        if hasattr(repository, 'with_user') and self._user_id:
+            return repository.with_user(self._user_id)
+        elif hasattr(repository, 'user_id'):
+            if self._user_id and repository.user_id != self._user_id:
+                repo_class = type(repository)
+                if hasattr(repository, 'session'):
+                    return repo_class(repository.session, user_id=self._user_id)
+        return repository
+
+    def with_user(self, user_id: str) -> 'TaskProgressService':
+        """Create a new service instance scoped to a specific user."""
+        return TaskProgressService(self._task_repository, self._subtask_repository, user_id)
     
     def update_task_progress_from_subtasks(self, task_id: str) -> Optional[float]:
         """
@@ -31,16 +49,18 @@ class TaskProgressService:
             The calculated progress percentage (0-100) or None if task not found
         """
         try:
-            # Get the task
+            # Get the task using user-scoped repository
             domain_task_id = TaskId(task_id)
-            task = self._task_repository.find_by_id(domain_task_id)
+            task_repo = self._get_user_scoped_repository(self._task_repository)
+            task = task_repo.find_by_id(domain_task_id)
             
             if not task:
                 logger.warning(f"Task {task_id} not found for progress update")
                 return None
             
-            # Get all subtasks for this task
-            subtasks = self._subtask_repository.find_by_parent_task_id(domain_task_id)
+            # Get all subtasks for this task using user-scoped repository
+            subtask_repo = self._get_user_scoped_repository(self._subtask_repository)
+            subtasks = subtask_repo.find_by_parent_task_id(domain_task_id)
             
             if not subtasks:
                 # No subtasks, progress remains at current value or 0

@@ -35,9 +35,11 @@ class UnifiedContextService:
         cache_service: Optional[ContextCacheService] = None,
         inheritance_service: Optional[ContextInheritanceService] = None,
         delegation_service: Optional[ContextDelegationService] = None,
-        validation_service: Optional[ContextValidationService] = None
+        validation_service: Optional[ContextValidationService] = None,
+        user_id: Optional[str] = None
     ):
         """Initialize unified context service with required repositories and services."""
+        self._user_id = user_id  # Store user context
         self.repositories = {
             ContextLevel.GLOBAL: global_context_repository,
             ContextLevel.PROJECT: project_context_repository,
@@ -61,6 +63,26 @@ class UnifiedContextService:
             branch_repo=branch_context_repository,
             task_repo=task_context_repository
         )
+
+    def with_user(self, user_id: str) -> 'UnifiedContextService':
+        """Create a new service instance scoped to a specific user."""
+        return UnifiedContextService(
+            self.repositories[ContextLevel.GLOBAL],
+            self.repositories[ContextLevel.PROJECT], 
+            self.repositories[ContextLevel.BRANCH],
+            self.repositories[ContextLevel.TASK],
+            self.cache_service,
+            self.inheritance_service,
+            self.delegation_service,
+            self.validation_service,
+            user_id
+        )
+
+    def _get_user_scoped_repository(self, repository):
+        """Get user-scoped repository if user_id is available."""
+        if self._user_id and hasattr(repository, 'with_user'):
+            return repository.with_user(self._user_id)
+        return repository
         
     def _normalize_context_id(self, level: str, context_id: str) -> str:
         """
@@ -235,6 +257,9 @@ class UnifiedContextService:
                     "error": f"No repository configured for level: {level}"
                 }
             
+            # Use user-scoped repository if user_id is available
+            repo = self._get_user_scoped_repository(repository)
+            
             # Create context entity based on level
             context_entity = self._create_context_entity(
                 level=context_level,
@@ -245,7 +270,7 @@ class UnifiedContextService:
             )
             
             # Save to repository
-            saved_context = repository.create(context_entity)
+            saved_context = repo.create(context_entity)
             
             # Invalidate cache for this context
             # Note: Cache service still async - skip for now in sync mode
@@ -291,7 +316,9 @@ class UnifiedContextService:
                     "error": f"No repository configured for level: {level}"
                 }
             
-            context_entity = repository.get(context_id)
+            # Use user-scoped repository if user_id is available
+            repo = self._get_user_scoped_repository(repository)
+            context_entity = repo.get(context_id)
             if not context_entity:
                 return {
                     "success": False,
@@ -345,7 +372,9 @@ class UnifiedContextService:
                     "error": f"No repository configured for level: {level}"
                 }
             
-            existing = repository.get(context_id)
+            # Use user-scoped repository if user_id is available
+            repo = self._get_user_scoped_repository(repository)
+            existing = repo.get(context_id)
             if not existing:
                 return {
                     "success": False,
@@ -373,8 +402,8 @@ class UnifiedContextService:
                 new_data=updated_data
             )
             
-            # Save to repository
-            saved_context = repository.update(context_id, updated_entity)
+            # Save to repository using user-scoped repository
+            saved_context = repo.update(context_id, updated_entity)
             
             # Skip cache invalidation for now (cache service is async)
             # TODO: Make cache service sync or skip caching in sync mode
@@ -418,8 +447,11 @@ class UnifiedContextService:
                     "error": f"No repository configured for level: {level}"
                 }
             
+            # Use user-scoped repository if user_id is available
+            repo = self._get_user_scoped_repository(repository)
+            
             # Check if context exists
-            existing = repository.get(context_id)
+            existing = repo.get(context_id)
             if not existing:
                 return {
                     "success": False,
@@ -427,7 +459,7 @@ class UnifiedContextService:
                 }
             
             # Delete from repository
-            result = repository.delete(context_id)
+            result = repo.delete(context_id)
             
             # Skip cache invalidation for now (cache service is async)
             # TODO: Make cache service sync or skip caching in sync mode
@@ -535,8 +567,11 @@ class UnifiedContextService:
                     "error": f"No repository configured for level: {level}"
                 }
             
+            # Use user-scoped repository if user_id is available
+            repo = self._get_user_scoped_repository(repository)
+            
             # Get contexts
-            contexts = repository.list(filters=filters)
+            contexts = repo.list(filters=filters)
             
             return {
                 "success": True,

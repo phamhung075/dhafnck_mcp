@@ -23,6 +23,27 @@ logger = logging.getLogger(__name__)
 class ContextValidationService:
     """Service for validating context updates according to Vision System rules."""
     
+    def __init__(self, user_id: Optional[str] = None):
+        """Initialize the context validation service."""
+        self._user_id = user_id  # Store user context
+
+    def _get_user_scoped_repository(self, repository: Any) -> Any:
+        """Get a user-scoped version of the repository if it supports user context."""
+        if not repository:
+            return repository
+        if hasattr(repository, 'with_user') and self._user_id:
+            return repository.with_user(self._user_id)
+        elif hasattr(repository, 'user_id'):
+            if self._user_id and repository.user_id != self._user_id:
+                repo_class = type(repository)
+                if hasattr(repository, 'session'):
+                    return repo_class(repository.session, user_id=self._user_id)
+        return repository
+
+    def with_user(self, user_id: str) -> 'ContextValidationService':
+        """Create a new service instance scoped to a specific user."""
+        return ContextValidationService(user_id)
+    
     def validate_completion_context(self, 
                                   task: Task, 
                                   context: TaskContext,

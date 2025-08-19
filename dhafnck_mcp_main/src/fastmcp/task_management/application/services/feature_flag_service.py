@@ -39,12 +39,14 @@ class FeatureFlagService:
     - Audit logging
     """
     
-    def __init__(self, config_path: Optional[str] = None):
+    def __init__(self, config_path: Optional[str] = None, user_id: Optional[str] = None):
         """Initialize feature flag service
         
         Args:
             config_path: Path to feature flags configuration file
+            user_id: User context for user-scoped feature flags
         """
+        self._user_id = user_id  # Store user context
         self._config_path = config_path or self._get_default_config_path()
         self._flags: Dict[str, FeatureFlag] = {}
         self._load_flags()
@@ -53,6 +55,23 @@ class FeatureFlagService:
         self._initialize_migration_flags()
         
         logger.info(f"FeatureFlagService initialized with {len(self._flags)} flags")
+
+    def _get_user_scoped_repository(self, repository: Any) -> Any:
+        """Get a user-scoped version of the repository if it supports user context."""
+        if not repository:
+            return repository
+        if hasattr(repository, 'with_user') and self._user_id:
+            return repository.with_user(self._user_id)
+        elif hasattr(repository, 'user_id'):
+            if self._user_id and repository.user_id != self._user_id:
+                repo_class = type(repository)
+                if hasattr(repository, 'session'):
+                    return repo_class(repository.session, user_id=self._user_id)
+        return repository
+
+    def with_user(self, user_id: str) -> 'FeatureFlagService':
+        """Create a new service instance scoped to a specific user."""
+        return FeatureFlagService(self._config_path, user_id)
     
     def _get_default_config_path(self) -> str:
         """Get default configuration file path"""

@@ -21,11 +21,29 @@ class ContextCacheService:
     invalidation to optimize performance of hierarchical context resolution.
     """
     
-    def __init__(self, repository=None, default_ttl_hours: int = 1):
+    def __init__(self, repository=None, default_ttl_hours: int = 1, user_id: Optional[str] = None):
         """Initialize cache service"""
         self.repository = repository  # Will be injected
         self.default_ttl_hours = default_ttl_hours
+        self._user_id = user_id  # Store user context
         logger.info(f"ContextCacheService initialized with {default_ttl_hours}h TTL")
+
+    def _get_user_scoped_repository(self, repository: Any) -> Any:
+        """Get a user-scoped version of the repository if it supports user context."""
+        if not repository:
+            return repository
+        if hasattr(repository, 'with_user') and self._user_id:
+            return repository.with_user(self._user_id)
+        elif hasattr(repository, 'user_id'):
+            if self._user_id and repository.user_id != self._user_id:
+                repo_class = type(repository)
+                if hasattr(repository, 'session'):
+                    return repo_class(repository.session, user_id=self._user_id)
+        return repository
+
+    def with_user(self, user_id: str) -> 'ContextCacheService':
+        """Create a new service instance scoped to a specific user."""
+        return ContextCacheService(self.repository, self.default_ttl_hours, user_id)
     
     # ===============================================
     # SYNC WRAPPER METHODS FOR FACADE COMPATIBILITY

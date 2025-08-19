@@ -30,16 +30,22 @@ logger = logging.getLogger(__name__)
 class ProjectManagementService:
     """Application service for project lifecycle and multi-agent coordination using SQLite database"""
     
-    def __init__(self, project_repo: Optional[ProjectRepository] = None):
+    def __init__(self, project_repo: Optional[ProjectRepository] = None, user_id: Optional[str] = None):
         """
         Initialize ProjectManagementService with SQLite repository
         
         Args:
             project_repo: Optional project repository (for testing/dependency injection)
+            user_id: User context for user-scoped project management
         """
         # Use provided repository or get default SQLite repository
         self._project_repo = project_repo or GlobalRepositoryManager.get_default()
+        self._user_id = user_id  # Store user context
         logger.info("ProjectManagementService initialized with SQLite repository")
+
+    def with_user(self, user_id: str) -> 'ProjectManagementService':
+        """Create a new service instance scoped to a specific user."""
+        return ProjectManagementService(self._project_repo, user_id)
     
     async def create_project(self, name: str, description: str = "", user_id: str = "default_id") -> Dict[str, Any]:
         """Create a new project with auto-generated UUID"""

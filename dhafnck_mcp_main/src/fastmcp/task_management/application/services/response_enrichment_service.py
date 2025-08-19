@@ -51,7 +51,8 @@ class ResponseEnrichmentService:
     This helps AI agents better understand the state of tasks and what actions to take.
     """
     
-    def __init__(self):
+    def __init__(self, user_id: Optional[str] = None):
+        self._user_id = user_id  # Store user context
         self.visual_indicators = {
             "context_missing": "🚫",
             "context_fresh": "✅",
@@ -66,6 +67,23 @@ class ResponseEnrichmentService:
             "priority_medium": "🟡",
             "priority_low": "🟢"
         }
+
+    def _get_user_scoped_repository(self, repository: Any) -> Any:
+        """Get a user-scoped version of the repository if it supports user context."""
+        if not repository:
+            return repository
+        if hasattr(repository, 'with_user') and self._user_id:
+            return repository.with_user(self._user_id)
+        elif hasattr(repository, 'user_id'):
+            if self._user_id and repository.user_id != self._user_id:
+                repo_class = type(repository)
+                if hasattr(repository, 'session'):
+                    return repo_class(repository.session, user_id=self._user_id)
+        return repository
+
+    def with_user(self, user_id: str) -> 'ResponseEnrichmentService':
+        """Create a new service instance scoped to a specific user."""
+        return ResponseEnrichmentService(user_id)
     
     def get_context_state(self, task_id: str, context_data: Optional[Dict[str, Any]] = None) -> ContextState:
         """

@@ -27,32 +27,14 @@ REQUIRED BEHAVIORS:
 ## Missing Test Files - CREATE IMMEDIATELY:
 
 ## Missing Test Files
-- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/middleware/jwt_auth_middleware.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/auth/middleware/jwt_auth_middleware_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/services/dependency_resolver_service.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/services/dependency_resolver_service_test.py`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/user_scoped_project_routes.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/server/routes/user_scoped_project_routes_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/services/git_branch_application_service.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/services/git_branch_application_service_test.py`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/services/agent_coordination_service.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/services/agent_coordination_service_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/services/project_application_service.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/services/project_application_service_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/services/task_application_service.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/services/task_application_service_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/database/models.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/database/models_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/global_context_repository_user_scoped.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/global_context_repository_user_scoped_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/project_context_repository_user_scoped.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/project_context_repository_user_scoped_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/user_scoped_orm_repository.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/user_scoped_orm_repository_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/services/subtask_application_service.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/services/subtask_application_service_test.py`
 
 
 ## EXECUTION COMMANDS - DO NOW:

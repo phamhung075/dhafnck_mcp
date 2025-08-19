@@ -30,7 +30,8 @@ class VisionAnalyticsService:
         self,
         task_repository=None,
         vision_repository=None,
-        enrichment_service=None
+        enrichment_service=None,
+        user_id: Optional[str] = None
     ):
         """Initialize the vision analytics service.
         
@@ -38,10 +39,21 @@ class VisionAnalyticsService:
             task_repository: Repository for task data access
             vision_repository: Repository for vision data access
             enrichment_service: Service for vision enrichment
+            user_id: User context for user-scoped analytics
         """
         self.task_repository = task_repository
         self.vision_repository = vision_repository
         self.enrichment_service = enrichment_service
+        self._user_id = user_id  # Store user context
+
+    def with_user(self, user_id: str) -> 'VisionAnalyticsService':
+        """Create a new service instance scoped to a specific user."""
+        return VisionAnalyticsService(
+            self.task_repository,
+            self.vision_repository,
+            self.enrichment_service,
+            user_id
+        )
     
     def generate_dashboard(
         self,

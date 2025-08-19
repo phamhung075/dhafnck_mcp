@@ -63,15 +63,39 @@ class WorkflowAnalysisService:
         self,
         task_repository: TaskRepository,
         context_repository: ContextRepository,
-        event_store: Optional[Any] = None  # EventStore not implemented yet
+        event_store: Optional[Any] = None,  # EventStore not implemented yet
+        user_id: Optional[str] = None
     ):
         self.task_repository = task_repository
         self.context_repository = context_repository
         self.event_store = event_store
+        self._user_id = user_id  # Store user context
         
         # Cache for analysis results
         self._analysis_cache: Dict[UUID, WorkflowAnalysis] = {}
         self._pattern_cache: Dict[str, WorkflowPattern] = {}
+
+    def _get_user_scoped_repository(self, repository: Any) -> Any:
+        """Get a user-scoped version of the repository if it supports user context."""
+        if not repository:
+            return repository
+        if hasattr(repository, 'with_user') and self._user_id:
+            return repository.with_user(self._user_id)
+        elif hasattr(repository, 'user_id'):
+            if self._user_id and repository.user_id != self._user_id:
+                repo_class = type(repository)
+                if hasattr(repository, 'session'):
+                    return repo_class(repository.session, user_id=self._user_id)
+        return repository
+
+    def with_user(self, user_id: str) -> 'WorkflowAnalysisService':
+        """Create a new service instance scoped to a specific user."""
+        return WorkflowAnalysisService(
+            self.task_repository,
+            self.context_repository,
+            self.event_store,
+            user_id
+        )
     
     async def analyze_task_workflow(
         self,

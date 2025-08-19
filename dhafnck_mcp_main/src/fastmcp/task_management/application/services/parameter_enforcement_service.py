@@ -108,15 +108,21 @@ class ParameterEnforcementService:
         "insights_found": ["Found existing utility for token generation", "Database index needed for performance"]
     }
     
-    def __init__(self, enforcement_level: EnforcementLevel = EnforcementLevel.WARNING):
+    def __init__(self, enforcement_level: EnforcementLevel = EnforcementLevel.WARNING, user_id: Optional[str] = None):
         """Initialize enforcement service
         
         Args:
             enforcement_level: Default enforcement level
+            user_id: User context for user-scoped enforcement
         """
+        self._user_id = user_id  # Store user context
         self.enforcement_level = enforcement_level
         self.agent_compliance: Dict[str, AgentCompliance] = {}
         logger.info(f"ParameterEnforcementService initialized with level: {enforcement_level.value}")
+
+    def with_user(self, user_id: str) -> 'ParameterEnforcementService':
+        """Create a new service instance scoped to a specific user."""
+        return ParameterEnforcementService(self.enforcement_level, user_id)
     
     def enforce(
         self,

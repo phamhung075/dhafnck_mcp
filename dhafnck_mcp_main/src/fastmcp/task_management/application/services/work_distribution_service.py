@@ -114,16 +114,41 @@ class WorkDistributionService:
         task_repository: TaskRepository,
         agent_repository: Optional[Any] = None,  # AgentRepository not implemented yet
         coordination_service: Optional[AgentCoordinationService] = None,
-        event_bus: Optional[Any] = None  # EventBus not implemented yet
+        event_bus: Optional[Any] = None,  # EventBus not implemented yet
+        user_id: Optional[str] = None
     ):
         self.task_repository = task_repository
         self.agent_repository = agent_repository
         self.coordination_service = coordination_service
         self.event_bus = event_bus
+        self._user_id = user_id  # Store user context
         
         # Track distribution history for learning
         self.distribution_history: List[Dict[str, Any]] = []
         self.agent_performance_cache: Dict[str, float] = {}
+
+    def _get_user_scoped_repository(self, repository: Any) -> Any:
+        """Get a user-scoped version of the repository if it supports user context."""
+        if not repository:
+            return repository
+        if hasattr(repository, 'with_user') and self._user_id:
+            return repository.with_user(self._user_id)
+        elif hasattr(repository, 'user_id'):
+            if self._user_id and repository.user_id != self._user_id:
+                repo_class = type(repository)
+                if hasattr(repository, 'session'):
+                    return repo_class(repository.session, user_id=self._user_id)
+        return repository
+
+    def with_user(self, user_id: str) -> 'WorkDistributionService':
+        """Create a new service instance scoped to a specific user."""
+        return WorkDistributionService(
+            self.task_repository,
+            self.agent_repository,
+            self.coordination_service,
+            self.event_bus,
+            user_id
+        )
     
     async def distribute_tasks(
         self,
@@ -136,8 +161,9 @@ class WorkDistributionService:
         
         # Get tasks
         tasks = []
+        task_repo = self._get_user_scoped_repository(self.task_repository)
         for task_id in task_ids:
-            task = await self.task_repository.get(task_id)
+            task = await task_repo.get(task_id)
             if task and task.status.value in [TaskStatusEnum.TODO.value, TaskStatusEnum.IN_PROGRESS.value]:
                 tasks.append(task)
         
@@ -146,10 +172,11 @@ class WorkDistributionService:
             return plan
         
         # Get available agents
+        agent_repo = self._get_user_scoped_repository(self.agent_repository)
         if project_id:
-            agents = await self.agent_repository.get_by_project(project_id)
+            agents = await agent_repo.get_by_project(project_id) if agent_repo else []
         else:
-            agents = await self.agent_repository.get_all()
+            agents = await agent_repo.get_all() if agent_repo else []
         
         available_agents = [a for a in agents if a.is_available()]
         

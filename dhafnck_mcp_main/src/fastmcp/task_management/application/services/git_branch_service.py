@@ -13,7 +13,9 @@ logger = logging.getLogger(__name__)
 
 class GitBranchService:
     def __init__(self, project_repo: Optional[ProjectRepository] = None, 
-                 hierarchical_context_service: Optional[UnifiedContextService] = None):
+                 hierarchical_context_service: Optional[UnifiedContextService] = None,
+                 user_id: Optional[str] = None):
+        self._user_id = user_id  # Store user context
         self._project_repo = project_repo or GlobalRepositoryManager.get_default()
         # Initialize git branch repository
         from ...infrastructure.repositories.orm.git_branch_repository import ORMGitBranchRepository
@@ -26,18 +28,30 @@ class GitBranchService:
             factory = UnifiedContextFacadeFactory()
             self._hierarchical_context_service = factory.create_unified_service()
 
+    def with_user(self, user_id: str) -> 'GitBranchService':
+        """Create a new service instance scoped to a specific user."""
+        return GitBranchService(self._project_repo, self._hierarchical_context_service, user_id)
+
+    def _get_user_scoped_repository(self, repository):
+        """Get user-scoped repository if user_id is available."""
+        if self._user_id and hasattr(repository, 'with_user'):
+            return repository.with_user(self._user_id)
+        return repository
+
     async def create_git_branch(self, project_id: str, branch_name: str, description: str = "") -> Dict[str, Any]:
-        project = await self._project_repo.find_by_id(project_id)
+        project_repo = self._get_user_scoped_repository(self._project_repo)
+        project = await project_repo.find_by_id(project_id)
         if not project:
             return {"success": False, "error": f"Project {project_id} not found"}
             
         # Check if branch already exists using the repository
-        existing_branch = await self._git_branch_repo.find_by_name(project_id, branch_name)
+        git_branch_repo = self._get_user_scoped_repository(self._git_branch_repo)
+        existing_branch = await git_branch_repo.find_by_name(project_id, branch_name)
         if existing_branch:
             return {"success": False, "error": f"Git branch '{branch_name}' already exists in project {project_id}"}
 
         # Create branch using the repository which properly persists it
-        git_branch = await self._git_branch_repo.create_branch(project_id, branch_name, description)
+        git_branch = await git_branch_repo.create_branch(project_id, branch_name, description)
         
         # Create corresponding branch context in hierarchical context system
         try:
@@ -69,7 +83,7 @@ class GitBranchService:
         
         # Also add to project entity for consistency
         project.add_git_branch(git_branch)
-        await self._project_repo.update(project)
+        await project_repo.update(project)
         
         # Return format expected by integration test
         return {
@@ -84,7 +98,8 @@ class GitBranchService:
         }
 
     async def get_git_branch(self, project_id: str, branch_name: str) -> Dict[str, Any]:
-        project = await self._project_repo.find_by_id(project_id)
+        project_repo = self._get_user_scoped_repository(self._project_repo)
+        project = await project_repo.find_by_id(project_id)
         if not project:
             return {"success": False, "error": f"Project {project_id} not found"}
         
@@ -95,7 +110,8 @@ class GitBranchService:
         return {"success": True, "git_branch": git_branch.to_dict()}
 
     async def list_git_branchs(self, project_id: str) -> Dict[str, Any]:
-        project = await self._project_repo.find_by_id(project_id)
+        project_repo = self._get_user_scoped_repository(self._project_repo)
+        project = await project_repo.find_by_id(project_id)
         if not project:
             return {"success": False, "error": f"Project {project_id} not found"}
             
@@ -105,7 +121,8 @@ class GitBranchService:
         """Delete a git branch and its associated data."""
         try:
             # First get the branch ID to find the project_id
-            result = await self._git_branch_repo.get_git_branch_by_id(git_branch_id)
+            git_branch_repo = self._get_user_scoped_repository(self._git_branch_repo)
+            result = await git_branch_repo.get_git_branch_by_id(git_branch_id)
             if not result.get("success"):
                 return {"success": False, "error": f"Git branch {git_branch_id} not found", "error_code": "NOT_FOUND"}
             
@@ -113,7 +130,7 @@ class GitBranchService:
             project_id = git_branch_data.get("project_id")
             
             # Delete the git branch using repository
-            await self._git_branch_repo.delete_branch(git_branch_id)
+            await git_branch_repo.delete_branch(git_branch_id)
             
             # Delete associated branch context
             try:
@@ -128,10 +145,11 @@ class GitBranchService:
             
             # Remove from project entity
             if project_id:
-                project = await self._project_repo.find_by_id(project_id)
+                project_repo = self._get_user_scoped_repository(self._project_repo)
+                project = await project_repo.find_by_id(project_id)
                 if project and git_branch_id in project.git_branchs:
                     del project.git_branchs[git_branch_id]
-                    await self._project_repo.update(project)
+                    await project_repo.update(project)
             
             logger.info(f"Successfully deleted git branch {git_branch_id}")
             
@@ -151,7 +169,8 @@ class GitBranchService:
         """
         try:
             # Verify the git branch exists
-            git_branch = await self._git_branch_repo.find_by_id(branch_id)
+            git_branch_repo = self._get_user_scoped_repository(self._git_branch_repo)
+            git_branch = await git_branch_repo.find_by_id(branch_id)
             if not git_branch:
                 return {"success": False, "error": f"Git branch {branch_id} not found"}
             

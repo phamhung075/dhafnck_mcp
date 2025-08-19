@@ -38,15 +38,39 @@ class ProgressTrackingService:
     def __init__(self, 
                  task_repository: TaskRepository,
                  context_repository: ContextRepository,
-                 event_bus: Optional[EventBus] = None):
+                 event_bus: Optional[EventBus] = None,
+                 user_id: Optional[str] = None):
         """Initialize progress tracking service."""
         self.task_repository = task_repository
         self.context_repository = context_repository
         self.event_bus = event_bus or get_event_bus()
+        self._user_id = user_id  # Store user context
         
         # Configuration
         self.stall_threshold_hours = 24  # Consider progress stalled after 24 hours
         self.auto_calculate_interval = 300  # Auto-calculate every 5 minutes
+
+    def _get_user_scoped_repository(self, repository: Any) -> Any:
+        """Get a user-scoped version of the repository if it supports user context."""
+        if not repository:
+            return repository
+        if hasattr(repository, 'with_user') and self._user_id:
+            return repository.with_user(self._user_id)
+        elif hasattr(repository, 'user_id'):
+            if self._user_id and repository.user_id != self._user_id:
+                repo_class = type(repository)
+                if hasattr(repository, 'session'):
+                    return repo_class(repository.session, user_id=self._user_id)
+        return repository
+
+    def with_user(self, user_id: str) -> 'ProgressTrackingService':
+        """Create a new service instance scoped to a specific user."""
+        return ProgressTrackingService(
+            self.task_repository,
+            self.context_repository,
+            self.event_bus,
+            user_id
+        )
         
     async def update_progress(self,
                             task_id: str,
@@ -69,8 +93,9 @@ class ProgressTrackingService:
         Returns:
             Updated task entity
         """
-        # Get task
-        task = await self.task_repository.get_by_id(TaskId(task_id))
+        # Get task using user-scoped repository
+        task_repo = self._get_user_scoped_repository(self.task_repository)
+        task = await task_repo.get_by_id(TaskId(task_id))
         if not task:
             raise ValueError(f"Task {task_id} not found")
         
