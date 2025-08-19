@@ -3,6 +3,15 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Profile } from '../../pages/Profile';
 import { AuthContext } from '../../contexts/AuthContext';
 
+// Mock useTheme hook
+jest.mock('../../hooks/useTheme', () => ({
+  useTheme: () => ({
+    theme: 'light',
+    setTheme: jest.fn(),
+    toggleTheme: jest.fn(),
+  }),
+}));
+
 // Mock window.alert
 global.alert = jest.fn();
 

@@ -24,7 +24,11 @@ describe('Context API Functions', () => {
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          result: mockResponse
+          result: {
+            content: [{
+              text: JSON.stringify(mockResponse)
+            }]
+          }
         })
       });
 
@@ -66,7 +70,11 @@ describe('Context API Functions', () => {
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          result: errorResponse
+          result: {
+            content: [{
+              text: JSON.stringify(errorResponse)
+            }]
+          }
         })
       });
 
@@ -96,7 +104,11 @@ describe('Context API Functions', () => {
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          result: mockResponse
+          result: {
+            content: [{
+              text: JSON.stringify(mockResponse)
+            }]
+          }
         })
       });
 
@@ -117,8 +129,11 @@ describe('Context API Functions', () => {
       const requestBody = JSON.parse(callArgs[1].body);
       
       expect(requestBody.params.arguments).toEqual({
-        action: 'get',
-        task_id: taskId
+        action: 'resolve',
+        level: 'task',
+        context_id: taskId,
+        force_refresh: false,
+        include_inherited: true
       });
 
       expect(result).toEqual(mockResponse);
@@ -135,7 +150,11 @@ describe('Context API Functions', () => {
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          result: errorResponse
+          result: {
+            content: [{
+              text: JSON.stringify(errorResponse)
+            }]
+          }
         })
       });
 
@@ -186,7 +205,13 @@ describe('Context API Functions', () => {
 
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ result: mockResponse })
+        json: async () => ({ 
+          result: {
+            content: [{
+              text: JSON.stringify(mockResponse)
+            }]
+          }
+        })
       });
 
       // Act
@@ -219,7 +244,13 @@ describe('Context API Functions', () => {
 
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ result: mockResponse })
+        json: async () => ({ 
+          result: {
+            content: [{
+              text: JSON.stringify(mockResponse)
+            }]
+          }
+        })
       });
 
       // Act

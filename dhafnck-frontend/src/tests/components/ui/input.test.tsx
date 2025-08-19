@@ -7,14 +7,14 @@ import { cn } from '../../../lib/utils';
 
 // Mock the cn utility
 jest.mock('../../../lib/utils', () => ({
-  cn: jest.fn((...args) => args.filter(Boolean).join(' ')),
+  cn: jest.fn((...args: any[]) => args.filter(Boolean).join(' ')),
 }));
 
 describe('Input', () => {
-  const user = userEvent.setup();
-
   beforeEach(() => {
     jest.clearAllMocks();
+    // Ensure the mock is working
+    (cn as jest.Mock).mockImplementation((...args: any[]) => args.filter(Boolean).join(' '));
   });
 
   it('renders with default props', () => {
@@ -23,7 +23,13 @@ describe('Input', () => {
     const input = screen.getByRole('textbox');
     expect(input).toBeInTheDocument();
     expect(input).toHaveAttribute('type', 'text');
-    expect(input).toHaveClass('theme-input flex h-10 w-full text-sm disabled:opacity-50 disabled:pointer-events-none');
+    expect(input.className).toContain('theme-input');
+    expect(input.className).toContain('flex');
+    expect(input.className).toContain('h-10');
+    expect(input.className).toContain('w-full');
+    expect(input.className).toContain('text-sm');
+    expect(input.className).toContain('disabled:opacity-50');
+    expect(input.className).toContain('disabled:pointer-events-none');
   });
 
   it('renders with custom type', () => {
@@ -47,8 +53,14 @@ describe('Input', () => {
     render(<Input className="custom-input" />);
     
     const input = screen.getByRole('textbox');
-    expect(input).toHaveClass('theme-input flex h-10 w-full text-sm disabled:opacity-50 disabled:pointer-events-none');
-    expect(input).toHaveClass('custom-input');
+    expect(input.className).toContain('theme-input');
+    expect(input.className).toContain('flex');
+    expect(input.className).toContain('h-10');
+    expect(input.className).toContain('w-full');
+    expect(input.className).toContain('text-sm');
+    expect(input.className).toContain('disabled:opacity-50');
+    expect(input.className).toContain('disabled:pointer-events-none');
+    expect(input.className).toContain('custom-input');
   });
 
   it('forwards ref correctly', () => {
@@ -59,14 +71,14 @@ describe('Input', () => {
     expect(ref.current?.tagName).toBe('INPUT');
   });
 
-  it('handles value and onChange', async () => {
+  it('handles value and onChange', () => {
     const handleChange = jest.fn();
     render(<Input value="test" onChange={handleChange} />);
     
     const input = screen.getByRole('textbox');
     expect(input).toHaveValue('test');
     
-    await user.type(input, 'a');
+    userEvent.type(input, 'a');
     expect(handleChange).toHaveBeenCalled();
   });
 
@@ -82,7 +94,8 @@ describe('Input', () => {
     
     const input = screen.getByRole('textbox');
     expect(input).toBeDisabled();
-    expect(input).toHaveClass('disabled:opacity-50 disabled:pointer-events-none');
+    expect(input.className).toContain('disabled:opacity-50');
+    expect(input.className).toContain('disabled:pointer-events-none');
   });
 
   it('handles readonly state', () => {

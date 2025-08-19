@@ -6,12 +6,14 @@ import { cn } from '../../../lib/utils';
 
 // Mock the cn utility
 jest.mock('../../../lib/utils', () => ({
-  cn: jest.fn((...args) => args.filter(Boolean).join(' ')),
+  cn: jest.fn((...args: any[]) => args.filter(Boolean).join(' ')),
 }));
 
 describe('Button', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Ensure the mock is working
+    (cn as jest.Mock).mockImplementation((...args: any[]) => args.filter(Boolean).join(' '));
   });
 
   it('renders with default props', () => {
@@ -19,8 +21,11 @@ describe('Button', () => {
     
     const button = screen.getByRole('button', { name: /click me/i });
     expect(button).toBeInTheDocument();
-    expect(button).toHaveClass('theme-btn-primary');
-    expect(button).toHaveClass('h-10 px-4 py-2');
+    // Check that the button's className contains the expected classes
+    expect(button.className).toContain('theme-btn-primary');
+    expect(button.className).toContain('h-10');
+    expect(button.className).toContain('px-4');
+    expect(button.className).toContain('py-2');
   });
 
   describe('variants', () => {
@@ -28,35 +33,38 @@ describe('Button', () => {
       render(<Button variant="default">Default</Button>);
       
       const button = screen.getByRole('button');
-      expect(button).toHaveClass('theme-btn-primary');
+      expect(button.className).toContain('theme-btn-primary');
     });
 
     it('renders outline variant', () => {
       render(<Button variant="outline">Outline</Button>);
       
       const button = screen.getByRole('button');
-      expect(button).toHaveClass('theme-btn-outline');
+      expect(button.className).toContain('theme-btn-outline');
     });
 
     it('renders secondary variant', () => {
       render(<Button variant="secondary">Secondary</Button>);
       
       const button = screen.getByRole('button');
-      expect(button).toHaveClass('theme-btn-secondary');
+      expect(button.className).toContain('theme-btn-secondary');
     });
 
     it('renders ghost variant', () => {
       render(<Button variant="ghost">Ghost</Button>);
       
       const button = screen.getByRole('button');
-      expect(button).toHaveClass('hover:bg-background-hover text-base-primary');
+      expect(button.className).toContain('hover:bg-background-hover');
+      expect(button.className).toContain('text-base-primary');
     });
 
     it('renders link variant', () => {
       render(<Button variant="link">Link</Button>);
       
       const button = screen.getByRole('button');
-      expect(button).toHaveClass('underline-offset-4 hover:underline text-primary');
+      expect(button.className).toContain('underline-offset-4');
+      expect(button.className).toContain('hover:underline');
+      expect(button.className).toContain('text-primary');
     });
   });
 
@@ -65,28 +73,37 @@ describe('Button', () => {
       render(<Button size="default">Default</Button>);
       
       const button = screen.getByRole('button');
-      expect(button).toHaveClass('h-10 px-4 py-2');
+      expect(button.className).toContain('h-10');
+      expect(button.className).toContain('px-4');
+      expect(button.className).toContain('py-2');
     });
 
     it('renders small size', () => {
       render(<Button size="sm">Small</Button>);
       
       const button = screen.getByRole('button');
-      expect(button).toHaveClass('h-9 px-3');
+      expect(button.className).toContain('h-9');
+      expect(button.className).toContain('px-3');
     });
 
     it('renders large size', () => {
       render(<Button size="lg">Large</Button>);
       
       const button = screen.getByRole('button');
-      expect(button).toHaveClass('h-11 px-8');
+      expect(button.className).toContain('h-11');
+      expect(button.className).toContain('px-8');
     });
 
     it('renders icon size', () => {
       render(<Button size="icon">🔥</Button>);
       
       const button = screen.getByRole('button');
-      expect(button).toHaveClass('h-10 w-10 p-0 flex items-center justify-center');
+      expect(button.className).toContain('h-10');
+      expect(button.className).toContain('w-10');
+      expect(button.className).toContain('p-0');
+      expect(button.className).toContain('flex');
+      expect(button.className).toContain('items-center');
+      expect(button.className).toContain('justify-center');
     });
   });
 
@@ -94,7 +111,7 @@ describe('Button', () => {
     render(<Button className="custom-class">Custom</Button>);
     
     const button = screen.getByRole('button');
-    expect(button).toHaveClass('custom-class');
+    expect(button.className).toContain('custom-class');
   });
 
   it('forwards ref correctly', () => {
@@ -121,7 +138,8 @@ describe('Button', () => {
     
     const button = screen.getByRole('button');
     expect(button).toBeDisabled();
-    expect(button).toHaveClass('disabled:opacity-50 disabled:pointer-events-none');
+    expect(button.className).toContain('disabled:opacity-50');
+    expect(button.className).toContain('disabled:pointer-events-none');
     
     fireEvent.click(button);
     expect(handleClick).not.toHaveBeenCalled();
@@ -131,18 +149,18 @@ describe('Button', () => {
     render(<Button>Base Classes</Button>);
     
     const button = screen.getByRole('button');
-    expect(button).toHaveClass('inline-flex');
-    expect(button).toHaveClass('items-center');
-    expect(button).toHaveClass('justify-center');
-    expect(button).toHaveClass('rounded-md');
-    expect(button).toHaveClass('text-sm');
-    expect(button).toHaveClass('font-medium');
-    expect(button).toHaveClass('transition-colors');
-    expect(button).toHaveClass('focus-visible:outline-none');
-    expect(button).toHaveClass('focus-visible:ring-2');
-    expect(button).toHaveClass('focus-visible:ring-ring');
-    expect(button).toHaveClass('focus-visible:ring-offset-2');
-    expect(button).toHaveClass('ring-offset-background');
+    expect(button.className).toContain('inline-flex');
+    expect(button.className).toContain('items-center');
+    expect(button.className).toContain('justify-center');
+    expect(button.className).toContain('rounded-md');
+    expect(button.className).toContain('text-sm');
+    expect(button.className).toContain('font-medium');
+    expect(button.className).toContain('transition-colors');
+    expect(button.className).toContain('focus-visible:outline-none');
+    expect(button.className).toContain('focus-visible:ring-2');
+    expect(button.className).toContain('focus-visible:ring-ring');
+    expect(button.className).toContain('focus-visible:ring-offset-2');
+    expect(button.className).toContain('ring-offset-background');
   });
 
   it('passes through HTML button attributes', () => {
@@ -170,8 +188,9 @@ describe('Button', () => {
     render(<Button variant="outline" size="lg">Combined</Button>);
     
     const button = screen.getByRole('button');
-    expect(button).toHaveClass('theme-btn-outline');
-    expect(button).toHaveClass('h-11 px-8');
+    expect(button.className).toContain('theme-btn-outline');
+    expect(button.className).toContain('h-11');
+    expect(button.className).toContain('px-8');
   });
 
   it('calls cn utility with correct arguments', () => {

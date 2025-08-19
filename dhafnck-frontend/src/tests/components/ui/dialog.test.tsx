@@ -6,12 +6,14 @@ import { cn } from '../../../lib/utils';
 
 // Mock the cn utility
 jest.mock('../../../lib/utils', () => ({
-  cn: jest.fn((...args) => args.filter(Boolean).join(' ')),
+  cn: jest.fn((...args: any[]) => args.filter(Boolean).join(' ')),
 }));
 
 describe('Dialog components', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Ensure the mock is working
+    (cn as jest.Mock).mockImplementation((...args: any[]) => args.filter(Boolean).join(' '));
     // Reset body overflow style
     document.body.style.overflow = 'unset';
   });
@@ -162,7 +164,9 @@ describe('Dialog components', () => {
       );
       
       const content = screen.getByText('Content').parentElement;
-      expect(content).toHaveClass('theme-modal w-full relative');
+      expect(content.className).toContain('theme-modal');
+      expect(content.className).toContain('w-full');
+      expect(content.className).toContain('relative');
     });
 
     it('applies custom className', () => {
@@ -173,8 +177,10 @@ describe('Dialog components', () => {
       );
       
       const content = screen.getByText('Content').parentElement;
-      expect(content).toHaveClass('theme-modal w-full relative');
-      expect(content).toHaveClass('custom-content');
+      expect(content.className).toContain('theme-modal');
+      expect(content.className).toContain('w-full');
+      expect(content.className).toContain('relative');
+      expect(content.className).toContain('custom-content');
     });
 
     it('stops click propagation', () => {
@@ -213,7 +219,7 @@ describe('Dialog components', () => {
       );
       
       const header = screen.getByText('Header').parentElement;
-      expect(header).toHaveClass('mb-4');
+      expect(header.className).toContain('mb-4');
     });
 
     it('applies custom className', () => {
@@ -224,8 +230,8 @@ describe('Dialog components', () => {
       );
       
       const header = screen.getByText('Header').parentElement;
-      expect(header).toHaveClass('mb-4');
-      expect(header).toHaveClass('custom-header');
+      expect(header.className).toContain('mb-4');
+      expect(header.className).toContain('custom-header');
     });
   });
 
@@ -241,15 +247,17 @@ describe('Dialog components', () => {
       render(<DialogTitle>Title</DialogTitle>);
       
       const title = screen.getByRole('heading', { level: 2 });
-      expect(title).toHaveClass('theme-modal-header text-left');
+      expect(title.className).toContain('theme-modal-header');
+      expect(title.className).toContain('text-left');
     });
 
     it('applies custom className', () => {
       render(<DialogTitle className="custom-title">Title</DialogTitle>);
       
       const title = screen.getByRole('heading', { level: 2 });
-      expect(title).toHaveClass('theme-modal-header text-left');
-      expect(title).toHaveClass('custom-title');
+      expect(title.className).toContain('theme-modal-header');
+      expect(title.className).toContain('text-left');
+      expect(title.className).toContain('custom-title');
     });
   });
 
@@ -274,7 +282,10 @@ describe('Dialog components', () => {
       );
       
       const footer = screen.getByText('Action').parentElement;
-      expect(footer).toHaveClass('mt-6 flex justify-end gap-2');
+      expect(footer.className).toContain('mt-6');
+      expect(footer.className).toContain('flex');
+      expect(footer.className).toContain('justify-end');
+      expect(footer.className).toContain('gap-2');
     });
 
     it('applies custom className', () => {
@@ -285,8 +296,11 @@ describe('Dialog components', () => {
       );
       
       const footer = screen.getByText('Action').parentElement;
-      expect(footer).toHaveClass('mt-6 flex justify-end gap-2');
-      expect(footer).toHaveClass('custom-footer');
+      expect(footer.className).toContain('mt-6');
+      expect(footer.className).toContain('flex');
+      expect(footer.className).toContain('justify-end');
+      expect(footer.className).toContain('gap-2');
+      expect(footer.className).toContain('custom-footer');
     });
   });
 

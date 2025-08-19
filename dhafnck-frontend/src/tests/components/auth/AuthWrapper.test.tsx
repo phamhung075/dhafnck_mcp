@@ -7,11 +7,15 @@ import { MuiThemeWrapper } from '../../../contexts/MuiThemeProvider';
 
 // Mock the context providers
 jest.mock('../../../contexts/AuthContext', () => ({
-  AuthProvider: jest.fn(({ children }) => <div data-testid="auth-provider">{children}</div>),
+  AuthProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="auth-provider">{children}</div>
+  ),
 }));
 
 jest.mock('../../../contexts/MuiThemeProvider', () => ({
-  MuiThemeWrapper: jest.fn(({ children }) => <div data-testid="mui-theme-wrapper">{children}</div>),
+  MuiThemeWrapper: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="mui-theme-wrapper">{children}</div>
+  ),
 }));
 
 describe('AuthWrapper', () => {

@@ -85,15 +85,13 @@ describe('ThemeToggle', () => {
   });
 
   it('toggles between light and dark mode icons', () => {
-    const { rerender } = render(<ThemeToggle />);
-
     // Start with light mode
     mockedUseTheme.mockReturnValue({
       theme: 'light',
       toggleTheme: mockToggleTheme,
       setTheme: jest.fn(),
     });
-    rerender(<ThemeToggle />);
+    const { rerender } = render(<ThemeToggle />);
     
     let button = screen.getByRole('button');
     expect(button.querySelector('.lucide-moon')).toBeInTheDocument();

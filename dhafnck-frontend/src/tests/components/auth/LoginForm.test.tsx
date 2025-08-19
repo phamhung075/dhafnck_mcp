@@ -11,6 +11,7 @@ import userEvent from '@testing-library/user-event';
 jest.mock('../../../hooks/useAuth');
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
+  BrowserRouter: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useNavigate: jest.fn(),
   Link: ({ children, to, ...props }: any) => <a href={to} {...props}>{children}</a>,
 }));

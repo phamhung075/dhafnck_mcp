@@ -1,7 +1,18 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
 import App from '../App';
+
+// Mock react-router-dom
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  BrowserRouter: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  Routes: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  Route: ({ element }: { element: React.ReactNode }) => <>{element}</>,
+  Navigate: ({ to }: { to: string }) => <div>Navigate to {to}</div>,
+  useNavigate: () => jest.fn(),
+  useLocation: () => ({ pathname: '/' }),
+  useParams: () => ({})
+}));
 
 // Mock the auth context
 jest.mock('../contexts/AuthContext', () => ({
@@ -63,19 +74,11 @@ describe('App', () => {
   });
 
   it('renders without crashing', () => {
-    render(
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    );
+    render(<App />);
   });
 
   it('redirects to dashboard from root path', async () => {
-    render(
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    );
+    render(<App />);
 
     await waitFor(() => {
       expect(window.location.pathname).toBe('/dashboard');
@@ -86,9 +89,7 @@ describe('App', () => {
     window.history.pushState({}, '', '/login');
     
     render(
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <App />
     );
 
     expect(screen.getByText('Login Form')).toBeInTheDocument();
@@ -98,9 +99,7 @@ describe('App', () => {
     window.history.pushState({}, '', '/signup');
     
     render(
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <App />
     );
 
     expect(screen.getByText('Signup Form')).toBeInTheDocument();
@@ -110,9 +109,7 @@ describe('App', () => {
     window.history.pushState({}, '', '/auth/verify');
     
     render(
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <App />
     );
 
     expect(screen.getByText('Email Verification')).toBeInTheDocument();
@@ -122,9 +119,7 @@ describe('App', () => {
     window.history.pushState({}, '', '/dashboard');
     
     render(
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <App />
     );
 
     expect(screen.getByText('Test Header')).toBeInTheDocument();
@@ -136,9 +131,7 @@ describe('App', () => {
     window.history.pushState({}, '', '/profile');
     
     render(
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <App />
     );
 
     expect(screen.getByTestId('app-layout')).toBeInTheDocument();

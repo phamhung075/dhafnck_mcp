@@ -1,8 +1,8 @@
-import * as api from '../../api';
-import * as apiV2 from '../../services/apiV2';
+import * as api from '../api';
+import * as apiV2 from '../services/apiV2';
 
 // Mock services/apiV2
-jest.mock('../../services/apiV2', () => ({
+jest.mock('../services/apiV2', () => ({
   taskApiV2: {
     getTasks: jest.fn(),
     createTask: jest.fn(),

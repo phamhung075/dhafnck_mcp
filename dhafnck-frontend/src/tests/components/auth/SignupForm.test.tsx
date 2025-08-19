@@ -8,6 +8,7 @@ import { useAuth } from '../../../hooks/useAuth';
 // Mock dependencies
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
+  BrowserRouter: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useNavigate: jest.fn(),
   Link: ({ to, children }: any) => <a href={to}>{children}</a>,
 }));
