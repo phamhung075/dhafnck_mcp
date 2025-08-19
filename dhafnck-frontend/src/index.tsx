@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import 'tailwindcss/tailwind.css';
 import App from './App';
 import './index.css';
+import './styles/theme.css';
 import reportWebVitals from './reportWebVitals';
 import './theme/global.scss';
 

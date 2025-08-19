@@ -3,10 +3,12 @@ import { AuthContext } from '../contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { User, Mail, Shield, Calendar, Edit2, Save, X, Lock, Settings } from 'lucide-react';
+import { User, Mail, Shield, Calendar, Edit2, Save, X, Lock, Settings, Moon, Sun } from 'lucide-react';
+import { useTheme } from '../hooks/useTheme';
 
 export const Profile: React.FC = () => {
   const authContext = useContext(AuthContext);
+  const { theme, setTheme } = useTheme();
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState<'account' | 'security' | 'preferences'>('account');
   const [formData, setFormData] = useState({
@@ -213,42 +215,92 @@ export const Profile: React.FC = () => {
         )}
 
         {activeTab === 'preferences' && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Preferences</CardTitle>
-              <CardDescription>
-                Customize your application experience
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="theme" className="text-sm font-medium">Theme</label>
-                <select
-                  id="theme"
-                  className="w-full px-3 py-2 border rounded-md"
-                  disabled={!isEditing}
-                >
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
-                  <option value="system">System</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="notifications" className="text-sm font-medium">Email Notifications</label>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="notifications"
-                    className="rounded"
-                    disabled={!isEditing}
-                  />
-                  <label htmlFor="notifications" className="font-normal">
-                    Receive email notifications for important updates
-                  </label>
+          <div className="space-y-6">
+            {/* Theme Preference Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Appearance</CardTitle>
+                <CardDescription>
+                  Customize how the application looks on your device
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <label className="text-sm font-medium mb-4 block">Theme Preference</label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button
+                      onClick={() => setTheme('light')}
+                      className={`p-4 rounded-lg border-2 transition-all ${
+                        theme === 'light' 
+                          ? 'border-primary bg-primary/5' 
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <Sun className="h-5 w-5 text-yellow-500" />
+                        <div className="text-left">
+                          <div className="font-medium">Light Mode</div>
+                          <div className="text-sm text-gray-500">Bright and clear interface</div>
+                        </div>
+                      </div>
+                    </button>
+                    
+                    <button
+                      onClick={() => setTheme('dark')}
+                      className={`p-4 rounded-lg border-2 transition-all ${
+                        theme === 'dark' 
+                          ? 'border-primary bg-primary/5' 
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <Moon className="h-5 w-5 text-blue-500" />
+                        <div className="text-left">
+                          <div className="font-medium">Dark Mode</div>
+                          <div className="text-sm text-gray-500">Easy on the eyes in low light</div>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                  
+                  <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                      <strong>Current theme:</strong> {theme === 'light' ? 'Light' : 'Dark'} mode
+                    </p>
+                    <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
+                      Your preference is automatically saved and synced across sessions
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+
+            {/* Notification Preferences Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Notifications</CardTitle>
+                <CardDescription>
+                  Manage how you receive updates and alerts
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="notifications" className="text-sm font-medium">Email Notifications</label>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="notifications"
+                      className="rounded"
+                      disabled={!isEditing}
+                    />
+                    <label htmlFor="notifications" className="font-normal">
+                      Receive email notifications for important updates
+                    </label>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         )}
       </div>
     </div>

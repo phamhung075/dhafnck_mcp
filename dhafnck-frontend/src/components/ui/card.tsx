@@ -9,7 +9,7 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "rounded-xl border bg-card text-card-foreground shadow",
+      "theme-card",
       className
     )}
     {...props}
@@ -40,7 +40,7 @@ function CardTitle({ className, children, ...props }: React.HTMLAttributes<HTMLH
 function CardDescription({ className, children, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
   return (
     <p
-      className={cn("text-sm text-muted-foreground", className)}
+      className={cn("text-sm text-base-secondary", className)}
       {...props}
     >
       {children}

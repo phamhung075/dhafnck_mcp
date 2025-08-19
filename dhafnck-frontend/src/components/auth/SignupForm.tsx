@@ -14,7 +14,8 @@ import {
   CircularProgress,
   Divider,
   LinearProgress,
-  FormHelperText
+  FormHelperText,
+  useTheme
 } from '@mui/material';
 import {
   Visibility,
@@ -26,6 +27,7 @@ import {
   Cancel
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
+import { ThemeToggle } from '../ThemeToggle';
 
 interface SignupFormData {
   email: string;
@@ -43,6 +45,7 @@ interface PasswordStrength {
 export const SignupForm: React.FC = () => {
   const { signup } = useAuth();
   const navigate = useNavigate();
+  const theme = useTheme();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -199,6 +202,10 @@ export const SignupForm: React.FC = () => {
 
   return (
     <Container component="main" maxWidth="xs">
+      {/* Theme Toggle in top-right corner */}
+      <Box sx={{ position: 'absolute', top: 16, right: 16 }}>
+        <ThemeToggle />
+      </Box>
       <Box
         sx={{
           marginTop: 8,
@@ -213,6 +220,7 @@ export const SignupForm: React.FC = () => {
             padding: 4,
             width: '100%',
             borderRadius: 2,
+            backgroundColor: theme.palette.mode === 'dark' ? 'background.paper' : 'background.default',
           }}
         >
           <Box

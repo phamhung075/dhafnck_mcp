@@ -29,7 +29,7 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
   
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 bg-black/60" onClick={() => onOpenChange(false)}>
+    <div className="theme-modal-overlay" onClick={() => onOpenChange(false)}>
       <div className="fixed inset-0 overflow-y-auto">
         <div className="flex min-h-full items-center justify-center p-4">
           {children}
@@ -43,7 +43,7 @@ export function DialogContent({ children, className }: { children: React.ReactNo
   return (
     <div 
       className={cn(
-        "bg-white dark:bg-gray-900 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 w-full mx-auto p-6 relative",
+        "theme-modal w-full relative",
         className
       )}
       onClick={e => e.stopPropagation()}
@@ -58,7 +58,7 @@ export function DialogHeader({ children, className }: { children: React.ReactNod
 }
 
 export function DialogTitle({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <h2 className={cn("text-lg font-bold text-left", className)}>{children}</h2>;
+  return <h2 className={cn("theme-modal-header text-left", className)}>{children}</h2>;
 }
 
 export function DialogFooter({ children, className }: { children: React.ReactNode; className?: string }) {

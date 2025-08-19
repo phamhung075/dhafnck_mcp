@@ -8,6 +8,7 @@ import { AuthWrapper, LoginForm, SignupForm, ProtectedRoute, EmailVerification }
 import { Header } from './components/Header';
 import { Profile } from './pages/Profile';
 import { AppLayout } from './components/AppLayout';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 // Use lazy loading for TaskList component for better performance
 const LazyTaskList = lazy(() => import('./components/LazyTaskList'));
@@ -38,7 +39,7 @@ function Dashboard() {
   }, []);
 
   return (
-    <div className="flex flex-col h-screen bg-background text-foreground">
+    <div className="flex flex-col h-screen bg-base text-base-primary transition-theme">
       {/* Header */}
       <Header />
       
@@ -51,7 +52,7 @@ function Dashboard() {
         w-96 lg:w-1/3 lg:min-w-[400px] lg:max-w-[500px]
         h-full
         border-r p-4 overflow-y-auto
-        bg-white dark:bg-gray-900
+        bg-surface
         transition-all duration-300 ease-in-out
         z-20
         lg:translate-x-0
@@ -81,7 +82,7 @@ function Dashboard() {
         <Button
           variant="outline"
           size="icon"
-          className={`fixed z-30 lg:hidden bg-white dark:bg-gray-800 border-2 shadow-lg hover:shadow-xl ${
+          className={`fixed z-30 lg:hidden bg-surface border-2 border-surface-border shadow-lg hover:shadow-xl ${
             sidebarOpen ? 'top-4 right-4' : 'top-4 left-4'
           }`}
           onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -125,37 +126,39 @@ function Dashboard() {
 
 function App() {
   return (
-    <AuthWrapper>
-      <Routes>
-        {/* Public routes */}
-        <Route path="/login" element={<LoginForm />} />
-        <Route path="/signup" element={<SignupForm />} />
-        <Route path="/auth/verify" element={<EmailVerification />} />
-        
-        {/* Protected routes */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <AppLayout>
-                <Profile />
-              </AppLayout>
-            </ProtectedRoute>
-          }
-        />
-        
-        {/* Default redirect */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
-    </AuthWrapper>
+    <ThemeProvider>
+      <AuthWrapper>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/login" element={<LoginForm />} />
+          <Route path="/signup" element={<SignupForm />} />
+          <Route path="/auth/verify" element={<EmailVerification />} />
+          
+          {/* Protected routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <Profile />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Default redirect */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </AuthWrapper>
+    </ThemeProvider>
   );
 }
 

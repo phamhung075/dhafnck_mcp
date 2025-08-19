@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
 import { Button } from './ui/button';
 import { User, LogOut, ChevronDown, Settings, Home } from 'lucide-react';
+import { ThemeToggle } from './ThemeToggle';
 
 export const Header: React.FC = () => {
   const authContext = useContext(AuthContext);
@@ -30,46 +31,49 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <header className="border-b bg-white dark:bg-gray-900 px-4 py-3 shadow-sm">
+    <header className="theme-nav px-4 py-3 shadow-sm transition-theme">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link to="/dashboard" className="flex items-center space-x-2">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">DhafnckMCP</h1>
+            <h1 className="text-2xl font-bold text-base-primary">DhafnckMCP</h1>
           </Link>
-          <span className="text-sm text-gray-500 dark:text-gray-400">Multi-Project AI Orchestration Platform</span>
+          <span className="text-sm text-base-secondary">Multi-Project AI Orchestration Platform</span>
         </div>
         
-        {user && (
+        {user ? (
           <div className="flex items-center space-x-4">
             {/* Navigation Links */}
             <nav className="hidden md:flex items-center space-x-4">
               <Link 
                 to="/dashboard" 
-                className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
+                className="theme-nav-item transition-colors"
               >
                 <Home className="h-5 w-5" />
               </Link>
               <Link 
                 to="/profile" 
-                className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
+                className="theme-nav-item transition-colors"
               >
                 <Settings className="h-5 w-5" />
               </Link>
             </nav>
 
+            {/* Theme Toggle */}
+            <ThemeToggle />
+
             {/* User Dropdown */}
             <div className="relative">
               <button
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-background-hover transition-colors"
               >
                 <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-semibold">
                   {getInitials(user.username)}
                 </div>
-                <span className="hidden sm:block text-sm font-medium text-gray-700 dark:text-gray-200">
+                <span className="hidden sm:block text-sm font-medium text-base-primary">
                   {user.username}
                 </span>
-                <ChevronDown className="h-4 w-4 text-gray-500" />
+                <ChevronDown className="h-4 w-4 text-base-secondary" />
               </button>
 
               {/* Dropdown Menu */}
@@ -79,12 +83,12 @@ export const Header: React.FC = () => {
                     className="fixed inset-0 z-10" 
                     onClick={() => setDropdownOpen(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20">
-                    <div className="p-3 border-b border-gray-200 dark:border-gray-700">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  <div className="absolute right-0 mt-2 w-56 bg-surface rounded-lg shadow-lg border border-surface-border z-20">
+                    <div className="p-3 border-b border-surface-border">
+                      <p className="text-sm font-medium text-base-primary">
                         {user.username}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      <p className="text-xs text-base-tertiary mt-1">
                         {user.email}
                       </p>
                     </div>
@@ -93,7 +97,7 @@ export const Header: React.FC = () => {
                       <Link
                         to="/profile"
                         onClick={() => setDropdownOpen(false)}
-                        className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                        className="flex items-center space-x-2 px-3 py-2 text-sm text-base-primary hover:bg-background-hover rounded-md transition-colors"
                       >
                         <User className="h-4 w-4" />
                         <span>Profile</span>
@@ -110,7 +114,7 @@ export const Header: React.FC = () => {
                       
                       <button
                         onClick={handleLogout}
-                        className="flex items-center space-x-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors w-full text-left"
+                        className="flex items-center space-x-2 px-3 py-2 text-sm text-error hover:bg-error-light rounded-md transition-colors w-full text-left"
                       >
                         <LogOut className="h-4 w-4" />
                         <span>Sign Out</span>
@@ -121,6 +125,9 @@ export const Header: React.FC = () => {
               )}
             </div>
           </div>
+        ) : (
+          /* Show theme toggle for non-authenticated users */
+          <ThemeToggle />
         )}
       </div>
     </header>
