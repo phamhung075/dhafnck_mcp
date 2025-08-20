@@ -1,6 +1,9 @@
 """Task Facade Factory
 
 Application layer factory for creating task facades with proper dependency injection.
+
+CRITICAL CHANGE: This factory now requires proper user authentication.
+The default_id fallback has been removed to enforce security requirements.
 """
 
 # NOTE: Importing inside method to avoid circular import with TaskApplicationFacade
@@ -98,14 +101,21 @@ class TaskFacadeFactory:
         Returns:
             Configured task application facade
         """
-        # Import default user ID from domain constants
-        from ...domain.constants import get_default_user_id, normalize_user_id
+        # Import validation and auth config
+        from ...domain.constants import validate_user_id
+        from ...domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
+        from ....config.auth_config import AuthConfig
         
-        # Normalize user_id - use default UUID if None
+        # Validate user authentication is provided
         if user_id is None:
-            user_id = get_default_user_id()
+            # Check if compatibility mode is enabled
+            if AuthConfig.is_default_user_allowed():
+                user_id = AuthConfig.get_fallback_user_id()
+                AuthConfig.log_authentication_bypass("Task facade creation", "compatibility mode")
+            else:
+                raise UserAuthenticationRequiredError("Task facade creation")
         else:
-            user_id = normalize_user_id(user_id)
+            user_id = validate_user_id(user_id, "Task facade creation")
         
         # Create task repository for facade construction
         # For now, use "main" as branch name since we're transitioning to UUIDs
@@ -146,14 +156,21 @@ class TaskFacadeFactory:
         Returns:
             Configured task application facade
         """
-        # Import default user ID from domain constants
-        from ...domain.constants import get_default_user_id, normalize_user_id
+        # Import validation and auth config
+        from ...domain.constants import validate_user_id
+        from ...domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
+        from ....config.auth_config import AuthConfig
         
-        # Normalize user_id - use default UUID if None or "default_id"
+        # Validate user authentication is provided
         if user_id is None:
-            user_id = get_default_user_id()
+            # Check if compatibility mode is enabled
+            if AuthConfig.is_default_user_allowed():
+                user_id = AuthConfig.get_fallback_user_id()
+                AuthConfig.log_authentication_bypass("Task facade with git_branch_id creation", "compatibility mode")
+            else:
+                raise UserAuthenticationRequiredError("Task facade with git_branch_id creation")
         else:
-            user_id = normalize_user_id(user_id)
+            user_id = validate_user_id(user_id, "Task facade with git_branch_id creation")
         
         # Create task repository with git_branch_id directly
         task_repository = self._repository_factory.create_repository_with_git_branch_id(project_id, git_branch_name, user_id, git_branch_id)

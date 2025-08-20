@@ -16,7 +16,6 @@ from .desc import description_loader
 from ...application.factories.git_branch_facade_factory import GitBranchFacadeFactory
 from ...application.facades.git_branch_application_facade import GitBranchApplicationFacade
 from .workflow_guidance.git_branch.git_branch_workflow_factory import GitBranchWorkflowFactory
-from ...domain.constants import get_default_user_id, normalize_user_id
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +28,7 @@ except ImportError:
     get_current_user_id = lambda: None
     # Fallback mixin if thread context manager is not available
     class ContextPropagationMixin:
-        def _run_async_with_context(self, async_func):
+        def _run_async_with_context(self, async_func, *args, **kwargs):
             import asyncio
             import threading
             result = None
@@ -40,7 +39,7 @@ except ImportError:
                     new_loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(new_loop)
                     try:
-                        result = new_loop.run_until_complete(async_func())
+                        result = new_loop.run_until_complete(async_func(*args, **kwargs))
                     finally:
                         new_loop.close()
                         asyncio.set_event_loop(None)

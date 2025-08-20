@@ -67,12 +67,26 @@ class TaskRepositoryFactory:
             default_user_id: Default user ID for single-user mode
             project_root: Injected project root for testing or custom environments
         """
-        from ...domain.constants import get_default_user_id
+        from ...domain.constants import validate_user_id
+        from ...domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
+        from ....config.auth_config import AuthConfig
         
         self.project_root = project_root or _find_project_root()
         self.base_path = base_path or str(self.project_root / ".cursor" / "rules" / "tasks")
+        
+        # Handle default_user_id for compatibility
         if default_user_id is None:
-            default_user_id = get_default_user_id()
+            # Check if compatibility mode is enabled
+            if AuthConfig.is_default_user_allowed():
+                default_user_id = AuthConfig.get_fallback_user_id()
+                AuthConfig.log_authentication_bypass("Task repository factory initialization", "compatibility mode")
+            else:
+                # For factory initialization, we'll allow None and validate later when creating repositories
+                default_user_id = None
+        elif default_user_id:
+            # Validate if a user_id was provided
+            default_user_id = validate_user_id(default_user_id, "Task repository factory initialization")
+        
         self.default_user_id = default_user_id
     
     @classmethod

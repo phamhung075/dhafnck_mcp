@@ -1,10 +1,15 @@
 """Project Facade Factory
 
 Factory for creating project application facades with proper dependency injection following DDD patterns.
+
+CRITICAL CHANGE: This factory now requires proper user authentication.
+The default_id parameter has been removed to enforce security requirements.
 """
 
 import logging
 from typing import Optional, Dict
+from ...domain.constants import validate_user_id
+from ...domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
 from ..facades.project_application_facade import ProjectApplicationFacade
 from ..services.project_management_service import ProjectManagementService
 from ...infrastructure.repositories.project_repository_factory import (
@@ -37,17 +42,22 @@ class ProjectFacadeFactory:
         logger.info("ProjectFacadeFactory initialized")
     
     def create_project_facade(self, 
-                            user_id: str = "default_id") -> ProjectApplicationFacade:
+                            user_id: str) -> ProjectApplicationFacade:
         """
         Create a project application facade with proper dependency injection.
         
         Args:
-            user_id: User identifier
+            user_id: User identifier (required - authentication is mandatory)
             
         Returns:
             ProjectApplicationFacade instance with injected dependencies
+            
+        Raises:
+            UserAuthenticationRequiredError: If user_id is not provided or invalid
         """
-        # Create cache key
+        # Validate user authentication is provided
+        user_id = validate_user_id(user_id, "Project facade creation")
+        # Create cache key after validation
         cache_key = f"{user_id}"
         
         # Check cache first
@@ -86,10 +96,15 @@ class ProjectFacadeFactory:
         Get a cached facade if available.
         
         Args:
-            user_id: User identifier
+            user_id: User identifier (required)
             
         Returns:
             Cached facade or None
+            
+        Raises:
+            UserAuthenticationRequiredError: If user_id is not provided or invalid
         """
+        # Validate user authentication is provided
+        user_id = validate_user_id(user_id, "Get cached facade")
         cache_key = f"{user_id}"
         return self._facades_cache.get(cache_key)

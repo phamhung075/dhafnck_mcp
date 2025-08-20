@@ -75,11 +75,26 @@ class CreateProjectUseCase:
                 
                 # Use unified context facade for project context creation
                 from ..factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+                from ...domain.constants import validate_user_id
+                from ...domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
+                from ....config.auth_config import AuthConfig
+                
+                # Get user_id from request or handle authentication
+                user_id = getattr(request, 'user_id', None)
+                if user_id is None:
+                    # Check if compatibility mode is enabled
+                    if AuthConfig.is_default_user_allowed():
+                        user_id = AuthConfig.get_fallback_user_id()
+                        AuthConfig.log_authentication_bypass("Project context creation", "compatibility mode")
+                    else:
+                        raise UserAuthenticationRequiredError("Project context creation")
+                else:
+                    user_id = validate_user_id(user_id, "Project context creation")
                 
                 # Create unified context facade
                 factory = UnifiedContextFacadeFactory()
                 context_facade = factory.create_facade(
-                    user_id="default_id",
+                    user_id=user_id,
                     project_id=project.id
                 )
                 

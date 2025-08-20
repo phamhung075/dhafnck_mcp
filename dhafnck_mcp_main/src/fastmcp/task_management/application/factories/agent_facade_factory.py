@@ -1,6 +1,9 @@
 """Agent Facade Factory
 
 Factory for creating agent application facades with proper dependency injection following DDD patterns.
+
+CRITICAL CHANGE: This factory now requires proper user authentication.
+The default_id fallback has been removed to enforce security requirements.
 """
 
 import logging
@@ -36,17 +39,20 @@ class AgentFacadeFactory:
         logger.info("AgentFacadeFactory initialized")
     
     def create_agent_facade(self, 
-                           project_id: str = "default_project",
-                           user_id: Optional[str] = None) -> AgentApplicationFacade:
+                           project_id: str,
+                           user_id: str) -> AgentApplicationFacade:
         """
         Create an agent application facade with proper dependency injection.
         
         Args:
-            project_id: Project identifier for scoping
-            user_id: User identifier for data isolation
+            project_id: Project identifier for scoping (required)
+            user_id: User identifier for data isolation (required - authentication is mandatory)
             
         Returns:
             AgentApplicationFacade instance with injected dependencies
+            
+        Raises:
+            UserAuthenticationRequiredError: If user_id is not provided or invalid
         """
         # Create cache key
         cache_key = f"{project_id}"
@@ -56,14 +62,13 @@ class AgentFacadeFactory:
             logger.debug(f"Returning cached agent facade for {cache_key}")
             return self._facades_cache[cache_key]
         
-        # Import default user ID from domain constants
-        from ...domain.constants import get_default_user_id, normalize_user_id
+        # Import validation and auth config
+        from ...domain.constants import validate_user_id
+        from ...domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
+        from ....config.auth_config import AuthConfig
         
-        # Normalize user_id - use default UUID if None
-        if user_id is None:
-            user_id = get_default_user_id()
-        else:
-            user_id = normalize_user_id(user_id)
+        # Validate user authentication is provided
+        user_id = validate_user_id(user_id, "Agent facade creation")
         
         try:
             # Create repository with user_id using the static create method

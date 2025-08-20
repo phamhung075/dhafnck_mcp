@@ -17,7 +17,12 @@ from .desc import description_loader
 from ...application.factories.agent_facade_factory import AgentFacadeFactory
 from ...application.facades.agent_application_facade import AgentApplicationFacade
 from .workflow_guidance.agent.agent_workflow_factory import AgentWorkflowFactory
-from ...domain.constants import get_default_user_id, normalize_user_id
+from ...domain.constants import validate_user_id
+from ...domain.exceptions.authentication_exceptions import (
+    UserAuthenticationRequiredError,
+    DefaultUserProhibitedError
+)
+from ....config.auth_config import AuthConfig
 
 logger = logging.getLogger(__name__)
 
@@ -82,12 +87,17 @@ class AgentMCPController:
         Returns:
             AgentApplicationFacade instance
         """
-        # Get current user context from JWT token or use default
+        # Get current user context from JWT token or handle authentication
         current_user_id = get_current_user_id()
         if current_user_id:
-            user_id = normalize_user_id(current_user_id)
+            user_id = validate_user_id(current_user_id, "Agent facade creation")
         else:
-            user_id = get_default_user_id()
+            # Check if compatibility mode is enabled
+            if AuthConfig.is_default_user_allowed():
+                user_id = AuthConfig.get_fallback_user_id()
+                AuthConfig.log_authentication_bypass("Agent facade creation", "compatibility mode")
+            else:
+                raise UserAuthenticationRequiredError("Agent facade creation")
         
         # Pass user_id to facade factory for proper data isolation
         return self._agent_facade_factory.create_agent_facade(project_id=project_id, user_id=user_id)

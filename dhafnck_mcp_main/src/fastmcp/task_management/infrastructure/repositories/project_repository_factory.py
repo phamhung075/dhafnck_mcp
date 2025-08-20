@@ -32,7 +32,7 @@ class ProjectRepositoryFactory:
     def create(
         cls,
         repository_type: Optional[RepositoryType] = None,
-        user_id: str = "default_id",
+        user_id: Optional[str] = None,
         db_path: Optional[str] = None,
         **kwargs
     ) -> ProjectRepository:
@@ -48,6 +48,21 @@ class ProjectRepositoryFactory:
         Returns:
             ProjectRepository instance
         """
+        # Validate user authentication
+        from ...domain.constants import validate_user_id
+        from ...domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
+        from ....config.auth_config import AuthConfig
+        
+        if user_id is None:
+            # Check if compatibility mode is enabled
+            if AuthConfig.is_default_user_allowed():
+                user_id = AuthConfig.get_fallback_user_id()
+                AuthConfig.log_authentication_bypass("Project repository creation", "compatibility mode")
+            else:
+                raise UserAuthenticationRequiredError("Project repository creation")
+        else:
+            user_id = validate_user_id(user_id, "Project repository creation")
+        
         # Use default repository type if not specified
         if repository_type is None:
             repository_type = cls._get_default_type()
@@ -195,7 +210,7 @@ class RepositoryConfig:
     def __init__(
         self,
         repository_type: Optional[str] = None,
-        user_id: str = "default_id",
+        user_id: Optional[str] = None,
         db_path: Optional[str] = None,
         **kwargs
     ):
@@ -229,7 +244,7 @@ class RepositoryConfig:
         """Create configuration from environment variables"""
         return cls(
             repository_type=os.getenv("MCP_PROJECT_REPOSITORY_TYPE"),
-            user_id=os.getenv("MCP_USER_ID", "default_id"),
+            user_id=os.getenv("MCP_USER_ID"),  # No default - authentication required
             db_path=os.getenv("MCP_DB_PATH")
         )
 

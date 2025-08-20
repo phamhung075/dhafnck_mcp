@@ -15,7 +15,12 @@ if TYPE_CHECKING:
 from .desc import description_loader
 from ...application.factories.project_facade_factory import ProjectFacadeFactory
 from ...application.facades.project_application_facade import ProjectApplicationFacade
-from ...domain.constants import get_default_user_id, normalize_user_id
+from ...domain.constants import validate_user_id
+from ...domain.exceptions.authentication_exceptions import (
+    UserAuthenticationRequiredError,
+    DefaultUserProhibitedError
+)
+from ....config.auth_config import AuthConfig
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +33,7 @@ except ImportError:
     get_current_user_id = lambda: None
     # Fallback mixin if thread context manager is not available
     class ContextPropagationMixin:
-        def _run_async_with_context(self, async_func):
+        def _run_async_with_context(self, async_func, *args, **kwargs):
             import asyncio
             import threading
             result = None
@@ -39,7 +44,7 @@ except ImportError:
                     new_loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(new_loop)
                     try:
-                        result = new_loop.run_until_complete(async_func())
+                        result = new_loop.run_until_complete(async_func(*args, **kwargs))
                     finally:
                         new_loop.close()
                         asyncio.set_event_loop(None)
@@ -105,6 +110,9 @@ class ProjectMCPController(ContextPropagationMixin):
             
         Returns:
             ProjectApplicationFacade instance
+            
+        Raises:
+            UserAuthenticationRequiredError: If no user authentication is available
         """
         # Get actual user ID from context if available
         if user_id is None:
@@ -112,10 +120,15 @@ class ProjectMCPController(ContextPropagationMixin):
             if context_user_id:
                 user_id = context_user_id
             else:
-                user_id = get_default_user_id()
+                # Check if compatibility mode is enabled
+                if AuthConfig.is_default_user_allowed():
+                    user_id = AuthConfig.get_fallback_user_id()
+                    AuthConfig.log_authentication_bypass("Project facade creation", "compatibility mode")
+                else:
+                    raise UserAuthenticationRequiredError("Project facade creation")
         
-        # Normalize the user ID to ensure consistency
-        user_id = normalize_user_id(user_id)
+        # Validate the user ID (will throw if invalid)
+        user_id = validate_user_id(user_id, "Project facade creation")
         
         return self._project_facade_factory.create_project_facade(user_id=user_id)
     
@@ -150,10 +163,15 @@ class ProjectMCPController(ContextPropagationMixin):
             if context_user_id:
                 user_id = context_user_id
             else:
-                user_id = get_default_user_id()
+                # Check if compatibility mode is enabled
+                if AuthConfig.is_default_user_allowed():
+                    user_id = AuthConfig.get_fallback_user_id()
+                    AuthConfig.log_authentication_bypass(f"Project {action}", "compatibility mode")
+                else:
+                    raise UserAuthenticationRequiredError(f"Project {action}")
         
-        # Normalize the user ID
-        user_id = normalize_user_id(user_id)
+        # Validate the user ID (will throw if invalid)
+        user_id = validate_user_id(user_id, f"Project {action}")
         
         # Route to appropriate handler based on action
         if action in ["create", "get", "list", "update", "delete"]:
@@ -271,7 +289,7 @@ class ProjectMCPController(ContextPropagationMixin):
     def _handle_create_project(self, facade: ProjectApplicationFacade, name: str, 
                                description: Optional[str], user_id: str) -> Dict[str, Any]:
         """Convert MCP create parameters and delegate to facade."""
-        async def _run_async():
+        async def _run_async(facade, name, description, user_id):
             return await facade.manage_project(
                 action="create",
                 name=name,
@@ -279,12 +297,12 @@ class ProjectMCPController(ContextPropagationMixin):
                 user_id=user_id
             )
         
-        return self._run_async_with_context(_run_async)
+        return self._run_async_with_context(_run_async, facade, name, description, user_id)
     
     def _handle_get_project(self, facade: ProjectApplicationFacade, 
                            project_id: Optional[str], name: Optional[str]) -> Dict[str, Any]:
         """Handle get project request with enhanced context inclusion."""
-        async def _run_async():
+        async def _run_async(facade, project_id, name, controller_self):
             # Get the basic project data
             result = await facade.manage_project(
                 action="get",
@@ -294,23 +312,23 @@ class ProjectMCPController(ContextPropagationMixin):
             
             # Enhance with project context if successful
             if result.get("success") and result.get("project"):
-                result = self._include_project_context(result)
+                result = controller_self._include_project_context(result)
             
             return result
         
-        return self._run_async_with_context(_run_async)
+        return self._run_async_with_context(_run_async, facade, project_id, name, self)
     
     def _handle_list_projects(self, facade: ProjectApplicationFacade) -> Dict[str, Any]:
         """Handle list projects request."""
-        async def _run_async():
+        async def _run_async(facade):
             return await facade.manage_project(action="list")
         
-        return self._run_async_with_context(_run_async)
+        return self._run_async_with_context(_run_async, facade)
     
     def _handle_update_project(self, facade: ProjectApplicationFacade, project_id: str,
                               name: Optional[str], description: Optional[str]) -> Dict[str, Any]:
         """Handle update project request."""
-        async def _run_async():
+        async def _run_async(facade, project_id, name, description):
             return await facade.manage_project(
                 action="update",
                 project_id=project_id,
@@ -318,24 +336,24 @@ class ProjectMCPController(ContextPropagationMixin):
                 description=description
             )
         
-        return self._run_async_with_context(_run_async)
+        return self._run_async_with_context(_run_async, facade, project_id, name, description)
     
     def _handle_delete_project(self, facade: ProjectApplicationFacade, project_id: str,
                               force: bool = False) -> Dict[str, Any]:
         """Handle delete project request with cascade deletion."""
-        async def _run_async():
+        async def _run_async(facade, project_id, force):
             return await facade.manage_project(
                 action="delete",
                 project_id=project_id,
                 force=force
             )
         
-        return self._run_async_with_context(_run_async)
+        return self._run_async_with_context(_run_async, facade, project_id, force)
     
     def _handle_maintenance_action(self, facade: ProjectApplicationFacade, action: str,
                                   project_id: str, force: bool, user_id: str) -> Dict[str, Any]:
         """Handle maintenance action request."""
-        async def _run_async():
+        async def _run_async(facade, action, project_id, force, user_id):
             return await facade.manage_project(
                 action=action,
                 project_id=project_id,
@@ -343,7 +361,7 @@ class ProjectMCPController(ContextPropagationMixin):
                 user_id=user_id
             )
         
-        return self._run_async_with_context(_run_async)
+        return self._run_async_with_context(_run_async, facade, action, project_id, force, user_id)
 
     def _get_project_management_descriptions(self) -> Dict[str, Any]:
         """

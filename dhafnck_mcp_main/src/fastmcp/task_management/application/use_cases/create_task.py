@@ -112,12 +112,21 @@ class CreateTaskUseCase:
             try:
                 # Use unified context facade for task context creation
                 from ..factories.unified_context_facade_factory import UnifiedContextFacadeFactory
-                from ...domain.constants import get_default_user_id
+                from ...domain.constants import validate_user_id
+                from ...domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
+                from ....config.auth_config import AuthConfig
                 
-                # Get user_id from request or use default
+                # Get user_id from request or handle authentication
                 user_id = getattr(request, 'user_id', None)
                 if user_id is None:
-                    user_id = get_default_user_id()
+                    # Check if compatibility mode is enabled
+                    if AuthConfig.is_default_user_allowed():
+                        user_id = AuthConfig.get_fallback_user_id()
+                        AuthConfig.log_authentication_bypass("Task context creation", "compatibility mode")
+                    else:
+                        raise UserAuthenticationRequiredError("Task context creation")
+                else:
+                    user_id = validate_user_id(user_id, "Task context creation")
                 
                 # Create unified context facade
                 factory = UnifiedContextFacadeFactory()

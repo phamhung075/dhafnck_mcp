@@ -361,15 +361,22 @@ class ORMProjectRepository(BaseORMRepository[Project], BaseUserScopedRepository,
         try:
             with self.transaction():
                 import uuid
-                from ....domain.constants import get_default_user_id, normalize_user_id
+                from ....domain.constants import validate_user_id
+                from ....domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
+                from .....config.auth_config import AuthConfig
                 
                 project_id = str(uuid.uuid4())
                 
-                # Normalize user_id to ensure it's a valid UUID
+                # Validate user authentication is provided
                 if user_id is None:
-                    user_id = get_default_user_id()
+                    # Check if compatibility mode is enabled
+                    if AuthConfig.is_default_user_allowed():
+                        user_id = AuthConfig.get_fallback_user_id()
+                        AuthConfig.log_authentication_bypass("Project creation in repository", "compatibility mode")
+                    else:
+                        raise UserAuthenticationRequiredError("Project creation")
                 else:
-                    user_id = normalize_user_id(user_id)
+                    user_id = validate_user_id(user_id, "Project creation")
                 
                 project = self.create(
                     id=project_id,

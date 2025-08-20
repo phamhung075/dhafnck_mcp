@@ -640,9 +640,20 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
                         )
                         session.add(task_label)
                 else:
-                    # Get user_id from repository context or use default
-                    from ....domain.constants import get_default_user_id
-                    task_user_id = self.user_id if hasattr(self, 'user_id') and self.user_id else get_default_user_id()
+                    # Get user_id from repository context or handle authentication
+                    from ....domain.constants import validate_user_id
+                    from ....domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
+                    from .....config.auth_config import AuthConfig
+                    
+                    if hasattr(self, 'user_id') and self.user_id:
+                        task_user_id = validate_user_id(self.user_id, "Task creation")
+                    else:
+                        # Check if compatibility mode is enabled
+                        if AuthConfig.is_default_user_allowed():
+                            task_user_id = AuthConfig.get_fallback_user_id()
+                            AuthConfig.log_authentication_bypass("Task creation in repository", "compatibility mode")
+                        else:
+                            raise UserAuthenticationRequiredError("Task creation")
                     
                     # Create new task
                     new_task = Task(

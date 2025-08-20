@@ -48,7 +48,12 @@ from ...application.services.response_enrichment_service import (
     ContextState,
     ContextStalnessLevel
 )
-from ...domain.constants import get_default_user_id, normalize_user_id
+from ...domain.constants import validate_user_id
+from ...domain.exceptions.authentication_exceptions import (
+    UserAuthenticationRequiredError,
+    DefaultUserProhibitedError
+)
+from ....config.auth_config import AuthConfig
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +66,7 @@ except ImportError:
     get_current_user_id = lambda: None
     # Fallback mixin if thread context manager is not available
     class ContextPropagationMixin:
-        def _run_async_with_context(self, async_func):
+        def _run_async_with_context(self, async_func, *args, **kwargs):
             import asyncio
             import threading
             result = None
@@ -72,7 +77,7 @@ except ImportError:
                     new_loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(new_loop)
                     try:
-                        result = new_loop.run_until_complete(async_func())
+                        result = new_loop.run_until_complete(async_func(*args, **kwargs))
                     finally:
                         new_loop.close()
                         asyncio.set_event_loop(None)
@@ -1215,7 +1220,7 @@ class TaskMCPController(ContextPropagationMixin):
             project_id, git_branch_name, user_id = self._derive_context_from_identifiers(git_branch_id=git_branch_id)
             
             # Since MCP tools are synchronous, we need to run the async method in sync context
-            async def _run_async():
+            async def _run_async(facade, include_context, user_id, project_id, git_branch_id):
                 return await facade.get_next_task(
                     include_context=include_context,
                     user_id=user_id,
@@ -1226,7 +1231,7 @@ class TaskMCPController(ContextPropagationMixin):
                 )
             
             # Use the context-aware threading approach to preserve authentication
-            result = self._run_async_with_context(_run_async)
+            result = self._run_async_with_context(_run_async, facade, include_context, user_id, project_id, git_branch_id)
             
             # Enhance response with comprehensive workflow guidance
             if result.get("success"):
@@ -1428,12 +1433,16 @@ class TaskMCPController(ContextPropagationMixin):
         logger = logging.getLogger(__name__)
         
         # Get current user context from JWT token or use default
-        from ...domain.constants import get_default_user_id, normalize_user_id
         current_user_id = get_current_user_id()
         if current_user_id:
-            user_id = normalize_user_id(current_user_id)
+            user_id = validate_user_id(current_user_id, "Task context resolution")
         else:
-            user_id = get_default_user_id()
+            # Check if compatibility mode is enabled
+            if AuthConfig.is_default_user_allowed():
+                user_id = AuthConfig.get_fallback_user_id()
+                AuthConfig.log_authentication_bypass("Task context resolution", "compatibility mode")
+            else:
+                raise UserAuthenticationRequiredError("Task context resolution")
         
         # For git_branch_id, look up the actual project_id
         if git_branch_id:
@@ -1551,9 +1560,19 @@ class TaskMCPController(ContextPropagationMixin):
                         git_branch_id=task.get("git_branch_id")
                     )
                     
-                    from ...domain.constants import get_default_user_id
+                    # Validate user_id before creating context facade
+                    validated_user_id = user_id
+                    if not validated_user_id:
+                        if AuthConfig.is_default_user_allowed():
+                            validated_user_id = AuthConfig.get_fallback_user_id()
+                            AuthConfig.log_authentication_bypass("Task context facade creation", "compatibility mode")
+                        else:
+                            raise UserAuthenticationRequiredError("Task context facade creation")
+                    else:
+                        validated_user_id = validate_user_id(validated_user_id, "Task context facade creation")
+                    
                     context_facade = self._context_facade_factory.create_facade(
-                        user_id=user_id or get_default_user_id(),
+                        user_id=validated_user_id,
                         project_id=project_id or "default_project",
                         git_branch_id=task.get("git_branch_id")
                     )
@@ -1575,11 +1594,21 @@ class TaskMCPController(ContextPropagationMixin):
                     import asyncio
                     import threading
                     
-                    async def _update_context_async():
-                        from ...domain.constants import get_default_user_id
+                    async def _update_context_async(context_facade, task_id, user_id, project_id, git_branch_name, context_data):
+                        # Validate user_id for context update
+                        validated_user_id = user_id
+                        if not validated_user_id:
+                            if AuthConfig.is_default_user_allowed():
+                                validated_user_id = AuthConfig.get_fallback_user_id()
+                                AuthConfig.log_authentication_bypass("Task context update", "compatibility mode")
+                            else:
+                                raise UserAuthenticationRequiredError("Task context update")
+                        else:
+                            validated_user_id = validate_user_id(validated_user_id, "Task context update")
+                        
                         return await context_facade.update_context(
                             task_id, 
-                            user_id or get_default_user_id(),
+                            validated_user_id,
                             project_id or "default_project",
                             git_branch_name or "main",
                             context_data
@@ -1587,10 +1616,11 @@ class TaskMCPController(ContextPropagationMixin):
                     
                     # Run async update with proper context preservation
                     try:
-                        result = self._run_async_with_context(_update_context_async)
+                        result = self._run_async_with_context(_update_context_async, context_facade, task_id, user_id, project_id, git_branch_name, context_data)
                     except Exception as exception:
                         logger.warning(f"Failed to update context for task {task_id}: {exception}")
-                    elif result and not result.get("success"):
+                    
+                    if result and not result.get("success"):
                         logger.warning(f"Failed to update context for task {task_id}: {result.get('error')}")
                 else:
                     logger.warning(f"Could not retrieve task {task_id} to update context")

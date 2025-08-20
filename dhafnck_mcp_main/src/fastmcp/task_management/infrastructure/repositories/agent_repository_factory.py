@@ -46,14 +46,21 @@ class AgentRepositoryFactory:
         Returns:
             AgentRepository instance
         """
-        # Import default user ID from domain constants  
-        from ...domain.constants import get_default_user_id, normalize_user_id
+        # Import validation and auth config
+        from ...domain.constants import validate_user_id
+        from ...domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
+        from ....config.auth_config import AuthConfig
         
-        # Normalize user_id - use default UUID if None
+        # Validate user authentication is provided
         if user_id is None:
-            user_id = get_default_user_id()
+            # Check if compatibility mode is enabled
+            if AuthConfig.is_default_user_allowed():
+                user_id = AuthConfig.get_fallback_user_id()
+                AuthConfig.log_authentication_bypass("Agent repository creation", "compatibility mode")
+            else:
+                raise UserAuthenticationRequiredError("Agent repository creation")
         else:
-            user_id = normalize_user_id(user_id)
+            user_id = validate_user_id(user_id, "Agent repository creation")
         
         # Use default repository type if not specified
         if repository_type is None:

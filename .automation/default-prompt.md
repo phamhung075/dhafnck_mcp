@@ -27,43 +27,71 @@ REQUIRED BEHAVIORS:
 ## Missing Test Files - CREATE IMMEDIATELY:
 
 ## Stale Test Files (Source Newer Than Test)
-- **Source**: `dhafnck-frontend/src/hooks/useAuthenticatedFetch.ts`
-  - **Test**: `dhafnck-frontend/src/tests/hooks/useAuthenticatedFetch.test.ts`
-  - **Days stale**: 0
-
-- **Source**: `dhafnck-frontend/src/pages/TokenManagement.tsx`
-  - **Test**: `dhafnck-frontend/src/tests/pages/TokenManagement.test.tsx`
-  - **Days stale**: 0
-
-- **Source**: `dhafnck-frontend/src/services/tokenService.ts`
-  - **Test**: `dhafnck-frontend/src/tests/services/tokenService.test.ts`
-  - **Days stale**: 0
-
 - **Source**: `dhafnck_mcp_main/src/fastmcp/server/mcp_entry_point.py`
   - **Test**: `dhafnck_mcp_main/src/tests/server/mcp_entry_point_test.py`
   - **Days stale**: 1
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/token_router.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/server/routes/token_router_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/database/models.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/database/models_test.py`
   - **Days stale**: 0
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/token_routes.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/server/routes/token_routes_test.py`
-  - **Days stale**: 0
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/project_repository.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/project_repository_test.py`
+  - **Days stale**: 1
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/task_repository.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/task_repository_test.py`
+  - **Days stale**: 1
 
 
 ## Missing Test Files
-- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/domain/services/jwt_service.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/auth/domain/services/jwt_service_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/mcp_integration/mcp_auth_middleware.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/auth/mcp_integration/mcp_auth_middleware_test.py`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/mcp_integration/jwt_auth_backend.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/auth/mcp_integration/jwt_auth_backend_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/mcp_integration/thread_context_manager.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/auth/mcp_integration/thread_context_manager_test.py`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/mcp_redirect_routes.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/server/routes/mcp_redirect_routes_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/factories/agent_facade_factory.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/factories/agent_facade_factory_test.py`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/mcp_registration_routes.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/server/routes/mcp_registration_routes_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/factories/task_facade_factory.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/factories/task_facade_factory_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/use_cases/call_agent.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/use_cases/call_agent_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/use_cases/create_task.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/use_cases/create_task_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/domain/constants.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/domain/constants_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/agent_repository_factory.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/agent_repository_factory_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/global_context_repository.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/global_context_repository_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/task_repository_factory.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/task_repository_factory_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/agent_mcp_controller.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/agent_mcp_controller_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/git_branch_mcp_controller.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/git_branch_mcp_controller_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/project_mcp_controller.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/project_mcp_controller_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/subtask_mcp_controller.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/subtask_mcp_controller_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/task_mcp_controller.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/task_mcp_controller_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/tools/tool.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/tools/tool_test.py`
 
 
 ## EXECUTION COMMANDS - DO NOW:

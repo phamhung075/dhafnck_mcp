@@ -17,6 +17,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import IntegrityError
 
+import json
 from fastmcp.task_management.infrastructure.database.models import (
     Base,
     APIToken,
@@ -325,13 +326,12 @@ class TestDatabaseModels:
         """Test GlobalContext with singleton UUID"""
         global_context = GlobalContext(
             id=GLOBAL_SINGLETON_UUID,
-            organization_id="org-123",
+            organization_id="00000000-0000-0000-0000-000000000002",
             autonomous_rules={"rule1": "value1"},
             security_policies={"policy1": "value1"},
             coding_standards={"standard1": "value1"},
             workflow_templates={"template1": "value1"},
-            delegation_rules={"delegation1": "value1"},
-            user_id="test-user-123"
+            delegation_rules={"delegation1": "value1"}
         )
         
         session.add(global_context)
@@ -347,8 +347,7 @@ class TestDatabaseModels:
         # Create hierarchy
         global_ctx = GlobalContext(
             id=GLOBAL_SINGLETON_UUID,
-            organization_id="org-123",
-            user_id="test-user-123"
+            organization_id="00000000-0000-0000-0000-000000000002"
         )
         
         project_ctx = ProjectContext(
@@ -418,13 +417,14 @@ class TestDatabaseModels:
     
     def test_context_inheritance_cache(self, session):
         """Test ContextInheritanceCache model"""
+        from datetime import timedelta
         cache_entry = ContextInheritanceCache(
             context_id="task-123",
             context_level="task",
             resolved_context={"merged": "data"},
             dependencies_hash="abc123",
             resolution_path="global->project->branch->task",
-            expires_at=datetime.utcnow(),
+            expires_at=datetime.utcnow() + timedelta(hours=1),
             cache_size_bytes=1024
         )
         
@@ -502,3 +502,156 @@ class TestDatabaseModels:
         session.refresh(project)
         assert project.model_metadata["new_key"] == "new_value"
         assert project.model_metadata["initial"] == "value"
+    
+    def test_global_context_default_uuid(self, session):
+        """Test GlobalContext uses default UUID when none provided"""
+        global_context = GlobalContext(
+            autonomous_rules={},
+            security_policies={},
+            coding_standards={},
+            workflow_templates={},
+            delegation_rules={}
+        )
+        
+        # Verify default UUID is assigned
+        assert global_context.id == GLOBAL_SINGLETON_UUID
+        assert global_context.organization_id == "00000000-0000-0000-0000-000000000002"
+    
+    def test_context_optional_fields(self, session):
+        """Test context models with optional fields"""
+        # Test ProjectContext with minimal fields
+        project_ctx = ProjectContext(
+            id=str(uuid4()),
+            data={"test": "data"}
+        )
+        
+        session.add(project_ctx)
+        session.commit()
+        
+        saved = session.query(ProjectContext).first()
+        assert saved.data == {"test": "data"}
+        assert saved.team_preferences == {}
+        assert saved.technology_stack == {}
+        assert saved.project_workflow == {}
+        assert saved.version == 1
+        assert saved.inheritance_disabled is False
+    
+    def test_subtask_completion_fields(self, session):
+        """Test TaskSubtask completion-related fields"""
+        project = Project(id=str(uuid4()), name="Test Project", user_id="test-user-123")
+        branch = ProjectGitBranch(id=str(uuid4()), project_id=project.id, name="main")
+        task = Task(
+            id=str(uuid4()),
+            title="Test Task",
+            description="Test",
+            git_branch_id=branch.id
+        )
+        
+        subtask = TaskSubtask(
+            id=str(uuid4()),
+            task_id=task.id,
+            title="Test Subtask",
+            progress_percentage=75,
+            progress_notes="Completed initial implementation",
+            blockers="Waiting for API documentation",
+            insights_found=["Found optimization opportunity", "Discovered existing utility"]
+        )
+        
+        session.add_all([project, branch, task, subtask])
+        session.commit()
+        
+        saved_subtask = session.query(TaskSubtask).first()
+        assert saved_subtask.progress_percentage == 75
+        assert saved_subtask.progress_notes == "Completed initial implementation"
+        assert saved_subtask.blockers == "Waiting for API documentation"
+        assert len(saved_subtask.insights_found) == 2
+        assert "Found optimization opportunity" in saved_subtask.insights_found
+    
+    def test_task_context_flags(self, session):
+        """Test TaskContext control flags"""
+        task_ctx = TaskContext(
+            id=str(uuid4()),
+            task_id=str(uuid4()),
+            data={"test": "data"},
+            force_local_only=True,
+            inheritance_disabled=True
+        )
+        
+        session.add(task_ctx)
+        session.commit()
+        
+        saved = session.query(TaskContext).first()
+        assert saved.force_local_only is True
+        assert saved.inheritance_disabled is True
+    
+    def test_context_delegation_validation(self, session):
+        """Test ContextDelegation with different trigger types"""
+        # Test auto_pattern trigger
+        delegation1 = ContextDelegation(
+            id=str(uuid4()),
+            source_level="task",
+            source_id="task-456",
+            target_level="branch",
+            target_id="branch-456",
+            delegated_data={"pattern": "error_handling"},
+            delegation_reason="Common error pattern",
+            trigger_type="auto_pattern",
+            auto_delegated=True,
+            confidence_score=0.88
+        )
+        
+        # Test auto_threshold trigger
+        delegation2 = ContextDelegation(
+            id=str(uuid4()),
+            source_level="branch",
+            source_id="branch-789",
+            target_level="project",
+            target_id="project-789",
+            delegated_data={"threshold": "performance_optimization"},
+            delegation_reason="Performance pattern used in multiple branches",
+            trigger_type="auto_threshold",
+            auto_delegated=True,
+            confidence_score=0.92
+        )
+        
+        session.add_all([delegation1, delegation2])
+        session.commit()
+        
+        # Verify delegations
+        auto_pattern = session.query(ContextDelegation).filter_by(trigger_type="auto_pattern").first()
+        assert auto_pattern.auto_delegated is True
+        assert auto_pattern.confidence_score == 0.88
+        
+        auto_threshold = session.query(ContextDelegation).filter_by(trigger_type="auto_threshold").first()
+        assert auto_threshold.auto_delegated is True
+        assert auto_threshold.confidence_score == 0.92
+    
+    def test_agent_metadata_and_timestamps(self, session):
+        """Test Agent model metadata and timestamp updates"""
+        agent = Agent(
+            id="agent-advanced-123",
+            name="Advanced Agent",
+            description="Agent with enhanced capabilities",
+            capabilities=["CODE_GENERATION", "TESTING", "DEBUGGING"],
+            status="busy",
+            availability_score=0.3,
+            model_metadata={
+                "version": "2.0",
+                "features": ["async", "parallel"],
+                "config": {"timeout": 300}
+            }
+        )
+        
+        session.add(agent)
+        session.commit()
+        
+        # Update last_active_at
+        now = datetime.utcnow()
+        agent.last_active_at = now
+        session.commit()
+        
+        saved_agent = session.query(Agent).filter_by(id="agent-advanced-123").first()
+        assert saved_agent.last_active_at == now
+        assert saved_agent.model_metadata["version"] == "2.0"
+        assert "async" in saved_agent.model_metadata["features"]
+        assert saved_agent.model_metadata["config"]["timeout"] == 300

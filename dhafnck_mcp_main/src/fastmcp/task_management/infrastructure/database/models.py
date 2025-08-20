@@ -49,7 +49,7 @@ class Project(Base):
     description: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
-    user_id: Mapped[str] = mapped_column(String, nullable=False, default="default_id")
+    user_id: Mapped[str] = mapped_column(String, nullable=False)  # No default - authentication required
     status: Mapped[str] = mapped_column(String, default="active")
     model_metadata: Mapped[Dict[str, Any]] = mapped_column("metadata", JSON, default=dict)
     
@@ -184,7 +184,7 @@ class TaskDependency(Base):
     task_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
     depends_on_task_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
     dependency_type: Mapped[str] = mapped_column(String, default="blocks")
-    user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False, default="00000000-0000-0000-0000-000000000000")
+    user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)  # No default - authentication required
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     
     # Relationships
@@ -282,7 +282,7 @@ class GlobalContext(Base):
     
     # All IDs are now UUID
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=GLOBAL_SINGLETON_UUID)
-    organization_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=True, default="00000000-0000-0000-0000-000000000002")
+    organization_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=True)  # No default org ID
     
     # Core organizational configuration
     autonomous_rules: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
