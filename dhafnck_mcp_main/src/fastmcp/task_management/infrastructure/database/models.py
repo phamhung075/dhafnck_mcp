@@ -22,6 +22,24 @@ from .database_config import Base
 GLOBAL_SINGLETON_UUID = "00000000-0000-0000-0000-000000000001"
 
 
+class APIToken(Base):
+    """API Token model for MCP authentication"""
+    __tablename__ = "api_tokens"
+    
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    user_id: Mapped[str] = mapped_column(String, nullable=False)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    token_hash: Mapped[str] = mapped_column(String, nullable=False)  # Store hashed token
+    scopes: Mapped[List[str]] = mapped_column(JSON, default=list)  # List of permission scopes
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    last_used_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    usage_count: Mapped[int] = mapped_column(Integer, default=0)
+    rate_limit: Mapped[int] = mapped_column(Integer, default=1000)  # Requests per hour
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    token_metadata: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)  # Additional metadata
+
+
 class Project(Base):
     """Project model - Core organizational structure"""
     __tablename__ = "projects"

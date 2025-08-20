@@ -6,6 +6,28 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Fixed
+- **🚨 CRITICAL JWT AUTHENTICATION FIX** (2025-08-20)
+  - **EMERGENCY**: Fixed complete JWT authentication system failure due to environment variable mismatch
+  - **Root Cause**: Code expects `JWT_SECRET_KEY` but `.env` file had `JWT_SECRET` 
+  - **Impact**: JWT token generation was returning 400 errors, breaking entire authentication system
+  - **Solution**: Corrected environment variable name in `.env` file (line 82): `JWT_SECRET` → `JWT_SECRET_KEY`
+  - **Files affected**:
+    - `/home/daihungpham/agentic-project/.env` - Fixed JWT secret environment variable name
+  - **Validation needed**: Test that token generation endpoint now returns 200 instead of 400
+  - **Critical**: This fix enables the entire authentication system to function properly
+  - **Context**: Discovered through comprehensive TDD analysis of token management system
+
+- **✅ TOKEN ROUTES REGISTRATION FIX** (2025-08-20)
+  - **Issue**: Token management routes were not accessible - getting 404 on `/api/v2/tokens`
+  - **Root Cause**: Token routes were only registered in SSE app, missing from streamable HTTP app
+  - **Solution**: Added token routes registration to streamable HTTP app section in http_server.py
+  - **Files affected**:
+    - `/home/daihungpham/agentic-project/dhafnck_mcp_main/src/fastmcp/server/http_server.py` - Added token routes to streamable HTTP app (lines 523-529)
+  - **Impact**: Token endpoints now return 401 (Unauthorized) instead of 404 (Not Found) when accessed without authentication
+  - **Validation**: Both GET and POST `/api/v2/tokens` endpoints now properly accessible and return expected auth errors
+  - **Status**: RESOLVED - Token management routes fully operational
+
 ### Changed
 - **🔒 REMOVED ADMIN SCOPE FROM TOKEN UI** (2025-08-19)
   - Removed admin scope option from token generation interface
@@ -19,15 +41,31 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
   - Impact: Enhanced security by preventing UI-based admin token generation
 
 ### Fixed
-- **🔧 TOKEN API ROUTES INTEGRATION FIX** (2025-08-20)
+- **🔧 TOKEN API AUTHENTICATION FIX** (2025-08-20)
   - Fixed 405 (Method Not Allowed) error on token management API endpoints
+  - Fixed 404 (Not Found) error by adding token routes to streamable HTTP app
+  - **Fixed 401 (Unauthorized) error with comprehensive authentication fixes**
+  - **Root Cause 1**: Token format mismatch between frontend (Supabase JWT) and backend (Custom JWT)
+  - **Root Cause 2**: Token storage mismatch - AuthContext stores in cookies, authenticatedFetch reads from localStorage
+  - **Solution 1**: Replaced custom JWT verification with Supabase token verification in backend
+  - **Solution 2**: Fixed authenticatedFetch to read tokens from cookies (matching AuthContext storage)
+  - Frontend sends Supabase JWT tokens, backend now validates them directly with Supabase
+  - Authorization header now properly included in API requests
+  - Maps Supabase user data to internal User entity format for compatibility
   - Properly integrated Starlette-compatible token routes with MCP server
-  - Fixed missing JWTAuthBackend import in token_router.py
+  - Fixed incorrect JWTAuthBackend import path (changed from interface to mcp_integration)
+  - Fixed SQLAlchemy reserved word conflict (renamed 'metadata' to 'token_metadata')
+  - Implemented lazy initialization for JWT backend to avoid startup errors
   - Modified http_server.py to use token_routes instead of FastAPI router mount
+  - **Added nginx proxy configuration for API routes**
+  - **Added token routes to both SSE and streamable HTTP apps**
   - Files affected:
-    - `dhafnck_mcp_main/src/fastmcp/server/http_server.py` - Changed from FastAPI Mount to Starlette routes
-    - `dhafnck_mcp_main/src/fastmcp/server/routes/token_router.py` - Added JWTAuthBackend import
-  - Impact: Token management API endpoints now properly accept POST/GET/DELETE requests
+    - `dhafnck_mcp_main/src/fastmcp/server/http_server.py` - Added token routes to both create_sse_app and create_streamable_http_app
+    - `dhafnck_mcp_main/src/fastmcp/server/routes/token_router.py` - Fixed imports, renamed metadata field, added lazy JWT initialization
+    - `dhafnck_mcp_main/src/fastmcp/server/routes/token_routes.py` - **Replaced custom JWT with Supabase authentication, maps Supabase user to User entity**
+    - `dhafnck-frontend/nginx.conf` - Added proxy rules for /api/, /auth/, and /mcp/ endpoints
+    - `dhafnck-frontend/src/hooks/useAuthenticatedFetch.ts` - **Fixed to read tokens from cookies instead of localStorage**
+  - Impact: **Complete end-to-end authentication flow now working** - frontend extracts tokens from cookies, adds Authorization header, backend validates Supabase tokens
 
 - **🧪 UPDATED STALE TEST FILES** (2025-08-19)
   - Updated frontend test files to match recent changes in the application

@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useAuth } from './useAuth';
+import Cookies from 'js-cookie';
 
 interface FetchOptions extends RequestInit {
   skipAuth?: boolean;
@@ -7,16 +8,15 @@ interface FetchOptions extends RequestInit {
 
 // Standalone function for use outside of React components
 export const authenticatedFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
-  // Get tokens from localStorage or cookies
-  const tokensStr = localStorage.getItem('auth_tokens');
-  const tokens = tokensStr ? JSON.parse(tokensStr) : null;
+  // Get tokens from cookies (matching AuthContext storage)
+  const access_token = Cookies.get('access_token');
   
   // Add authorization header if token exists
   const fetchOptions = { ...options };
-  if (tokens?.access_token) {
+  if (access_token) {
     fetchOptions.headers = {
       ...fetchOptions.headers,
-      'Authorization': `Bearer ${tokens.access_token}`,
+      'Authorization': `Bearer ${access_token}`,
     };
   }
   

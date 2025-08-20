@@ -13,7 +13,8 @@ from .database_config import get_db_config, Base
 from .models import (
     Project, ProjectGitBranch, Task, TaskSubtask, TaskAssignee,
     TaskDependency, Agent, Label, TaskLabel, Template,
-    GlobalContext, ProjectContext, BranchContext, TaskContext, ContextDelegation, ContextInheritanceCache
+    GlobalContext, ProjectContext, BranchContext, TaskContext, ContextDelegation, ContextInheritanceCache,
+    APIToken
 )
 
 logger = logging.getLogger(__name__)

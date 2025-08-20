@@ -16,27 +16,8 @@ from typing import Annotated
 
 from fastmcp.auth.interface.fastapi_auth import get_current_user, get_db
 from fastmcp.auth.domain.entities.user import User
-from fastmcp.auth.interface.jwt_auth_backend import JWTAuthBackend
-from sqlalchemy.ext.declarative import declarative_base
-
-Base = declarative_base()
-
-# Token model for database
-class APIToken(Base):
-    __tablename__ = "api_tokens"
-    
-    id = Column(String, primary_key=True)
-    user_id = Column(String, ForeignKey("users.id"), nullable=False)
-    name = Column(String, nullable=False)
-    token_hash = Column(String, nullable=False)  # Store hashed token
-    scopes = Column(JSON, default=list)  # List of permission scopes
-    created_at = Column(DateTime, default=datetime.utcnow)
-    expires_at = Column(DateTime, nullable=False)
-    last_used_at = Column(DateTime, nullable=True)
-    usage_count = Column(Integer, default=0)
-    rate_limit = Column(Integer, default=1000)  # Requests per hour
-    is_active = Column(Boolean, default=True)
-    metadata = Column(JSON, default=dict)  # Additional metadata
+from fastmcp.auth.mcp_integration.jwt_auth_backend import JWTAuthBackend
+from fastmcp.task_management.infrastructure.database.models import APIToken
 
 # Pydantic models for API
 class TokenGenerateRequest(BaseModel):
@@ -79,8 +60,257 @@ class TokenValidateResponse(BaseModel):
 router = APIRouter(prefix="/api/v2/tokens", tags=["Token Management"])
 security = HTTPBearer()
 
-# JWT backend for user authentication
-jwt_backend = JWTAuthBackend()
+# ===== STANDALONE HANDLER FUNCTIONS FOR STARLETTE INTEGRATION =====
+
+async def generate_token_handler(request: TokenGenerateRequest, current_user: User, db: Session) -> TokenResponse:
+    """Standalone handler for generating tokens (for Starlette integration)"""
+    # Generate token
+    raw_token = generate_secure_token()
+    token_hash = hash_token(raw_token)
+    
+    # Calculate expiration
+    expires_at = datetime.utcnow() + timedelta(days=request.expires_in_days)
+    
+    # Create token ID
+    token_id = f"tok_{secrets.token_hex(8)}"
+    
+    # Create database record
+    db_token = APIToken(
+        id=token_id,
+        user_id=current_user.id,
+        name=request.name,
+        token_hash=token_hash,
+        scopes=request.scopes,
+        expires_at=expires_at,
+        rate_limit=request.rate_limit or 1000,
+        token_metadata=request.metadata or {}
+    )
+    
+    db.add(db_token)
+    db.commit()
+    db.refresh(db_token)
+    
+    # Create JWT for the token
+    jwt_token = create_jwt_for_token(
+        token_id=token_id,
+        user_id=current_user.id,
+        scopes=request.scopes,
+        expires_at=expires_at
+    )
+    
+    # Return response with the actual token (only shown once)
+    return TokenResponse(
+        id=db_token.id,
+        name=db_token.name,
+        token=jwt_token,  # Include the JWT token
+        scopes=db_token.scopes,
+        created_at=db_token.created_at,
+        expires_at=db_token.expires_at,
+        last_used_at=db_token.last_used_at,
+        usage_count=db_token.usage_count,
+        rate_limit=db_token.rate_limit,
+        is_active=db_token.is_active,
+        metadata=db_token.token_metadata
+    )
+
+async def list_tokens_handler(current_user: User, db: Session, skip: int = 0, limit: int = 100) -> TokenListResponse:
+    """Standalone handler for listing tokens (for Starlette integration)"""
+    # Query tokens for the user
+    query = db.query(APIToken).filter(
+        APIToken.user_id == current_user.id
+    ).order_by(APIToken.created_at.desc())
+    
+    total = query.count()
+    tokens = query.offset(skip).limit(limit).all()
+    
+    # Convert to response format (without exposing actual tokens)
+    token_responses = [
+        TokenResponse(
+            id=token.id,
+            name=token.name,
+            scopes=token.scopes,
+            created_at=token.created_at,
+            expires_at=token.expires_at,
+            last_used_at=token.last_used_at,
+            usage_count=token.usage_count,
+            rate_limit=token.rate_limit,
+            is_active=token.is_active,
+            metadata=token.token_metadata
+        )
+        for token in tokens
+    ]
+    
+    return TokenListResponse(data=token_responses, total=total)
+
+async def get_token_details_handler(token_id: str, current_user: User, db: Session) -> TokenResponse:
+    """Standalone handler for getting token details (for Starlette integration)"""
+    # Query for the token
+    token = db.query(APIToken).filter(
+        APIToken.id == token_id,
+        APIToken.user_id == current_user.id
+    ).first()
+    
+    if not token:
+        raise HTTPException(status_code=404, detail="Token not found")
+    
+    return TokenResponse(
+        id=token.id,
+        name=token.name,
+        scopes=token.scopes,
+        created_at=token.created_at,
+        expires_at=token.expires_at,
+        last_used_at=token.last_used_at,
+        usage_count=token.usage_count,
+        rate_limit=token.rate_limit,
+        is_active=token.is_active,
+        metadata=token.token_metadata
+    )
+
+async def revoke_token_handler(token_id: str, current_user: User, db: Session) -> dict:
+    """Standalone handler for revoking tokens (for Starlette integration)"""
+    # Query for the token
+    token = db.query(APIToken).filter(
+        APIToken.id == token_id,
+        APIToken.user_id == current_user.id
+    ).first()
+    
+    if not token:
+        raise HTTPException(status_code=404, detail="Token not found")
+    
+    # Mark as inactive
+    token.is_active = False
+    db.commit()
+    
+    return {"message": "Token revoked successfully"}
+
+async def update_token_handler(token_id: str, request: TokenUpdateRequest, current_user: User, db: Session) -> TokenResponse:
+    """Standalone handler for updating tokens (for Starlette integration)"""
+    # Query for the token
+    token = db.query(APIToken).filter(
+        APIToken.id == token_id,
+        APIToken.user_id == current_user.id
+    ).first()
+    
+    if not token:
+        raise HTTPException(status_code=404, detail="Token not found")
+    
+    # Update fields
+    if request.name is not None:
+        token.name = request.name
+    if request.scopes is not None:
+        token.scopes = request.scopes
+    if request.rate_limit is not None:
+        token.rate_limit = request.rate_limit
+    if request.is_active is not None:
+        token.is_active = request.is_active
+    
+    db.commit()
+    db.refresh(token)
+    
+    return TokenResponse(
+        id=token.id,
+        name=token.name,
+        scopes=token.scopes,
+        created_at=token.created_at,
+        expires_at=token.expires_at,
+        last_used_at=token.last_used_at,
+        usage_count=token.usage_count,
+        rate_limit=token.rate_limit,
+        is_active=token.is_active,
+        metadata=token.token_metadata
+    )
+
+async def rotate_token_handler(token_id: str, current_user: User, db: Session) -> TokenResponse:
+    """Standalone handler for rotating tokens (for Starlette integration)"""
+    # Query for the token
+    old_token = db.query(APIToken).filter(
+        APIToken.id == token_id,
+        APIToken.user_id == current_user.id
+    ).first()
+    
+    if not old_token:
+        raise HTTPException(status_code=404, detail="Token not found")
+    
+    # Generate new token
+    raw_token = generate_secure_token()
+    token_hash = hash_token(raw_token)
+    
+    # Create new token ID
+    new_token_id = f"tok_{secrets.token_hex(8)}"
+    
+    # Update the existing token with new credentials
+    old_token.id = new_token_id
+    old_token.token_hash = token_hash
+    
+    db.commit()
+    db.refresh(old_token)
+    
+    # Create JWT for the new token
+    jwt_token = create_jwt_for_token(
+        token_id=new_token_id,
+        user_id=current_user.id,
+        scopes=old_token.scopes,
+        expires_at=old_token.expires_at
+    )
+    
+    return TokenResponse(
+        id=old_token.id,
+        name=old_token.name,
+        token=jwt_token,  # Include the new JWT token
+        scopes=old_token.scopes,
+        created_at=old_token.created_at,
+        expires_at=old_token.expires_at,
+        last_used_at=old_token.last_used_at,
+        usage_count=old_token.usage_count,
+        rate_limit=old_token.rate_limit,
+        is_active=old_token.is_active,
+        metadata=old_token.token_metadata
+    )
+
+async def validate_token_handler(token: str) -> TokenValidateResponse:
+    """Standalone handler for validating tokens (for Starlette integration)"""
+    try:
+        jwt_backend = get_jwt_backend()
+        payload = jwt.decode(token, jwt_backend.secret_key, algorithms=[jwt_backend.algorithm])
+        
+        return TokenValidateResponse(
+            valid=True,
+            user_id=payload.get("user_id"),
+            scopes=payload.get("scopes", []),
+            expires_at=datetime.fromtimestamp(payload.get("exp", 0))
+        )
+    except jwt.ExpiredSignatureError:
+        return TokenValidateResponse(valid=False)
+    except jwt.InvalidTokenError:
+        return TokenValidateResponse(valid=False)
+
+async def get_token_usage_stats_handler(token_id: str, current_user: User, db: Session) -> dict:
+    """Standalone handler for getting token usage stats (for Starlette integration)"""
+    # Query for the token
+    token = db.query(APIToken).filter(
+        APIToken.id == token_id,
+        APIToken.user_id == current_user.id
+    ).first()
+    
+    if not token:
+        raise HTTPException(status_code=404, detail="Token not found")
+    
+    return {
+        "token_id": token.id,
+        "usage_count": token.usage_count,
+        "last_used_at": token.last_used_at,
+        "rate_limit": token.rate_limit,
+        "is_active": token.is_active
+    }
+
+# JWT backend for user authentication (lazy initialization)
+_jwt_backend = None
+
+def get_jwt_backend():
+    global _jwt_backend
+    if _jwt_backend is None:
+        _jwt_backend = JWTAuthBackend()
+    return _jwt_backend
 
 def generate_secure_token() -> str:
     """Generate a cryptographically secure token"""
@@ -92,6 +322,7 @@ def hash_token(token: str) -> str:
 
 def create_jwt_for_token(token_id: str, user_id: str, scopes: List[str], expires_at: datetime) -> str:
     """Create a JWT that encapsulates the API token"""
+    jwt_backend = get_jwt_backend()
     payload = {
         "token_id": token_id,
         "user_id": user_id,
@@ -129,7 +360,7 @@ async def generate_token(
         scopes=request.scopes,
         expires_at=expires_at,
         rate_limit=request.rate_limit or 1000,
-        metadata=request.metadata or {}
+        token_metadata=request.metadata or {}
     )
     
     db.add(db_token)
@@ -156,7 +387,7 @@ async def generate_token(
         usage_count=db_token.usage_count,
         rate_limit=db_token.rate_limit,
         is_active=db_token.is_active,
-        metadata=db_token.metadata
+        metadata=db_token.token_metadata
     )
 
 @router.get("/", response_model=TokenListResponse)
@@ -333,7 +564,7 @@ async def rotate_token(
         scopes=old_token.scopes,
         expires_at=new_expires_at,
         rate_limit=old_token.rate_limit,
-        metadata={**old_token.metadata, "rotated_from": old_token.id}
+        token_metadata={**old_token.token_metadata, "rotated_from": old_token.id}
     )
     
     # Delete old token and add new one
@@ -375,6 +606,7 @@ async def validate_token(
     
     try:
         # Decode the JWT token
+        jwt_backend = get_jwt_backend()
         payload = jwt.decode(
             token,
             jwt_backend.secret_key,

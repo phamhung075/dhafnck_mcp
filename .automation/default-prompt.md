@@ -27,9 +27,17 @@ REQUIRED BEHAVIORS:
 ## Missing Test Files - CREATE IMMEDIATELY:
 
 ## Stale Test Files (Source Newer Than Test)
-- **Source**: `dhafnck-frontend/src/pages/Profile.tsx`
-  - **Test**: `dhafnck-frontend/src/tests/pages/Profile.test.tsx`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/token_router.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/server/routes/token_router_test.py`
   - **Days stale**: 0
+
+
+## Missing Test Files
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/http_server.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/server/http_server_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/token_routes.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/server/routes/token_routes_test.py`
 
 
 ## EXECUTION COMMANDS - DO NOW:

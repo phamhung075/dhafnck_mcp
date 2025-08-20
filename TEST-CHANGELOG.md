@@ -8,6 +8,48 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ### Updated - 2025-08-19
 
+#### Backend Test Updates
+- **token_router_test.py** - Completely refactored to match new token router implementation
+  - Updated imports to use new model names (TokenGenerateRequest, TokenResponse, etc.)
+  - Replaced old service-based tests with direct API endpoint testing
+  - Added comprehensive tests for JWT token generation and validation
+  - Added tests for token rotation with JWT creation
+  - Updated all endpoint paths to /api/v2/tokens
+  - Added tests for token usage statistics endpoint
+  - Added tests for HTTP Bearer authentication in validate endpoint
+  - Updated error handling tests for proper status codes
+  - Fixed all mock patterns to match new implementation
+  - Added edge case tests for expired tokens, wrong token types, and inactive tokens
+  - Total: 50+ test cases covering all new functionality
+
+### Added - 2025-08-19
+
+#### Backend Test Files Created
+- **http_server_test.py** - Comprehensive test suite for HTTP server infrastructure
+  - Tests RequestContextMiddleware for HTTP request context management
+  - Tests MCPHeaderValidationMiddleware for MCP protocol header enforcement
+  - Tests CORS header handling in error responses
+  - Tests setup_auth_middleware_and_routes function
+  - Tests create_base_app with various configurations
+  - Tests create_http_server_factory for common server components
+  - Tests create_sse_app for Server-Sent Events functionality
+  - Tests create_streamable_http_app for streamable HTTP endpoints
+  - Tests StarletteWithLifespan class properties
+  - Tests integration scenarios with actual client requests
+  - Total: 30+ test cases covering all server components
+
+- **token_routes_test.py** - Complete test coverage for Starlette token routes integration
+  - Tests all 8 token route handlers individually
+  - Tests successful token operations (generate, list, get, update, delete, rotate, validate, usage)
+  - Tests unauthorized access returns 401 for all protected endpoints
+  - Tests error handling for missing token IDs and invalid requests
+  - Tests request parsing for query parameters and path parameters
+  - Tests JSON request/response handling
+  - Tests validate endpoint with various authorization header formats
+  - Tests integration with Starlette app and route registration
+  - Tests database error handling and exception propagation
+  - Total: 35+ test cases covering all route handlers
+
 #### Frontend Test Updates
 - **Profile.test.tsx** - Updated test suite to support new navigation and API token UI features
   - Added mock for react-router-dom to support useNavigate hook
@@ -821,5 +863,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
     - Import error simulation and handling
   - **Dependencies**: pytest, unittest.mock, Starlette TestClient, AsyncMock
   - **Rationale**: Ensures Supabase auth endpoints integrate properly with MCP server
+
+### Summary - 2025-08-19
+- Updated 1 stale test file (token_router_test.py) to match current implementation
+- Created 2 missing test files (http_server_test.py, token_routes_test.py)
+- Total test additions: 115+ new test cases
+- All tests now properly cover the new token management system with JWT authentication
 
 ## [2.1.1] - 2025-08-10

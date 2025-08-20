@@ -519,6 +519,14 @@ def create_streamable_http_app(
         logger.info("Branch summary routes registered for sidebar performance optimization")
     except ImportError as e:
         logger.warning(f"Could not import branch summary routes: {e}")
+    
+    # Add token management routes for streamable HTTP
+    try:
+        from .routes.token_routes import token_routes
+        server_routes.extend(token_routes)
+        logger.info(f"Token management routes registered for streamable HTTP at /api/v2/tokens ({len(token_routes)} endpoints)")
+    except ImportError as e:
+        logger.warning(f"Could not import token management routes for streamable HTTP: {e}")
 
     if middleware:
         server_middleware.extend(middleware)
