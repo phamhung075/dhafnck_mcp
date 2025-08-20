@@ -15,8 +15,8 @@ from sqlalchemy import Column, String, DateTime, Boolean, Integer, JSON
 
 from mcp.server.auth.provider import AccessToken
 from fastmcp.server.auth.providers.bearer import BearerAuthProvider
-from fastmcp.auth.interface.jwt_auth_backend import JWTAuthBackend
-from fastmcp.auth.infrastructure.database import get_db_session
+from fastmcp.auth.mcp_integration.jwt_auth_backend import JWTAuthBackend
+from fastmcp.auth.interface.fastapi_auth import get_db
 
 
 class JWTBearerAuthProvider(BearerAuthProvider):
@@ -191,7 +191,7 @@ class JWTBearerAuthProvider(BearerAuthProvider):
             from fastmcp.server.routes.token_router import APIToken
             
             # Get database session
-            db = next(get_db_session())
+            db = next(get_db())
             
             # Query token
             token = db.query(APIToken).filter(

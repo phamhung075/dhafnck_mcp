@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator, Callable, Generator
 from contextlib import asynccontextmanager, contextmanager
 from contextvars import ContextVar
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from mcp.server.auth.middleware.auth_context import AuthContextMiddleware
 from mcp.server.auth.middleware.bearer_auth import (
@@ -11,6 +11,7 @@ from mcp.server.auth.middleware.bearer_auth import (
     RequireAuthMiddleware,
 )
 from mcp.server.auth.routes import create_auth_routes
+from mcp.server.auth.provider import AccessToken
 from mcp.server.lowlevel.server import LifespanResultT
 from mcp.server.sse import SseServerTransport
 from mcp.server.streamable_http import EventStore
@@ -56,6 +57,45 @@ def set_http_request(request: Request) -> Generator[Request, None, None]:
         _current_http_request.reset(token)
 
 
+@runtime_checkable
+class TokenVerifier(Protocol):
+    """Protocol for token verification matching MCP's TokenVerifier interface."""
+    
+    async def verify_token(self, token: str) -> AccessToken | None:
+        """Verify a token and return an AccessToken if valid."""
+        ...
+
+
+class TokenVerifierAdapter:
+    """
+    Adapter that wraps an OAuthProvider to implement the TokenVerifier protocol.
+    
+    This bridges the gap between FastMCP's OAuthProvider (which has load_access_token)
+    and MCP's TokenVerifier (which expects verify_token).
+    """
+    
+    def __init__(self, provider: OAuthProvider):
+        """
+        Initialize the adapter with an OAuth provider.
+        
+        Args:
+            provider: The OAuth provider to wrap
+        """
+        self.provider = provider
+    
+    async def verify_token(self, token: str) -> AccessToken | None:
+        """
+        Verify a token by delegating to the provider's load_access_token method.
+        
+        Args:
+            token: The token to verify
+            
+        Returns:
+            AccessToken if valid, None otherwise
+        """
+        return await self.provider.load_access_token(token)
+
+
 class RequestContextMiddleware:
     """
     Middleware that stores each request in a ContextVar
@@ -87,10 +127,13 @@ def setup_auth_middleware_and_routes(
     auth_routes: list[BaseRoute] = []
     required_scopes: list[str] = []
 
+    # Create the adapter to bridge OAuthProvider to TokenVerifier
+    token_verifier = TokenVerifierAdapter(auth)
+    
     middleware = [
         Middleware(
             AuthenticationMiddleware,
-            backend=BearerAuthBackend(provider=auth),
+            backend=BearerAuthBackend(token_verifier=token_verifier),
         ),
         Middleware(AuthContextMiddleware),
     ]
@@ -352,6 +395,14 @@ def create_sse_app(
     # Store the FastMCP server instance on the Starlette app state
     app.state.fastmcp_server = server
     app.state.path = sse_path
+    
+    # Register agent metadata routes
+    try:
+        from .routes.agent_metadata_routes import register_agent_metadata_routes
+        register_agent_metadata_routes(app)
+        logger.info("Agent metadata routes registered successfully")
+    except ImportError as e:
+        logger.warning(f"Agent metadata routes not available: {e}")
 
     return app
 

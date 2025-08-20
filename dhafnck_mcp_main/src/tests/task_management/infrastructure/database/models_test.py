@@ -19,6 +19,7 @@ from sqlalchemy.exc import IntegrityError
 
 from fastmcp.task_management.infrastructure.database.models import (
     Base,
+    APIToken,
     Project,
     ProjectGitBranch,
     Task,
@@ -56,6 +57,94 @@ class TestDatabaseModels:
         session = SessionLocal()
         yield session
         session.close()
+    
+    def test_api_token_model(self, session):
+        """Test APIToken model creation and fields"""
+        from datetime import datetime, timedelta
+        
+        # Create API token
+        expires_at = datetime.utcnow() + timedelta(days=30)
+        api_token = APIToken(
+            id=str(uuid4()),
+            user_id="test-user-123",
+            name="Test Token",
+            token_hash="hashed_token_value",
+            scopes=["read", "write"],
+            expires_at=expires_at,
+            rate_limit=5000,
+            token_metadata={"source": "test", "environment": "dev"}
+        )
+        
+        session.add(api_token)
+        session.commit()
+        
+        # Verify token was created
+        retrieved_token = session.query(APIToken).filter_by(id=api_token.id).first()
+        assert retrieved_token is not None
+        assert retrieved_token.user_id == "test-user-123"
+        assert retrieved_token.name == "Test Token"
+        assert retrieved_token.token_hash == "hashed_token_value"
+        assert retrieved_token.scopes == ["read", "write"]
+        assert retrieved_token.expires_at == expires_at
+        assert retrieved_token.usage_count == 0
+        assert retrieved_token.rate_limit == 5000
+        assert retrieved_token.is_active is True
+        assert retrieved_token.token_metadata == {"source": "test", "environment": "dev"}
+        assert retrieved_token.created_at is not None
+        assert retrieved_token.last_used_at is None
+    
+    def test_api_token_default_values(self, session):
+        """Test APIToken model default values"""
+        from datetime import datetime, timedelta
+        
+        # Create minimal API token
+        expires_at = datetime.utcnow() + timedelta(days=7)
+        api_token = APIToken(
+            id=str(uuid4()),
+            user_id="test-user-456",
+            name="Minimal Token",
+            token_hash="minimal_hash",
+            expires_at=expires_at
+        )
+        
+        session.add(api_token)
+        session.commit()
+        
+        # Verify defaults
+        retrieved_token = session.query(APIToken).filter_by(id=api_token.id).first()
+        assert retrieved_token.scopes == []
+        assert retrieved_token.usage_count == 0
+        assert retrieved_token.rate_limit == 1000
+        assert retrieved_token.is_active is True
+        assert retrieved_token.token_metadata == {}
+    
+    def test_api_token_update_usage(self, session):
+        """Test updating API token usage statistics"""
+        from datetime import datetime, timedelta
+        
+        # Create and save token
+        expires_at = datetime.utcnow() + timedelta(days=30)
+        api_token = APIToken(
+            id=str(uuid4()),
+            user_id="test-user-789",
+            name="Usage Token",
+            token_hash="usage_hash",
+            expires_at=expires_at
+        )
+        
+        session.add(api_token)
+        session.commit()
+        
+        # Update usage
+        now = datetime.utcnow()
+        api_token.usage_count = 10
+        api_token.last_used_at = now
+        session.commit()
+        
+        # Verify updates
+        retrieved_token = session.query(APIToken).filter_by(id=api_token.id).first()
+        assert retrieved_token.usage_count == 10
+        assert retrieved_token.last_used_at == now
     
     def test_project_model(self, session):
         """Test Project model creation and fields"""

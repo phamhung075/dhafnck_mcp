@@ -110,7 +110,7 @@ async def generate_token_handler(request: TokenGenerateRequest, current_user: Us
         usage_count=db_token.usage_count,
         rate_limit=db_token.rate_limit,
         is_active=db_token.is_active,
-        metadata=db_token.token_metadata
+        metadata=db_token.token_metadata if isinstance(db_token.token_metadata, dict) else {}
     )
 
 async def list_tokens_handler(current_user: User, db: Session, skip: int = 0, limit: int = 100) -> TokenListResponse:
@@ -135,7 +135,7 @@ async def list_tokens_handler(current_user: User, db: Session, skip: int = 0, li
             usage_count=token.usage_count,
             rate_limit=token.rate_limit,
             is_active=token.is_active,
-            metadata=token.token_metadata
+            metadata=token.token_metadata if isinstance(token.token_metadata, dict) else {}
         )
         for token in tokens
     ]
@@ -387,7 +387,7 @@ async def generate_token(
         usage_count=db_token.usage_count,
         rate_limit=db_token.rate_limit,
         is_active=db_token.is_active,
-        metadata=db_token.token_metadata
+        metadata=db_token.token_metadata if isinstance(db_token.token_metadata, dict) else {}
     )
 
 @router.get("/", response_model=TokenListResponse)

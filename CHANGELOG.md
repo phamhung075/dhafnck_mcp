@@ -7,6 +7,37 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 ## [Unreleased]
 
 ### Fixed
+- **🔧 TOKEN RESPONSE METADATA SERIALIZATION FIX** (2025-08-20)
+  - **Issue**: API endpoint `/api/v2/tokens` returning 400 Bad Request with Pydantic validation error
+  - **Error**: `TokenResponse metadata: Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]`
+  - **Root Cause**: SQLAlchemy JSON column `token_metadata` was returning a MetaData object instead of a dictionary
+  - **Solution**: Added type checking to ensure metadata is always serialized as a dictionary
+  - **Implementation**:
+    - Updated all TokenResponse instantiations to check if `token_metadata` is a dict
+    - Falls back to empty dict `{}` if not a dictionary type
+  - **Files affected**:
+    - `/home/daihungpham/agentic-project/dhafnck_mcp_main/src/fastmcp/server/routes/token_router.py`
+      - Fixed line 113: Added type check for metadata field
+      - Fixed line 138: Added type check in list_tokens_handler
+      - Fixed line 160: Added type check in get_token_details_handler
+  - **Impact**: Token API endpoints now return proper JSON responses without validation errors
+  - **Validation**: Tested TokenResponse model with dict and empty dict metadata - all tests passing
+
+- **🔧 MCP BEARER AUTHENTICATION BACKEND FIX** (2025-08-20)
+  - **Issue**: Server startup failure with `TypeError: BearerAuthBackend.__init__() got an unexpected keyword argument 'provider'`
+  - **Root Cause**: MCP's `BearerAuthBackend` expects `token_verifier: TokenVerifier` parameter, not `provider: OAuthProvider`
+  - **Solution**: Created `TokenVerifierAdapter` class to bridge OAuthProvider interface to TokenVerifier protocol
+  - **Implementation**: 
+    - Added adapter pattern to wrap OAuthProvider and implement TokenVerifier interface
+    - Updated `setup_auth_middleware_and_routes()` to use correct parameter name
+  - **Files affected**:
+    - `/home/daihungpham/agentic-project/dhafnck_mcp_main/src/fastmcp/server/http_server.py`
+      - Added `TokenVerifier` protocol definition (lines 60-66)
+      - Added `TokenVerifierAdapter` class (lines 69-96)
+      - Fixed `BearerAuthBackend` instantiation (line 136)
+  - **Impact**: Server now starts successfully without authentication errors
+  - **Validation**: Tested server startup with both PostgreSQL and Supabase database configurations
+
 - **🚨 CRITICAL JWT AUTHENTICATION FIX** (2025-08-20)
   - **EMERGENCY**: Fixed complete JWT authentication system failure due to environment variable mismatch
   - **Root Cause**: Code expects `JWT_SECRET_KEY` but `.env` file had `JWT_SECRET` 

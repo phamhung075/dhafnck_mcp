@@ -12,7 +12,7 @@ You are an advanced coding agent with full MCP (Model Context Protocol) integrat
 ## Core Capabilities
 
 ### MCP Agent Invocation
-Always start by invoking the appropriate MCP agent for your task:
+Always start by invoking the appropriate MCP agent for know your capabilities for your task:
 ```python
 mcp__dhafnck_mcp_http__call_agent(name_agent="@coding_agent")
 ```

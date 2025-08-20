@@ -1,36 +1,36 @@
 import { renderHook, act } from '@testing-library/react';
-import { useAuthenticatedFetch } from '../../hooks/useAuthenticatedFetch';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuthenticatedFetch, authenticatedFetch } from '../../hooks/useAuthenticatedFetch';
+import { useAuth } from '../../hooks/useAuth';
 import { jest } from '@jest/globals';
+import Cookies from 'js-cookie';
 
-// Mock the auth context
-jest.mock('../../contexts/AuthContext', () => ({
-  useAuth: jest.fn(),
-}));
+// Mock the auth hook
+jest.mock('../../hooks/useAuth');
+
+// Mock js-cookie
+jest.mock('js-cookie');
 
 const mockUseAuth = jest.mocked(useAuth);
+const mockCookies = jest.mocked(Cookies);
 
 // Mock global fetch
 global.fetch = jest.fn() as jest.MockedFunction<typeof fetch>;
 const mockFetch = global.fetch as jest.MockedFunction<typeof fetch>;
 
 describe('useAuthenticatedFetch', () => {
-  const mockUser = {
-    id: '123',
-    email: 'test@example.com',
-    access_token: 'test-token',
+  const mockTokens = {
+    access_token: 'test-access-token',
+    refresh_token: 'test-refresh-token',
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockUseAuth.mockReturnValue({
-      user: mockUser,
-      loading: false,
-      signIn: jest.fn(),
-      signUp: jest.fn(),
-      signOut: jest.fn(),
-      refreshAccessToken: jest.fn(),
+      tokens: mockTokens,
+      refreshToken: jest.fn(),
+      logout: jest.fn(),
     });
+    mockCookies.get.mockReturnValue('test-access-token');
   });
 
   it('returns a function when rendered in a hook', () => {
@@ -57,7 +57,7 @@ describe('useAuthenticatedFetch', () => {
     expect(mockFetch).toHaveBeenCalledWith('/api/test', {
       method: 'GET',
       headers: {
-        Authorization: 'Bearer test-token',
+        Authorization: 'Bearer test-access-token',
       },
     });
   });
@@ -86,20 +86,17 @@ describe('useAuthenticatedFetch', () => {
       headers: {
         'Content-Type': 'application/json',
         'X-Custom-Header': 'custom-value',
-        Authorization: 'Bearer test-token',
+        Authorization: 'Bearer test-access-token',
       },
       body: JSON.stringify({ test: 'data' }),
     });
   });
 
-  it('makes request without auth header when user is not authenticated', async () => {
+  it('makes request without auth header when tokens are not available', async () => {
     mockUseAuth.mockReturnValue({
-      user: null,
-      loading: false,
-      signIn: jest.fn(),
-      signUp: jest.fn(),
-      signOut: jest.fn(),
-      refreshAccessToken: jest.fn(),
+      tokens: null,
+      refreshToken: jest.fn(),
+      logout: jest.fn(),
     });
 
     mockFetch.mockResolvedValueOnce({
@@ -113,9 +110,7 @@ describe('useAuthenticatedFetch', () => {
       await result.current('/api/public');
     });
 
-    expect(mockFetch).toHaveBeenCalledWith('/api/public', {
-      headers: {},
-    });
+    expect(mockFetch).toHaveBeenCalledWith('/api/public', {});
   });
 
   it('handles non-JSON responses', async () => {
@@ -144,31 +139,15 @@ describe('useAuthenticatedFetch', () => {
     })).rejects.toThrow('Network error');
   });
 
-  it('can be used in non-React context with access token', async () => {
+  it('can be used in non-React context with access token from cookies', async () => {
     const mockResponse = { data: 'standalone' };
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => mockResponse,
     } as Response);
 
-    // Mock the hook to return null when used outside React
-    mockUseAuth.mockImplementation(() => {
-      throw new Error('useAuth must be used within AuthProvider');
-    });
-
-    // Call the hook directly with try/catch to handle the non-React scenario
-    let authenticatedFetch: any;
-    try {
-      const { result } = renderHook(() => useAuthenticatedFetch());
-      authenticatedFetch = result.current;
-    } catch {
-      // In non-React context, create the function manually
-      authenticatedFetch = (url: string, options: RequestInit = {}) => {
-        const headers = new Headers(options.headers);
-        headers.set('Authorization', 'Bearer standalone-token');
-        return fetch(url, { ...options, headers });
-      };
-    }
+    // Mock cookie access
+    mockCookies.get.mockReturnValue('cookie-token');
 
     const response = await authenticatedFetch('/api/standalone', {
       method: 'GET',
@@ -176,8 +155,11 @@ describe('useAuthenticatedFetch', () => {
 
     expect(mockFetch).toHaveBeenCalledWith('/api/standalone', {
       method: 'GET',
-      headers: expect.any(Headers),
+      headers: {
+        'Authorization': 'Bearer cookie-token',
+      },
     });
+    expect(mockCookies.get).toHaveBeenCalledWith('access_token');
   });
 
   it('handles 401 unauthorized responses', async () => {
@@ -196,44 +178,35 @@ describe('useAuthenticatedFetch', () => {
     });
   });
 
-  it('uses refreshed token after refresh', async () => {
-    const refreshAccessToken = jest.fn().mockResolvedValue('new-token');
+  it('handles 401 responses by refreshing token and retrying', async () => {
+    const refreshToken = jest.fn().mockResolvedValue(undefined);
     
     mockUseAuth.mockReturnValue({
-      user: { ...mockUser, access_token: 'old-token' },
-      loading: false,
-      signIn: jest.fn(),
-      signUp: jest.fn(),
-      signOut: jest.fn(),
-      refreshAccessToken,
+      tokens: mockTokens,
+      refreshToken,
+      logout: jest.fn(),
     });
 
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ refreshed: true }),
-    } as Response);
+    // First request returns 401
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        statusText: 'Unauthorized',
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ refreshed: true }),
+      } as Response);
 
     const { result } = renderHook(() => useAuthenticatedFetch());
     
-    // Update the user with new token
-    mockUseAuth.mockReturnValue({
-      user: { ...mockUser, access_token: 'new-token' },
-      loading: false,
-      signIn: jest.fn(),
-      signUp: jest.fn(),
-      signOut: jest.fn(),
-      refreshAccessToken,
-    });
-
     await act(async () => {
       await result.current('/api/test');
     });
 
-    expect(mockFetch).toHaveBeenCalledWith('/api/test', {
-      headers: {
-        Authorization: 'Bearer new-token',
-      },
-    });
+    expect(refreshToken).toHaveBeenCalled();
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
   it('supports all HTTP methods', async () => {
@@ -254,9 +227,128 @@ describe('useAuthenticatedFetch', () => {
       expect(mockFetch).toHaveBeenLastCalledWith('/api/test', {
         method,
         headers: {
-          Authorization: 'Bearer test-token',
+          Authorization: 'Bearer test-access-token',
         },
       });
     }
+  });
+
+  it('supports skipAuth option', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ public: true }),
+    } as Response);
+
+    const { result } = renderHook(() => useAuthenticatedFetch());
+    
+    await act(async () => {
+      await result.current('/api/public', { skipAuth: true });
+    });
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/public', {});
+  });
+
+  it('handles refresh token failure by logging out', async () => {
+    const refreshToken = jest.fn().mockRejectedValue(new Error('Refresh failed'));
+    const logout = jest.fn();
+    
+    mockUseAuth.mockReturnValue({
+      tokens: mockTokens,
+      refreshToken,
+      logout,
+    });
+
+    // First request returns 401
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      statusText: 'Unauthorized',
+    } as Response);
+
+    const { result } = renderHook(() => useAuthenticatedFetch());
+    
+    await expect(act(async () => {
+      await result.current('/api/test');
+    })).rejects.toThrow('Session expired. Please login again.');
+
+    expect(refreshToken).toHaveBeenCalled();
+    expect(logout).toHaveBeenCalled();
+  });
+});
+
+describe('authenticatedFetch (standalone)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('adds authorization header when token is available in cookies', async () => {
+    mockCookies.get.mockReturnValue('cookie-access-token');
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ success: true }),
+    } as Response);
+
+    await authenticatedFetch('/api/test');
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/test', {
+      headers: {
+        'Authorization': 'Bearer cookie-access-token',
+      },
+    });
+  });
+
+  it('makes request without auth header when no token in cookies', async () => {
+    mockCookies.get.mockReturnValue(undefined);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ public: true }),
+    } as Response);
+
+    await authenticatedFetch('/api/public');
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/public', {});
+  });
+
+  it('preserves existing headers when adding authorization', async () => {
+    mockCookies.get.mockReturnValue('cookie-token');
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ success: true }),
+    } as Response);
+
+    await authenticatedFetch('/api/test', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Custom-Header': 'custom-value',
+      },
+      body: JSON.stringify({ test: 'data' }),
+    });
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/test', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Custom-Header': 'custom-value',
+        'Authorization': 'Bearer cookie-token',
+      },
+      body: JSON.stringify({ test: 'data' }),
+    });
+  });
+
+  it('returns response including 401 unauthorized responses', async () => {
+    mockCookies.get.mockReturnValue('invalid-token');
+    const unauthorizedResponse = {
+      ok: false,
+      status: 401,
+      statusText: 'Unauthorized',
+    } as Response;
+    
+    mockFetch.mockResolvedValueOnce(unauthorizedResponse);
+
+    const response = await authenticatedFetch('/api/protected');
+
+    expect(response).toBe(unauthorizedResponse);
+    expect(response.status).toBe(401);
   });
 });
