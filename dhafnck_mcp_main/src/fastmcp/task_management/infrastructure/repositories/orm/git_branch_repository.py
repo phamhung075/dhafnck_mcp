@@ -37,7 +37,7 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectGitBranch], GitBranchRepos
     SQLAlchemy ORM models and the ProjectGitBranch model.
     """
     
-    def __init__(self, user_id: str = "default_id"):
+    def __init__(self, user_id: Optional[str] = None):
         """
         Initialize ORM Git Branch Repository.
         

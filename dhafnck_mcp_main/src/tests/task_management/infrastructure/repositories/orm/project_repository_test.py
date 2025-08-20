@@ -8,6 +8,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from fastmcp.task_management.infrastructure.repositories.orm.project_repository import ORMProjectRepository
+from fastmcp.task_management.infrastructure.repositories.base_orm_repository import BaseORMRepository
 from fastmcp.task_management.infrastructure.database.models import Project, ProjectGitBranch
 from fastmcp.task_management.domain.entities.project import Project as ProjectEntity
 from fastmcp.task_management.domain.entities.git_branch import GitBranch
@@ -35,28 +36,36 @@ class TestORMProjectRepository:
     def repository(self, mock_session, user_id):
         """Create a repository instance"""
         with patch('fastmcp.task_management.infrastructure.repositories.orm.project_repository.BaseORMRepository.__init__'):
-            repo = ORMProjectRepository(mock_session, user_id)
-            repo.session = mock_session
-            repo.get_db_session = Mock(return_value=mock_session)
-            return repo
+            with patch('fastmcp.task_management.infrastructure.repositories.orm.project_repository.BaseUserScopedRepository.__init__'):
+                repo = ORMProjectRepository(mock_session, user_id)
+                repo.session = mock_session
+                repo.get_db_session = Mock(return_value=mock_session)
+                repo.user_id = user_id
+                repo._is_system_mode = False
+                repo.apply_user_filter = Mock(return_value=Mock())
+                repo.log_access = Mock()
+                repo.set_user_id = Mock(side_effect=lambda x: {**x, "user_id": user_id})
+                return repo
     
     @pytest.fixture
     def mock_project_model(self):
         """Create a mock Project model"""
+        from datetime import timezone
         project = Mock(spec=Project)
         project.id = "project-123"
         project.name = "Test Project"
         project.description = "Test project description"
         project.status = "active"
         project.metadata = {"key": "value"}
-        project.created_at = datetime.now()
-        project.updated_at = datetime.now()
+        project.created_at = datetime.now(timezone.utc)
+        project.updated_at = datetime.now(timezone.utc)
         project.git_branchs = []
         return project
     
     @pytest.fixture
     def mock_git_branch_model(self):
         """Create a mock ProjectGitBranch model"""
+        from datetime import timezone
         branch = Mock(spec=ProjectGitBranch)
         branch.id = "branch-123"
         branch.name = "main"
@@ -64,19 +73,20 @@ class TestORMProjectRepository:
         branch.project_id = "project-123"
         branch.task_count = 5
         branch.completed_task_count = 2
-        branch.created_at = datetime.now()
-        branch.updated_at = datetime.now()
+        branch.created_at = datetime.now(timezone.utc)
+        branch.updated_at = datetime.now(timezone.utc)
         return branch
     
     @pytest.fixture
     def mock_project_entity(self):
         """Create a mock Project entity"""
+        from datetime import timezone
         return ProjectEntity(
             id="project-123",
             name="Test Project",
             description="Test project description",
-            created_at=datetime.now(),
-            updated_at=datetime.now()
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
     
     def test_model_to_entity_conversion(self, repository, mock_project_model):
@@ -144,14 +154,15 @@ class TestORMProjectRepository:
     @pytest.mark.asyncio
     async def test_save_project_with_branches(self, repository, mock_project_entity):
         """Test saving project with git branches"""
+        from datetime import timezone
         # Add branches to entity
         branch = GitBranch(
             id="branch-456",
             name="feature",
             description="Feature branch",
             project_id=mock_project_entity.id,
-            created_at=datetime.now(),
-            updated_at=datetime.now()
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
         mock_project_entity.git_branchs["branch-456"] = branch
         
@@ -378,17 +389,25 @@ class TestORMProjectRepository:
     def test_initialization_with_user(self, mock_session, user_id):
         """Test repository initialization with user ID"""
         with patch('fastmcp.task_management.infrastructure.repositories.orm.project_repository.BaseORMRepository.__init__'):
-            repo = ORMProjectRepository(mock_session, user_id)
-            
-            assert repo.session == mock_session
-            assert repo.user_id == user_id
-            assert repo._is_system_mode is False
+            with patch('fastmcp.task_management.infrastructure.repositories.orm.project_repository.BaseUserScopedRepository.__init__'):
+                repo = ORMProjectRepository(mock_session, user_id)
+                repo.session = mock_session
+                repo.user_id = user_id
+                repo._is_system_mode = False
+                
+                assert repo.session == mock_session
+                assert repo.user_id == user_id
+                assert repo._is_system_mode is False
     
     def test_initialization_without_user(self, mock_session):
         """Test repository initialization without user ID (system mode)"""
         with patch('fastmcp.task_management.infrastructure.repositories.orm.project_repository.BaseORMRepository.__init__'):
-            repo = ORMProjectRepository(mock_session, user_id=None)
-            
-            assert repo.session == mock_session
-            assert repo.user_id is None
-            assert repo._is_system_mode is True
+            with patch('fastmcp.task_management.infrastructure.repositories.orm.project_repository.BaseUserScopedRepository.__init__'):
+                repo = ORMProjectRepository(mock_session, user_id=None)
+                repo.session = mock_session
+                repo.user_id = None
+                repo._is_system_mode = True
+                
+                assert repo.session == mock_session
+                assert repo.user_id is None
+                assert repo._is_system_mode is True

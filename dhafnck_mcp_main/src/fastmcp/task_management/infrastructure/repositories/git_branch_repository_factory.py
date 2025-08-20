@@ -31,7 +31,7 @@ class GitBranchRepositoryFactory:
     def create(
         cls,
         repository_type: Optional[GitBranchRepositoryType] = None,
-        user_id: str = "default_id",
+        user_id: Optional[str] = None,
         **kwargs
     ) -> GitBranchRepository:
         """
@@ -140,12 +140,12 @@ GitBranchRepositoryFactory.register_type(GitBranchRepositoryType.MEMORY, MockGit
 
 
 # Convenience functions
-def get_default_repository(user_id: str = "default_id") -> GitBranchRepository:
+def get_default_repository(user_id: Optional[str] = None) -> GitBranchRepository:
     """Get default git branch repository"""
     return GitBranchRepositoryFactory.create(user_id=user_id)
 
 
-def get_sqlite_repository(user_id: str = "default_id", **kwargs) -> GitBranchRepository:
+def get_sqlite_repository(user_id: Optional[str] = None, **kwargs) -> GitBranchRepository:
     """Get ORM git branch repository (legacy compatibility method)"""
     return GitBranchRepositoryFactory.create(
         repository_type=GitBranchRepositoryType.ORM,
@@ -154,7 +154,7 @@ def get_sqlite_repository(user_id: str = "default_id", **kwargs) -> GitBranchRep
     )
 
 
-def get_orm_repository(user_id: str = "default_id", **kwargs) -> GitBranchRepository:
+def get_orm_repository(user_id: Optional[str] = None, **kwargs) -> GitBranchRepository:
     """Get ORM git branch repository"""
     return GitBranchRepositoryFactory.create(
         repository_type=GitBranchRepositoryType.ORM,

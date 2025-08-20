@@ -95,7 +95,7 @@ class TaskApplicationService:
         return response
 
     async def get_task(self, task_id: str, generate_rules: bool = True, force_full_generation: bool = False,
-                      include_context: bool = False, user_id: str = "default_id", 
+                      include_context: bool = False, user_id: Optional[str] = None, 
                       project_id: str = "", git_branch_name: str = "main") -> Optional[TaskResponse]:
         try:
             return await self._get_task_use_case.execute(

@@ -42,7 +42,7 @@ class DeleteContextRequest:
 @dataclass
 class ListContextsRequest:
     """Request DTO for listing contexts following clean relationship chain"""
-    user_id: str = "default_id"  # Only user_id needed since contexts are accessed via tasks
+    user_id: Optional[str] = None  # Only user_id needed since contexts are accessed via tasks
     project_id: str = ""  # Optional project_id for filtering contexts
 
 

@@ -47,7 +47,7 @@ class ProjectManagementService:
         """Create a new service instance scoped to a specific user."""
         return ProjectManagementService(self._project_repo, user_id)
     
-    async def create_project(self, name: str, description: str = "", user_id: str = "default_id") -> Dict[str, Any]:
+    async def create_project(self, name: str, description: str = "", user_id: Optional[str] = None) -> Dict[str, Any]:
         """Create a new project with auto-generated UUID"""
         try:
             use_case = CreateProjectUseCase(self._project_repo)

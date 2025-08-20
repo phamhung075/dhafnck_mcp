@@ -6,6 +6,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Fixed
+- **Updated stale ORM repository tests to match current implementation** (2025-08-20)
+  - Fixed imports to include `BaseORMRepository` and proper inheritance structure
+  - Updated repository fixtures to mock both `BaseORMRepository` and `BaseUserScopedRepository` initialization
+  - Fixed datetime timezone issues by using `datetime.now(timezone.utc)` instead of `datetime.now()`
+  - Updated task IDs to use valid UUID format (e.g., "12345678-1234-5678-1234-567812345678" instead of "task-123")
+  - Fixed TaskStatus and Priority assertions to use `.value` property instead of enum comparison
+  - Added proper git_branch_id, project_id, and user_id initialization in task repository fixtures
+  - Files updated:
+    - `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/project_repository_test.py`
+    - `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/task_repository_test.py`
+
 ### Added
 - **🔐 AUTHENTICATION ENFORCEMENT INFRASTRUCTURE** (2025-08-20)
   - **Purpose**: Eliminate default_id usage and enforce proper authentication for all operations
@@ -42,12 +54,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
   - **Impact**: Breaking change - all operations now require authentication
   - **Migration Path**: Set `ALLOW_DEFAULT_USER=true` temporarily during transition
   - **Next Steps**: Update remaining 32 files to complete default_id elimination
-  - **Progress Update - PHASE 2 COMPLETE**:
-    - ✅ Controllers updated (5/5): project, task, subtask, git_branch, agent
-    - ✅ Factories updated (4/4): project, task, agent, task_repository
-    - ✅ Repositories updated (3/3): task_repository, agent_repository_factory, project_repository
-    - ✅ Use cases updated (1/1): create_task
-    - **Total: 17 of 37 files updated**
+  - **🎉 AUTHENTICATION ENFORCEMENT COMPLETE - ALL PHASES** (2025-08-20):
+    - ✅ **Controllers** (6/6): project, task, subtask, git_branch, agent, dependency
+    - ✅ **Factories** (10/10): All application and repository factories updated
+    - ✅ **Repositories** (8/8): All repository implementations and factories
+    - ✅ **Use cases** (3/3): create_task, create_project, create_git_branch
+    - ✅ **Services** (4/4): All application services updated
+    - ✅ **Facades** (3/3): All application facades updated
+    - ✅ **DTOs** (1/1): context_request
+    - ✅ **Infrastructure** (2/2): path_resolver, context_schema
+    - ✅ **Database models**: Removed all default values for user_id columns
+    - **Total: 37 of 37 files updated - 100% COMPLETE**
+    - **Result**: ZERO occurrences of "default_id" remaining in production code
   - **Test Results - ALL PASSING**:
     - ✅ Domain constants successfully enforce authentication
     - ✅ All factories reject default_id and require user_id

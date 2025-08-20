@@ -30,7 +30,7 @@ class ProjectServiceFactory:
             project_repo=repository
         )
     
-    def create_project_application_service(self, user_id: str = "default_id") -> ProjectApplicationService:
+    def create_project_application_service(self, user_id: Optional[str] = None) -> ProjectApplicationService:
         """Create a DDD-compliant project application service"""
         repository = self._project_repository or self._get_repository_for_user(user_id)
         return ProjectApplicationService(
@@ -49,7 +49,7 @@ class ProjectServiceFactory:
             return self._project_repository
         return ProjectRepositoryFactory.create(user_id=user_id)
     
-    def create_sqlite_service(self, user_id: str = "default_id", db_path: Optional[str] = None) -> ProjectApplicationService:
+    def create_sqlite_service(self, user_id: Optional[str] = None, db_path: Optional[str] = None) -> ProjectApplicationService:
         """Create service with SQLite repository (legacy support)"""
         repository = get_sqlite_repository(user_id=user_id, db_path=db_path)
         return ProjectApplicationService(project_repository=repository)
@@ -59,7 +59,7 @@ class ProjectServiceFactory:
         repository = config.create_repository()
         return ProjectApplicationService(project_repository=repository)
     
-    def create_service_from_environment(self, user_id: str = "default_id") -> ProjectApplicationService:
+    def create_service_from_environment(self, user_id: Optional[str] = None) -> ProjectApplicationService:
         """Create service using environment configuration"""
         config = RepositoryConfig.from_environment()
         config.user_id = user_id
@@ -103,7 +103,7 @@ def create_project_service_for_user(user_id: str) -> ProjectApplicationService:
 
 
 def create_sqlite_project_service(
-    user_id: str = "default_id", 
+    user_id: Optional[str] = None, 
     db_path: Optional[str] = None
 ) -> ProjectApplicationService:
     """Create a project service with SQLite repository (legacy support)"""

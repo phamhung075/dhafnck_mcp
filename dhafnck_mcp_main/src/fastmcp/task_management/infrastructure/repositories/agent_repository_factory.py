@@ -169,7 +169,7 @@ class AgentRepositoryConfig:
     def __init__(
         self,
         repository_type: Optional[str] = None,
-        user_id: str = "default_id",
+        user_id: Optional[str] = None,
         db_path: Optional[str] = None,
         **kwargs
     ):
@@ -203,7 +203,7 @@ class AgentRepositoryConfig:
         """Create configuration from environment variables"""
         return cls(
             repository_type=os.getenv("MCP_AGENT_REPOSITORY_TYPE"),
-            user_id=os.getenv("MCP_USER_ID", "default_id"),
+            user_id=os.getenv("MCP_USER_ID"),  # No default - authentication required
             db_path=os.getenv("MCP_DB_PATH")
         )
 
@@ -248,7 +248,7 @@ class GlobalAgentRepositoryManager:
 
 # Convenience functions for easy repository creation
 def create_agent_repository(
-    user_id: str = "default_id",
+    user_id: Optional[str] = None,
     repository_type: Optional[str] = None,
     db_path: Optional[str] = None
 ) -> AgentRepository:
@@ -261,7 +261,7 @@ def create_agent_repository(
 
 
 def get_sqlite_agent_repository(
-    user_id: str = "default_id",
+    user_id: Optional[str] = None,
     db_path: Optional[str] = None
 ) -> ORMAgentRepository:
     """Get ORM agent repository instance (legacy compatibility method)"""
@@ -272,7 +272,7 @@ def get_sqlite_agent_repository(
 
 
 def get_orm_agent_repository(
-    user_id: str = "default_id",
+    user_id: Optional[str] = None,
     project_id: Optional[str] = None
 ) -> ORMAgentRepository:
     """Get ORM agent repository instance"""

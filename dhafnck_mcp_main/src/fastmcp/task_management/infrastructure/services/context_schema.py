@@ -17,7 +17,7 @@ class ContextMetadata:
     task_id: str
     project_id: str
     git_branch_id: str = "main"
-    user_id: str = "default_id"
+    user_id: Optional[str] = None
     status: TaskStatus = field(default_factory=TaskStatus.todo)
     priority: Priority = field(default_factory=Priority.medium)
     assignees: List[str] = field(default_factory=list)
@@ -295,7 +295,7 @@ class ContextSchema:
                         "task_id": {"type": "string"},
                         "project_id": {"type": "string"},
                         "git_branch_id": {"type": "string", "default": "main"},
-                        "user_id": {"type": "string", "default": "default_id"},
+                        "user_id": {"type": ["string", "null"], "default": null},
                         "status": {"type": "string", "enum": [status.value for status in TaskStatusEnum]},
                         "priority": {"type": "string", "enum": [priority.label for priority in PriorityLevel]},
                         "assignees": {"type": "array", "items": {"type": "string"}},

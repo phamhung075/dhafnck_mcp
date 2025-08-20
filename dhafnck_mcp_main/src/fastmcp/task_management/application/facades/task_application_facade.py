@@ -145,7 +145,20 @@ class TaskApplicationFacade:
             # Set derived context as attributes for later use
             derived_project_id = context.get("project_id") or "default_project"
             derived_git_branch_name = context.get("git_branch_name") or "main"
-            derived_user_id = "default_id"  # Default user ID
+            # Validate user authentication
+            from ...domain.constants import validate_user_id
+            from ...domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
+            from ....config.auth_config import AuthConfig
+            
+            derived_user_id = getattr(request, 'user_id', None)
+            if derived_user_id is None:
+                if AuthConfig.is_default_user_allowed():
+                    derived_user_id = AuthConfig.get_fallback_user_id()
+                    AuthConfig.log_authentication_bypass("Task creation", "compatibility mode")
+                else:
+                    raise UserAuthenticationRequiredError("Task creation")
+            else:
+                derived_user_id = validate_user_id(derived_user_id, "Task creation")
             
             # Validate request at application boundary
             self._validate_create_task_request(request)
@@ -704,7 +717,7 @@ class TaskApplicationFacade:
             logger.error(f"Unexpected error in search_tasks: {e}")
             return {"success": False, "action": "search", "error": f"Unexpected error: {str(e)}"}
     
-    async def get_next_task(self, include_context: bool = True, user_id: str = "default_id", 
+    async def get_next_task(self, include_context: bool = True, user_id: Optional[str] = None, 
                            project_id: str = "", git_branch_id: str = "main", 
                            assignee: Optional[str] = None, labels: Optional[List[str]] = None) -> Dict[str, Any]:
         """Get the next task to work on with optional context data"""

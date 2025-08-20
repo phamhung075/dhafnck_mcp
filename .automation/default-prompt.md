@@ -27,14 +27,6 @@ REQUIRED BEHAVIORS:
 ## Missing Test Files - CREATE IMMEDIATELY:
 
 ## Stale Test Files (Source Newer Than Test)
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/mcp_entry_point.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/server/mcp_entry_point_test.py`
-  - **Days stale**: 1
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/database/models.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/database/models_test.py`
-  - **Days stale**: 0
-
 - **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/project_repository.py`
   - **Test**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/project_repository_test.py`
   - **Days stale**: 1
@@ -45,20 +37,14 @@ REQUIRED BEHAVIORS:
 
 
 ## Missing Test Files
-- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/mcp_integration/mcp_auth_middleware.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/auth/mcp_integration/mcp_auth_middleware_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/config/auth_config.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/config/auth_config_test.py`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/mcp_integration/thread_context_manager.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/auth/mcp_integration/thread_context_manager_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/factories/project_facade_factory.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/factories/project_facade_factory_test.py`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/factories/agent_facade_factory.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/factories/agent_facade_factory_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/factories/task_facade_factory.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/factories/task_facade_factory_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/use_cases/call_agent.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/use_cases/call_agent_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/use_cases/create_project.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/use_cases/create_project_test.py`
 
 - **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/use_cases/create_task.py`
   - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/use_cases/create_task_test.py`
@@ -66,11 +52,17 @@ REQUIRED BEHAVIORS:
 - **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/domain/constants.py`
   - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/domain/constants_test.py`
 
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/domain/exceptions/authentication_exceptions.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/domain/exceptions/authentication_exceptions_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/database/migrations/add_user_id_to_project_contexts.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/database/migrations/add_user_id_to_project_contexts_test.py`
+
 - **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/agent_repository_factory.py`
   - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/agent_repository_factory_test.py`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/global_context_repository.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/global_context_repository_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/project_repository_factory.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/project_repository_factory_test.py`
 
 - **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/task_repository_factory.py`
   - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/task_repository_factory_test.py`
@@ -89,9 +81,6 @@ REQUIRED BEHAVIORS:
 
 - **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/task_mcp_controller.py`
   - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/task_mcp_controller_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/tools/tool.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/tools/tool_test.py`
 
 
 ## EXECUTION COMMANDS - DO NOW:

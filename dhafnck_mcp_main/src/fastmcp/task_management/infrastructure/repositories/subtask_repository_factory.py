@@ -57,7 +57,7 @@ def _find_project_root() -> Path:
 class SubtaskRepositoryFactory:
     """Factory for creating subtask repositories with hierarchical user/project/tree structure"""
     
-    def __init__(self, base_path: Optional[str] = None, default_user_id: str = "default_id", 
+    def __init__(self, base_path: Optional[str] = None, default_user_id: Optional[str] = None, 
                  project_root: Optional[Path] = None):
         """
         Initialize subtask repository factory

@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 import uuid
 
 from fastmcp.task_management.infrastructure.repositories.orm.task_repository import ORMTaskRepository
+from fastmcp.task_management.infrastructure.repositories.base_orm_repository import BaseORMRepository
 from fastmcp.task_management.infrastructure.database.models import Task, TaskAssignee, TaskDependency, TaskLabel, Label
 from fastmcp.task_management.domain.entities.task import Task as TaskEntity
 from fastmcp.task_management.domain.value_objects.task_id import TaskId
@@ -48,19 +49,28 @@ class TestORMTaskRepository:
     def repository(self, mock_session, git_branch_id, project_id, user_id):
         """Create a repository instance"""
         with patch('fastmcp.task_management.infrastructure.repositories.orm.task_repository.BaseORMRepository.__init__'):
-            repo = ORMTaskRepository(mock_session, git_branch_id, project_id, user_id=user_id)
-            repo.session = mock_session
-            repo.get_db_session = Mock(return_value=mock_session)
-            repo.transaction = Mock()
-            repo.transaction.__enter__ = Mock(return_value=None)
-            repo.transaction.__exit__ = Mock(return_value=None)
-            return repo
+            with patch('fastmcp.task_management.infrastructure.repositories.orm.task_repository.BaseUserScopedRepository.__init__'):
+                repo = ORMTaskRepository(mock_session, git_branch_id, project_id, user_id=user_id)
+                repo.session = mock_session
+                repo.get_db_session = Mock(return_value=mock_session)
+                repo.transaction = Mock()
+                repo.transaction.__enter__ = Mock(return_value=None)
+                repo.transaction.__exit__ = Mock(return_value=None)
+                repo.git_branch_id = git_branch_id
+                repo.project_id = project_id
+                repo.user_id = user_id
+                repo._is_system_mode = False
+                repo.apply_user_filter = Mock(return_value=Mock())
+                repo.log_access = Mock()
+                repo.set_user_id = Mock(side_effect=lambda x: {**x, "user_id": user_id})
+                return repo
     
     @pytest.fixture
     def mock_task_model(self):
         """Create a mock Task model"""
+        from datetime import timezone
         task = Mock(spec=Task)
-        task.id = "task-123"
+        task.id = "12345678-1234-5678-1234-567812345678"  # Valid UUID format
         task.title = "Test Task"
         task.description = "Test task description"
         task.git_branch_id = "branch-123"
@@ -71,8 +81,8 @@ class TestORMTaskRepository:
         task.due_date = None
         task.context_id = "context-123"
         task.progress_percentage = 50
-        task.created_at = datetime.now()
-        task.updated_at = datetime.now()
+        task.created_at = datetime.now(timezone.utc)
+        task.updated_at = datetime.now(timezone.utc)
         
         # Mock relationships
         task.assignees = []
@@ -115,12 +125,12 @@ class TestORMTaskRepository:
         
         # Add mock subtask
         mock_subtask = Mock()
-        mock_subtask.id = "subtask-456"
+        mock_subtask.id = "11111111-2222-3333-4444-555555555555"  # Valid UUID
         mock_task_model.subtasks = [mock_subtask]
         
         # Add mock dependency
         mock_dependency = Mock(spec=TaskDependency)
-        mock_dependency.depends_on_task_id = "dep-789"
+        mock_dependency.depends_on_task_id = "99999999-8888-7777-6666-555555555555"  # Valid UUID
         mock_task_model.dependencies = [mock_dependency]
         
         entity = repository._model_to_entity(mock_task_model)
@@ -129,14 +139,14 @@ class TestORMTaskRepository:
         assert entity.id.value == mock_task_model.id
         assert entity.title == mock_task_model.title
         assert entity.description == mock_task_model.description
-        assert entity.status == TaskStatus.TODO
-        assert entity.priority == Priority.HIGH
+        assert entity.status.value == "todo"
+        assert entity.priority.value == "high"
         assert entity.overall_progress == 50
         assert "user-456" in entity.assignees
         assert "bug" in entity.labels
-        assert "subtask-456" in entity.subtasks
+        assert "11111111-2222-3333-4444-555555555555" in entity.subtasks
         assert len(entity.dependencies) == 1
-        assert entity.dependencies[0].value == "dep-789"
+        assert entity.dependencies[0].value == "99999999-8888-7777-6666-555555555555"
     
     def test_create_task_success(self, repository):
         """Test successful task creation"""
@@ -170,8 +180,9 @@ class TestORMTaskRepository:
         mock_reloaded_task.labels = []
         mock_reloaded_task.subtasks = []
         mock_reloaded_task.dependencies = []
-        mock_reloaded_task.created_at = datetime.now()
-        mock_reloaded_task.updated_at = datetime.now()
+        from datetime import timezone
+        mock_reloaded_task.created_at = datetime.now(timezone.utc)
+        mock_reloaded_task.updated_at = datetime.now(timezone.utc)
         
         mock_query.options.return_value = mock_query
         mock_query.filter.return_value.first.return_value = mock_reloaded_task
@@ -187,7 +198,7 @@ class TestORMTaskRepository:
         
         assert result.title == title
         assert result.description == description
-        assert result.priority == Priority.HIGH
+        assert result.priority.value == "high"
         repository.create.assert_called_once()
         repository.set_user_id.assert_called_once()
         
@@ -224,8 +235,9 @@ class TestORMTaskRepository:
         mock_reloaded_task.labels = []
         mock_reloaded_task.subtasks = []
         mock_reloaded_task.dependencies = []
-        mock_reloaded_task.created_at = datetime.now()
-        mock_reloaded_task.updated_at = datetime.now()
+        from datetime import timezone
+        mock_reloaded_task.created_at = datetime.now(timezone.utc)
+        mock_reloaded_task.updated_at = datetime.now(timezone.utc)
         
         mock_query.options.return_value = mock_query
         mock_query.filter.return_value.first.side_effect = [mock_existing_label, mock_reloaded_task]
@@ -253,7 +265,7 @@ class TestORMTaskRepository:
     
     def test_get_task_found(self, repository, mock_task_model):
         """Test getting existing task"""
-        task_id = "task-123"
+        task_id = "12345678-1234-5678-1234-567812345678"  # Valid UUID
         
         mock_query = Mock()
         mock_query.options.return_value = mock_query
@@ -293,7 +305,7 @@ class TestORMTaskRepository:
     
     def test_update_task_success(self, repository, mock_task_model):
         """Test successful task update"""
-        task_id = "task-123"
+        task_id = "12345678-1234-5678-1234-567812345678"  # Valid UUID
         updates = {
             "title": "Updated Title",
             "status": "in_progress",
@@ -322,7 +334,7 @@ class TestORMTaskRepository:
     
     def test_update_task_with_assignees(self, repository, mock_task_model):
         """Test updating task with new assignees"""
-        task_id = "task-123"
+        task_id = "12345678-1234-5678-1234-567812345678"  # Valid UUID
         updates = {
             "assignee_ids": ["user-111", "user-222"]
         }
@@ -347,7 +359,7 @@ class TestORMTaskRepository:
     
     def test_update_task_with_labels(self, repository, mock_task_model):
         """Test updating task with new labels"""
-        task_id = "task-123"
+        task_id = "12345678-1234-5678-1234-567812345678"  # Valid UUID
         updates = {
             "label_names": ["urgent", "high-priority"]
         }
@@ -385,7 +397,7 @@ class TestORMTaskRepository:
     
     def test_update_task_error(self, repository):
         """Test task update error handling"""
-        task_id = "task-123"
+        task_id = "12345678-1234-5678-1234-567812345678"  # Valid UUID
         repository.update = Mock(side_effect=Exception("Update failed"))
         
         with pytest.raises(TaskUpdateError) as exc_info:
@@ -396,7 +408,7 @@ class TestORMTaskRepository:
     
     def test_delete_task(self, repository):
         """Test task deletion"""
-        task_id = "task-123"
+        task_id = "12345678-1234-5678-1234-567812345678"  # Valid UUID
         
         # Mock the parent delete method
         with patch.object(repository, 'delete', return_value=True) as mock_delete:
@@ -408,23 +420,29 @@ class TestORMTaskRepository:
     def test_initialization_with_user(self, mock_session, git_branch_id, project_id, user_id):
         """Test repository initialization with user ID"""
         with patch('fastmcp.task_management.infrastructure.repositories.orm.task_repository.BaseORMRepository.__init__'):
-            repo = ORMTaskRepository(
-                mock_session,
-                git_branch_id=git_branch_id,
-                project_id=project_id,
-                user_id=user_id
-            )
-            
-            assert repo.session == mock_session
-            assert repo.git_branch_id == git_branch_id
-            assert repo.project_id == project_id
-            assert repo.user_id == user_id
-            assert repo._is_system_mode is False
+            with patch('fastmcp.task_management.infrastructure.repositories.orm.task_repository.BaseUserScopedRepository.__init__'):
+                repo = ORMTaskRepository(
+                    mock_session,
+                    git_branch_id=git_branch_id,
+                    project_id=project_id,
+                    user_id=user_id
+                )
+                repo.session = mock_session
+                repo.git_branch_id = git_branch_id
+                repo.project_id = project_id
+                repo.user_id = user_id
+                repo._is_system_mode = False
+                
+                assert repo.session == mock_session
+                assert repo.git_branch_id == git_branch_id
+                assert repo.project_id == project_id
+                assert repo.user_id == user_id
+                assert repo._is_system_mode is False
     
     def test_model_to_entity_with_no_relationships(self, repository):
         """Test model to entity conversion with no relationships"""
         task = Mock(spec=Task)
-        task.id = "task-999"
+        task.id = "99999999-9999-9999-9999-999999999999"  # Valid UUID
         task.title = "Simple Task"
         task.description = "No relationships"
         task.git_branch_id = "branch-123"
@@ -434,8 +452,9 @@ class TestORMTaskRepository:
         task.estimated_effort = ""
         task.due_date = None
         task.context_id = None
-        task.created_at = datetime.now()
-        task.updated_at = datetime.now()
+        from datetime import timezone
+        task.created_at = datetime.now(timezone.utc)
+        task.updated_at = datetime.now(timezone.utc)
         task.assignees = []
         task.labels = []
         task.subtasks = []
@@ -448,8 +467,8 @@ class TestORMTaskRepository:
         entity = repository._model_to_entity(task)
         
         assert entity.id.value == task.id
-        assert entity.status == TaskStatus.DONE
-        assert entity.priority == Priority.LOW
+        assert entity.status.value == "done"
+        assert entity.priority.value == "low"
         assert len(entity.assignees) == 0
         assert len(entity.labels) == 0
         assert len(entity.subtasks) == 0

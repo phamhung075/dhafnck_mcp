@@ -1190,6 +1190,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
   - **Dependencies**: pytest, unittest.mock, Starlette TestClient, AsyncMock
   - **Rationale**: Ensures Supabase auth endpoints integrate properly with MCP server
 
+### Fixed - 2025-08-20
+- Updated stale ORM repository tests to match current implementation
+  - Fixed imports in `project_repository_test.py` and `task_repository_test.py` to include `BaseORMRepository`
+  - Updated repository fixtures to properly mock both `BaseORMRepository` and `BaseUserScopedRepository` initialization
+  - Added user isolation properties (`user_id`, `_is_system_mode`, `apply_user_filter`, `log_access`, `set_user_id`) to repository mocks
+  - Fixed datetime timezone issues by using `datetime.now(timezone.utc)` instead of `datetime.now()`
+  - Updated task IDs to use valid UUID format (e.g., "12345678-1234-5678-1234-567812345678" instead of "task-123")
+  - Fixed TaskStatus and Priority assertions to use `.value` property instead of enum comparison
+  - Added proper git_branch_id, project_id, and user_id initialization in task repository fixtures
+  - Files modified:
+    - `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/project_repository_test.py`
+    - `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/task_repository_test.py`
+
 ### Summary - 2025-08-20
 - **Backend Tests Created**: 4 new test files
   - jwt_service_test.py: 20 test cases for JWT token management

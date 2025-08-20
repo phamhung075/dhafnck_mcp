@@ -6,6 +6,9 @@ from .unified_context_service import UnifiedContextService
 from ...domain.repositories.task_repository import TaskRepository
 from ...domain.value_objects.task_id import TaskId
 from ..use_cases.get_task import GetTaskUseCase
+from ...domain.constants import validate_user_id
+from ...domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
+from ....config.auth_config import AuthConfig
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +48,7 @@ class TaskContextSyncService:
         self,
         task_id: str,
         *,
-        user_id: str = "default_id",
+        user_id: Optional[str] = None,
         project_id: str = "",
         git_branch_name: str = "main",
     ) -> Optional[Any]:
@@ -55,6 +58,16 @@ class TaskContextSyncService:
         can decide how to handle fallback behaviour.
         """
         try:
+            # Validate user authentication
+            if user_id is None:
+                if AuthConfig.is_default_user_allowed():
+                    user_id = AuthConfig.get_fallback_user_id()
+                    AuthConfig.log_authentication_bypass("Task context sync", "compatibility mode")
+                else:
+                    raise UserAuthenticationRequiredError("Task context sync")
+            else:
+                user_id = validate_user_id(user_id, "Task context sync")
+            
             # ------------------------------------------------------------------
             # 1. Reload domain task and create/update its context
             # ------------------------------------------------------------------

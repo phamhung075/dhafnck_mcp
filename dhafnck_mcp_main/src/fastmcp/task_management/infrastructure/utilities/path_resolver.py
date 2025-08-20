@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 import logging
+from typing import Optional
 # Removed problematic tool_path import, ensure_project_structure
 
 logger = logging.getLogger(__name__)
@@ -78,14 +79,14 @@ class PathResolver:
             with open(self.projects_file, 'w') as f:
                 json.dump(default_projects, f, indent=2)
         
-    def get_tasks_json_path(self, project_id: str = None, git_branch_name: str = "main", user_id: str = "default_id") -> Path:
+    def get_tasks_json_path(self, project_id: str = None, git_branch_name: str = "main", user_id: Optional[str] = None) -> Path:
         """
         Get the hierarchical tasks.json path for user/project/tree
         
         Args:
             project_id: Project identifier (required for new structure)
             git_branch_name: Task tree identifier (defaults to "main")
-            user_id: User identifier (defaults to "default_id")
+            user_id: User identifier (required for authentication)
             
         Returns:
             Path to tasks.json file in hierarchical structure

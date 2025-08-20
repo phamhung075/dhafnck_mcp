@@ -41,7 +41,7 @@ class DependencyMCPController:
             task_id: Annotated[str, Field(description=manage_dependency_desc["parameters"].get("task_id", "Task identifier"))],
             project_id: Annotated[str, Field(description=manage_dependency_desc["parameters"].get("project_id", "Project identifier"))] = "default_project",
             git_branch_name: Annotated[str, Field(description=manage_dependency_desc["parameters"].get("git_branch_name", "Task tree identifier"))] = "main",
-            user_id: Annotated[str, Field(description=manage_dependency_desc["parameters"].get("user_id", "User identifier"))] = "default_id",
+            user_id: Annotated[Optional[str], Field(description=manage_dependency_desc["parameters"].get("user_id", "User identifier"))] = None,
             dependency_data: Annotated[Optional[Dict[str, Any]], Field(description=manage_dependency_desc["parameters"].get("dependency_data", "Dependency data"))] = None
         ) -> Dict[str, Any]:
             return self.handle_dependency_operations(
@@ -68,7 +68,7 @@ class DependencyMCPController:
     def handle_dependency_operations(self, action: str, task_id: str, 
                                      project_id: str = "default_project", 
                                      git_branch_name: str = "main", 
-                                     user_id: str = "default_id", 
+                                     user_id: Optional[str] = None, 
                                      dependency_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         try:
             if not task_id:

@@ -16,7 +16,7 @@ class ProjectApplicationFacade:
         project_id: Optional[str] = None,
         name: Optional[str] = None,
         description: Optional[str] = None,
-        user_id: Optional[str] = "default_id",
+        user_id: Optional[str] = None,
         force: bool = False,
     ) -> Dict[str, Any]:
         """Facade method to route project management actions to the service layer."""

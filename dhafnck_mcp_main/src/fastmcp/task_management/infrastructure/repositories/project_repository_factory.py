@@ -289,7 +289,7 @@ class GlobalRepositoryManager:
 # Convenience functions for clean API
 
 def create_project_repository(
-    user_id: str = "default_id",
+    user_id: Optional[str] = None,
     repository_type: Optional[str] = None,
     db_path: Optional[str] = None
 ) -> ProjectRepository:
@@ -303,7 +303,7 @@ def create_project_repository(
 
 
 def get_sqlite_repository(
-    user_id: str = "default_id",
+    user_id: Optional[str] = None,
     db_path: Optional[str] = None
 ) -> ORMProjectRepository:
     """Get ORM project repository (legacy compatibility method)"""

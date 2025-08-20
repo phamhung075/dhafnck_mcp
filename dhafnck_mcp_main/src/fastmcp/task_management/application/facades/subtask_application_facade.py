@@ -80,10 +80,22 @@ class SubtaskApplicationFacade:
         
         # If task not found, return defaults
         logger.warning(f"Task {task_id} not found, using default context")
+        # Validate user authentication
+        from ...domain.constants import validate_user_id
+        from ...domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
+        from ....config.auth_config import AuthConfig
+        
+        user_id = None
+        if AuthConfig.is_default_user_allowed():
+            user_id = AuthConfig.get_fallback_user_id()
+            AuthConfig.log_authentication_bypass("Subtask context derivation", "compatibility mode")
+        else:
+            raise UserAuthenticationRequiredError("Subtask context derivation")
+        
         return {
             "project_id": "default_project",
             "git_branch_name": "main", 
-            "user_id": "default_id"
+            "user_id": user_id
         }
     
     def _derive_context_from_git_branch_id(self, git_branch_id: str) -> Dict[str, str]:
@@ -127,10 +139,22 @@ class SubtaskApplicationFacade:
         
         # Fallback to defaults
         logger.warning(f"Could not derive context from git_branch_id {git_branch_id}, using defaults")
+        # Validate user authentication
+        from ...domain.constants import validate_user_id
+        from ...domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
+        from ....config.auth_config import AuthConfig
+        
+        user_id = None
+        if AuthConfig.is_default_user_allowed():
+            user_id = AuthConfig.get_fallback_user_id()
+            AuthConfig.log_authentication_bypass("Subtask context derivation", "compatibility mode")
+        else:
+            raise UserAuthenticationRequiredError("Subtask context derivation")
+        
         return {
             "project_id": "default_project",
             "git_branch_name": "main", 
-            "user_id": "default_id"
+            "user_id": user_id
         }
 
     def _get_context_repositories(self, project_id: str = None, git_branch_name: str = None, user_id: str = None) -> tuple[TaskRepository, SubtaskRepository]:

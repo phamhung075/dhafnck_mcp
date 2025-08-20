@@ -385,7 +385,7 @@ class NextTaskUseCase:
             logger.debug(f"Error checking context info generation for task: {e}")
             return False
     
-    def _task_to_dict(self, task, include_context: bool = False, user_id: str = "default_id", project_id: str = "default_project", git_branch_id: str = "main") -> Dict[str, Any]:
+    def _task_to_dict(self, task, include_context: bool = False, user_id: Optional[str] = None, project_id: str = "default_project", git_branch_id: str = "main") -> Dict[str, Any]:
         """Convert task entity to dictionary with optional context data following clean relationship chain"""
         task_dict = task.to_dict()
         
