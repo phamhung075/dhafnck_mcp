@@ -607,7 +607,8 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
                         new_dependency = TaskDependency(
                             task_id=str(task.id),
                             depends_on_task_id=str(dependency.value if hasattr(dependency, 'value') else dependency),
-                            dependency_type="blocks"
+                            dependency_type="blocks",
+                            user_id=self.user_id if hasattr(self, 'user_id') and self.user_id else "00000000-0000-0000-0000-000000000000"
                         )
                         session.add(new_dependency)
                     
@@ -639,6 +640,10 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
                         )
                         session.add(task_label)
                 else:
+                    # Get user_id from repository context or use default
+                    from ....domain.constants import get_default_user_id
+                    task_user_id = self.user_id if hasattr(self, 'user_id') and self.user_id else get_default_user_id()
+                    
                     # Create new task
                     new_task = Task(
                         id=str(task.id),
@@ -653,6 +658,7 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
                         created_at=task.created_at,
                         updated_at=task.updated_at,
                         context_id=task.context_id,
+                        user_id=task_user_id,  # Add user_id field
                         # Map overall_progress to progress_percentage
                         progress_percentage=task.overall_progress if hasattr(task, 'overall_progress') else 0
                     )
@@ -663,7 +669,8 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
                         new_dependency = TaskDependency(
                             task_id=str(task.id),
                             depends_on_task_id=str(dependency.value if hasattr(dependency, 'value') else dependency),
-                            dependency_type="blocks"
+                            dependency_type="blocks",
+                            user_id=task_user_id
                         )
                         session.add(new_dependency)
                     
@@ -695,8 +702,11 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
                 # Return the saved task entity
                 return task
         except Exception as e:
+            import traceback
             logger.error(f"Failed to save task: {e}")
-            return None
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            # Re-raise to see the actual error during debugging
+            raise
     
     def find_by_id(self, task_id) -> TaskEntity | None:
         """Find task by ID"""

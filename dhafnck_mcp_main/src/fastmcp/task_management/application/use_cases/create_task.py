@@ -112,11 +112,17 @@ class CreateTaskUseCase:
             try:
                 # Use unified context facade for task context creation
                 from ..factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+                from ...domain.constants import get_default_user_id
+                
+                # Get user_id from request or use default
+                user_id = getattr(request, 'user_id', None)
+                if user_id is None:
+                    user_id = get_default_user_id()
                 
                 # Create unified context facade
                 factory = UnifiedContextFacadeFactory()
                 context_facade = factory.create_facade(
-                    user_id="default_id",
+                    user_id=user_id,
                     git_branch_id=request.git_branch_id
                 )
                 

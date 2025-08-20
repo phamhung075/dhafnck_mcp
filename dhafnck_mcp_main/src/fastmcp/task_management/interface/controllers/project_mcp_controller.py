@@ -15,16 +15,51 @@ if TYPE_CHECKING:
 from .desc import description_loader
 from ...application.factories.project_facade_factory import ProjectFacadeFactory
 from ...application.facades.project_application_facade import ProjectApplicationFacade
+from ...domain.constants import get_default_user_id, normalize_user_id
 
 logger = logging.getLogger(__name__)
 
+# Try to import user context utilities - gracefully handle if not available
+try:
+    from fastmcp.auth.mcp_integration.user_context_middleware import get_current_user_id
+    from fastmcp.auth.mcp_integration.thread_context_manager import ContextPropagationMixin
+except ImportError:
+    logger.warning("User context middleware not available - using default user ID")
+    get_current_user_id = lambda: None
+    # Fallback mixin if thread context manager is not available
+    class ContextPropagationMixin:
+        def _run_async_with_context(self, async_func):
+            import asyncio
+            import threading
+            result = None
+            exception = None
+            def run_in_new_loop():
+                nonlocal result, exception
+                try:
+                    new_loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(new_loop)
+                    try:
+                        result = new_loop.run_until_complete(async_func())
+                    finally:
+                        new_loop.close()
+                        asyncio.set_event_loop(None)
+                except Exception as e:
+                    exception = e
+            thread = threading.Thread(target=run_in_new_loop)
+            thread.start()
+            thread.join()
+            if exception:
+                raise exception
+            return result
 
-class ProjectMCPController:
+
+class ProjectMCPController(ContextPropagationMixin):
     """
     MCP Controller for project management operations.
 
     Handles only MCP protocol concerns and delegates business operations
     to the ProjectApplicationFacade following proper DDD layer separation.
+    Enhanced with proper authentication context propagation across threads.
     """
 
     def __init__(self, project_facade_factory: ProjectFacadeFactory):
@@ -61,16 +96,27 @@ class ProjectMCPController:
                 force=force
             )
     
-    def _get_facade_for_request(self, user_id: str = "default_id") -> ProjectApplicationFacade:
+    def _get_facade_for_request(self, user_id: str = None) -> ProjectApplicationFacade:
         """
         Get a ProjectApplicationFacade with the appropriate context.
         
         Args:
-            user_id: User identifier
+            user_id: User identifier (optional, will be retrieved from context if not provided)
             
         Returns:
             ProjectApplicationFacade instance
         """
+        # Get actual user ID from context if available
+        if user_id is None:
+            context_user_id = get_current_user_id()
+            if context_user_id:
+                user_id = context_user_id
+            else:
+                user_id = get_default_user_id()
+        
+        # Normalize the user ID to ensure consistency
+        user_id = normalize_user_id(user_id)
+        
         return self._project_facade_factory.create_project_facade(user_id=user_id)
     
     def manage_project(
@@ -98,9 +144,16 @@ class ProjectMCPController:
         """
         logger.info(f"Managing project with action: {action}, project_id: {project_id}")
         
-        # Use default user_id if not provided
+        # Get actual user ID from context if not provided
         if user_id is None:
-            user_id = "default_id"
+            context_user_id = get_current_user_id()
+            if context_user_id:
+                user_id = context_user_id
+            else:
+                user_id = get_default_user_id()
+        
+        # Normalize the user ID
+        user_id = normalize_user_id(user_id)
         
         # Route to appropriate handler based on action
         if action in ["create", "get", "list", "update", "delete"]:
@@ -130,7 +183,7 @@ class ProjectMCPController:
         project_id: Optional[str] = None,
         name: Optional[str] = None,
         description: Optional[str] = None,
-        user_id: str = "default_id",
+        user_id: str = None,
         force: bool = False
     ) -> Dict[str, Any]:
         """
@@ -187,7 +240,7 @@ class ProjectMCPController:
         action: str,
         project_id: Optional[str] = None,
         force: bool = False,
-        user_id: str = "default_id"
+        user_id: str = None
     ) -> Dict[str, Any]:
         """
         Handle maintenance operations by converting MCP parameters 
@@ -218,9 +271,6 @@ class ProjectMCPController:
     def _handle_create_project(self, facade: ProjectApplicationFacade, name: str, 
                                description: Optional[str], user_id: str) -> Dict[str, Any]:
         """Convert MCP create parameters and delegate to facade."""
-        import asyncio
-        import threading
-        
         async def _run_async():
             return await facade.manage_project(
                 action="create",
@@ -229,37 +279,11 @@ class ProjectMCPController:
                 user_id=user_id
             )
         
-        # Always use threading approach to avoid asyncio.run() issues
-        result = None
-        exception = None
-        
-        def run_in_new_loop():
-            nonlocal result, exception
-            try:
-                new_loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(new_loop)
-                try:
-                    result = new_loop.run_until_complete(_run_async())
-                finally:
-                    new_loop.close()
-                    asyncio.set_event_loop(None)
-            except Exception as e:
-                exception = e
-        
-        thread = threading.Thread(target=run_in_new_loop)
-        thread.start()
-        thread.join()
-        
-        if exception:
-            raise exception
-        return result
+        return self._run_async_with_context(_run_async)
     
     def _handle_get_project(self, facade: ProjectApplicationFacade, 
                            project_id: Optional[str], name: Optional[str]) -> Dict[str, Any]:
         """Handle get project request with enhanced context inclusion."""
-        import asyncio
-        import threading
-        
         async def _run_async():
             # Get the basic project data
             result = await facade.manage_project(
@@ -274,70 +298,18 @@ class ProjectMCPController:
             
             return result
         
-        # Always use threading approach to avoid asyncio.run() issues
-        result = None
-        exception = None
-        
-        def run_in_new_loop():
-            nonlocal result, exception
-            try:
-                new_loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(new_loop)
-                try:
-                    result = new_loop.run_until_complete(_run_async())
-                finally:
-                    new_loop.close()
-                    asyncio.set_event_loop(None)
-            except Exception as e:
-                exception = e
-        
-        thread = threading.Thread(target=run_in_new_loop)
-        thread.start()
-        thread.join()
-        
-        if exception:
-            raise exception
-        return result
+        return self._run_async_with_context(_run_async)
     
     def _handle_list_projects(self, facade: ProjectApplicationFacade) -> Dict[str, Any]:
         """Handle list projects request."""
-        import asyncio
-        import threading
-        
         async def _run_async():
             return await facade.manage_project(action="list")
         
-        # Always use threading approach to avoid asyncio.run() issues
-        result = None
-        exception = None
-        
-        def run_in_new_loop():
-            nonlocal result, exception
-            try:
-                new_loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(new_loop)
-                try:
-                    result = new_loop.run_until_complete(_run_async())
-                finally:
-                    new_loop.close()
-                    asyncio.set_event_loop(None)
-            except Exception as e:
-                exception = e
-        
-        thread = threading.Thread(target=run_in_new_loop)
-        thread.start()
-        thread.join()
-        
-        if exception:
-            raise exception
-        return result
+        return self._run_async_with_context(_run_async)
     
     def _handle_update_project(self, facade: ProjectApplicationFacade, project_id: str,
                               name: Optional[str], description: Optional[str]) -> Dict[str, Any]:
         """Handle update project request."""
-        import asyncio
-        import threading
-        
         async def _run_async():
             return await facade.manage_project(
                 action="update",
@@ -346,37 +318,11 @@ class ProjectMCPController:
                 description=description
             )
         
-        # Always use threading approach to avoid asyncio.run() issues
-        result = None
-        exception = None
-        
-        def run_in_new_loop():
-            nonlocal result, exception
-            try:
-                new_loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(new_loop)
-                try:
-                    result = new_loop.run_until_complete(_run_async())
-                finally:
-                    new_loop.close()
-                    asyncio.set_event_loop(None)
-            except Exception as e:
-                exception = e
-        
-        thread = threading.Thread(target=run_in_new_loop)
-        thread.start()
-        thread.join()
-        
-        if exception:
-            raise exception
-        return result
+        return self._run_async_with_context(_run_async)
     
     def _handle_delete_project(self, facade: ProjectApplicationFacade, project_id: str,
                               force: bool = False) -> Dict[str, Any]:
         """Handle delete project request with cascade deletion."""
-        import asyncio
-        import threading
-        
         async def _run_async():
             return await facade.manage_project(
                 action="delete",
@@ -384,37 +330,11 @@ class ProjectMCPController:
                 force=force
             )
         
-        # Always use threading approach to avoid asyncio.run() issues
-        result = None
-        exception = None
-        
-        def run_in_new_loop():
-            nonlocal result, exception
-            try:
-                new_loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(new_loop)
-                try:
-                    result = new_loop.run_until_complete(_run_async())
-                finally:
-                    new_loop.close()
-                    asyncio.set_event_loop(None)
-            except Exception as e:
-                exception = e
-        
-        thread = threading.Thread(target=run_in_new_loop)
-        thread.start()
-        thread.join()
-        
-        if exception:
-            raise exception
-        return result
+        return self._run_async_with_context(_run_async)
     
     def _handle_maintenance_action(self, facade: ProjectApplicationFacade, action: str,
                                   project_id: str, force: bool, user_id: str) -> Dict[str, Any]:
         """Handle maintenance action request."""
-        import asyncio
-        import threading
-        
         async def _run_async():
             return await facade.manage_project(
                 action=action,
@@ -423,30 +343,7 @@ class ProjectMCPController:
                 user_id=user_id
             )
         
-        # Always use threading approach to avoid asyncio.run() issues
-        result = None
-        exception = None
-        
-        def run_in_new_loop():
-            nonlocal result, exception
-            try:
-                new_loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(new_loop)
-                try:
-                    result = new_loop.run_until_complete(_run_async())
-                finally:
-                    new_loop.close()
-                    asyncio.set_event_loop(None)
-            except Exception as e:
-                exception = e
-        
-        thread = threading.Thread(target=run_in_new_loop)
-        thread.start()
-        thread.join()
-        
-        if exception:
-            raise exception
-        return result
+        return self._run_async_with_context(_run_async)
 
     def _get_project_management_descriptions(self) -> Dict[str, Any]:
         """

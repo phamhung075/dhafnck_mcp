@@ -17,8 +17,16 @@ from .desc import description_loader
 from ...application.factories.agent_facade_factory import AgentFacadeFactory
 from ...application.facades.agent_application_facade import AgentApplicationFacade
 from .workflow_guidance.agent.agent_workflow_factory import AgentWorkflowFactory
+from ...domain.constants import get_default_user_id, normalize_user_id
 
 logger = logging.getLogger(__name__)
+
+# Try to import user context utilities - gracefully handle if not available
+try:
+    from fastmcp.auth.mcp_integration.user_context_middleware import get_current_user_id
+except ImportError:
+    logger.warning("User context middleware not available - using default user ID")
+    get_current_user_id = lambda: None
 
 
 class AgentMCPController:
@@ -74,7 +82,15 @@ class AgentMCPController:
         Returns:
             AgentApplicationFacade instance
         """
-        return self._agent_facade_factory.create_agent_facade(project_id=project_id)
+        # Get current user context from JWT token or use default
+        current_user_id = get_current_user_id()
+        if current_user_id:
+            user_id = normalize_user_id(current_user_id)
+        else:
+            user_id = get_default_user_id()
+        
+        # Pass user_id to facade factory for proper data isolation
+        return self._agent_facade_factory.create_agent_facade(project_id=project_id, user_id=user_id)
     
     def manage_agent(
         self,

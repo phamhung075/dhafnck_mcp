@@ -1,225 +1,283 @@
-import * as tokenService from '../../services/tokenService';
-import { useAuthenticatedFetch } from '../../hooks/useAuthenticatedFetch';
+import { tokenService } from '../../services/tokenService';
+import { authenticatedFetch } from '../../hooks/useAuthenticatedFetch';
 
-// Mock the authenticated fetch hook
+// Mock the authenticated fetch function
 jest.mock('../../hooks/useAuthenticatedFetch', () => ({
-  useAuthenticatedFetch: jest.fn(),
+  authenticatedFetch: jest.fn(),
 }));
 
-const mockUseAuthenticatedFetch = jest.mocked(useAuthenticatedFetch);
+const mockAuthenticatedFetch = jest.mocked(authenticatedFetch);
 
 describe('tokenService', () => {
-  let mockFetch: jest.Mock;
   const baseUrl = '/api/v2/tokens';
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockFetch = jest.fn();
-    mockUseAuthenticatedFetch.mockReturnValue(mockFetch);
   });
 
   describe('listTokens', () => {
     it('fetches all tokens successfully', async () => {
-      const mockTokens = [
-        { id: '1', name: 'Token 1' },
-        { id: '2', name: 'Token 2' },
-      ];
+      const mockTokensResponse = {
+        data: [
+          { id: '1', name: 'Token 1', scopes: ['read:tasks'] },
+          { id: '2', name: 'Token 2', scopes: ['write:tasks'] },
+        ],
+        total: 2
+      };
       
-      mockFetch.mockResolvedValue(mockTokens);
+      const mockResponse = {
+        ok: true,
+        status: 200,
+        json: jest.fn().mockResolvedValue(mockTokensResponse),
+      } as unknown as Response;
+      
+      mockAuthenticatedFetch.mockResolvedValue(mockResponse);
 
       const result = await tokenService.listTokens();
 
-      expect(mockFetch).toHaveBeenCalledWith(baseUrl, {
+      expect(mockAuthenticatedFetch).toHaveBeenCalledWith(baseUrl, {
         method: 'GET',
       });
-      expect(result).toEqual(mockTokens);
+      expect(result).toEqual(mockTokensResponse);
     });
 
     it('handles empty token list', async () => {
-      mockFetch.mockResolvedValue([]);
+      const emptyResponse = { data: [], total: 0 };
+      const mockResponse = {
+        ok: true,
+        status: 200,
+        json: jest.fn().mockResolvedValue(emptyResponse),
+      } as unknown as Response;
+      
+      mockAuthenticatedFetch.mockResolvedValue(mockResponse);
 
       const result = await tokenService.listTokens();
 
-      expect(result).toEqual([]);
+      expect(result).toEqual(emptyResponse);
     });
 
     it('handles fetch error', async () => {
-      const error = new Error('Network error');
-      mockFetch.mockRejectedValue(error);
+      const mockResponse = {
+        ok: false,
+        status: 500,
+        json: jest.fn().mockResolvedValue({ message: 'Server error' }),
+      } as unknown as Response;
+      
+      mockAuthenticatedFetch.mockResolvedValue(mockResponse);
 
-      await expect(tokenService.listTokens()).rejects.toThrow('Network error');
+      await expect(tokenService.listTokens()).rejects.toThrow('Server error');
     });
   });
 
-  describe('getToken', () => {
+  describe('getTokenDetails', () => {
     it('fetches a specific token by id', async () => {
-      const mockToken = { id: '123', name: 'Test Token' };
-      mockFetch.mockResolvedValue(mockToken);
+      const mockToken = { 
+        id: '123', 
+        name: 'Test Token',
+        scopes: ['read:tasks'],
+        is_active: true 
+      };
+      const mockResponse = {
+        ok: true,
+        status: 200,
+        json: jest.fn().mockResolvedValue(mockToken),
+      } as unknown as Response;
+      
+      mockAuthenticatedFetch.mockResolvedValue(mockResponse);
 
-      const result = await tokenService.getToken('123');
+      const result = await tokenService.getTokenDetails('123');
 
-      expect(mockFetch).toHaveBeenCalledWith(`${baseUrl}/123`, {
+      expect(mockAuthenticatedFetch).toHaveBeenCalledWith(`${baseUrl}/123`, {
         method: 'GET',
       });
       expect(result).toEqual(mockToken);
     });
 
     it('handles not found error', async () => {
-      mockFetch.mockRejectedValue(new Error('Token not found'));
+      const mockResponse = {
+        ok: false,
+        status: 404,
+        json: jest.fn().mockResolvedValue({ message: 'Token not found' }),
+      } as unknown as Response;
+      
+      mockAuthenticatedFetch.mockResolvedValue(mockResponse);
 
-      await expect(tokenService.getToken('999')).rejects.toThrow('Token not found');
+      await expect(tokenService.getTokenDetails('999')).rejects.toThrow('Token not found');
     });
   });
 
-  describe('createToken', () => {
-    it('creates a new token with all fields', async () => {
+  describe('generateToken', () => {
+    it('generates a new token with all fields', async () => {
       const newTokenData = {
         name: 'New Token',
-        description: 'Test description',
+        scopes: ['read:tasks', 'write:tasks'],
+        expires_in_days: 30,
         rate_limit: 100,
       };
       
       const createdToken = {
-        ...newTokenData,
         id: '456',
+        name: 'New Token',
         token: 'generated-token-value',
+        scopes: ['read:tasks', 'write:tasks'],
         is_active: true,
         created_at: '2024-01-01T00:00:00Z',
+        expires_at: '2024-01-31T00:00:00Z',
+        usage_count: 0,
+        rate_limit: 100,
       };
       
-      mockFetch.mockResolvedValue(createdToken);
+      const mockResponse = {
+        ok: true,
+        status: 200,
+        json: jest.fn().mockResolvedValue(createdToken),
+      } as unknown as Response;
+      
+      mockAuthenticatedFetch.mockResolvedValue(mockResponse);
 
-      const result = await tokenService.createToken(newTokenData);
+      const result = await tokenService.generateToken(newTokenData);
 
-      expect(mockFetch).toHaveBeenCalledWith(baseUrl, {
+      expect(mockAuthenticatedFetch).toHaveBeenCalledWith(baseUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(newTokenData),
       });
-      expect(result).toEqual(createdToken);
-    });
-
-    it('creates a token with minimal fields', async () => {
-      const minimalData = { name: 'Minimal Token' };
-      const createdToken = {
-        ...minimalData,
-        id: '789',
-        token: 'minimal-token',
-        is_active: true,
-      };
-      
-      mockFetch.mockResolvedValue(createdToken);
-
-      const result = await tokenService.createToken(minimalData);
-
-      expect(mockFetch).toHaveBeenCalledWith(baseUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(minimalData),
-      });
-      expect(result).toEqual(createdToken);
+      expect(result).toEqual({ data: createdToken });
     });
 
     it('handles validation error', async () => {
-      mockFetch.mockRejectedValue(new Error('Validation failed'));
+      const mockResponse = {
+        ok: false,
+        status: 400,
+        json: jest.fn().mockResolvedValue({ message: 'Validation failed' }),
+      } as unknown as Response;
+      
+      mockAuthenticatedFetch.mockResolvedValue(mockResponse);
 
-      await expect(tokenService.createToken({ name: '' })).rejects.toThrow('Validation failed');
+      await expect(tokenService.generateToken({ 
+        name: '', 
+        scopes: [], 
+        expires_in_days: 30 
+      })).rejects.toThrow('Validation failed');
     });
   });
 
-  describe('updateToken', () => {
-    it('updates token fields', async () => {
-      const updates = {
-        description: 'Updated description',
-        is_active: false,
-        rate_limit: 200,
-      };
+  describe('updateTokenScopes', () => {
+    it('updates token scopes', async () => {
+      const newScopes = ['read:tasks', 'write:tasks', 'execute:mcp'];
       
       const updatedToken = {
         id: '123',
         name: 'Test Token',
-        ...updates,
+        scopes: newScopes,
+        is_active: true,
       };
       
-      mockFetch.mockResolvedValue(updatedToken);
+      const mockResponse = {
+        ok: true,
+        status: 200,
+        json: jest.fn().mockResolvedValue(updatedToken),
+      } as unknown as Response;
+      
+      mockAuthenticatedFetch.mockResolvedValue(mockResponse);
 
-      const result = await tokenService.updateToken('123', updates);
+      const result = await tokenService.updateTokenScopes('123', newScopes);
 
-      expect(mockFetch).toHaveBeenCalledWith(`${baseUrl}/123`, {
-        method: 'PUT',
+      expect(mockAuthenticatedFetch).toHaveBeenCalledWith(`${baseUrl}/123/scopes`, {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(updates),
+        body: JSON.stringify({ scopes: newScopes }),
       });
       expect(result).toEqual(updatedToken);
     });
 
-    it('updates only is_active field', async () => {
-      const updates = { is_active: true };
-      const updatedToken = { id: '123', name: 'Token', is_active: true };
+    it('handles update error', async () => {
+      const mockResponse = {
+        ok: false,
+        status: 403,
+        json: jest.fn().mockResolvedValue({ message: 'Forbidden' }),
+      } as unknown as Response;
       
-      mockFetch.mockResolvedValue(updatedToken);
+      mockAuthenticatedFetch.mockResolvedValue(mockResponse);
 
-      const result = await tokenService.updateToken('123', updates);
-
-      expect(mockFetch).toHaveBeenCalledWith(`${baseUrl}/123`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updates),
-      });
-      expect(result.is_active).toBe(true);
+      await expect(tokenService.updateTokenScopes('123', ['admin'])).rejects.toThrow('Forbidden');
     });
   });
 
-  describe('deleteToken', () => {
-    it('deletes a token successfully', async () => {
-      mockFetch.mockResolvedValue({ success: true });
+  describe('revokeToken', () => {
+    it('revokes a token successfully', async () => {
+      const mockResponse = {
+        ok: true,
+        status: 200,
+        json: jest.fn().mockResolvedValue({ success: true }),
+      } as unknown as Response;
+      
+      mockAuthenticatedFetch.mockResolvedValue(mockResponse);
 
-      await tokenService.deleteToken('123');
+      await tokenService.revokeToken('123');
 
-      expect(mockFetch).toHaveBeenCalledWith(`${baseUrl}/123`, {
+      expect(mockAuthenticatedFetch).toHaveBeenCalledWith(`${baseUrl}/123`, {
         method: 'DELETE',
       });
     });
 
-    it('handles deletion error', async () => {
-      mockFetch.mockRejectedValue(new Error('Deletion failed'));
+    it('handles revocation error', async () => {
+      const mockResponse = {
+        ok: false,
+        status: 500,
+        json: jest.fn().mockResolvedValue({ message: 'Revocation failed' }),
+      } as unknown as Response;
+      
+      mockAuthenticatedFetch.mockResolvedValue(mockResponse);
 
-      await expect(tokenService.deleteToken('123')).rejects.toThrow('Deletion failed');
+      await expect(tokenService.revokeToken('123')).rejects.toThrow('Revocation failed');
     });
   });
 
-  describe('regenerateToken', () => {
-    it('regenerates a token and returns new value', async () => {
-      const regeneratedToken = {
+  describe('rotateToken', () => {
+    it('rotates a token and returns new value', async () => {
+      const rotatedToken = {
         id: '123',
         name: 'Test Token',
-        token: 'new-regenerated-token',
+        token: 'new-rotated-token',
+        scopes: ['read:tasks'],
         is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        expires_at: '2024-01-31T00:00:00Z',
+        usage_count: 0,
       };
       
-      mockFetch.mockResolvedValue(regeneratedToken);
+      const mockResponse = {
+        ok: true,
+        status: 200,
+        json: jest.fn().mockResolvedValue(rotatedToken),
+      } as unknown as Response;
+      
+      mockAuthenticatedFetch.mockResolvedValue(mockResponse);
 
-      const result = await tokenService.regenerateToken('123');
+      const result = await tokenService.rotateToken('123');
 
-      expect(mockFetch).toHaveBeenCalledWith(`${baseUrl}/123/regenerate`, {
+      expect(mockAuthenticatedFetch).toHaveBeenCalledWith(`${baseUrl}/123/rotate`, {
         method: 'POST',
       });
-      expect(result).toEqual(regeneratedToken);
-      expect(result.token).toBe('new-regenerated-token');
+      expect(result).toEqual({ data: rotatedToken });
+      expect(result.data.token).toBe('new-rotated-token');
     });
 
-    it('handles regeneration error', async () => {
-      mockFetch.mockRejectedValue(new Error('Regeneration failed'));
+    it('handles rotation error', async () => {
+      const mockResponse = {
+        ok: false,
+        status: 400,
+        json: jest.fn().mockResolvedValue({ message: 'Rotation failed' }),
+      } as unknown as Response;
+      
+      mockAuthenticatedFetch.mockResolvedValue(mockResponse);
 
-      await expect(tokenService.regenerateToken('123')).rejects.toThrow('Regeneration failed');
+      await expect(tokenService.rotateToken('123')).rejects.toThrow('Rotation failed');
     });
   });
 
@@ -227,93 +285,137 @@ describe('tokenService', () => {
     it('validates a token successfully', async () => {
       const validationResult = {
         valid: true,
+        scopes: ['read:tasks', 'write:tasks'],
         user_id: 'user-123',
-        token_id: 'token-123',
       };
       
-      mockFetch.mockResolvedValue(validationResult);
+      const mockResponse = {
+        ok: true,
+        status: 200,
+        json: jest.fn().mockResolvedValue(validationResult),
+      } as unknown as Response;
+      
+      // Mock fetch directly for validateToken as it doesn't use authenticatedFetch
+      global.fetch = jest.fn().mockResolvedValue(mockResponse);
 
       const result = await tokenService.validateToken('test-token-value');
 
-      expect(mockFetch).toHaveBeenCalledWith(`${baseUrl}/validate`, {
+      expect(global.fetch).toHaveBeenCalledWith('/api/v2/tokens/validate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': 'Bearer test-token-value',
         },
-        body: JSON.stringify({ token: 'test-token-value' }),
       });
       expect(result).toEqual(validationResult);
     });
 
     it('handles invalid token', async () => {
-      const invalidResult = {
-        valid: false,
-        error: 'Invalid token',
-      };
+      const mockResponse = {
+        ok: false,
+        status: 401,
+        json: jest.fn().mockResolvedValue({ error: 'Invalid token' }),
+      } as unknown as Response;
       
-      mockFetch.mockResolvedValue(invalidResult);
+      global.fetch = jest.fn().mockResolvedValue(mockResponse);
 
       const result = await tokenService.validateToken('invalid-token');
 
       expect(result.valid).toBe(false);
-      expect(result.error).toBe('Invalid token');
     });
   });
 
-  describe('getTokenStats', () => {
-    it('fetches token statistics', async () => {
+  describe('getTokenUsageStats', () => {
+    it('fetches token usage statistics', async () => {
       const stats = {
         total_requests: 1000,
         requests_today: 50,
         rate_limit_hits: 5,
         last_used: '2024-01-01T12:00:00Z',
+        daily_breakdown: [
+          { date: '2024-01-01', count: 50 },
+          { date: '2023-12-31', count: 45 }
+        ]
       };
       
-      mockFetch.mockResolvedValue(stats);
+      const mockResponse = {
+        ok: true,
+        status: 200,
+        json: jest.fn().mockResolvedValue(stats),
+      } as unknown as Response;
+      
+      mockAuthenticatedFetch.mockResolvedValue(mockResponse);
 
-      const result = await tokenService.getTokenStats('123');
+      const result = await tokenService.getTokenUsageStats('123');
 
-      expect(mockFetch).toHaveBeenCalledWith(`${baseUrl}/123/stats`, {
+      expect(mockAuthenticatedFetch).toHaveBeenCalledWith(`${baseUrl}/123/usage`, {
         method: 'GET',
       });
       expect(result).toEqual(stats);
     });
 
     it('handles stats not available', async () => {
-      mockFetch.mockResolvedValue(null);
+      const mockResponse = {
+        ok: false,
+        status: 404,
+        json: jest.fn().mockResolvedValue({ message: 'Stats not found' }),
+      } as unknown as Response;
+      
+      mockAuthenticatedFetch.mockResolvedValue(mockResponse);
 
-      const result = await tokenService.getTokenStats('123');
-
-      expect(result).toBeNull();
+      await expect(tokenService.getTokenUsageStats('123')).rejects.toThrow('Stats not found');
     });
   });
 
   describe('error handling', () => {
-    it('handles network timeout', async () => {
-      const timeoutError = new Error('Request timeout');
-      timeoutError.name = 'TimeoutError';
-      mockFetch.mockRejectedValue(timeoutError);
+    it('handles json parsing error gracefully', async () => {
+      const mockResponse = {
+        ok: false,
+        status: 500,
+        json: jest.fn().mockRejectedValue(new Error('Invalid JSON')),
+      } as unknown as Response;
+      
+      mockAuthenticatedFetch.mockResolvedValue(mockResponse);
 
-      await expect(tokenService.listTokens()).rejects.toThrow('Request timeout');
+      await expect(tokenService.listTokens()).rejects.toThrow('Failed to fetch tokens');
     });
 
     it('handles 401 unauthorized', async () => {
-      const authError = new Error('Unauthorized');
-      mockFetch.mockRejectedValue(authError);
+      const mockResponse = {
+        ok: false,
+        status: 401,
+        json: jest.fn().mockResolvedValue({ error: 'Unauthorized' }),
+      } as unknown as Response;
+      
+      mockAuthenticatedFetch.mockResolvedValue(mockResponse);
 
       await expect(tokenService.listTokens()).rejects.toThrow('Unauthorized');
     });
 
     it('handles 403 forbidden', async () => {
-      const forbiddenError = new Error('Forbidden');
-      mockFetch.mockRejectedValue(forbiddenError);
+      const mockResponse = {
+        ok: false,
+        status: 403,
+        json: jest.fn().mockResolvedValue({ message: 'Forbidden' }),
+      } as unknown as Response;
+      
+      mockAuthenticatedFetch.mockResolvedValue(mockResponse);
 
-      await expect(tokenService.createToken({ name: 'Test' })).rejects.toThrow('Forbidden');
+      await expect(tokenService.generateToken({ 
+        name: 'Test', 
+        scopes: ['admin'],
+        expires_in_days: 30 
+      })).rejects.toThrow('Forbidden');
     });
 
     it('handles 500 server error', async () => {
-      const serverError = new Error('Internal Server Error');
-      mockFetch.mockRejectedValue(serverError);
+      const mockResponse = {
+        ok: false,
+        status: 500,
+        json: jest.fn().mockResolvedValue({ message: 'Internal Server Error' }),
+      } as unknown as Response;
+      
+      mockAuthenticatedFetch.mockResolvedValue(mockResponse);
 
       await expect(tokenService.listTokens()).rejects.toThrow('Internal Server Error');
     });
@@ -321,53 +423,133 @@ describe('tokenService', () => {
 
   describe('edge cases', () => {
     it('handles empty token name', async () => {
-      const emptyNameToken = { name: '' };
-      mockFetch.mockRejectedValue(new Error('Name is required'));
+      const mockResponse = {
+        ok: false,
+        status: 400,
+        json: jest.fn().mockResolvedValue({ message: 'Name is required' }),
+      } as unknown as Response;
+      
+      mockAuthenticatedFetch.mockResolvedValue(mockResponse);
 
-      await expect(tokenService.createToken(emptyNameToken)).rejects.toThrow('Name is required');
+      await expect(tokenService.generateToken({ 
+        name: '', 
+        scopes: ['read:tasks'],
+        expires_in_days: 30 
+      })).rejects.toThrow('Name is required');
     });
 
     it('handles very long token names', async () => {
       const longName = 'a'.repeat(256);
-      const tokenData = { name: longName };
-      const createdToken = { id: '123', name: longName };
+      const tokenData = { 
+        name: longName,
+        scopes: ['read:tasks'],
+        expires_in_days: 30,
+        rate_limit: 100
+      };
+      const createdToken = { 
+        id: '123', 
+        name: longName,
+        token: 'test-token',
+        scopes: ['read:tasks'],
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        expires_at: '2024-01-31T00:00:00Z',
+        usage_count: 0,
+        rate_limit: 100
+      };
       
-      mockFetch.mockResolvedValue(createdToken);
+      const mockResponse = {
+        ok: true,
+        status: 200,
+        json: jest.fn().mockResolvedValue(createdToken),
+      } as unknown as Response;
+      
+      mockAuthenticatedFetch.mockResolvedValue(mockResponse);
 
-      const result = await tokenService.createToken(tokenData);
+      const result = await tokenService.generateToken(tokenData);
 
-      expect(result.name).toBe(longName);
+      expect(result.data.name).toBe(longName);
     });
 
     it('handles special characters in token names', async () => {
       const specialName = 'Test!@#$%^&*()';
-      const tokenData = { name: specialName };
-      const createdToken = { id: '123', name: specialName };
+      const tokenData = { 
+        name: specialName,
+        scopes: ['read:tasks'],
+        expires_in_days: 30
+      };
+      const createdToken = { 
+        id: '123', 
+        name: specialName,
+        token: 'test-token',
+        scopes: ['read:tasks'],
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        expires_at: '2024-01-31T00:00:00Z',
+        usage_count: 0
+      };
       
-      mockFetch.mockResolvedValue(createdToken);
+      const mockResponse = {
+        ok: true,
+        status: 200,
+        json: jest.fn().mockResolvedValue(createdToken),
+      } as unknown as Response;
+      
+      mockAuthenticatedFetch.mockResolvedValue(mockResponse);
 
-      const result = await tokenService.createToken(tokenData);
+      const result = await tokenService.generateToken(tokenData);
 
-      expect(result.name).toBe(specialName);
+      expect(result.data.name).toBe(specialName);
     });
 
     it('handles negative rate limits', async () => {
-      const invalidData = { name: 'Test', rate_limit: -1 };
-      mockFetch.mockRejectedValue(new Error('Rate limit must be positive'));
+      const mockResponse = {
+        ok: false,
+        status: 400,
+        json: jest.fn().mockResolvedValue({ message: 'Rate limit must be positive' }),
+      } as unknown as Response;
+      
+      mockAuthenticatedFetch.mockResolvedValue(mockResponse);
 
-      await expect(tokenService.createToken(invalidData)).rejects.toThrow('Rate limit must be positive');
+      await expect(tokenService.generateToken({ 
+        name: 'Test', 
+        scopes: ['read:tasks'],
+        expires_in_days: 30,
+        rate_limit: -1 
+      })).rejects.toThrow('Rate limit must be positive');
     });
 
     it('handles very large rate limits', async () => {
       const largeRateLimit = 1000000;
-      const tokenData = { name: 'Test', rate_limit: largeRateLimit };
-      const createdToken = { id: '123', ...tokenData };
+      const tokenData = { 
+        name: 'Test', 
+        scopes: ['read:tasks'],
+        expires_in_days: 30,
+        rate_limit: largeRateLimit 
+      };
+      const createdToken = { 
+        id: '123',
+        name: 'Test',
+        token: 'test-token',
+        scopes: ['read:tasks'],
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        expires_at: '2024-01-31T00:00:00Z',
+        usage_count: 0,
+        rate_limit: largeRateLimit
+      };
       
-      mockFetch.mockResolvedValue(createdToken);
+      const mockResponse = {
+        ok: true,
+        status: 200,
+        json: jest.fn().mockResolvedValue(createdToken),
+      } as unknown as Response;
+      
+      mockAuthenticatedFetch.mockResolvedValue(mockResponse);
 
-      const result = await tokenService.createToken(tokenData);
+      const result = await tokenService.generateToken(tokenData);
 
-      expect(result.rate_limit).toBe(largeRateLimit);
+      expect(result.data.rate_limit).toBe(largeRateLimit);
     });
   });
 });

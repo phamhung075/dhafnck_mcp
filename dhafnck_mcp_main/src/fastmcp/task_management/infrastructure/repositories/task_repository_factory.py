@@ -57,7 +57,7 @@ def _find_project_root() -> Path:
 class TaskRepositoryFactory:
     """Factory for creating task repositories with hierarchical user/project/tree structure"""
     
-    def __init__(self, base_path: Optional[str] = None, default_user_id: str = "default_id", 
+    def __init__(self, base_path: Optional[str] = None, default_user_id: str = None, 
                  project_root: Optional[Path] = None):
         """
         Initialize task repository factory
@@ -67,8 +67,12 @@ class TaskRepositoryFactory:
             default_user_id: Default user ID for single-user mode
             project_root: Injected project root for testing or custom environments
         """
+        from ...domain.constants import get_default_user_id
+        
         self.project_root = project_root or _find_project_root()
         self.base_path = base_path or str(self.project_root / ".cursor" / "rules" / "tasks")
+        if default_user_id is None:
+            default_user_id = get_default_user_id()
         self.default_user_id = default_user_id
     
     @classmethod

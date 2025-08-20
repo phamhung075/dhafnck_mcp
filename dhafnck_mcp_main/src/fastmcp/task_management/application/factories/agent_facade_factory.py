@@ -36,12 +36,14 @@ class AgentFacadeFactory:
         logger.info("AgentFacadeFactory initialized")
     
     def create_agent_facade(self, 
-                           project_id: str = "default_project") -> AgentApplicationFacade:
+                           project_id: str = "default_project",
+                           user_id: Optional[str] = None) -> AgentApplicationFacade:
         """
         Create an agent application facade with proper dependency injection.
         
         Args:
             project_id: Project identifier for scoping
+            user_id: User identifier for data isolation
             
         Returns:
             AgentApplicationFacade instance with injected dependencies
@@ -54,11 +56,22 @@ class AgentFacadeFactory:
             logger.debug(f"Returning cached agent facade for {cache_key}")
             return self._facades_cache[cache_key]
         
+        # Import default user ID from domain constants
+        from ...domain.constants import get_default_user_id, normalize_user_id
+        
+        # Normalize user_id - use default UUID if None
+        if user_id is None:
+            user_id = get_default_user_id()
+        else:
+            user_id = normalize_user_id(user_id)
+        
         try:
-            # Create repository
+            # Create repository with user_id using the static create method
             if self._agent_repository_factory:
-                agent_repository = self._agent_repository_factory.create_repository(
-                    project_id=project_id
+                # Use the static create method of AgentRepositoryFactory
+                from ...infrastructure.repositories.agent_repository_factory import AgentRepositoryFactory
+                agent_repository = AgentRepositoryFactory.create(
+                    user_id=user_id
                 )
             else:
                 # Use default repository if no factory provided

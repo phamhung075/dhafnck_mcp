@@ -27,25 +27,43 @@ REQUIRED BEHAVIORS:
 ## Missing Test Files - CREATE IMMEDIATELY:
 
 ## Stale Test Files (Source Newer Than Test)
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/auth/providers/jwt_bearer.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/server/auth/providers/jwt_bearer_test.py`
+- **Source**: `dhafnck-frontend/src/hooks/useAuthenticatedFetch.ts`
+  - **Test**: `dhafnck-frontend/src/tests/hooks/useAuthenticatedFetch.test.ts`
   - **Days stale**: 0
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/http_server.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/server/http_server_test.py`
+- **Source**: `dhafnck-frontend/src/pages/TokenManagement.tsx`
+  - **Test**: `dhafnck-frontend/src/tests/pages/TokenManagement.test.tsx`
   - **Days stale**: 0
+
+- **Source**: `dhafnck-frontend/src/services/tokenService.ts`
+  - **Test**: `dhafnck-frontend/src/tests/services/tokenService.test.ts`
+  - **Days stale**: 0
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/mcp_entry_point.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/server/mcp_entry_point_test.py`
+  - **Days stale**: 1
 
 - **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/token_router.py`
   - **Test**: `dhafnck_mcp_main/src/tests/server/routes/token_router_test.py`
   - **Days stale**: 0
 
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/token_routes.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/server/routes/token_routes_test.py`
+  - **Days stale**: 0
+
 
 ## Missing Test Files
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/agent_metadata_routes.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/server/routes/agent_metadata_routes_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/domain/services/jwt_service.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/auth/domain/services/jwt_service_test.py`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/agent_registry.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/server/routes/agent_registry_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/mcp_integration/jwt_auth_backend.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/auth/mcp_integration/jwt_auth_backend_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/mcp_redirect_routes.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/server/routes/mcp_redirect_routes_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/mcp_registration_routes.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/server/routes/mcp_registration_routes_test.py`
 
 
 ## EXECUTION COMMANDS - DO NOW:

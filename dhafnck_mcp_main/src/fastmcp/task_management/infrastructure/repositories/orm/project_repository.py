@@ -356,12 +356,20 @@ class ORMProjectRepository(BaseORMRepository[Project], BaseUserScopedRepository,
             )
     
     # Additional ORM-specific methods
-    def create_project(self, name: str, description: str = "", user_id: str = "default_id") -> ProjectEntity:
+    def create_project(self, name: str, description: str = "", user_id: str = None) -> ProjectEntity:
         """Create a new project with ORM"""
         try:
             with self.transaction():
                 import uuid
+                from ....domain.constants import get_default_user_id, normalize_user_id
+                
                 project_id = str(uuid.uuid4())
+                
+                # Normalize user_id to ensure it's a valid UUID
+                if user_id is None:
+                    user_id = get_default_user_id()
+                else:
+                    user_id = normalize_user_id(user_id)
                 
                 project = self.create(
                     id=project_id,

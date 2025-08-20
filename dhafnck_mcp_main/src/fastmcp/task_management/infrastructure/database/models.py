@@ -184,6 +184,7 @@ class TaskDependency(Base):
     task_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
     depends_on_task_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
     dependency_type: Mapped[str] = mapped_column(String, default="blocks")
+    user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False, default="00000000-0000-0000-0000-000000000000")
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     
     # Relationships
@@ -290,8 +291,8 @@ class GlobalContext(Base):
     workflow_templates: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     delegation_rules: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     
-    # User isolation
-    user_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    # Note: Global context is organization-wide, not user-specific
+    # No user_id field needed here
     
     # Timestamps and versioning
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

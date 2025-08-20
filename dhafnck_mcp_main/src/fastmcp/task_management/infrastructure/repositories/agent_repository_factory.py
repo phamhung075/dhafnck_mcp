@@ -30,7 +30,7 @@ class AgentRepositoryFactory:
     def create(
         cls,
         repository_type: Optional[AgentRepositoryType] = None,
-        user_id: str = "default_id",
+        user_id: Optional[str] = None,
         db_path: Optional[str] = None,
         **kwargs
     ) -> AgentRepository:
@@ -46,6 +46,15 @@ class AgentRepositoryFactory:
         Returns:
             AgentRepository instance
         """
+        # Import default user ID from domain constants  
+        from ...domain.constants import get_default_user_id, normalize_user_id
+        
+        # Normalize user_id - use default UUID if None
+        if user_id is None:
+            user_id = get_default_user_id()
+        else:
+            user_id = normalize_user_id(user_id)
+        
         # Use default repository type if not specified
         if repository_type is None:
             repository_type = cls._get_default_type()

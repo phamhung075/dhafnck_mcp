@@ -86,7 +86,7 @@ class ExecutableAgent:
     
     def __init__(self, name: str, config: Dict[str, Any], capabilities: AgentCapabilities, 
                  contexts: List[Dict], rules: List[Dict], output_formats: List[Dict], 
-                 mcp_tools: List[Dict]):
+                 mcp_tools: List[Dict], metadata: Dict[str, Any]):
         self.name = name
         self.config = config
         self.capabilities = capabilities
@@ -94,6 +94,7 @@ class ExecutableAgent:
         self.rules = rules
         self.output_formats = output_formats
         self.mcp_tools = mcp_tools
+        self.metadata = metadata
     
     def get_agent_info(self) -> Dict[str, Any]:
         """Get comprehensive agent information"""
@@ -158,6 +159,7 @@ class AgentFactory:
             rules = self._load_rules(agent_dir)
             output_formats = self._load_output_formats(agent_dir)
             mcp_tools = self._load_mcp_tools(agent_dir)
+            metadata = self._load_metadata(agent_dir)
             
             # Create capabilities manager
             capabilities = AgentCapabilities(capabilities_config)
@@ -170,7 +172,8 @@ class AgentFactory:
                 contexts=contexts,
                 rules=rules,
                 output_formats=output_formats,
-                mcp_tools=mcp_tools
+                mcp_tools=mcp_tools,
+                metadata=metadata
             )
         except Exception as e:
             logging.error(f"Error creating agent {agent_name}: {str(e)}")
@@ -251,6 +254,23 @@ class AgentFactory:
                 except Exception as e:
                     logging.warning(f"Error loading MCP tool {tool_file}: {str(e)}")
         return mcp_tools
+    
+    def _load_metadata(self, agent_dir: Path) -> Dict[str, Any]:
+        """Load agent metadata"""
+        metadata_file = agent_dir / "metadata.yaml"
+        if metadata_file.exists():
+            try:
+                with open(metadata_file, 'r', encoding='utf-8') as f:
+                    # Handle multiple YAML documents
+                    docs = list(yaml.safe_load_all(f))
+                    # Return the first non-empty document
+                    for doc in docs:
+                        if doc and isinstance(doc, dict):
+                            return doc
+                    return {}
+            except Exception as e:
+                logging.warning(f"Error loading metadata {metadata_file}: {str(e)}")
+        return {}
 
 
 class CallAgentUseCase:
@@ -349,7 +369,8 @@ class CallAgentUseCase:
                     "contexts": executable_agent.contexts,
                     "rules": executable_agent.rules,
                     "output_formats": executable_agent.output_formats,
-                    "mcp_tools": executable_agent.mcp_tools
+                    "mcp_tools": executable_agent.mcp_tools,
+                    "metadata": executable_agent.metadata
                 },
                 "capabilities": {
                     "available_actions": executable_agent.get_available_actions(),

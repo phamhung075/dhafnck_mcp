@@ -583,6 +583,9 @@ def main():
         mvp_mode = os.environ.get("DHAFNCK_MVP_MODE", "false")
         supabase_configured = bool(os.environ.get("SUPABASE_URL"))
         
+        # Convert auth status to boolean
+        auth_enabled = auth_status.lower() in ("true", "1", "yes", "on")
+        
         logger.info(f"Authentication: {auth_status}, MVP Mode: {mvp_mode}, Supabase: {supabase_configured}")
         
         # Determine transport from environment or command line arguments
@@ -604,11 +607,31 @@ def main():
             logger.info(f"HTTP server will bind to {host}:{port}")
             logger.info("Debug logging enabled for HTTP requests")
             
-            # Configure debug middleware for HTTP mode
+            # Configure middleware for HTTP mode
             from starlette.middleware import Middleware
-            debug_middleware = [Middleware(DebugLoggingMiddleware)]
             
-            # For streamable-http transport, pass the debug middleware
+            # Build middleware stack
+            middleware_stack = []
+            
+            # Add MCP auth middleware for user context extraction if auth is enabled
+            if auth_enabled:
+                try:
+                    from fastmcp.auth.mcp_integration.mcp_auth_middleware import MCPAuthMiddleware
+                    from fastmcp.auth.mcp_integration.jwt_auth_backend import create_jwt_auth_backend
+                    
+                    # Create JWT backend for the middleware
+                    jwt_backend = create_jwt_auth_backend()
+                    
+                    # Add auth middleware first so context is set before other processing
+                    middleware_stack.append(Middleware(MCPAuthMiddleware, jwt_backend=jwt_backend))
+                    logger.info("MCPAuthMiddleware added for user context extraction")
+                except Exception as e:
+                    logger.error(f"Failed to add MCPAuthMiddleware: {e}")
+            
+            # Add debug middleware
+            middleware_stack.append(Middleware(DebugLoggingMiddleware))
+            
+            # For streamable-http transport, pass the middleware stack
             # Authentication is handled by the FastMCP server's built-in auth parameter
             server.run(
                 transport="streamable-http", 
@@ -616,8 +639,8 @@ def main():
                 port=port,
                 # Enable detailed logging for debugging HTTP requests
                 log_level="DEBUG",
-                # Pass debug middleware for HTTP request logging
-                middleware=debug_middleware
+                # Pass middleware stack for HTTP request processing
+                middleware=middleware_stack
             )
         else:
             # For stdio transport (standard MCP)

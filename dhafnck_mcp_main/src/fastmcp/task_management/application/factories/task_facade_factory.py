@@ -83,7 +83,7 @@ class TaskFacadeFactory:
     if TYPE_CHECKING:
         from ..facades.task_application_facade import TaskApplicationFacade as _TaskApplicationFacade
 
-    def create_task_facade(self, project_id: str, git_branch_id: str = None, user_id: str = "default_id") -> object:
+    def create_task_facade(self, project_id: str, git_branch_id: str = None, user_id: str = None) -> object:
         """
         Create a task application facade with proper dependency injection.
         
@@ -98,6 +98,15 @@ class TaskFacadeFactory:
         Returns:
             Configured task application facade
         """
+        # Import default user ID from domain constants
+        from ...domain.constants import get_default_user_id, normalize_user_id
+        
+        # Normalize user_id - use default UUID if None
+        if user_id is None:
+            user_id = get_default_user_id()
+        else:
+            user_id = normalize_user_id(user_id)
+        
         # Create task repository for facade construction
         # For now, use "main" as branch name since we're transitioning to UUIDs
         task_repository = self._repository_factory.create_repository(project_id, "main", user_id)
@@ -137,6 +146,15 @@ class TaskFacadeFactory:
         Returns:
             Configured task application facade
         """
+        # Import default user ID from domain constants
+        from ...domain.constants import get_default_user_id, normalize_user_id
+        
+        # Normalize user_id - use default UUID if None or "default_id"
+        if user_id is None:
+            user_id = get_default_user_id()
+        else:
+            user_id = normalize_user_id(user_id)
+        
         # Create task repository with git_branch_id directly
         task_repository = self._repository_factory.create_repository_with_git_branch_id(project_id, git_branch_name, user_id, git_branch_id)
         

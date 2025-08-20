@@ -48,19 +48,54 @@ from ...application.services.response_enrichment_service import (
     ContextState,
     ContextStalnessLevel
 )
-from ...domain.value_objects.progress import ProgressType
-from ...domain.value_objects.hints import HintType
+from ...domain.constants import get_default_user_id, normalize_user_id
 
 logger = logging.getLogger(__name__)
 
+# Try to import user context utilities - gracefully handle if not available
+try:
+    from fastmcp.auth.mcp_integration.user_context_middleware import get_current_user_id
+    from fastmcp.auth.mcp_integration.thread_context_manager import ContextPropagationMixin
+except ImportError:
+    logger.warning("User context middleware not available - using default user ID")
+    get_current_user_id = lambda: None
+    # Fallback mixin if thread context manager is not available
+    class ContextPropagationMixin:
+        def _run_async_with_context(self, async_func):
+            import asyncio
+            import threading
+            result = None
+            exception = None
+            def run_in_new_loop():
+                nonlocal result, exception
+                try:
+                    new_loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(new_loop)
+                    try:
+                        result = new_loop.run_until_complete(async_func())
+                    finally:
+                        new_loop.close()
+                        asyncio.set_event_loop(None)
+                except Exception as e:
+                    exception = e
+            thread = threading.Thread(target=run_in_new_loop)
+            thread.start()
+            thread.join()
+            if exception:
+                raise exception
+            return result
+from ...domain.value_objects.progress import ProgressType
+from ...domain.value_objects.hints import HintType
 
-class TaskMCPController:
+
+class TaskMCPController(ContextPropagationMixin):
     """
     MCP Controller for task management operations.
     
     Handles only MCP protocol concerns and delegates business operations
     to the TaskApplicationFacade following proper DDD layer separation.
-    Enhanced with workflow hints and context enforcement for better AI guidance.
+    Enhanced with workflow hints, context enforcement, and proper authentication
+    context propagation across threads.
     """
     
     def __init__(self, 
@@ -1190,30 +1225,8 @@ class TaskMCPController:
                     labels=None     # Pass None explicitly to avoid NoneType errors
                 )
             
-            # Always use threading approach to avoid asyncio.run() issues
-            import threading
-            result = None
-            exception = None
-            
-            def run_in_new_loop():
-                nonlocal result, exception
-                try:
-                    new_loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(new_loop)
-                    try:
-                        result = new_loop.run_until_complete(_run_async())
-                    finally:
-                        new_loop.close()
-                        asyncio.set_event_loop(None)
-                except Exception as e:
-                    exception = e
-            
-            thread = threading.Thread(target=run_in_new_loop)
-            thread.start()
-            thread.join()
-            
-            if exception:
-                raise exception
+            # Use the context-aware threading approach to preserve authentication
+            result = self._run_async_with_context(_run_async)
             
             # Enhance response with comprehensive workflow guidance
             if result.get("success"):
@@ -1414,6 +1427,14 @@ class TaskMCPController:
         import logging
         logger = logging.getLogger(__name__)
         
+        # Get current user context from JWT token or use default
+        from ...domain.constants import get_default_user_id, normalize_user_id
+        current_user_id = get_current_user_id()
+        if current_user_id:
+            user_id = normalize_user_id(current_user_id)
+        else:
+            user_id = get_default_user_id()
+        
         # For git_branch_id, look up the actual project_id
         if git_branch_id:
             logger.debug(f"Looking up project_id for git_branch_id {git_branch_id}")
@@ -1432,7 +1453,7 @@ class TaskMCPController:
                     if result:
                         actual_project_id, git_branch_name = result
                         logger.debug(f"Found project_id {actual_project_id} and branch name '{git_branch_name}' for git_branch_id {git_branch_id}")
-                        return (actual_project_id, git_branch_name, "default_id")
+                        return (actual_project_id, git_branch_name, user_id)
                     else:
                         logger.warning(f"Git branch {git_branch_id} not found in project_git_branchs table")
             except Exception as e:
@@ -1440,7 +1461,7 @@ class TaskMCPController:
             
             # Fallback for git_branch_id case
             logger.debug(f"Using default context for git_branch_id {git_branch_id}")
-            return ("default_project", "main", "default_id")
+            return ("default_project", "main", user_id)
         
         # For task_id, look up the git_branch_id and derive context
         if task_id:
@@ -1471,10 +1492,10 @@ class TaskMCPController:
                         if branch_result:
                             actual_project_id, git_branch_name = branch_result
                             logger.debug(f"Found project_id {actual_project_id} and branch name '{git_branch_name}' for git_branch_id {found_git_branch_id}")
-                            return (actual_project_id, git_branch_name, "default_id")
+                            return (actual_project_id, git_branch_name, user_id)
                         else:
                             logger.warning(f"Git branch {found_git_branch_id} not found in project_git_branchs table")
-                            return ("default_project", "main", "default_id")
+                            return ("default_project", "main", user_id)
                     else:
                         logger.warning(f"Task {task_id} not found or has no git_branch_id")
             except Exception as e:
@@ -1482,7 +1503,7 @@ class TaskMCPController:
         
         # Default fallback
         logger.debug("Using default context for task facade")
-        return ("default_project", "main", "default_id")
+        return ("default_project", "main", user_id)
 
     def _get_task_facade(self, project_id: str, git_branch_name: str, user_id: str, git_branch_id: Optional[str] = None) -> TaskApplicationFacade:
         """Get a context-aware task facade."""
@@ -1530,8 +1551,9 @@ class TaskMCPController:
                         git_branch_id=task.get("git_branch_id")
                     )
                     
+                    from ...domain.constants import get_default_user_id
                     context_facade = self._context_facade_factory.create_facade(
-                        user_id=user_id or "default_id",
+                        user_id=user_id or get_default_user_id(),
                         project_id=project_id or "default_project",
                         git_branch_id=task.get("git_branch_id")
                     )
@@ -1554,35 +1576,19 @@ class TaskMCPController:
                     import threading
                     
                     async def _update_context_async():
+                        from ...domain.constants import get_default_user_id
                         return await context_facade.update_context(
                             task_id, 
-                            user_id or "default_id",
+                            user_id or get_default_user_id(),
                             project_id or "default_project",
                             git_branch_name or "main",
                             context_data
                         )
                     
-                    # Run async update in a new thread to avoid event loop issues
-                    result = None
-                    exception = None
-                    
-                    def run_in_new_loop():
-                        nonlocal result, exception
-                        try:
-                            new_loop = asyncio.new_event_loop()
-                            asyncio.set_event_loop(new_loop)
-                            try:
-                                result = new_loop.run_until_complete(_update_context_async())
-                            finally:
-                                new_loop.close()
-                        except Exception as e:
-                            exception = e
-                    
-                    thread = threading.Thread(target=run_in_new_loop)
-                    thread.start()
-                    thread.join()
-                    
-                    if exception:
+                    # Run async update with proper context preservation
+                    try:
+                        result = self._run_async_with_context(_update_context_async)
+                    except Exception as exception:
                         logger.warning(f"Failed to update context for task {task_id}: {exception}")
                     elif result and not result.get("success"):
                         logger.warning(f"Failed to update context for task {task_id}: {result.get('error')}")

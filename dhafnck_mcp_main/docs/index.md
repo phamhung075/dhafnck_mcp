@@ -17,6 +17,7 @@ Foundational design principles, architectural patterns, and technical decisions 
 - [**Architecture & Design Overview**](architecture-design/README.md) - Complete architectural documentation hub
 - [System Architecture](architecture-design/architecture.md) - Overall system architecture and components
 - [Technical Architecture](architecture-design/Architecture_Technique.md) - Detailed technical architecture with DDD
+- [**Authentication System Architecture**](CORE ARCHITECTURE/authentication-system.md) - JWT-based authentication with MCP integration
 - [Domain-Driven Design](architecture-design/domain-driven-design.md) - DDD implementation patterns
 - [AI Context Realistic Approach](architecture-design/AI-CONTEXT-REALISTIC-APPROACH.md) - Practical AI context strategies
 - [**User Isolation Architecture**](architecture/user-isolation-architecture.md) - Multi-tenant data isolation architecture
@@ -80,6 +81,7 @@ Comprehensive testing documentation, QA procedures, and test results.
 Technical development guides, implementation patterns, and best practices.
 
 - [**Development Guides Overview**](development-guides/README.md) - Complete development documentation hub
+- [**MCP Integration Guide**](DEVELOPMENT GUIDES/mcp-integration-guide.md) - Complete MCP client integration patterns and examples
 - [Error Handling and Logging](development-guides/error-handling-and-logging.md) - Error handling patterns and logging strategies
 - [ORM Agent Repository](development-guides/orm-agent-repository-implementation.md) - ORM-based repository patterns
 - [Docker Deployment](development-guides/docker-deployment.md) - Production-ready Docker configurations
@@ -119,6 +121,7 @@ The Vision System is a CRITICAL component that transforms DhafnckMCP into a stra
 Comprehensive troubleshooting documentation for diagnosing and resolving issues.
 
 - [**Troubleshooting Overview**](troubleshooting-guides/README.md) - Complete troubleshooting documentation hub
+- [**MCP Connection Issues Guide**](TROUBLESHOOTING/mcp-connection-issues.md) - Diagnose and fix MCP connection problems
 - [Comprehensive Troubleshooting Guide](troubleshooting-guides/COMPREHENSIVE_TROUBLESHOOTING_GUIDE.md) - Systematic problem diagnosis and solutions
 - [Quick Troubleshooting Reference](troubleshooting-guides/TROUBLESHOOTING.md) - Common issues and quick fixes
 - [**Issue Documentation**](issues/index.md) - Detailed documentation of significant issues and resolutions
@@ -133,6 +136,7 @@ System status reports, documentation health checks, and implementation status up
 
 ### 🐳 Deployment & Operations
 - **[Operations Overview](operations/index.md)** - Complete operations documentation hub
+- [**MCP Registration System**](OPERATIONS/mcp-registration-system.md) - MCP client registration and session management
 - [PostgreSQL Configuration Guide](operations/postgresql-configuration-guide.md) - Database setup and configuration
 - [Docker Deployment](development-guides/docker-deployment.md) - Production Docker deployment
 - [Docker Configuration](docker/config/README.md) - Docker configuration details
@@ -152,6 +156,21 @@ System status reports, documentation health checks, and implementation status up
 - **🐛 Troubleshooting**: See [Comprehensive Troubleshooting Guide](troubleshooting-guides/COMPREHENSIVE_TROUBLESHOOTING_GUIDE.md)
 
 ## 📅 Recent Updates
+
+### 2025-08-20
+- **MCP Registration System**: Implemented proper `/register` endpoint for Claude MCP client compatibility
+  - Created dedicated registration routes with session management
+  - Added support for multiple registration paths
+  - Returns MCP protocol-compliant responses
+- **Authentication System Fixes**: Resolved JWT token validation issues
+  - Fixed token type compatibility (accepts both `access` and `api_token`)
+  - Fixed user ID field flexibility (checks both `sub` and `user_id`)
+  - Fixed metadata validation errors with SQLAlchemy
+- **Documentation Updates**: Comprehensive documentation for new systems
+  - MCP Registration System documentation
+  - Authentication System Architecture guide
+  - MCP Integration Guide with examples
+  - Troubleshooting guide for connection issues
 
 ### 2025-01-31
 - **Major Documentation Reorganization**: Complete restructuring of documentation into logical categories

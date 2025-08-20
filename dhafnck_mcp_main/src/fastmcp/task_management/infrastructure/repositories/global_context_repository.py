@@ -83,10 +83,16 @@ class GlobalContextRepository(BaseORMRepository):
             if custom_fields:
                 workflow_templates["_custom"] = custom_fields
             
+            # Store the actual organization_name in workflow_templates metadata
+            if entity.organization_name:
+                workflow_templates["_metadata"] = {"organization_name": entity.organization_name}
+            
             # Create new global context - map domain entity to database model
+            # For organization_id, use the default UUID since it's not user-specific
+            
             db_model = GlobalContextModel(
                 id=GLOBAL_SINGLETON_UUID,
-                organization_id=entity.organization_name,  # Map organization_name to organization_id
+                organization_id="00000000-0000-0000-0000-000000000002",  # Default organization UUID
                 autonomous_rules=autonomous_rules,
                 security_policies=security_policies,
                 coding_standards=coding_standards,
@@ -207,9 +213,13 @@ class GlobalContextRepository(BaseORMRepository):
             "version": db_model.version
         }
         
+        # Get organization_name from workflow_templates metadata if stored there
+        org_metadata = db_model.workflow_templates.get("_metadata", {}) if db_model.workflow_templates else {}
+        organization_name = org_metadata.get("organization_name", "Default Organization")
+        
         return GlobalContext(
             id=db_model.id,
-            organization_name=db_model.organization_id,  # Map organization_id to organization_name
+            organization_name=organization_name,  # Get from workflow_templates metadata
             global_settings=global_settings,
             metadata=metadata
         )

@@ -26,14 +26,48 @@ from ..utils.schema_monkey_patch import apply_all_schema_patches
 
 logger = logging.getLogger(__name__)
 
+# Try to import user context utilities - gracefully handle if not available
+try:
+    from fastmcp.auth.mcp_integration.user_context_middleware import get_current_user_id
+    from fastmcp.auth.mcp_integration.thread_context_manager import ContextPropagationMixin
+except ImportError:
+    logger.warning("User context middleware not available - using default user ID")
+    get_current_user_id = lambda: None
+    # Fallback mixin if thread context manager is not available
+    class ContextPropagationMixin:
+        def _run_async_with_context(self, async_func):
+            import asyncio
+            import threading
+            result = None
+            exception = None
+            def run_in_new_loop():
+                nonlocal result, exception
+                try:
+                    new_loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(new_loop)
+                    try:
+                        result = new_loop.run_until_complete(async_func())
+                    finally:
+                        new_loop.close()
+                        asyncio.set_event_loop(None)
+                except Exception as e:
+                    exception = e
+            thread = threading.Thread(target=run_in_new_loop)
+            thread.start()
+            thread.join()
+            if exception:
+                raise exception
+            return result
 
-class SubtaskMCPController:
+
+class SubtaskMCPController(ContextPropagationMixin):
     """
     MCP Controller for subtask management operations with integrated progress tracking.
     
     Handles only MCP protocol concerns and delegates business operations
     to the SubtaskApplicationFacade following proper DDD layer separation.
     All actions automatically update parent task context and progress.
+    Enhanced with proper authentication context propagation across threads.
     """
     
     def __init__(self, subtask_facade_factory: SubtaskFacadeFactory, task_facade=None, context_facade=None, task_repository_factory=None):
@@ -54,15 +88,14 @@ class SubtaskMCPController:
         logger.info("SubtaskMCPController initialized with integrated progress tracking")
     
     def _run_async(self, coro):
-        """Helper method to run async operations in sync context."""
+        """Helper method to run async operations in sync context with context preservation."""
         try:
             loop = asyncio.get_event_loop()
             if loop.is_running():
-                # If loop is already running, create a task
-                import concurrent.futures
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(asyncio.run, coro)
-                    return future.result()
+                # If loop is already running, use our context-aware threading
+                async def _wrapper():
+                    return await coro
+                return self._run_async_with_context(_wrapper)
             else:
                 # If no loop is running, use asyncio.run
                 return asyncio.run(coro)

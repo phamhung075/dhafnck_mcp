@@ -1,183 +1,203 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import TokenManagement from '../../pages/TokenManagement';
-import * as tokenService from '../../services/tokenService';
+import { TokenManagement } from '../../pages/TokenManagement';
+import { tokenService } from '../../services/tokenService';
 import { format } from 'date-fns';
-import { ThemeProvider } from '../../contexts/ThemeContext';
+import { BrowserRouter } from 'react-router-dom';
+import { AuthProvider } from '../../contexts/AuthContext';
 
 // Mock dependencies
 jest.mock('../../services/tokenService');
+jest.mock('../../hooks/useAuth', () => ({
+  useAuth: () => ({
+    user: { id: 'test-user', email: 'test@example.com' }
+  })
+}));
 jest.mock('date-fns', () => ({
   format: jest.fn((date) => 'formatted-date'),
 }));
 
 const mockTokenService = jest.mocked(tokenService);
 
-const mockTokens: tokenService.Token[] = [
+interface APIToken {
+  id: string;
+  name: string;
+  token?: string;
+  scopes: string[];
+  created_at: string;
+  expires_at: string;
+  last_used_at?: string;
+  usage_count: number;
+  rate_limit?: number;
+  is_active: boolean;
+}
+
+const mockTokens: APIToken[] = [
   {
     id: '1',
     name: 'Test Token 1',
-    description: 'Test description 1',
+    scopes: ['read:tasks', 'write:tasks'],
     is_active: true,
     rate_limit: 100,
     created_at: '2024-01-01T00:00:00Z',
+    expires_at: '2024-02-01T00:00:00Z',
     last_used_at: '2024-01-02T00:00:00Z',
+    usage_count: 42,
   },
   {
     id: '2',
     name: 'Test Token 2',
-    description: 'Test description 2',
+    scopes: ['read:context'],
     is_active: false,
     rate_limit: 50,
     created_at: '2024-01-03T00:00:00Z',
-    last_used_at: null,
+    expires_at: '2024-02-03T00:00:00Z',
+    last_used_at: undefined,
+    usage_count: 0,
   },
 ];
 
-const renderWithTheme = (component: React.ReactElement) => {
+const renderWithProviders = (component: React.ReactElement) => {
   return render(
-    <ThemeProvider>
-      {component}
-    </ThemeProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        {component}
+      </AuthProvider>
+    </BrowserRouter>
   );
 };
 
 describe('TokenManagement', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockTokenService.listTokens.mockResolvedValue(mockTokens);
+    mockTokenService.listTokens.mockResolvedValue({ data: mockTokens, total: mockTokens.length });
   });
 
-  describe('Scope removal - admin scope', () => {
-    it('should not include admin scope in available scopes', () => {
-      renderWithTheme(<TokenManagement />);
+  describe('Tab functionality', () => {
+    it('should display Generate Token tab by default', () => {
+      renderWithProviders(<TokenManagement />);
       
-      // Open new token dialog
-      const newTokenButton = screen.getByRole('button', { name: /new token/i });
-      fireEvent.click(newTokenButton);
-      
-      // Check that admin scope is not in the list
-      const scopeCheckboxes = screen.getAllByRole('checkbox');
-      const scopeLabels = scopeCheckboxes.map(checkbox => {
-        const label = checkbox.closest('label');
-        return label?.textContent || '';
-      });
-      
-      expect(scopeLabels).not.toContain('Admin');
-      expect(scopeLabels).toContain('Read Tasks');
-      expect(scopeLabels).toContain('Write Tasks');
-      expect(scopeLabels).toContain('Read Context');
-      expect(scopeLabels).toContain('Write Context');
-      expect(scopeLabels).toContain('Read Agents');
-      expect(scopeLabels).toContain('Write Agents');
-      expect(scopeLabels).toContain('Execute MCP');
+      // Check that Generate Token tab content is visible
+      expect(screen.getByText('Generate New API Token')).toBeInTheDocument();
+      expect(screen.getByLabelText('Token Name')).toBeInTheDocument();
     });
 
-    it('should only have 7 available scopes after admin removal', () => {
-      renderWithTheme(<TokenManagement />);
+    it('should switch to Active Tokens tab and fetch tokens', async () => {
+      renderWithProviders(<TokenManagement />);
       
-      // Open new token dialog
-      const newTokenButton = screen.getByRole('button', { name: /new token/i });
-      fireEvent.click(newTokenButton);
+      // Click on Active Tokens tab
+      const activeTokensTab = screen.getByRole('tab', { name: /active tokens/i });
+      fireEvent.click(activeTokensTab);
       
-      // Count scope checkboxes
-      const scopeCheckboxes = screen.getAllByRole('checkbox');
-      // Filter out any non-scope checkboxes
-      const scopeLabels = scopeCheckboxes.filter(checkbox => {
-        const label = checkbox.closest('label');
-        const labelText = label?.textContent || '';
-        return labelText.includes('Read') || labelText.includes('Write') || labelText.includes('Execute');
+      // Wait for tokens to be fetched
+      await waitFor(() => {
+        expect(mockTokenService.listTokens).toHaveBeenCalled();
       });
       
-      expect(scopeLabels).toHaveLength(7);
+      // Check that tokens are displayed
+      await waitFor(() => {
+        expect(screen.getByText('Test Token 1')).toBeInTheDocument();
+        expect(screen.getByText('Test Token 2')).toBeInTheDocument();
+      });
+    });
+
+    it('should show Settings tab with info message', () => {
+      renderWithProviders(<TokenManagement />);
+      
+      // Click on Settings tab
+      const settingsTab = screen.getByRole('tab', { name: /settings/i });
+      fireEvent.click(settingsTab);
+      
+      expect(screen.getByText('Token Settings')).toBeInTheDocument();
+      expect(screen.getByText(/Token settings configuration will be available in a future update/i)).toBeInTheDocument();
     });
   });
 
   it('renders the page title and description', () => {
-    renderWithTheme(<TokenManagement />);
+    renderWithProviders(<TokenManagement />);
     
     expect(screen.getByText('API Token Management')).toBeInTheDocument();
-    expect(screen.getByText(/manage your api tokens/i)).toBeInTheDocument();
+    expect(screen.getByText(/Generate and manage API tokens for MCP authentication/i)).toBeInTheDocument();
   });
 
-  it('loads and displays tokens on mount', async () => {
-    renderWithTheme(<TokenManagement />);
-    
-    await waitFor(() => {
-      expect(mockTokenService.listTokens).toHaveBeenCalled();
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText('Test Token 1')).toBeInTheDocument();
-      expect(screen.getByText('Test Token 2')).toBeInTheDocument();
-    });
-  });
-
-  it('shows loading state while fetching tokens', async () => {
-    mockTokenService.listTokens.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
-    
-    renderWithTheme(<TokenManagement />);
-    
-    expect(screen.getByRole('progressbar')).toBeInTheDocument();
-  });
-
-  it('opens create dialog when Create New Token button is clicked', async () => {
-    renderWithTheme(<TokenManagement />);
-    
-    const createButton = screen.getByRole('button', { name: /create new token/i });
-    fireEvent.click(createButton);
-
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /create new api token/i })).toBeInTheDocument();
+  describe('Scope selection', () => {
+    it('should have correct available scopes', () => {
+      renderWithProviders(<TokenManagement />);
+      
+      // Check for scope checkboxes
+      const scopeCheckboxes = screen.getAllByRole('checkbox');
+      
+      // Get all chip labels which represent scopes
+      const chipElements = screen.getAllByText(/Read|Write|Execute/i);
+      const scopeNames = chipElements.map(el => el.textContent);
+      
+      expect(scopeNames).toContain('Read Tasks');
+      expect(scopeNames).toContain('Write Tasks');
+      expect(scopeNames).toContain('Read Context');
+      expect(scopeNames).toContain('Write Context');
+      expect(scopeNames).toContain('Read Agents');
+      expect(scopeNames).toContain('Write Agents');
+      expect(scopeNames).toContain('Execute MCP');
+      expect(scopeNames).not.toContain('Admin');
     });
   });
 
   it('creates a new token with form data', async () => {
-    const newToken = {
+    const newToken: APIToken = {
       id: '3',
       name: 'New Token',
-      description: 'New token description',
+      scopes: ['read:tasks', 'write:tasks'],
       token: 'generated-token-value',
       is_active: true,
       rate_limit: 200,
       created_at: '2024-01-04T00:00:00Z',
-      last_used_at: null,
+      expires_at: '2024-02-04T00:00:00Z',
+      last_used_at: undefined,
+      usage_count: 0,
     };
     
-    mockTokenService.createToken.mockResolvedValue(newToken);
-    mockTokenService.listTokens.mockResolvedValueOnce(mockTokens).mockResolvedValueOnce([...mockTokens, newToken]);
+    mockTokenService.generateToken.mockResolvedValue({ data: newToken });
+    mockTokenService.listTokens
+      .mockResolvedValueOnce({ data: mockTokens, total: mockTokens.length })
+      .mockResolvedValueOnce({ data: [...mockTokens, newToken], total: mockTokens.length + 1 });
     
-    renderWithTheme(<TokenManagement />);
+    renderWithProviders(<TokenManagement />);
     
-    // Open create dialog
-    const createButton = screen.getByRole('button', { name: /create new token/i });
-    fireEvent.click(createButton);
-
     // Fill form
-    const nameInput = screen.getByLabelText(/token name/i);
-    const descriptionInput = screen.getByLabelText(/description/i);
-    const rateLimitInput = screen.getByLabelText(/rate limit/i);
-    
+    const nameInput = screen.getByLabelText(/Token Name/i);
     fireEvent.change(nameInput, { target: { value: 'New Token' } });
-    fireEvent.change(descriptionInput, { target: { value: 'New token description' } });
+    
+    // Select scopes
+    const readTasksCheckbox = screen.getByRole('checkbox', { name: /read tasks/i });
+    const writeTasksCheckbox = screen.getByRole('checkbox', { name: /write tasks/i });
+    fireEvent.click(readTasksCheckbox);
+    fireEvent.click(writeTasksCheckbox);
+    
+    // Set expiry days
+    const expiryInput = screen.getByLabelText(/Expiry \(days\)/i);
+    fireEvent.change(expiryInput, { target: { value: '30' } });
+    
+    // Set rate limit
+    const rateLimitInput = screen.getByLabelText(/Rate Limit/i);
     fireEvent.change(rateLimitInput, { target: { value: '200' } });
 
     // Submit form
-    const submitButton = screen.getByRole('button', { name: /create/i });
+    const submitButton = screen.getByRole('button', { name: /Generate Token/i });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(mockTokenService.createToken).toHaveBeenCalledWith({
+      expect(mockTokenService.generateToken).toHaveBeenCalledWith({
         name: 'New Token',
-        description: 'New token description',
+        scopes: ['read:tasks', 'write:tasks'],
+        expires_in_days: 30,
         rate_limit: 200,
       });
     });
 
     // Check if token display dialog is shown
     await waitFor(() => {
-      expect(screen.getByText(/token created successfully/i)).toBeInTheDocument();
+      expect(screen.getByText(/Token Generated Successfully/i)).toBeInTheDocument();
       expect(screen.getByText('generated-token-value')).toBeInTheDocument();
     });
   });
@@ -188,27 +208,31 @@ describe('TokenManagement', () => {
     };
     Object.assign(navigator, { clipboard: mockClipboard });
 
-    const newToken = {
+    const newToken: APIToken = {
       id: '3',
       name: 'New Token',
       token: 'test-token-to-copy',
+      scopes: ['read:tasks'],
       is_active: true,
       rate_limit: 100,
       created_at: '2024-01-04T00:00:00Z',
+      expires_at: '2024-02-04T00:00:00Z',
+      usage_count: 0,
     };
     
-    mockTokenService.createToken.mockResolvedValue(newToken);
+    mockTokenService.generateToken.mockResolvedValue({ data: newToken });
     
-    renderWithTheme(<TokenManagement />);
+    renderWithProviders(<TokenManagement />);
     
     // Create a token
-    const createButton = screen.getByRole('button', { name: /create new token/i });
-    fireEvent.click(createButton);
-    
-    const nameInput = screen.getByLabelText(/token name/i);
+    const nameInput = screen.getByLabelText(/Token Name/i);
     fireEvent.change(nameInput, { target: { value: 'New Token' } });
     
-    const submitButton = screen.getByRole('button', { name: /create/i });
+    // Select at least one scope
+    const readTasksCheckbox = screen.getByRole('checkbox', { name: /read tasks/i });
+    fireEvent.click(readTasksCheckbox);
+    
+    const submitButton = screen.getByRole('button', { name: /Generate Token/i });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
@@ -216,41 +240,27 @@ describe('TokenManagement', () => {
     });
 
     // Click copy button
-    const copyButton = screen.getByRole('button', { name: /copy to clipboard/i });
+    const copyButton = screen.getByRole('button', { name: /Copy Token Only/i });
     fireEvent.click(copyButton);
 
     expect(mockClipboard.writeText).toHaveBeenCalledWith('test-token-to-copy');
     
     await waitFor(() => {
-      expect(screen.getByText(/copied!/i)).toBeInTheDocument();
+      expect(screen.getByText(/Copied to clipboard/i)).toBeInTheDocument();
     });
   });
 
-  it('toggles token activation status', async () => {
-    mockTokenService.updateToken.mockResolvedValue({ ...mockTokens[0], is_active: false });
+  it('revokes a token when delete button is clicked and confirmed', async () => {
+    mockTokenService.revokeToken.mockResolvedValue(undefined);
+    mockTokenService.listTokens
+      .mockResolvedValueOnce({ data: mockTokens, total: mockTokens.length })
+      .mockResolvedValueOnce({ data: [mockTokens[1]], total: 1 });
     
-    renderWithTheme(<TokenManagement />);
+    renderWithProviders(<TokenManagement />);
     
-    await waitFor(() => {
-      expect(screen.getByText('Test Token 1')).toBeInTheDocument();
-    });
-
-    // Find the first token's row
-    const firstTokenRow = screen.getByText('Test Token 1').closest('tr')!;
-    const toggleSwitch = within(firstTokenRow).getByRole('checkbox');
-    
-    fireEvent.click(toggleSwitch);
-
-    await waitFor(() => {
-      expect(mockTokenService.updateToken).toHaveBeenCalledWith('1', { is_active: false });
-    });
-  });
-
-  it('deletes a token when delete button is clicked and confirmed', async () => {
-    mockTokenService.deleteToken.mockResolvedValue(undefined);
-    mockTokenService.listTokens.mockResolvedValueOnce(mockTokens).mockResolvedValueOnce([mockTokens[1]]);
-    
-    renderWithTheme(<TokenManagement />);
+    // Switch to Active Tokens tab
+    const activeTokensTab = screen.getByRole('tab', { name: /active tokens/i });
+    fireEvent.click(activeTokensTab);
     
     await waitFor(() => {
       expect(screen.getByText('Test Token 1')).toBeInTheDocument();
@@ -258,20 +268,20 @@ describe('TokenManagement', () => {
 
     // Find delete button for first token
     const firstTokenRow = screen.getByText('Test Token 1').closest('tr')!;
-    const deleteButton = within(firstTokenRow).getByRole('button', { name: /delete/i });
+    const deleteButton = within(firstTokenRow).getByRole('button');
     
     fireEvent.click(deleteButton);
 
     // Confirm deletion
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /confirm deletion/i })).toBeInTheDocument();
+      expect(screen.getByText(/Revoke API Token/i)).toBeInTheDocument();
     });
     
-    const confirmButton = screen.getByRole('button', { name: /delete/i });
+    const confirmButton = screen.getByRole('button', { name: /Revoke Token/i });
     fireEvent.click(confirmButton);
 
     await waitFor(() => {
-      expect(mockTokenService.deleteToken).toHaveBeenCalledWith('1');
+      expect(mockTokenService.revokeToken).toHaveBeenCalledWith('1');
     });
 
     // Check if tokens are refreshed
@@ -280,8 +290,12 @@ describe('TokenManagement', () => {
     });
   });
 
-  it('cancels token deletion when cancel is clicked', async () => {
-    renderWithTheme(<TokenManagement />);
+  it('cancels token revocation when cancel is clicked', async () => {
+    renderWithProviders(<TokenManagement />);
+    
+    // Switch to Active Tokens tab
+    const activeTokensTab = screen.getByRole('tab', { name: /active tokens/i });
+    fireEvent.click(activeTokensTab);
     
     await waitFor(() => {
       expect(screen.getByText('Test Token 1')).toBeInTheDocument();
@@ -289,44 +303,49 @@ describe('TokenManagement', () => {
 
     // Find delete button for first token
     const firstTokenRow = screen.getByText('Test Token 1').closest('tr')!;
-    const deleteButton = within(firstTokenRow).getByRole('button', { name: /delete/i });
+    const deleteButton = within(firstTokenRow).getByRole('button');
     
     fireEvent.click(deleteButton);
 
     // Cancel deletion
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /confirm deletion/i })).toBeInTheDocument();
+      expect(screen.getByText(/Revoke API Token/i)).toBeInTheDocument();
     });
     
     const cancelButton = screen.getByRole('button', { name: /cancel/i });
     fireEvent.click(cancelButton);
 
     await waitFor(() => {
-      expect(screen.queryByRole('heading', { name: /confirm deletion/i })).not.toBeInTheDocument();
+      expect(screen.queryByText(/Revoke API Token/i)).not.toBeInTheDocument();
     });
 
-    expect(mockTokenService.deleteToken).not.toHaveBeenCalled();
+    expect(mockTokenService.revokeToken).not.toHaveBeenCalled();
   });
 
-  it('displays error message when token creation fails', async () => {
+  it('displays error message when token generation fails', async () => {
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-    mockTokenService.createToken.mockRejectedValue(new Error('Creation failed'));
+    mockTokenService.generateToken.mockRejectedValue(new Error('Generation failed'));
     
-    renderWithTheme(<TokenManagement />);
+    renderWithProviders(<TokenManagement />);
     
-    // Open create dialog
-    const createButton = screen.getByRole('button', { name: /create new token/i });
-    fireEvent.click(createButton);
-
     // Fill and submit form
-    const nameInput = screen.getByLabelText(/token name/i);
+    const nameInput = screen.getByLabelText(/Token Name/i);
     fireEvent.change(nameInput, { target: { value: 'New Token' } });
     
-    const submitButton = screen.getByRole('button', { name: /create/i });
+    // Select at least one scope
+    const readTasksCheckbox = screen.getByRole('checkbox', { name: /read tasks/i });
+    fireEvent.click(readTasksCheckbox);
+    
+    const submitButton = screen.getByRole('button', { name: /Generate Token/i });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to create token:', expect.any(Error));
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Error generating token:', expect.any(Error));
+    });
+
+    // Should show error alert
+    await waitFor(() => {
+      expect(screen.getByText('Generation failed')).toBeInTheDocument();
     });
 
     consoleErrorSpy.mockRestore();
@@ -336,17 +355,30 @@ describe('TokenManagement', () => {
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
     mockTokenService.listTokens.mockRejectedValue(new Error('Load failed'));
     
-    renderWithTheme(<TokenManagement />);
+    renderWithProviders(<TokenManagement />);
+    
+    // Switch to Active Tokens tab to trigger loading
+    const activeTokensTab = screen.getByRole('tab', { name: /active tokens/i });
+    fireEvent.click(activeTokensTab);
 
     await waitFor(() => {
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to load tokens:', expect.any(Error));
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Error fetching tokens:', expect.any(Error));
+    });
+
+    // Should show error alert
+    await waitFor(() => {
+      expect(screen.getByText('Load failed')).toBeInTheDocument();
     });
 
     consoleErrorSpy.mockRestore();
   });
 
   it('formats dates correctly', async () => {
-    renderWithTheme(<TokenManagement />);
+    renderWithProviders(<TokenManagement />);
+    
+    // Switch to Active Tokens tab
+    const activeTokensTab = screen.getByRole('tab', { name: /active tokens/i });
+    fireEvent.click(activeTokensTab);
     
     await waitFor(() => {
       expect(screen.getByText('Test Token 1')).toBeInTheDocument();
@@ -356,43 +388,43 @@ describe('TokenManagement', () => {
     expect(format).toHaveBeenCalled();
   });
 
-  it('displays Never for tokens that have never been used', async () => {
-    renderWithTheme(<TokenManagement />);
+  it('displays usage count and last used information', async () => {
+    renderWithProviders(<TokenManagement />);
+    
+    // Switch to Active Tokens tab
+    const activeTokensTab = screen.getByRole('tab', { name: /active tokens/i });
+    fireEvent.click(activeTokensTab);
     
     await waitFor(() => {
-      expect(screen.getByText('Test Token 2')).toBeInTheDocument();
+      expect(screen.getByText('Test Token 1')).toBeInTheDocument();
     });
 
-    // Find the second token's row which has null last_used_at
-    const secondTokenRow = screen.getByText('Test Token 2').closest('tr')!;
-    expect(within(secondTokenRow).getByText('Never')).toBeInTheDocument();
+    // Check usage count
+    expect(screen.getByText('42 requests')).toBeInTheDocument();
+    expect(screen.getByText('0 requests')).toBeInTheDocument();
   });
 
   it('validates form fields before submission', async () => {
-    renderWithTheme(<TokenManagement />);
+    renderWithProviders(<TokenManagement />);
     
-    // Open create dialog
-    const createButton = screen.getByRole('button', { name: /create new token/i });
-    fireEvent.click(createButton);
-
-    // Try to submit empty form
-    const submitButton = screen.getByRole('button', { name: /create/i });
+    // Try to submit with empty name
+    const submitButton = screen.getByRole('button', { name: /Generate Token/i });
     fireEvent.click(submitButton);
 
-    // Check that the API was not called
-    expect(mockTokenService.createToken).not.toHaveBeenCalled();
+    // Should show error
+    await waitFor(() => {
+      expect(screen.getByText('Token name is required')).toBeInTheDocument();
+    });
 
-    // Fill only name and try again
-    const nameInput = screen.getByLabelText(/token name/i);
+    // Fill name but no scopes
+    const nameInput = screen.getByLabelText(/Token Name/i);
     fireEvent.change(nameInput, { target: { value: 'Test' } });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(mockTokenService.createToken).toHaveBeenCalledWith({
-        name: 'Test',
-        description: '',
-        rate_limit: 100, // default value
-      });
+      expect(screen.getByText('At least one scope must be selected')).toBeInTheDocument();
     });
+
+    expect(mockTokenService.generateToken).not.toHaveBeenCalled();
   });
 });

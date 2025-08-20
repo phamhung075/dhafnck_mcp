@@ -146,6 +146,20 @@ class FunctionTool(Tool):
         """Run the tool with arguments."""
         from fastmcp.server.dependencies import get_context
         from fastmcp.server.context import Context
+        
+        # Import user context middleware for authentication context propagation
+        try:
+            from fastmcp.auth.mcp_integration.user_context_middleware import (
+                current_user_context, 
+                get_current_user_context
+            )
+            # Ensure user context propagates to tool execution
+            user_context = get_current_user_context()
+            if user_context:
+                current_user_context.set(user_context)
+        except ImportError:
+            # User context middleware not available, continue without user context
+            pass
 
         arguments = arguments.copy()
 

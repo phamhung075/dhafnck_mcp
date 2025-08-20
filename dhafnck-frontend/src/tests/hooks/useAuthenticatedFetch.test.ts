@@ -38,12 +38,13 @@ describe('useAuthenticatedFetch', () => {
     expect(typeof result.current).toBe('function');
   });
 
-  it('makes authenticated request with bearer token', async () => {
-    const mockResponse = { data: 'test' };
-    mockFetch.mockResolvedValueOnce({
+  it('makes authenticated request with bearer token and returns Response object', async () => {
+    const mockResponse = {
       ok: true,
-      json: async () => mockResponse,
-    } as Response);
+      status: 200,
+      json: async () => ({ data: 'test' }),
+    } as Response;
+    mockFetch.mockResolvedValueOnce(mockResponse);
 
     const { result } = renderHook(() => useAuthenticatedFetch());
     
@@ -51,7 +52,7 @@ describe('useAuthenticatedFetch', () => {
       const response = await result.current('/api/test', {
         method: 'GET',
       });
-      expect(response).toEqual(mockResponse);
+      expect(response).toBe(mockResponse);
     });
 
     expect(mockFetch).toHaveBeenCalledWith('/api/test', {
@@ -63,15 +64,18 @@ describe('useAuthenticatedFetch', () => {
   });
 
   it('preserves existing headers when adding authorization', async () => {
-    mockFetch.mockResolvedValueOnce({
+    const mockResponse = {
       ok: true,
+      status: 200,
       json: async () => ({ success: true }),
-    } as Response);
+    } as Response;
+    mockFetch.mockResolvedValueOnce(mockResponse);
 
     const { result } = renderHook(() => useAuthenticatedFetch());
     
+    let response: Response;
     await act(async () => {
-      await result.current('/api/test', {
+      response = await result.current('/api/test', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -81,6 +85,7 @@ describe('useAuthenticatedFetch', () => {
       });
     });
 
+    expect(response!).toBe(mockResponse);
     expect(mockFetch).toHaveBeenCalledWith('/api/test', {
       method: 'POST',
       headers: {
@@ -99,17 +104,21 @@ describe('useAuthenticatedFetch', () => {
       logout: jest.fn(),
     });
 
-    mockFetch.mockResolvedValueOnce({
+    const mockResponse = {
       ok: true,
+      status: 200,
       json: async () => ({ public: true }),
-    } as Response);
+    } as Response;
+    mockFetch.mockResolvedValueOnce(mockResponse);
 
     const { result } = renderHook(() => useAuthenticatedFetch());
     
+    let response: Response;
     await act(async () => {
-      await result.current('/api/public');
+      response = await result.current('/api/public');
     });
 
+    expect(response!).toBe(mockResponse);
     expect(mockFetch).toHaveBeenCalledWith('/api/public', {});
   });
 
@@ -124,7 +133,7 @@ describe('useAuthenticatedFetch', () => {
     
     await act(async () => {
       const response = await result.current('/api/text');
-      expect(response).toBeInstanceOf(Response);
+      expect(response).toBe(mockResponse);
     });
   });
 
@@ -174,7 +183,8 @@ describe('useAuthenticatedFetch', () => {
     
     await act(async () => {
       const response = await result.current('/api/protected');
-      expect(response.status).toBe(401);
+      expect(response).toBe(mockResponse);
+      expect(mockResponse.status).toBe(401);
     });
   });
 
@@ -187,6 +197,12 @@ describe('useAuthenticatedFetch', () => {
       logout: jest.fn(),
     });
 
+    const mockSuccessResponse = {
+      ok: true,
+      status: 200,
+      json: async () => ({ refreshed: true }),
+    } as Response;
+
     // First request returns 401
     mockFetch
       .mockResolvedValueOnce({
@@ -194,17 +210,16 @@ describe('useAuthenticatedFetch', () => {
         status: 401,
         statusText: 'Unauthorized',
       } as Response)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ refreshed: true }),
-      } as Response);
+      .mockResolvedValueOnce(mockSuccessResponse);
 
     const { result } = renderHook(() => useAuthenticatedFetch());
     
+    let response: Response;
     await act(async () => {
-      await result.current('/api/test');
+      response = await result.current('/api/test');
     });
 
+    expect(response!).toBe(mockSuccessResponse);
     expect(refreshToken).toHaveBeenCalled();
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });
@@ -213,17 +228,21 @@ describe('useAuthenticatedFetch', () => {
     const methods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
     
     for (const method of methods) {
-      mockFetch.mockResolvedValueOnce({
+      const mockResponse = {
         ok: true,
+        status: 200,
         json: async () => ({ method }),
-      } as Response);
+      } as Response;
+      mockFetch.mockResolvedValueOnce(mockResponse);
 
       const { result } = renderHook(() => useAuthenticatedFetch());
       
+      let response: Response;
       await act(async () => {
-        await result.current('/api/test', { method });
+        response = await result.current('/api/test', { method });
       });
 
+      expect(response!).toBe(mockResponse);
       expect(mockFetch).toHaveBeenLastCalledWith('/api/test', {
         method,
         headers: {
@@ -234,17 +253,21 @@ describe('useAuthenticatedFetch', () => {
   });
 
   it('supports skipAuth option', async () => {
-    mockFetch.mockResolvedValueOnce({
+    const mockResponse = {
       ok: true,
+      status: 200,
       json: async () => ({ public: true }),
-    } as Response);
+    } as Response;
+    mockFetch.mockResolvedValueOnce(mockResponse);
 
     const { result } = renderHook(() => useAuthenticatedFetch());
     
+    let response: Response;
     await act(async () => {
-      await result.current('/api/public', { skipAuth: true });
+      response = await result.current('/api/public', { skipAuth: true });
     });
 
+    expect(response!).toBe(mockResponse);
     expect(mockFetch).toHaveBeenCalledWith('/api/public', {});
   });
 

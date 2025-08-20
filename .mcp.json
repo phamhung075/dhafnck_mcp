@@ -13,7 +13,7 @@
             "url": "http://localhost:8000/mcp/",
             "headers": {
                 "Accept": "application/json, text/event-stream",
-                "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItMTIzIiwidXNlcl9pZCI6InRlc3QtdXNlci0xMjMiLCJ0eXBlIjoiYWNjZXNzIiwic2NvcGVzIjpbImV4ZWN1dGU6bWNwIl0sImV4cCI6MTc1NTc4NzgzOSwiaWF0IjoxNzU1NzAxNDM5fQ.xei2bCePbF_956Gu0cEfTUWdzkVZWJ5o5ckgdN-1knY"
+                "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl9pZCI6InRva18wZWI4MTMyZmUxMzZiNzgyIiwidXNlcl9pZCI6IjY1ZDczM2U5LTA0ZDYtNGRkYS05NTM2LTY4OGMzYTU5NDQ4ZSIsInNjb3BlcyI6WyJyZWFkOnRhc2tzIiwicmVhZDpjb250ZXh0Iiwid3JpdGU6Y29udGV4dCIsIndyaXRlOnRhc2tzIiwicmVhZDphZ2VudHMiLCJ3cml0ZTphZ2VudHMiLCJleGVjdXRlOm1jcCJdLCJleHAiOjE3NTgyOTQ5ODAsImlhdCI6MTc1NTcwMjk4MSwidHlwZSI6ImFwaV90b2tlbiJ9.CBDY79GJDoIiftIL0IJmjxxvuo75gaxNwShrHhaGec8"
             }
         },
         "shadcn-ui-server": {

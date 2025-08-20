@@ -16,11 +16,45 @@ from .desc import description_loader
 from ...application.factories.git_branch_facade_factory import GitBranchFacadeFactory
 from ...application.facades.git_branch_application_facade import GitBranchApplicationFacade
 from .workflow_guidance.git_branch.git_branch_workflow_factory import GitBranchWorkflowFactory
+from ...domain.constants import get_default_user_id, normalize_user_id
 
 logger = logging.getLogger(__name__)
 
+# Try to import user context utilities - gracefully handle if not available
+try:
+    from fastmcp.auth.mcp_integration.user_context_middleware import get_current_user_id
+    from fastmcp.auth.mcp_integration.thread_context_manager import ContextPropagationMixin
+except ImportError:
+    logger.warning("User context middleware not available - using default user ID")
+    get_current_user_id = lambda: None
+    # Fallback mixin if thread context manager is not available
+    class ContextPropagationMixin:
+        def _run_async_with_context(self, async_func):
+            import asyncio
+            import threading
+            result = None
+            exception = None
+            def run_in_new_loop():
+                nonlocal result, exception
+                try:
+                    new_loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(new_loop)
+                    try:
+                        result = new_loop.run_until_complete(async_func())
+                    finally:
+                        new_loop.close()
+                        asyncio.set_event_loop(None)
+                except Exception as e:
+                    exception = e
+            thread = threading.Thread(target=run_in_new_loop)
+            thread.start()
+            thread.join()
+            if exception:
+                raise exception
+            return result
 
-class GitBranchMCPController:
+
+class GitBranchMCPController(ContextPropagationMixin):
     """
     MCP controller for git branch management operations.
     
@@ -28,6 +62,7 @@ class GitBranchMCPController:
     - Handling MCP-specific concerns (parameter validation, response formatting)
     - Delegating business logic to the git branch application facade
     - Maintaining clean separation between interface and business logic
+    - Proper authentication context propagation across threads
     """
     
     def __init__(self, git_branch_facade_factory: GitBranchFacadeFactory):
@@ -433,40 +468,21 @@ class GitBranchMCPController:
             # Get the project_id from facade context or find it from the branch
             # Since we need the repository directly, let's use it
             from ...infrastructure.repositories.orm.git_branch_repository import ORMGitBranchRepository
-            import asyncio
-            import threading
             
             # Create repository instance
             repo = ORMGitBranchRepository()
             
-            # Get branch statistics
-            result = None
-            exception = None
+            # Get branch statistics with proper context propagation
+            async def _get_statistics_async():
+                # Get branch with correct parameters
+                branch = await repo.find_by_id(project_id, git_branch_id)
+                if branch:
+                    # Get statistics
+                    return await repo.get_branch_statistics(project_id, git_branch_id)
+                else:
+                    return {"error": f"Branch {git_branch_id} not found in project {project_id}"}
             
-            def run_in_new_loop():
-                nonlocal result, exception
-                try:
-                    new_loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(new_loop)
-                    # Get branch with correct parameters
-                    branch = new_loop.run_until_complete(repo.find_by_id(project_id, git_branch_id))
-                    if branch:
-                        # Get statistics
-                        result = new_loop.run_until_complete(repo.get_branch_statistics(project_id, git_branch_id))
-                    else:
-                        result = {"error": f"Branch {git_branch_id} not found in project {project_id}"}
-                    new_loop.close()
-                except Exception as e:
-                    exception = e
-                    if new_loop:
-                        new_loop.close()
-            
-            thread = threading.Thread(target=run_in_new_loop)
-            thread.start()
-            thread.join()
-            
-            if exception:
-                raise exception
+            result = self._run_async_with_context(_get_statistics_async)
                 
             if result and "error" not in result:
                 response = {
@@ -540,38 +556,20 @@ class GitBranchMCPController:
         try:
             # Use the git branch repository directly to find the branch by name
             from ...infrastructure.repositories.orm.git_branch_repository import ORMGitBranchRepository
-            import asyncio
-            import threading
             
             repo = ORMGitBranchRepository()
             
-            # Handle async operation in a sync context
-            result = None
-            exception = None
+            # Handle async operation with proper context propagation
+            async def _resolve_name_async():
+                git_branch = await repo.find_by_name(project_id, git_branch_name)
+                return git_branch.id if git_branch else None
             
-            def run_in_new_loop():
-                nonlocal result, exception
-                try:
-                    new_loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(new_loop)
-                    git_branch = new_loop.run_until_complete(repo.find_by_name(project_id, git_branch_name))
-                    if git_branch:
-                        result = git_branch.id
-                    new_loop.close()
-                except Exception as e:
-                    exception = e
-                    if new_loop:
-                        new_loop.close()
-            
-            thread = threading.Thread(target=run_in_new_loop)
-            thread.start()
-            thread.join()
-            
-            if exception:
+            try:
+                result = self._run_async_with_context(_resolve_name_async)
+                return result
+            except Exception as exception:
                 logger.error(f"Error resolving branch name to ID: {exception}")
                 return None
-                
-            return result
             
         except Exception as e:
             logger.error(f"Error in _resolve_branch_name_to_id: {e}")
@@ -591,39 +589,20 @@ class GitBranchMCPController:
         try:
             # Use the git branch repository directly to find the branch by ID
             from ...infrastructure.repositories.orm.git_branch_repository import ORMGitBranchRepository
-            import asyncio
-            import threading
             
             repo = ORMGitBranchRepository()
             
-            # Handle async operation in a sync context
-            result = None
-            exception = None
+            # Handle async operation with proper context propagation
+            async def _resolve_id_async():
+                git_branch = await repo.find_by_id(project_id, git_branch_id)
+                return git_branch.name if git_branch else None
             
-            def run_in_new_loop():
-                nonlocal result, exception
-                new_loop = None
-                try:
-                    new_loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(new_loop)
-                    git_branch = new_loop.run_until_complete(repo.find_by_id(project_id, git_branch_id))
-                    if git_branch:
-                        result = git_branch.name
-                    new_loop.close()
-                except Exception as e:
-                    exception = e
-                    if new_loop:
-                        new_loop.close()
-            
-            thread = threading.Thread(target=run_in_new_loop)
-            thread.start()
-            thread.join()
-            
-            if exception:
+            try:
+                result = self._run_async_with_context(_resolve_id_async)
+                return result
+            except Exception as exception:
                 logger.error(f"Error resolving branch ID to name: {exception}")
                 return None
-                
-            return result
             
         except Exception as e:
             logger.error(f"Error in _resolve_branch_id_to_name: {e}")
