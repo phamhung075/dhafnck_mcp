@@ -54,6 +54,7 @@ from ...domain.exceptions.authentication_exceptions import (
     DefaultUserProhibitedError
 )
 from ....config.auth_config import AuthConfig
+from .auth_helper import get_authenticated_user_id, log_authentication_details
 
 logger = logging.getLogger(__name__)
 
@@ -1432,17 +1433,9 @@ class TaskMCPController(ContextPropagationMixin):
         import logging
         logger = logging.getLogger(__name__)
         
-        # Get current user context from JWT token or use default
-        current_user_id = get_current_user_id()
-        if current_user_id:
-            user_id = validate_user_id(current_user_id, "Task context resolution")
-        else:
-            # Check if compatibility mode is enabled
-            if AuthConfig.is_default_user_allowed():
-                user_id = AuthConfig.get_fallback_user_id()
-                AuthConfig.log_authentication_bypass("Task context resolution", "compatibility mode")
-            else:
-                raise UserAuthenticationRequiredError("Task context resolution")
+        # Get authenticated user ID using helper function
+        log_authentication_details()  # For debugging
+        user_id = get_authenticated_user_id(None, "Task context resolution")
         
         # For git_branch_id, look up the actual project_id
         if git_branch_id:

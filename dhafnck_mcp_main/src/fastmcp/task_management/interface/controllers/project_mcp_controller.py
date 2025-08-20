@@ -21,6 +21,7 @@ from ...domain.exceptions.authentication_exceptions import (
     DefaultUserProhibitedError
 )
 from ....config.auth_config import AuthConfig
+from .auth_helper import get_authenticated_user_id, log_authentication_details
 
 logger = logging.getLogger(__name__)
 
@@ -114,21 +115,9 @@ class ProjectMCPController(ContextPropagationMixin):
         Raises:
             UserAuthenticationRequiredError: If no user authentication is available
         """
-        # Get actual user ID from context if available
-        if user_id is None:
-            context_user_id = get_current_user_id()
-            if context_user_id:
-                user_id = context_user_id
-            else:
-                # Check if compatibility mode is enabled
-                if AuthConfig.is_default_user_allowed():
-                    user_id = AuthConfig.get_fallback_user_id()
-                    AuthConfig.log_authentication_bypass("Project facade creation", "compatibility mode")
-                else:
-                    raise UserAuthenticationRequiredError("Project facade creation")
-        
-        # Validate the user ID (will throw if invalid)
-        user_id = validate_user_id(user_id, "Project facade creation")
+        # Get authenticated user ID using helper function
+        log_authentication_details()  # For debugging
+        user_id = get_authenticated_user_id(user_id, "Project facade creation")
         
         return self._project_facade_factory.create_project_facade(user_id=user_id)
     
@@ -159,15 +148,21 @@ class ProjectMCPController(ContextPropagationMixin):
         
         # Get actual user ID from context if not provided
         if user_id is None:
+            logger.info(f"🔍 Project Controller: No user_id provided, trying context extraction...")
             context_user_id = get_current_user_id()
+            logger.info(f"🎯 Project Controller: get_current_user_id() returned: {context_user_id}")
             if context_user_id:
                 user_id = context_user_id
+                logger.info(f"✅ Project Controller: Using context user_id: {user_id}")
             else:
+                logger.warning(f"⚠️ Project Controller: No user_id from context, checking compatibility mode...")
                 # Check if compatibility mode is enabled
                 if AuthConfig.is_default_user_allowed():
                     user_id = AuthConfig.get_fallback_user_id()
+                    logger.info(f"✅ Project Controller: Using compatibility mode user_id: {user_id}")
                     AuthConfig.log_authentication_bypass(f"Project {action}", "compatibility mode")
                 else:
+                    logger.error(f"❌ Project Controller: No authentication found and compatibility mode disabled")
                     raise UserAuthenticationRequiredError(f"Project {action}")
         
         # Validate the user ID (will throw if invalid)

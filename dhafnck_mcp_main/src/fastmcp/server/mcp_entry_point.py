@@ -14,6 +14,23 @@ import json
 from pathlib import Path
 from typing import Optional, Dict, Any
 
+# Load environment variables from .env file FIRST
+try:
+    from dotenv import load_dotenv
+    # Load from the parent directory where .env is located
+    env_path = Path(__file__).parent.parent.parent.parent.parent / ".env"
+    if env_path.exists():
+        load_dotenv(env_path)
+        print(f"✅ Loaded environment variables from {env_path}")
+    else:
+        # Try loading from current directory
+        load_dotenv()
+        print("✅ Loaded environment variables from current directory")
+except ImportError:
+    print("⚠️ python-dotenv not available - using environment variables only")
+except Exception as e:
+    print(f"⚠️ Failed to load .env file: {e}")
+
 # Import the FastMCP server class directly
 from fastmcp.server.server import FastMCP
 from fastmcp.utilities.logging import configure_logging

@@ -115,50 +115,80 @@ mwIDAQAB
         Returns:
             AccessToken if valid, None otherwise
         """
+        import logging
+        logger = logging.getLogger(__name__)
+        
         try:
+            logger.info(f"🔍 JWT Auth Backend: Validating token for MCP access")
+            logger.debug(f"Token (first 20 chars): {token[:20]}...")
+            
             # Validate token using our JWT service
             # Try both "access" and "api_token" types for compatibility
+            logger.debug("Trying 'access' token type first")
             payload = self._jwt_service.verify_token(token, expected_type="access")
+            
             if not payload:
+                logger.debug("'access' type failed, trying 'api_token' type")
                 # Try api_token type for frontend compatibility
                 payload = self._jwt_service.verify_token(token, expected_type="api_token")
                 if not payload:
+                    logger.error("❌ Both 'access' and 'api_token' validation failed")
                     return None
+                else:
+                    logger.info("✅ Token validated as 'api_token' type")
+            else:
+                logger.info("✅ Token validated as 'access' type")
+            
+            logger.debug(f"JWT payload keys: {list(payload.keys())}")
             
             # Extract user information - check both "sub" and "user_id" fields
             user_id = payload.get("sub") or payload.get("user_id")
+            logger.debug(f"Extracted user_id: {user_id}")
+            
             if not user_id:
+                logger.error("❌ No user_id found in token payload")
                 return None
             
             # Get or cache user context
             user_context = await self._get_user_context(user_id)
             if not user_context:
+                logger.error(f"❌ Could not get user context for user_id: {user_id}")
                 return None
+            
+            logger.info(f"✅ User context loaded for: {user_id}")
             
             # Extract scopes from token
             scopes = payload.get("scopes", [])
             if isinstance(scopes, str):
                 scopes = scopes.split()
             
+            logger.debug(f"Token scopes: {scopes}")
+            
             # Add MCP-specific scopes based on user roles
             mcp_scopes = self._map_roles_to_scopes(user_context.roles)
             all_scopes = list(set(scopes + mcp_scopes))
+            
+            logger.debug(f"Final scopes (token + MCP): {all_scopes}")
             
             # Get expiration
             exp = payload.get("exp")
             
             # Return AccessToken for MCP
-            return AccessToken(
+            access_token = AccessToken(
                 token=token,
                 client_id=user_id,  # Use user_id as client_id
                 scopes=all_scopes,
                 expires_at=int(exp) if exp else None
             )
             
+            logger.info(f"🎉 Successfully created AccessToken for user: {user_id}")
+            return access_token
+            
         except Exception as e:
             # Log error but don't expose internal details
-            import logging
-            logging.getLogger(__name__).error(f"Token validation failed: {e}")
+            logger.error(f"❌ Token validation failed: {e}")
+            import traceback
+            logger.debug(f"Full error trace:\n{traceback.format_exc()}")
             return None
     
     async def _get_user_context(self, user_id: str) -> Optional[MCPUserContext]:

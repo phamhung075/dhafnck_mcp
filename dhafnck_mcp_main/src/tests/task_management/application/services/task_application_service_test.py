@@ -260,6 +260,7 @@ class TestTaskApplicationService:
         assert result is False
     
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_complete_task(self, service, mock_use_cases):
         """Test task completion"""
         task_id = "task-123"
@@ -351,3 +352,51 @@ class TestTaskApplicationService:
             # This test would need more complex mocking to fully test
             # the repository creation logic
             pass
+    
+    @pytest.mark.asyncio
+    async def test_complete_task_with_completion_summary(self, service, mock_use_cases):
+        """Test task completion with completion summary parameter"""
+        task_id = "task-123"
+        completion_summary = "Successfully implemented JWT authentication with refresh tokens"
+        expected_result = {
+            "success": True,
+            "task_id": task_id,
+            "completion_summary": completion_summary
+        }
+        mock_use_cases['complete'].execute.return_value = expected_result
+        
+        # The service method now accepts completion_summary parameter
+        result = await service.complete_task(task_id, completion_summary=completion_summary)
+        
+        mock_use_cases['complete'].execute.assert_called_once_with(
+            task_id,
+            completion_summary=completion_summary
+        )
+        assert result == expected_result
+    
+    @pytest.mark.asyncio
+    async def test_complete_task_with_testing_notes(self, service, mock_use_cases):
+        """Test task completion with testing notes"""
+        task_id = "task-123"
+        completion_summary = "Implemented user authentication"
+        testing_notes = "Added unit tests for auth service, integration tests for login flow"
+        expected_result = {
+            "success": True,
+            "task_id": task_id,
+            "completion_summary": completion_summary,
+            "testing_notes": testing_notes
+        }
+        mock_use_cases['complete'].execute.return_value = expected_result
+        
+        result = await service.complete_task(
+            task_id,
+            completion_summary=completion_summary,
+            testing_notes=testing_notes
+        )
+        
+        mock_use_cases['complete'].execute.assert_called_once_with(
+            task_id,
+            completion_summary=completion_summary,
+            testing_notes=testing_notes
+        )
+        assert result == expected_result

@@ -57,18 +57,25 @@ class UserContextMiddleware(BaseHTTPMiddleware):
         Returns:
             Response from the next handler
         """
+        logger.info(f"🔍 UserContextMiddleware processing request: {request.method} {request.url}")
+        
         # Reset context for this request
         token_value = current_user_context.set(None)
         
         try:
             # Extract token from Authorization header
             auth_header = request.headers.get("Authorization", "")
+            logger.debug(f"Authorization header: {auth_header[:20]}..." if auth_header else "No Authorization header")
+            
             if auth_header.startswith("Bearer "):
                 token = auth_header[7:]  # Remove "Bearer " prefix
+                logger.info(f"🔑 Validating JWT token for user context")
                 
                 # Validate token and get user context
                 access_token = await self.jwt_backend.load_access_token(token)
                 if access_token:
+                    logger.info(f"✅ JWT token validated, client_id: {access_token.client_id}")
+                    
                     # Get user context from token
                     user_id = access_token.client_id
                     user_context = await self.jwt_backend._get_user_context(user_id)
@@ -83,20 +90,30 @@ class UserContextMiddleware(BaseHTTPMiddleware):
                         request.state.user_roles = user_context.roles
                         request.state.user_scopes = access_token.scopes
                         
-                        logger.debug(f"User context set for user {user_context.user_id}")
+                        logger.info(f"🎉 User context set for user {user_context.user_id} in ContextVar")
+                        logger.debug(f"Request state updated: user_id={request.state.user_id}")
+                    else:
+                        logger.warning(f"❌ Could not get user context for user_id: {user_id}")
+                else:
+                    logger.warning(f"❌ JWT token validation failed")
+            else:
+                logger.debug("No Bearer token found in Authorization header")
             
             # Process the request
             response = await call_next(request)
             return response
             
         except Exception as e:
-            logger.error(f"Error in UserContextMiddleware: {e}")
+            logger.error(f"❌ Error in UserContextMiddleware: {e}")
+            import traceback
+            logger.debug(f"Full error trace:\n{traceback.format_exc()}")
             # Continue without user context on error
             response = await call_next(request)
             return response
         finally:
             # Reset context after request
             current_user_context.reset(token_value)
+            logger.debug("🔄 User context reset after request")
 
 
 def get_current_user_context() -> Optional[MCPUserContext]:

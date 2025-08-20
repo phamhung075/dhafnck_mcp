@@ -30,10 +30,19 @@ from fastmcp.utilities.logging import get_logger
 # Temporarily disable error middleware to fix circular import
 # from .error_middleware import ErrorHandlingMiddleware
 
+# Initialize logger first to avoid NameError
+logger = get_logger(__name__)
+
+# Import user context middleware for JWT token processing
+try:
+    from fastmcp.auth.mcp_integration.user_context_middleware import UserContextMiddleware
+    USER_CONTEXT_MIDDLEWARE_AVAILABLE = True
+except ImportError:
+    logger.warning("UserContextMiddleware not available - user context will not be propagated")
+    USER_CONTEXT_MIDDLEWARE_AVAILABLE = False
+
 if TYPE_CHECKING:
     from fastmcp.server.server import FastMCP
-
-logger = get_logger(__name__)
 
 
 _current_http_request: ContextVar[Request | None] = ContextVar(
@@ -157,6 +166,13 @@ def setup_auth_middleware_and_routes(
         ),
         Middleware(AuthContextMiddleware),
     ]
+    
+    # Add our custom user context middleware to extract user_id from JWT tokens
+    if USER_CONTEXT_MIDDLEWARE_AVAILABLE:
+        middleware.append(Middleware(UserContextMiddleware))
+        logger.info("Added UserContextMiddleware for user_id extraction from JWT tokens")
+    else:
+        logger.warning("UserContextMiddleware not available - MCP tools will not have user context")
 
     required_scopes = getattr(auth, 'required_scopes', None) or []
 

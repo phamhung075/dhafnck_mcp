@@ -53,14 +53,21 @@ class ProjectRepositoryFactory:
         from ...domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
         from ....config.auth_config import AuthConfig
         
+        logger.info(f"🔍 Project Repository Factory: Creating repository with user_id: {user_id}")
+        logger.info(f"🔧 Repository type: {repository_type}, db_path: {db_path}")
+        
         if user_id is None:
+            logger.warning(f"⚠️ Project Repository Factory: No user_id provided, checking compatibility mode...")
             # Check if compatibility mode is enabled
             if AuthConfig.is_default_user_allowed():
                 user_id = AuthConfig.get_fallback_user_id()
+                logger.info(f"✅ Project Repository Factory: Using compatibility mode user_id: {user_id}")
                 AuthConfig.log_authentication_bypass("Project repository creation", "compatibility mode")
             else:
+                logger.error(f"❌ Project Repository Factory: No user_id and compatibility mode disabled")
                 raise UserAuthenticationRequiredError("Project repository creation")
         else:
+            logger.info(f"✅ Project Repository Factory: Using provided user_id: {user_id}")
             user_id = validate_user_id(user_id, "Project repository creation")
         
         # Use default repository type if not specified

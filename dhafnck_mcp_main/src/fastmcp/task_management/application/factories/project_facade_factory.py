@@ -71,8 +71,8 @@ class ProjectFacadeFactory:
                 user_id=user_id
             )
         else:
-            # Use global repository manager if no factory provided
-            project_repository = GlobalRepositoryManager.get_default()
+            # Use global repository manager with user context
+            project_repository = GlobalRepositoryManager.get_for_user(user_id)
         
         # Create service with repository
         project_service = ProjectManagementService(project_repo=project_repository)

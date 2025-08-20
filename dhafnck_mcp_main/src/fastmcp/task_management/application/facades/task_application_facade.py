@@ -150,14 +150,31 @@ class TaskApplicationFacade:
             from ...domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
             from ....config.auth_config import AuthConfig
             
-            derived_user_id = getattr(request, 'user_id', None)
+            # Try to get user_id from authentication context (same approach as project facade)
+            derived_user_id = None
+            try:
+                from fastmcp.auth.mcp_integration.user_context_middleware import get_current_user_id
+                derived_user_id = get_current_user_id()
+                logger.info(f"🎯 TaskApplicationFacade: get_current_user_id() returned: {derived_user_id}")
+            except ImportError:
+                logger.warning("User context middleware not available - using fallback")
+            
+            # Also check request for backward compatibility
             if derived_user_id is None:
+                derived_user_id = getattr(request, 'user_id', None)
+                logger.info(f"🔄 TaskApplicationFacade: Fallback to request.user_id: {derived_user_id}")
+            
+            if derived_user_id is None:
+                logger.warning(f"⚠️ TaskApplicationFacade: No user_id from context or request, checking compatibility mode...")
                 if AuthConfig.is_default_user_allowed():
                     derived_user_id = AuthConfig.get_fallback_user_id()
+                    logger.info(f"✅ TaskApplicationFacade: Using compatibility mode user_id: {derived_user_id}")
                     AuthConfig.log_authentication_bypass("Task creation", "compatibility mode")
                 else:
+                    logger.error(f"❌ TaskApplicationFacade: No authentication found and compatibility mode disabled")
                     raise UserAuthenticationRequiredError("Task creation")
             else:
+                logger.info(f"✅ TaskApplicationFacade: Using authenticated user_id: {derived_user_id}")
                 derived_user_id = validate_user_id(derived_user_id, "Task creation")
             
             # Validate request at application boundary
