@@ -11,6 +11,9 @@ export const authenticatedFetch = async (url: string, options: RequestInit = {})
   // Get tokens from cookies (matching AuthContext storage)
   const access_token = Cookies.get('access_token');
   
+  console.log('authenticatedFetch - URL:', url);
+  console.log('authenticatedFetch - Has access token:', !!access_token);
+  
   // Add authorization header if token exists
   const fetchOptions = { ...options };
   if (access_token) {
@@ -21,6 +24,7 @@ export const authenticatedFetch = async (url: string, options: RequestInit = {})
   }
   
   const response = await fetch(url, fetchOptions);
+  console.log('authenticatedFetch - Response status:', response.status);
   
   // If unauthorized, the hook version will handle refresh
   // For the standalone version, just return the response

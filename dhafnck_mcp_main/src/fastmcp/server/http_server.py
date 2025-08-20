@@ -93,7 +93,27 @@ class TokenVerifierAdapter:
         Returns:
             AccessToken if valid, None otherwise
         """
-        return await self.provider.load_access_token(token)
+        # Handle OAuth providers
+        if hasattr(self.provider, 'load_access_token'):
+            return await self.provider.load_access_token(token)
+        
+        # Handle JWT middleware providers
+        elif hasattr(self.provider, 'extract_user_from_token'):
+            user_id = self.provider.extract_user_from_token(token)
+            if user_id:
+                # Create a proper AccessToken object for JWT authentication
+                from mcp.server.auth.provider import AccessToken
+                return AccessToken(
+                    token=token,
+                    client_id=user_id,  # Use user_id as client_id for JWT auth
+                    scopes=['execute:mcp']
+                )
+            return None
+        
+        # Unknown provider type
+        else:
+            logger.error(f"Unknown auth provider type: {type(self.provider)}")
+            return None
 
 
 class RequestContextMiddleware:
@@ -138,17 +158,22 @@ def setup_auth_middleware_and_routes(
         Middleware(AuthContextMiddleware),
     ]
 
-    required_scopes = auth.required_scopes or []
+    required_scopes = getattr(auth, 'required_scopes', None) or []
 
-    auth_routes.extend(
-        create_auth_routes(
-            provider=auth,
-            issuer_url=auth.issuer_url,
-            service_documentation_url=auth.service_documentation_url,
-            client_registration_options=auth.client_registration_options,
-            revocation_options=auth.revocation_options,
+    # Only add OAuth auth routes if auth provider supports them
+    if hasattr(auth, 'issuer_url') and hasattr(auth, 'service_documentation_url'):
+        auth_routes.extend(
+            create_auth_routes(
+                provider=auth,
+                issuer_url=auth.issuer_url,
+                service_documentation_url=auth.service_documentation_url,
+                client_registration_options=getattr(auth, 'client_registration_options', None),
+                revocation_options=getattr(auth, 'revocation_options', None),
+            )
         )
-    )
+    else:
+        # Simple JWT auth - no OAuth routes needed
+        logger.info("Using simple JWT authentication (no OAuth routes)")
 
     return middleware, auth_routes, required_scopes
 
@@ -578,6 +603,14 @@ def create_streamable_http_app(
         logger.info(f"Token management routes registered for streamable HTTP at /api/v2/tokens ({len(token_routes)} endpoints)")
     except ImportError as e:
         logger.warning(f"Could not import token management routes for streamable HTTP: {e}")
+    
+    # Add MCP registration routes for Claude and other MCP clients
+    try:
+        from .routes.mcp_registration_routes import mcp_registration_routes
+        server_routes.extend(mcp_registration_routes)
+        logger.info("MCP registration routes registered for Claude MCP client compatibility (/register endpoint)")
+    except ImportError as e:
+        logger.warning(f"Could not import MCP registration routes: {e}")
 
     if middleware:
         server_middleware.extend(middleware)

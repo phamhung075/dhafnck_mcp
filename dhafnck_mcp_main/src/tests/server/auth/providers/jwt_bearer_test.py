@@ -11,212 +11,240 @@ import sys
 # Add the parent directory to the Python path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../..')))
 
-from fastmcp.server.auth.providers.jwt_bearer import JWTBearerProvider
-from fastmcp.resources import Resource
+
+if __name__ == "__main__":
+    # Run tests when executing the file directly
+    pytest.main([__file__, "-v"])
+
+from fastmcp.server.auth.providers.jwt_bearer import JWTBearerAuthProvider
+from mcp.server.auth.provider import AccessToken
 
 
-class TestJWTBearerProviderInit:
-    """Test cases for JWTBearerProvider initialization."""
+class TestJWTBearerAuthProviderInit:
+    """Test cases for JWTBearerAuthProvider initialization."""
 
     def test_init_with_secret(self):
         """Test initialization with a secret."""
-        provider = JWTBearerProvider(secret="test-secret")
-        assert provider.secret == "test-secret"
-        assert provider._db_facade is not None
+        provider = JWTBearerAuthProvider(secret_key="test-secret")
+        assert provider.secret_key == "test-secret"
+        assert provider.check_database is True
+        assert provider.issuer == "dhafnck-mcp"
+        assert provider.required_scopes == ["mcp:access"]
 
-    def test_init_without_secret(self):
-        """Test initialization without a secret."""
-        provider = JWTBearerProvider()
-        assert provider.secret is None
-        assert provider._db_facade is not None
+    @patch.dict(os.environ, {"JWT_SECRET_KEY": "env-secret"})
+    def test_init_with_env_secret(self):
+        """Test initialization with environment variable secret."""
+        provider = JWTBearerAuthProvider()
+        assert provider.secret_key == "env-secret"
 
-    @patch('fastmcp.server.auth.providers.jwt_bearer.TokenDbApplicationFacade')
-    def test_init_with_custom_db_facade(self, mock_facade_class):
-        """Test initialization with custom database facade."""
-        mock_facade = Mock()
-        mock_facade_class.return_value = mock_facade
-        
-        provider = JWTBearerProvider(secret="test-secret")
-        
-        assert provider._db_facade == mock_facade
-        mock_facade_class.assert_called_once()
+    def test_init_without_secret_raises_error(self):
+        """Test initialization without secret raises ValueError."""
+        with patch.dict(os.environ, {}, clear=True):
+            with pytest.raises(ValueError, match="JWT_SECRET_KEY must be provided"):
+                JWTBearerAuthProvider()
+
+    def test_init_with_custom_params(self):
+        """Test initialization with custom parameters."""
+        provider = JWTBearerAuthProvider(
+            secret_key="test-secret",
+            issuer="custom-issuer",
+            audience=["audience1", "audience2"],
+            required_scopes=["read", "write"],
+            check_database=False
+        )
+        assert provider.issuer == "custom-issuer"
+        assert provider.audience == ["audience1", "audience2"]
+        assert provider.required_scopes == ["read", "write"]
+        assert provider.check_database is False
 
 
-class TestJWTBearerProviderAuthenticate:
-    """Test cases for authenticate method."""
+class TestJWTBearerAuthProviderLoadAccessToken:
+    """Test cases for load_access_token method."""
 
     @pytest.fixture
     def provider(self):
         """Create a provider instance for testing."""
-        return JWTBearerProvider(secret="test-secret")
+        with patch.dict(os.environ, {"JWT_SECRET_KEY": "test-secret"}):
+            provider = JWTBearerAuthProvider(check_database=False)
+            return provider
 
     @pytest.fixture
-    def mock_db_facade(self, provider):
-        """Mock the database facade."""
-        provider._db_facade = Mock()
-        return provider._db_facade
+    def provider_with_db(self):
+        """Create a provider instance with database checking enabled."""
+        with patch.dict(os.environ, {"JWT_SECRET_KEY": "test-secret"}):
+            provider = JWTBearerAuthProvider(check_database=True)
+            return provider
 
     @pytest.mark.asyncio
-    async def test_authenticate_valid_token(self, provider, mock_db_facade):
-        """Test authentication with a valid token."""
-        # Create a valid token
+    async def test_load_access_token_valid_api_token(self, provider):
+        """Test loading a valid API token."""
+        # Create a valid API token
         payload = {
+            "type": "api_token",
             "token_id": "test-token-id",
             "user_id": "test-user-id",
-            "exp": datetime.now(timezone.utc) + timedelta(hours=1)
+            "scopes": ["read:tasks", "write:tasks"],
+            "exp": int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
         }
         token = jwt.encode(payload, "test-secret", algorithm="HS256")
         
-        # Mock database response
-        mock_db_facade.get_token_by_id.return_value = {
-            "id": "test-token-id",
-            "is_active": True,
-            "user_id": "test-user-id"
+        # Test loading token
+        result = await provider.load_access_token(token)
+        
+        assert isinstance(result, AccessToken)
+        assert result.client_id == "test-user-id"
+        assert "mcp:access" in result.scopes
+        assert "mcp:read" in result.scopes
+        assert "mcp:write" in result.scopes
+        assert result.metadata["token_id"] == "test-token-id"
+        assert result.metadata["token_type"] == "api_token"
+
+    @pytest.mark.asyncio
+    async def test_load_access_token_valid_user_token(self, provider):
+        """Test loading a valid user token."""
+        # Create a valid user token
+        payload = {
+            "token_type": "access",
+            "sub": "user-123",
+            "email": "user@example.com",
+            "roles": ["developer"],
+            "exp": int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
         }
+        token = jwt.encode(payload, "test-secret", algorithm="HS256")
         
-        # Test authentication
-        result = await provider.authenticate({"token": token})
+        # Test loading token
+        result = await provider.load_access_token(token)
         
-        assert result["authenticated"] is True
-        assert result["metadata"]["user_id"] == "test-user-id"
-        assert result["metadata"]["token_id"] == "test-token-id"
-        mock_db_facade.get_token_by_id.assert_called_once_with("test-token-id")
+        assert isinstance(result, AccessToken)
+        assert result.client_id == "user-123"
+        assert "mcp:access" in result.scopes
+        assert "mcp:read" in result.scopes
+        assert "mcp:write" in result.scopes
+        assert result.metadata["token_type"] == "user_token"
+        assert result.metadata["email"] == "user@example.com"
 
     @pytest.mark.asyncio
-    async def test_authenticate_no_credentials(self, provider):
-        """Test authentication with no credentials."""
-        result = await provider.authenticate({})
-        
-        assert result["authenticated"] is False
-        assert "No token provided" in result["reason"]
+    async def test_load_access_token_invalid_format(self, provider):
+        """Test loading token with invalid format."""
+        result = await provider.load_access_token("invalid-token")
+        assert result is None
 
     @pytest.mark.asyncio
-    async def test_authenticate_invalid_token_format(self, provider):
-        """Test authentication with invalid token format."""
-        result = await provider.authenticate({"token": "invalid-token"})
-        
-        assert result["authenticated"] is False
-        assert "Invalid token" in result["reason"]
-
-    @pytest.mark.asyncio
-    async def test_authenticate_expired_token(self, provider, mock_db_facade):
-        """Test authentication with an expired token."""
+    async def test_load_access_token_expired(self, provider):
+        """Test loading an expired token."""
         # Create an expired token
         payload = {
+            "type": "api_token",
             "token_id": "test-token-id",
             "user_id": "test-user-id",
-            "exp": datetime.now(timezone.utc) - timedelta(hours=1)
+            "exp": int((datetime.now(timezone.utc) - timedelta(hours=1)).timestamp())
         }
         token = jwt.encode(payload, "test-secret", algorithm="HS256")
         
-        result = await provider.authenticate({"token": token})
-        
-        assert result["authenticated"] is False
-        assert "Token has expired" in result["reason"]
+        result = await provider.load_access_token(token)
+        assert result is None
 
     @pytest.mark.asyncio
-    async def test_authenticate_wrong_secret(self, provider, mock_db_facade):
-        """Test authentication with token signed with wrong secret."""
-        # Create token with different secret
+    async def test_load_access_token_wrong_secret(self, provider):
+        """Test loading token signed with wrong secret."""
         payload = {
+            "type": "api_token",
             "token_id": "test-token-id",
             "user_id": "test-user-id",
-            "exp": datetime.now(timezone.utc) + timedelta(hours=1)
+            "exp": int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
         }
         token = jwt.encode(payload, "wrong-secret", algorithm="HS256")
         
-        result = await provider.authenticate({"token": token})
-        
-        assert result["authenticated"] is False
-        assert "Invalid token" in result["reason"]
+        result = await provider.load_access_token(token)
+        assert result is None
 
     @pytest.mark.asyncio
-    async def test_authenticate_inactive_token(self, provider, mock_db_facade):
-        """Test authentication with an inactive token in database."""
-        # Create a valid token
+    async def test_load_access_token_with_db_check_inactive(self, provider_with_db):
+        """Test loading token that is inactive in database."""
         payload = {
+            "type": "api_token",
             "token_id": "test-token-id",
             "user_id": "test-user-id",
-            "exp": datetime.now(timezone.utc) + timedelta(hours=1)
+            "scopes": ["read:tasks"],
+            "exp": int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
         }
         token = jwt.encode(payload, "test-secret", algorithm="HS256")
         
-        # Mock database response with inactive token
-        mock_db_facade.get_token_by_id.return_value = {
-            "id": "test-token-id",
-            "is_active": False,
-            "user_id": "test-user-id"
-        }
-        
-        result = await provider.authenticate({"token": token})
-        
-        assert result["authenticated"] is False
-        assert "Token is not active" in result["reason"]
+        # Mock database check
+        with patch.object(provider_with_db, '_validate_token_in_database', return_value=False):
+            result = await provider_with_db.load_access_token(token)
+            assert result is None
 
     @pytest.mark.asyncio
-    async def test_authenticate_token_not_in_database(self, provider, mock_db_facade):
-        """Test authentication when token is not found in database."""
-        # Create a valid token
+    async def test_load_access_token_with_db_check_valid(self, provider_with_db):
+        """Test loading token that is valid in database."""
         payload = {
+            "type": "api_token",
             "token_id": "test-token-id",
             "user_id": "test-user-id",
-            "exp": datetime.now(timezone.utc) + timedelta(hours=1)
+            "scopes": ["read:tasks"],
+            "exp": int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
         }
         token = jwt.encode(payload, "test-secret", algorithm="HS256")
         
-        # Mock database response - token not found
-        mock_db_facade.get_token_by_id.return_value = None
-        
-        result = await provider.authenticate({"token": token})
-        
-        assert result["authenticated"] is False
-        assert "Token not found" in result["reason"]
+        # Mock database check
+        with patch.object(provider_with_db, '_validate_token_in_database', return_value=True):
+            result = await provider_with_db.load_access_token(token)
+            assert isinstance(result, AccessToken)
+            assert result.client_id == "test-user-id"
 
     @pytest.mark.asyncio
-    async def test_authenticate_missing_token_id_in_payload(self, provider, mock_db_facade):
-        """Test authentication with token missing token_id in payload."""
-        # Create token without token_id
+    async def test_load_access_token_missing_required_fields(self, provider):
+        """Test loading API token missing required fields."""
+        # Token without token_id
         payload = {
+            "type": "api_token",
             "user_id": "test-user-id",
-            "exp": datetime.now(timezone.utc) + timedelta(hours=1)
+            "exp": int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
         }
         token = jwt.encode(payload, "test-secret", algorithm="HS256")
+        result = await provider.load_access_token(token)
+        assert result is None
         
-        result = await provider.authenticate({"token": token})
-        
-        assert result["authenticated"] is False
-        assert "Invalid token payload" in result["reason"]
-
-    @pytest.mark.asyncio
-    async def test_authenticate_no_secret_configured(self, mock_db_facade):
-        """Test authentication when no secret is configured."""
-        provider = JWTBearerProvider()  # No secret
-        provider._db_facade = mock_db_facade
-        
-        token = "some-token"
-        result = await provider.authenticate({"token": token})
-        
-        assert result["authenticated"] is False
-        assert "JWT secret not configured" in result["reason"]
-
-    @pytest.mark.asyncio
-    async def test_authenticate_database_error(self, provider, mock_db_facade):
-        """Test authentication when database raises an error."""
-        # Create a valid token
+        # Token without user_id
         payload = {
+            "type": "api_token",
             "token_id": "test-token-id",
-            "user_id": "test-user-id",
-            "exp": datetime.now(timezone.utc) + timedelta(hours=1)
+            "exp": int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
+        }
+        token = jwt.encode(payload, "test-secret", algorithm="HS256")
+        result = await provider.load_access_token(token)
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_load_access_token_admin_role(self, provider):
+        """Test loading user token with admin role."""
+        payload = {
+            "token_type": "access",
+            "sub": "admin-user",
+            "roles": ["admin"],
+            "exp": int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
         }
         token = jwt.encode(payload, "test-secret", algorithm="HS256")
         
-        # Mock database error
-        mock_db_facade.get_token_by_id.side_effect = Exception("Database error")
+        result = await provider.load_access_token(token)
+        assert isinstance(result, AccessToken)
+        assert "mcp:admin" in result.scopes
+        assert "mcp:write" in result.scopes
+        assert "mcp:read" in result.scopes
+
+    @pytest.mark.asyncio
+    async def test_load_access_token_unknown_token_type(self, provider):
+        """Test loading token with unknown type."""
+        payload = {
+            "type": "unknown_type",
+            "user_id": "test-user-id",
+            "exp": int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
+        }
+        token = jwt.encode(payload, "test-secret", algorithm="HS256")
         
-        result = await provider.authenticate({"token": token})
-        
-        assert result["authenticated"] is False
-        assert "Authentication failed" in result["reason"]
+        result = await provider.load_access_token(token)
+        assert result is None
 
 
 class TestJWTBearerProviderCheckPermission:

@@ -98,7 +98,8 @@ async def handle_generate_token(request: Request) -> JSONResponse:
         # Generate token
         result = await generate_token_handler(token_request, user, db)
         
-        return JSONResponse(result.dict())
+        # Use model_dump with mode='json' to properly serialize datetime objects
+        return JSONResponse(result.model_dump(mode='json'))
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=400)
     finally:
@@ -125,7 +126,8 @@ async def handle_list_tokens(request: Request) -> JSONResponse:
         # List tokens
         result = await list_tokens_handler(user, db, skip, limit)
         
-        return JSONResponse(result.dict())
+        # Use model_dump with mode='json' to properly serialize datetime objects
+        return JSONResponse(result.model_dump(mode='json'))
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=400)
     finally:
@@ -153,7 +155,8 @@ async def handle_get_token_details(request: Request) -> JSONResponse:
         # Get token details
         result = await get_token_details_handler(token_id, user, db)
         
-        return JSONResponse(result.dict())
+        # Use model_dump with mode='json' to properly serialize datetime objects
+        return JSONResponse(result.model_dump(mode='json'))
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=400)
     finally:

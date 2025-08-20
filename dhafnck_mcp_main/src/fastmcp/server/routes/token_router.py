@@ -163,7 +163,7 @@ async def get_token_details_handler(token_id: str, current_user: User, db: Sessi
         usage_count=token.usage_count,
         rate_limit=token.rate_limit,
         is_active=token.is_active,
-        metadata=token.token_metadata
+        metadata=token.token_metadata if isinstance(token.token_metadata, dict) else {}
     )
 
 async def revoke_token_handler(token_id: str, current_user: User, db: Session) -> dict:
@@ -419,7 +419,7 @@ async def list_tokens(
             usage_count=token.usage_count,
             rate_limit=token.rate_limit,
             is_active=token.is_active,
-            metadata=token.metadata
+            metadata=token.token_metadata if isinstance(token.token_metadata, dict) else {}
         )
         for token in tokens
     ]
@@ -455,7 +455,7 @@ async def get_token_details(
         usage_count=token.usage_count,
         rate_limit=token.rate_limit,
         is_active=token.is_active,
-        metadata=token.metadata
+        metadata=token.token_metadata if isinstance(token.token_metadata, dict) else {}
     )
 
 @router.delete("/{token_id}")
@@ -526,7 +526,7 @@ async def update_token(
         usage_count=token.usage_count,
         rate_limit=token.rate_limit,
         is_active=token.is_active,
-        metadata=token.metadata
+        metadata=token.token_metadata if isinstance(token.token_metadata, dict) else {}
     )
 
 @router.post("/{token_id}/rotate", response_model=TokenResponse)
@@ -592,7 +592,7 @@ async def rotate_token(
         usage_count=new_token.usage_count,
         rate_limit=new_token.rate_limit,
         is_active=new_token.is_active,
-        metadata=new_token.metadata
+        metadata=new_token.token_metadata if isinstance(new_token.token_metadata, dict) else {}
     )
 
 @router.post("/validate", response_model=TokenValidateResponse)

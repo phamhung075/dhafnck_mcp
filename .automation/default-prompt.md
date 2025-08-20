@@ -27,27 +27,25 @@ REQUIRED BEHAVIORS:
 ## Missing Test Files - CREATE IMMEDIATELY:
 
 ## Stale Test Files (Source Newer Than Test)
-- **Source**: `dhafnck-frontend/src/hooks/useAuthenticatedFetch.ts`
-  - **Test**: `dhafnck-frontend/src/tests/hooks/useAuthenticatedFetch.test.ts`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/auth/providers/jwt_bearer.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/server/auth/providers/jwt_bearer_test.py`
   - **Days stale**: 0
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/database/models.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/database/models_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/http_server.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/server/http_server_test.py`
+  - **Days stale**: 0
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/token_router.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/server/routes/token_router_test.py`
   - **Days stale**: 0
 
 
 ## Missing Test Files
-- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/bridge/token_mount.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/auth/bridge/token_mount_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/agent_metadata_routes.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/server/routes/agent_metadata_routes_test.py`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/token_routes_backup.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/server/routes/token_routes_backup_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/token_routes_starlette_bridge_backup.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/server/routes/token_routes_starlette_bridge_backup_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/database/init_database.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/database/init_database_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/agent_registry.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/server/routes/agent_registry_test.py`
 
 
 ## EXECUTION COMMANDS - DO NOW:

@@ -106,16 +106,32 @@ export function TokenManagement() {
   const [tokenToDelete, setTokenToDelete] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchTokens();
-  }, []);
+    // Only fetch tokens if we're on the Active Tokens tab
+    if (tabValue === 1) {
+      fetchTokens();
+    }
+  }, [tabValue]);
 
   const fetchTokens = async () => {
     try {
       setLoading(true);
+      setError(null);
+      console.log('Starting token fetch...');
       const response = await tokenService.listTokens();
-      setTokens(response.data);
+      console.log('Fetched tokens response:', response);
+      
+      if (response && response.data) {
+        setTokens(response.data);
+        console.log('Set tokens state with:', response.data);
+      } else {
+        setTokens([]);
+        console.log('No data in response, setting empty array');
+      }
     } catch (err) {
-      setError('Failed to fetch tokens');
+      console.error('Error fetching tokens:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch tokens';
+      setError(errorMessage);
+      setTokens([]);
     } finally {
       setLoading(false);
     }
@@ -155,7 +171,8 @@ export function TokenManagement() {
       // Refresh token list
       await fetchTokens();
     } catch (err) {
-      setError('Failed to generate token');
+      console.error('Error generating token:', err);
+      setError(err instanceof Error ? err.message : 'Failed to generate token');
     } finally {
       setLoading(false);
     }
@@ -306,6 +323,17 @@ export function TokenManagement() {
           </TabPanel>
 
           <TabPanel value={tabValue} index={1}>
+            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="h6">Active API Tokens</Typography>
+              <Button
+                size="small"
+                onClick={fetchTokens}
+                disabled={loading}
+                startIcon={loading ? <CircularProgress size={16} /> : <Shield size={16} />}
+              >
+                Refresh
+              </Button>
+            </Box>
             <TableContainer>
               <Table>
                 <TableHead>
@@ -405,22 +433,80 @@ export function TokenManagement() {
         </Paper>
 
         {/* Generated Token Dialog */}
-        <Dialog open={showTokenDialog} onClose={() => setShowTokenDialog(false)} maxWidth="sm" fullWidth>
+        <Dialog 
+          open={showTokenDialog} 
+          onClose={() => setShowTokenDialog(false)} 
+          maxWidth="md" 
+          fullWidth
+          PaperProps={{
+            sx: { maxHeight: '90vh' }
+          }}
+        >
           <DialogTitle>Token Generated Successfully</DialogTitle>
-          <DialogContent>
+          <DialogContent dividers sx={{ pb: 3 }}>
             <Alert severity="warning" sx={{ mb: 2 }}>
               Make sure to copy this token now. You won't be able to see it again!
             </Alert>
             <TextField
               fullWidth
               multiline
-              rows={4}
+              rows={3}
               value={generatedToken || ''}
               InputProps={{
                 readOnly: true,
-                sx: { fontFamily: 'monospace' }
+                sx: { fontFamily: 'monospace', fontSize: '0.85rem' }
               }}
+              sx={{ mb: 2 }}
             />
+            
+            <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+              How to Use This Token
+            </Typography>
+            
+            <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
+              For Claude Code MCP Configuration:
+            </Typography>
+            <Paper sx={{ p: 2, bgcolor: 'grey.100', mb: 2 }}>
+              <Typography variant="body2" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+{`"dhafnck_mcp_http": {
+    "type": "http",
+    "url": "http://localhost:8000/mcp/",
+    "headers": {
+        "Accept": "application/json, text/event-stream",
+        "Authorization": "Bearer ${generatedToken || 'YOUR_TOKEN_HERE'}"
+    }
+}`}
+              </Typography>
+            </Paper>
+            <Button
+              size="small"
+              startIcon={<Copy size={16} />}
+              onClick={() => {
+                const config = {
+                  dhafnck_mcp_http: {
+                    type: "http",
+                    url: "http://localhost:8000/mcp/",
+                    headers: {
+                      Accept: "application/json, text/event-stream",
+                      Authorization: `Bearer ${generatedToken}`
+                    }
+                  }
+                };
+                copyToClipboard(JSON.stringify(config, null, 4));
+                setSuccess('MCP configuration copied to clipboard');
+              }}
+            >
+              Copy MCP Configuration
+            </Button>
+            
+            <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
+              For API Requests:
+            </Typography>
+            <Paper sx={{ p: 2, bgcolor: 'grey.100' }}>
+              <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                Authorization: Bearer {generatedToken ? `${generatedToken.substring(0, 20)}...` : 'YOUR_TOKEN_HERE'}
+              </Typography>
+            </Paper>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setShowTokenDialog(false)}>Close</Button>
@@ -429,7 +515,7 @@ export function TokenManagement() {
               startIcon={<Copy size={18} />}
               onClick={() => generatedToken && copyToClipboard(generatedToken)}
             >
-              Copy Token
+              Copy Token Only
             </Button>
           </DialogActions>
         </Dialog>

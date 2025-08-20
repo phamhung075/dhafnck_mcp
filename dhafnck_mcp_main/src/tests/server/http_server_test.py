@@ -24,6 +24,8 @@ from fastmcp.server.http_server import (
     StarletteWithLifespan,
     set_http_request,
     _current_http_request,
+    TokenVerifier,
+    TokenVerifierAdapter,
 )
 
 
@@ -274,6 +276,43 @@ class TestMCPHeaderValidationMiddleware:
         assert response_headers.get("access-control-allow-headers") == "*"
 
 
+class TestTokenVerifierAdapter:
+    """Test the TokenVerifierAdapter class."""
+
+    def test_adapter_implements_protocol(self):
+        """Test that adapter implements TokenVerifier protocol."""
+        mock_provider = Mock()
+        adapter = TokenVerifierAdapter(mock_provider)
+        
+        # Check it implements the protocol
+        assert isinstance(adapter, TokenVerifier)
+        assert hasattr(adapter, 'verify_token')
+
+    @pytest.mark.asyncio
+    async def test_verify_token_delegates_to_provider(self):
+        """Test that verify_token delegates to provider's load_access_token."""
+        mock_provider = Mock()
+        mock_access_token = Mock()
+        mock_provider.load_access_token = AsyncMock(return_value=mock_access_token)
+        
+        adapter = TokenVerifierAdapter(mock_provider)
+        result = await adapter.verify_token("test-token")
+        
+        mock_provider.load_access_token.assert_called_once_with("test-token")
+        assert result == mock_access_token
+
+    @pytest.mark.asyncio
+    async def test_verify_token_returns_none_on_invalid(self):
+        """Test that verify_token returns None for invalid tokens."""
+        mock_provider = Mock()
+        mock_provider.load_access_token = AsyncMock(return_value=None)
+        
+        adapter = TokenVerifierAdapter(mock_provider)
+        result = await adapter.verify_token("invalid-token")
+        
+        assert result is None
+
+
 class TestSetupAuthMiddleware:
     """Test the setup_auth_middleware_and_routes function."""
 
@@ -286,6 +325,7 @@ class TestSetupAuthMiddleware:
         mock_auth.service_documentation_url = "https://docs.example.com"
         mock_auth.client_registration_options = {}
         mock_auth.revocation_options = {}
+        mock_auth.load_access_token = AsyncMock()
         
         with patch('fastmcp.server.http_server.create_auth_routes') as mock_create_routes:
             mock_create_routes.return_value = [
@@ -307,6 +347,31 @@ class TestSetupAuthMiddleware:
         
         # Verify scopes
         assert scopes == ["read", "write"]
+
+    @patch('fastmcp.server.http_server.TokenVerifierAdapter')
+    @patch('fastmcp.server.http_server.BearerAuthBackend')
+    def test_setup_creates_token_verifier_adapter(self, mock_bearer_backend, mock_adapter_class):
+        """Test that setup creates TokenVerifierAdapter for OAuth provider."""
+        # Mock OAuth provider
+        mock_auth = Mock()
+        mock_auth.required_scopes = ["admin"]
+        mock_auth.issuer_url = "https://auth.example.com"
+        mock_auth.service_documentation_url = "https://docs.example.com"
+        mock_auth.client_registration_options = {}
+        mock_auth.revocation_options = {}
+        
+        # Mock adapter
+        mock_adapter = Mock()
+        mock_adapter_class.return_value = mock_adapter
+        
+        with patch('fastmcp.server.http_server.create_auth_routes', return_value=[]):
+            middleware, routes, scopes = setup_auth_middleware_and_routes(mock_auth)
+        
+        # Verify adapter was created with the auth provider
+        mock_adapter_class.assert_called_once_with(mock_auth)
+        
+        # Verify BearerAuthBackend was created with the adapter
+        mock_bearer_backend.assert_called_once_with(token_verifier=mock_adapter)
 
 
 class TestCreateBaseApp:

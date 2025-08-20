@@ -6,7 +6,128 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Added
+- **🔐 MCP CLIENT REGISTRATION ENDPOINT** (2025-08-20)
+  - **Feature**: Proper `/register` endpoint for Claude MCP client compatibility
+  - **Purpose**: Replace redirect-based workaround with actual registration functionality
+  - **Implementation**:
+    - Created dedicated registration routes module with session management
+    - Supports client info and capabilities negotiation
+    - Returns MCP protocol-compliant registration response
+    - Tracks active registrations with session IDs
+    - Provides CORS headers for cross-origin requests
+  - **Files created**:
+    - `/dhafnck_mcp_main/src/fastmcp/server/routes/mcp_registration_routes.py` - Registration handler
+  - **Endpoints**:
+    - `POST /register` - Main registration endpoint
+    - `POST /unregister` - Client logout/cleanup
+    - `GET /registrations` - Debug endpoint for active sessions
+    - Alternative paths: `/api/register`, `/mcp/register`
+  - **Response format**:
+    ```json
+    {
+      "success": true,
+      "session_id": "uuid",
+      "server": { "name", "version", "protocol_version" },
+      "endpoints": { "mcp", "initialize", "tools", "health" },
+      "transport": "streamable-http",
+      "authentication": { "required", "type", "header", "format" },
+      "capabilities": { "tools", "resources", "prompts", "logging", "progress" },
+      "instructions": { "next_step", "authentication", "protocol" }
+    }
+    ```
+  - **Testing**: Successfully tested with curl and MCP bridge
+  - **Impact**: Claude Desktop can now properly register with the MCP server
+
 ### Fixed
+- **🔧 TOKEN METADATA VALIDATION ERRORS** (2025-08-20)
+  - **Issue**: TokenResponse validation failing with "Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]"
+  - **Root Cause**: Direct access to `token.metadata` returning SQLAlchemy MetaData() objects instead of dictionaries
+  - **Solution**: Replaced all direct metadata access with proper type checking: `token.token_metadata if isinstance(token.token_metadata, dict) else {}`
+  - **Files Modified**:
+    - `/dhafnck_mcp_main/src/fastmcp/server/routes/token_router.py` - Fixed metadata references in all token endpoints
+  - **Impact**: Token generation through frontend now works without Pydantic validation errors
+
+### Added
+- **🤖 CLAUDE AGENT GENERATION SYSTEM** (2025-08-20)
+  - **Feature**: Automated generation of `.claude/agents/*.md` files from MCP server agent definitions
+  - **Purpose**: Enable direct loading of agent configurations for Claude AI integration
+  - **Components**:
+    - Created standalone agent generator script for immediate use
+    - Defined 10 specialized agents with detailed metadata
+    - Added agent registry system for dynamic agent management
+    - Prepared server endpoints for future agent metadata API
+  - **Files created**:
+    - `/dhafnck_mcp_main/scripts/sync_agents_standalone.py` - Standalone generator (works now)
+    - `/dhafnck_mcp_main/scripts/sync_agents_to_claude.py` - Server-based sync (for future use)
+    - `/dhafnck_mcp_main/src/fastmcp/server/routes/agent_registry.py` - Agent registry system
+    - `/dhafnck_mcp_main/src/fastmcp/server/routes/agent_metadata_routes.py` - API endpoints
+  - **Generated agents**:
+    - `@uber_orchestrator_agent` - Master coordinator
+    - `@coding_agent` - Development specialist
+    - `@debugger_agent` - Bug resolution specialist
+    - `@test_orchestrator_agent` - Testing coordinator
+    - `@ui_designer_agent` - Frontend specialist
+    - `@documentation_agent` - Documentation specialist
+    - `@task_planning_agent` - Task breakdown specialist
+    - `@security_auditor_agent` - Security specialist
+    - `@database_architect_agent` - Database specialist
+    - `@devops_engineer_agent` - Infrastructure specialist
+  - **Usage**: Run `python dhafnck_mcp_main/scripts/sync_agents_standalone.py` to generate agent files
+  - **Impact**: Enables seamless integration between MCP server agents and Claude AI capabilities
+
+- **🚀 ENHANCED AGENT REGISTRY WITH CLOUD SYNC** (2025-08-20)
+  - **Feature**: Complete cloud-to-local agent synchronization architecture
+  - **Purpose**: Enable agents to be configured from frontend and synced to Claude Code
+  - **Architecture**:
+    - Frontend configures agents → MCP server stores in database/cloud
+    - Sync script pulls from MCP server → Generates .claude/agents/*.md files
+    - Claude Code reads agents → Provides AI assistance with specialized capabilities
+  - **Components Enhanced**:
+    - `AgentMetadata` dataclass with 30+ configuration fields
+    - Full CRUD operations (create, read, update, delete)
+    - Cloud sync capabilities (Supabase/Firebase ready)
+    - Frontend configuration support (ui_config, custom_settings)
+    - Usage tracking metrics (usage_count, success_rate, avg_response_time)
+    - Change detection using SHA256 content hashing
+    - Persistent storage in `/data/agent_registry/agents.json`
+    - Export functionality for Claude-compatible markdown
+    - Search and filtering by category, type, and query
+    - Statistics API for usage analytics
+  - **Files modified**:
+    - `/dhafnck_mcp_main/src/fastmcp/server/routes/agent_registry.py` - Enhanced with full registry system
+  - **New Methods**:
+    - `create_agent()` - Create agents with full metadata
+    - `update_agent()` - Update existing agents
+    - `delete_agent()` - Remove agents from registry
+    - `search_agents()` - Search by name, role, description
+    - `sync_to_cloud()` - Sync individual agents to cloud
+    - `export_all_to_claude()` - Batch export to .md files
+    - `get_statistics()` - Usage analytics and insights
+  - **Usage Flow**:
+    1. Configure agents in frontend UI
+    2. Call `mcp__dhafnck_mcp_http__manage_agent(action="create", ...)`
+    3. Run sync script to pull agents to ~/.claude/agents/
+    4. Claude Code automatically loads agent configurations
+  - **Impact**: Complete agent management system from frontend to AI assistance
+
+### Fixed
+- **🔧 JWT AUTHENTICATION BACKEND SECRET KEY FIX** (2025-08-20)
+  - **Issue**: API endpoint `/api/v2/tokens` returning 400 Bad Request with AttributeError
+  - **Error**: `'JWTAuthBackend' object has no attribute 'secret_key'`
+  - **Root Cause**: token_router.py was trying to access `jwt_backend.secret_key` and `jwt_backend.algorithm` directly, but JWTAuthBackend stores these in its internal `_jwt_service` object
+  - **Solution**: Added properties to JWTAuthBackend to expose `secret_key` and `algorithm` from the internal JWT service
+  - **Implementation**:
+    - Added `@property` methods for `secret_key` and `algorithm` in JWTAuthBackend
+    - Properties delegate to the internal `_jwt_service` attributes
+    - Maintains encapsulation while providing necessary access
+  - **Files affected**:
+    - `/home/daihungpham/agentic-project/dhafnck_mcp_main/src/fastmcp/auth/mcp_integration/jwt_auth_backend.py`
+      - Added `secret_key` property (lines 98-101)
+      - Added `algorithm` property (lines 103-106)
+  - **Impact**: Token generation and validation endpoints now work correctly without AttributeError
+  - **Validation**: Created comprehensive test suite with 5 tests - all passing
+
 - **🔧 TOKEN RESPONSE METADATA SERIALIZATION FIX** (2025-08-20)
   - **Issue**: API endpoint `/api/v2/tokens` returning 400 Bad Request with Pydantic validation error
   - **Error**: `TokenResponse metadata: Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]`
@@ -48,6 +169,87 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
   - **Validation needed**: Test that token generation endpoint now returns 200 instead of 400
   - **Critical**: This fix enables the entire authentication system to function properly
   - **Context**: Discovered through comprehensive TDD analysis of token management system
+
+- **🔧 DATETIME JSON SERIALIZATION FIX** (2025-08-20)
+  - **Issue**: API endpoint `/api/v2/tokens` returning 500 Internal Server Error
+  - **Error**: `Object of type datetime is not JSON serializable`
+  - **Root Cause**: Pydantic v2 .dict() method keeps datetime objects which aren't JSON serializable
+  - **Solution**: Replaced deprecated .dict() with model_dump(mode='json') for proper datetime serialization
+  - **Implementation**:
+    - Updated all TokenResponse serializations to use model_dump(mode='json')
+    - This ensures datetime fields are converted to ISO format strings
+    - Maintains backward compatibility while fixing serialization
+  - **Files affected**:
+    - `/home/daihungpham/agentic-project/dhafnck_mcp_main/src/fastmcp/server/routes/token_routes.py`
+      - Fixed line 102: handle_generate_token returns model_dump(mode='json')
+      - Fixed line 130: handle_list_tokens returns model_dump(mode='json')
+      - Fixed line 159: handle_get_token_details returns model_dump(mode='json')
+  - **Impact**: Token API endpoints now return properly serialized JSON responses with datetime fields as ISO strings
+  - **Validation**: Created comprehensive test suite with 4 tests verifying datetime serialization - all passing
+
+- **🔧 FRONTEND TOKEN SERVICE RESPONSE WRAPPER FIX** (2025-08-20)
+  - **Issue**: Frontend showing "Failed to generate token" despite backend returning valid token response
+  - **Root Cause**: Frontend expected response wrapped in `{ data: TokenResponse }` but backend returns `TokenResponse` directly
+  - **Solution**: Updated frontend tokenService to wrap backend responses for compatibility
+  - **Implementation**:
+    - Modified `generateToken()` to wrap response in `{ data: ... }` structure
+    - Modified `rotateToken()` to wrap response in `{ data: ... }` structure
+    - `listTokens()` already returns correct structure from backend
+  - **Files affected**:
+    - `/home/daihungpham/agentic-project/dhafnck-frontend/src/services/tokenService.ts`
+      - Fixed line 45-47: Wrap generateToken response
+      - Fixed line 114-116: Wrap rotateToken response
+  - **Impact**: Frontend now correctly handles token generation responses and displays success instead of error
+
+- **✨ ENHANCED TOKEN GENERATION DIALOG WITH MCP CONFIGURATION** (2025-08-20)
+  - **Feature**: Added MCP configuration instructions to token generation success dialog
+  - **Purpose**: Help users quickly configure Claude Code with generated API tokens
+  - **Implementation**:
+    - Expanded token generation dialog to show MCP configuration JSON
+    - Added "Copy MCP Configuration" button for one-click config copy
+    - Shows proper Authorization header format with Bearer token
+    - Displays truncated token preview for API requests
+  - **User Experience**:
+    - Users can now see exactly how to use their token in Claude Code
+    - Ready-to-paste JSON configuration for `dhafnck_mcp_http` server
+    - Includes proper headers with Accept and Authorization fields
+    - Separate buttons for copying just token vs full MCP config
+  - **Files affected**:
+    - `/home/daihungpham/agentic-project/dhafnck-frontend/src/pages/TokenManagement.tsx`
+      - Enhanced dialog (lines 408-485) with configuration instructions
+      - Added MCP configuration JSON template with Bearer token
+      - Added copy buttons for token and full configuration
+  - **Impact**: Significantly improves user onboarding for MCP authentication setup
+
+- **🔧 IMPROVED TOKEN LIST LOADING AND ERROR HANDLING** (2025-08-20)
+  - **Issue**: Active Tokens tab not properly loading or displaying created tokens
+  - **Solution**: Enhanced error handling, logging, and user experience for token list
+  - **Implementation**:
+    - Changed to lazy loading - tokens only fetch when Active Tokens tab is clicked
+    - Added extensive console logging for debugging token fetch operations
+    - Improved error messages to show actual error details
+    - Added manual "Refresh" button to reload token list
+    - Clear error state before fetching to avoid stale errors
+    - Fixed dialog layout to ensure "How to Use This Token" section is visible
+    - Reduced token field height and added proper spacing
+    - Added dividers to dialog for better content separation
+  - **User Experience Improvements**:
+    - Tokens only load when needed (when clicking Active Tokens tab)
+    - Manual refresh button available for on-demand updates
+    - Better error visibility with detailed messages
+    - Dialog content properly scrollable with max height set
+    - Improved visual hierarchy in token generation dialog
+  - **Files affected**:
+    - `/home/daihungpham/agentic-project/dhafnck-frontend/src/pages/TokenManagement.tsx`
+      - Changed useEffect to only fetch when tabValue === 1 (lines 108-113)
+      - Enhanced fetchTokens() with detailed logging (lines 115-137)
+      - Added Refresh button to Active Tokens tab (lines 313-323)
+      - Fixed dialog layout and spacing (lines 426-454)
+    - `/home/daihungpham/agentic-project/dhafnck-frontend/src/services/tokenService.ts`
+      - Added console logging for debugging (lines 51-65)
+    - `/home/daihungpham/agentic-project/dhafnck-frontend/src/hooks/useAuthenticatedFetch.ts`
+      - Added authentication debugging logs (lines 14-27)
+  - **Impact**: More reliable token list loading with better debugging capabilities and improved UI
 
 - **✅ TOKEN ROUTES REGISTRATION FIX** (2025-08-20)
   - **Issue**: Token management routes were not accessible - getting 404 on `/api/v2/tokens`

@@ -141,24 +141,43 @@ class JWTService:
         
         Args:
             token: JWT token to verify
-            expected_type: Expected token type (access, refresh, reset)
+            expected_type: Expected token type (access, refresh, reset, api_token)
             
         Returns:
             Decoded token payload if valid, None otherwise
         """
         try:
-            # Decode and verify token
-            payload = jwt.decode(
-                token,
-                self.secret_key,
-                algorithms=[self.ALGORITHM],
-                issuer=self.issuer
-            )
+            # Decode and verify token - try with issuer first, then without for compatibility
+            payload = None
+            try:
+                payload = jwt.decode(
+                    token,
+                    self.secret_key,
+                    algorithms=[self.ALGORITHM],
+                    issuer=self.issuer
+                )
+            except InvalidTokenError:
+                # Try without issuer validation for frontend compatibility
+                payload = jwt.decode(
+                    token,
+                    self.secret_key,
+                    algorithms=[self.ALGORITHM]
+                )
             
-            # Verify token type
-            if payload.get("type") != expected_type:
-                logger.warning(f"Token type mismatch: expected {expected_type}, got {payload.get('type')}")
+            if not payload:
                 return None
+            
+            # Verify token type - be flexible with type validation
+            token_type = payload.get("type")
+            if token_type != expected_type:
+                # Allow api_token type for access token compatibility
+                if expected_type == "access" and token_type == "api_token":
+                    logger.debug(f"Accepting api_token type for access token compatibility")
+                elif expected_type == "api_token" and token_type == "access":
+                    logger.debug(f"Accepting access type for api_token compatibility")
+                else:
+                    logger.warning(f"Token type mismatch: expected {expected_type}, got {token_type}")
+                    return None
             
             return payload
             

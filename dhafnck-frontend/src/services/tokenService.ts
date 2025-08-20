@@ -42,20 +42,28 @@ class TokenService {
       throw new Error(error.message || 'Failed to generate token');
     }
 
-    return response.json();
+    const tokenResponse = await response.json();
+    // Backend returns TokenResponse directly, wrap it for frontend compatibility
+    return { data: tokenResponse };
   }
 
   async listTokens(): Promise<TokenListResponse> {
+    console.log('Fetching tokens from:', this.baseUrl);
     const response = await authenticatedFetch(this.baseUrl, {
       method: 'GET',
     });
 
+    console.log('Response status:', response.status);
+    
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Failed to fetch tokens' }));
-      throw new Error(error.message || 'Failed to fetch tokens');
+      console.error('Token fetch error:', error);
+      throw new Error(error.message || error.error || 'Failed to fetch tokens');
     }
 
-    return response.json();
+    const data = await response.json();
+    console.log('Token list response:', data);
+    return data;
   }
 
   async revokeToken(tokenId: string): Promise<void> {
@@ -109,7 +117,9 @@ class TokenService {
       throw new Error(error.message || 'Failed to rotate token');
     }
 
-    return response.json();
+    const tokenResponse = await response.json();
+    // Backend returns TokenResponse directly, wrap it for frontend compatibility
+    return { data: tokenResponse };
   }
 
   async getTokenUsageStats(tokenId: string): Promise<any> {

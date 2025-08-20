@@ -6,8 +6,6 @@ This script fetches agent configurations from the MCP server
 and generates .claude/agents/*.md files for local use.
 """
 
-import os
-import json
 import requests
 from pathlib import Path
 from typing import Dict, List, Any

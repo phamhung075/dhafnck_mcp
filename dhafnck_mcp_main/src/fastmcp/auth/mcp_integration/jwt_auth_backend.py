@@ -95,6 +95,16 @@ mwIDAQAB
         self._cache_ttl = 300  # 5 minutes
         self._cache_timestamps: Dict[str, float] = {}
     
+    @property
+    def secret_key(self) -> str:
+        """Get the JWT secret key from the internal JWT service."""
+        return self._jwt_service.secret_key
+    
+    @property
+    def algorithm(self) -> str:
+        """Get the JWT algorithm from the internal JWT service."""
+        return self._jwt_service.ALGORITHM
+    
     async def load_access_token(self, token: str) -> Optional[AccessToken]:
         """
         Validate JWT token and return AccessToken for MCP.
@@ -107,12 +117,16 @@ mwIDAQAB
         """
         try:
             # Validate token using our JWT service
+            # Try both "access" and "api_token" types for compatibility
             payload = self._jwt_service.verify_token(token, expected_type="access")
             if not payload:
-                return None
+                # Try api_token type for frontend compatibility
+                payload = self._jwt_service.verify_token(token, expected_type="api_token")
+                if not payload:
+                    return None
             
-            # Extract user information
-            user_id = payload.get("sub")
+            # Extract user information - check both "sub" and "user_id" fields
+            user_id = payload.get("sub") or payload.get("user_id")
             if not user_id:
                 return None
             

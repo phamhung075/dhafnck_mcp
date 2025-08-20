@@ -12,7 +12,8 @@
             "type": "http",
             "url": "http://localhost:8000/mcp/",
             "headers": {
-                "Accept": "application/json, text/event-stream"
+                "Accept": "application/json, text/event-stream",
+                "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItMTIzIiwidXNlcl9pZCI6InRlc3QtdXNlci0xMjMiLCJ0eXBlIjoiYWNjZXNzIiwic2NvcGVzIjpbImV4ZWN1dGU6bWNwIl0sImV4cCI6MTc1NTc4NzgzOSwiaWF0IjoxNzU1NzAxNDM5fQ.xei2bCePbF_956Gu0cEfTUWdzkVZWJ5o5ckgdN-1knY"
             }
         },
         "shadcn-ui-server": {

@@ -283,6 +283,10 @@ def create_dhafnck_mcp_server() -> FastMCP:
         # Suppress duplicate tool warnings since task management tools are registered automatically
         on_duplicate_tools="ignore",
         
+        # --- AUTHENTICATION CONFIGURATION ---
+        # Pass authentication middleware to the server
+        auth=auth_middleware if auth_enabled else None,
+        
         # --- DEPRECATED SETTINGS (but required for compatibility) ---
         # Enable JSON response for compatibility with JSON-only MCP clients like Cursor
         json_response=True,
@@ -478,11 +482,10 @@ def create_dhafnck_mcp_server() -> FastMCP:
             "version": "2.1.0"
         }
         
-        # Add authentication status if available
-        try:
-            health_data["auth_enabled"] = auth_middleware.enabled
-        except Exception:
-            health_data["auth_enabled"] = False
+        # Add authentication status based on environment configuration
+        auth_status = os.environ.get("DHAFNCK_AUTH_ENABLED", "true")
+        supabase_configured = bool(os.environ.get("SUPABASE_URL"))
+        health_data["auth_enabled"] = auth_status.lower() == "true" and supabase_configured
         
         # Add connection manager status if available
         try:
@@ -605,7 +608,8 @@ def main():
             from starlette.middleware import Middleware
             debug_middleware = [Middleware(DebugLoggingMiddleware)]
             
-            # For streamable-http transport, pass the middleware
+            # For streamable-http transport, pass the debug middleware
+            # Authentication is handled by the FastMCP server's built-in auth parameter
             server.run(
                 transport="streamable-http", 
                 host=host, 

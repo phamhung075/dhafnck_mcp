@@ -145,3 +145,4 @@ See CHANGELOG.md for version history and recent changes.
 - Do what has been asked; nothing more, nothing less
 - Rebuild Docker to view code changes in container mode
 - **TEST-CHANGELOG.md Updates**: AI agents MUST update TEST-CHANGELOG.md when making changes to test files. Document all test additions, modifications, or fixes in TEST-CHANGELOG.md (located in project root). This rule belongs in CLAUDE.local.md, NOT in CLAUDE.md.
+- use the Task tool to launch the Claude Code troubleshooter agent
