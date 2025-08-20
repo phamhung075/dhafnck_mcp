@@ -24,6 +24,39 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 - **Framework alignment**: DDD patterns, Clean Architecture, SOLID principles, Factory patterns, and Repository patterns tested
 
 ### Fixed
+- **🔒 PROJECT CREATION USER_ID NULL ISSUE** (2025-08-20)
+  - **Purpose**: Fix the user_id null issue in MCP project creation by implementing proper user isolation
+  - **Issue**: ProjectManagementService ignored user_id parameter and CreateProjectUseCase had broken user authentication
+  - **Root Cause**: Architectural inconsistencies between project and task management systems
+  - **Solution**:
+    - **ProjectManagementService**: Implemented `_get_user_scoped_repository()` method following TaskApplicationService pattern
+    - **All project operations**: Updated to use user-scoped repositories instead of global repository manager
+    - **CreateProjectUseCase**: Fixed broken `request.user_id` access by using repository user context
+    - **ProjectApplicationFacade**: Added proper user scoping support with `with_user()` method
+    - **Method signature**: Removed redundant user_id parameter from `create_project()` method
+  - **Files modified**: 
+    - `/src/fastmcp/task_management/application/services/project_management_service.py`
+    - `/src/fastmcp/task_management/application/use_cases/create_project.py`
+    - `/src/fastmcp/task_management/application/facades/project_application_facade.py`
+    - `/src/tests/task_management/application/facades/project_application_facade_test.py`
+  - **Architecture**: Project management now follows proven TaskApplicationService pattern for user isolation
+  - **Testing**: All user isolation tests pass, facade tests updated to match new architecture
+  - **Impact**: MCP project creation now properly enforces user isolation and prevents data leakage
+
+- **🔒 DATABASE USER ISOLATION ENFORCEMENT** (2025-08-20)
+  - **Purpose**: Enforce user isolation at database level by making user_id NOT NULL for all models
+  - **Issue**: Database models allowed NULL user_id values, compromising user isolation and security
+  - **Solution**:
+    - Updated SQLAlchemy models to make user_id NOT NULL for Task, Agent, ProjectContext, BranchContext, TaskContext
+    - Created migration script to update existing NULL user_id values to fallback user ID
+    - Added database integrity verification to ensure no NULL user_id values exist
+    - Updated type annotations from `Mapped[Optional[str]]` to `Mapped[str]` for user_id fields
+  - **Files Modified**:
+    - `/src/fastmcp/task_management/infrastructure/database/models.py` - Updated 5 models with NOT NULL user_id constraints
+    - `/src/fastmcp/task_management/infrastructure/database/migrations/add_user_id_not_null_constraints.py` - Created migration script
+    - `/scripts/run_migration_user_id_not_null.py` - Added migration runner script
+  - **Security Impact**: User isolation now enforced at database level, preventing unauthorized cross-user data access
+  - **Migration**: Run `python scripts/run_migration_user_id_not_null.py` to update existing databases
 - **🔐 MCP SERVER AUTHENTICATION INTEGRATION** (2025-08-20)
   - **Purpose**: Fix MCP tools to properly extract user_id from JWT tokens for authentication
   - **Issue**: MCP tools were failing with "Project repository creation requires user authentication" error

@@ -43,14 +43,30 @@ class ProjectManagementService:
         self._user_id = user_id  # Store user context
         logger.info("ProjectManagementService initialized with SQLite repository")
 
+    def _get_user_scoped_repository(self) -> ProjectRepository:
+        """Get a user-scoped version of the repository if it supports user context."""
+        if hasattr(self._project_repo, 'with_user') and self._user_id:
+            # Repository supports user scoping
+            return self._project_repo.with_user(self._user_id)
+        elif hasattr(self._project_repo, 'user_id'):
+            # Repository has user_id property, set it if needed
+            if self._user_id and self._project_repo.user_id != self._user_id:
+                # Create new instance with user_id
+                repo_class = type(self._project_repo)
+                if hasattr(self._project_repo, 'session'):
+                    return repo_class(self._project_repo.session, user_id=self._user_id)
+        return self._project_repo
+    
     def with_user(self, user_id: str) -> 'ProjectManagementService':
         """Create a new service instance scoped to a specific user."""
         return ProjectManagementService(self._project_repo, user_id)
     
-    async def create_project(self, name: str, description: str = "", user_id: Optional[str] = None) -> Dict[str, Any]:
+    async def create_project(self, name: str, description: str = "") -> Dict[str, Any]:
         """Create a new project with auto-generated UUID"""
         try:
-            use_case = CreateProjectUseCase(self._project_repo)
+            # Use user-scoped repository instead of the default one
+            user_scoped_repo = self._get_user_scoped_repository()
+            use_case = CreateProjectUseCase(user_scoped_repo)
             # Pass `None` for project_id so the use-case auto-generates one.
             return await use_case.execute(None, name, description)
         except Exception as e:
@@ -60,7 +76,8 @@ class ProjectManagementService:
     async def get_project(self, project_id: str) -> Dict[str, Any]:
         """Get project details by UUID"""
         try:
-            use_case = GetProjectUseCase(self._project_repo)
+            user_scoped_repo = self._get_user_scoped_repository()
+            use_case = GetProjectUseCase(user_scoped_repo)
             return await use_case.execute(project_id)
         except Exception as e:
             logger.error(f"Failed to get project {project_id}: {e}")
@@ -69,13 +86,13 @@ class ProjectManagementService:
     async def get_project_by_name(self, name: str) -> Dict[str, Any]:
         """Get project details by name"""
         try:
-            # Assuming GetProjectUseCase can handle by_name lookups, or we need another use case
-            # For now, let's add a method to the repo and use GetProjectUseCase
-            project = await self._project_repo.find_by_name(name)
+            # Use user-scoped repository for all operations
+            user_scoped_repo = self._get_user_scoped_repository()
+            project = await user_scoped_repo.find_by_name(name)
             if not project:
                 return {"success": False, "error": f"Project with name '{name}' not found"}
             
-            use_case = GetProjectUseCase(self._project_repo)
+            use_case = GetProjectUseCase(user_scoped_repo)
             return await use_case.execute(project.id)
 
         except Exception as e:
@@ -91,7 +108,8 @@ class ProjectManagementService:
                             Defaults to True for optimal performance.
         """
         try:
-            use_case = ListProjectsUseCase(self._project_repo)
+            user_scoped_repo = self._get_user_scoped_repository()
+            use_case = ListProjectsUseCase(user_scoped_repo)
             return await use_case.execute(include_branches=include_branches)
         except Exception as e:
             logger.error(f"Failed to list projects: {e}")
@@ -100,7 +118,8 @@ class ProjectManagementService:
     async def update_project(self, project_id: str, name: str = None, description: str = None) -> Dict[str, Any]:
         """Update an existing project"""
         try:
-            use_case = UpdateProjectUseCase(self._project_repo)
+            user_scoped_repo = self._get_user_scoped_repository()
+            use_case = UpdateProjectUseCase(user_scoped_repo)
             return await use_case.execute(project_id, name, description)
         except Exception as e:
             logger.error(f"Failed to update project {project_id}: {e}")
@@ -109,7 +128,8 @@ class ProjectManagementService:
     async def project_health_check(self, project_id: str = None) -> Dict[str, Any]:
         """Perform health check on project(s)"""
         try:
-            use_case = ProjectHealthCheckUseCase(self._project_repo)
+            user_scoped_repo = self._get_user_scoped_repository()
+            use_case = ProjectHealthCheckUseCase(user_scoped_repo)
             return await use_case.execute(project_id)
         except Exception as e:
             logger.error(f"Failed to perform health check: {e}")
@@ -118,7 +138,8 @@ class ProjectManagementService:
     async def cleanup_obsolete(self, project_id: str = None) -> Dict[str, Any]:
         """Clean up obsolete project data"""
         try:
-            use_case = CleanupObsoleteUseCase(self._project_repo)
+            user_scoped_repo = self._get_user_scoped_repository()
+            use_case = CleanupObsoleteUseCase(user_scoped_repo)
             return await use_case.execute(project_id)
         except Exception as e:
             logger.error(f"Failed to cleanup obsolete data: {e}")
@@ -128,7 +149,8 @@ class ProjectManagementService:
     async def validate_integrity(self, project_id: str = None) -> Dict[str, Any]:
         """Validate integrity of project data"""
         try:
-            use_case = ValidateIntegrityUseCase(self._project_repo)
+            user_scoped_repo = self._get_user_scoped_repository()
+            use_case = ValidateIntegrityUseCase(user_scoped_repo)
             return await use_case.execute(project_id)
         except Exception as e:
             logger.error(f"Failed to validate integrity: {e}")
@@ -138,7 +160,8 @@ class ProjectManagementService:
     async def rebalance_agents(self, project_id: str = None) -> Dict[str, Any]:
         """Rebalance agent assignments across task trees"""
         try:
-            use_case = RebalanceAgentsUseCase(self._project_repo)
+            user_scoped_repo = self._get_user_scoped_repository()
+            use_case = RebalanceAgentsUseCase(user_scoped_repo)
             return await use_case.execute(project_id)
         except Exception as e:
             logger.error(f"Failed to rebalance agents: {e}")
@@ -158,7 +181,8 @@ class ProjectManagementService:
         """
         try:
             # Get project to validate it exists
-            project = await self._project_repo.find_by_id(project_id)
+            user_scoped_repo = self._get_user_scoped_repository()
+            project = await user_scoped_repo.find_by_id(project_id)
             if not project:
                 return {"success": False, "error": f"Project {project_id} not found"}
             
@@ -218,9 +242,9 @@ class ProjectManagementService:
                     if branch_id:
                         git_branch_facade.delete_git_branch(branch_id)
             
-            # Delete the project itself
+            # Delete the project itself using user-scoped repository
             logger.info(f"Attempting to delete project {project_id} from repository")
-            deleted = await self._project_repo.delete(project_id)
+            deleted = await user_scoped_repo.delete(project_id)
             logger.info(f"Delete operation returned: {deleted}")
             
             if deleted:

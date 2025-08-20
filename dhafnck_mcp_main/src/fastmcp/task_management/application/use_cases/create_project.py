@@ -79,8 +79,12 @@ class CreateProjectUseCase:
                 from ...domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
                 from ....config.auth_config import AuthConfig
                 
-                # Get user_id from request or handle authentication
-                user_id = getattr(request, 'user_id', None)
+                # Get user_id from repository context or handle authentication
+                # Note: The repository should already be user-scoped by the service layer
+                user_id = None
+                if hasattr(self._project_repository, 'user_id'):
+                    user_id = getattr(self._project_repository, 'user_id', None)
+                
                 if user_id is None:
                     # Check if compatibility mode is enabled
                     if AuthConfig.is_default_user_allowed():

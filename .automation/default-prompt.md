@@ -27,62 +27,29 @@ REQUIRED BEHAVIORS:
 ## Missing Test Files - CREATE IMMEDIATELY:
 
 ## Stale Test Files (Source Newer Than Test)
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/services/task_application_service.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/application/services/task_application_service_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/mcp_integration/jwt_auth_backend.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/auth/mcp_integration/jwt_auth_backend_test.py`
+  - **Days stale**: 0
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/http_server.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/server/http_server_test.py`
+  - **Days stale**: 0
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/mcp_entry_point.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/server/mcp_entry_point_test.py`
   - **Days stale**: 1
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/factories/project_facade_factory.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/task_management/application/factories/project_facade_factory_test.py`
+  - **Days stale**: 0
 
 
 ## Missing Test Files
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/dtos/context/context_request.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/dtos/context/context_request_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/mcp_integration/user_context_middleware.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/auth/mcp_integration/user_context_middleware_test.py`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/facades/project_application_facade.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/facades/project_application_facade_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/facades/subtask_application_facade.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/facades/subtask_application_facade_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/facades/task_application_facade.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/facades/task_application_facade_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/factories/project_service_factory.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/factories/project_service_factory_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/services/project_management_service.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/services/project_management_service_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/services/task_context_sync_service.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/services/task_context_sync_service_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/use_cases/create_git_branch.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/use_cases/create_git_branch_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/use_cases/next_task.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/use_cases/next_task_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/agent_repository_factory.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/agent_repository_factory_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/git_branch_repository_factory.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/git_branch_repository_factory_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/git_branch_repository.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/git_branch_repository_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/project_repository_factory.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/project_repository_factory_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/subtask_repository_factory.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/subtask_repository_factory_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/services/context_schema.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/services/context_schema_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/utilities/path_resolver.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/utilities/path_resolver_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/dependency_mcp_controller.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/dependency_mcp_controller_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/auth_helper.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/auth_helper_test.py`
 
 
 ## EXECUTION COMMANDS - DO NOW:

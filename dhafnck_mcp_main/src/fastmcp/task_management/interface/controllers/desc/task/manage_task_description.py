@@ -53,27 +53,27 @@ The tool validates parameters based on the action and returns clear error messag
 
 📝 PRACTICAL EXAMPLES FOR AI:
 1. Starting a new feature:
-   - action: "create", git_branch_id: "feature-branch-id", title: "Implement user authentication", description: "Add JWT-based authentication with login, logout, and session management", priority: "high", estimated_effort: "3 days"
+   - action: "create", git_branch_id: "550e8400-e29b-41d4-a716-446655440001", title: "Implement user authentication", description: "Add JWT-based authentication with login, logout, and session management", priority: "high", estimated_effort: "3 days"
 
 2. Getting recommended work:
-   - action: "next", git_branch_id: "current-branch-id", include_context: true
+   - action: "next", git_branch_id: "550e8400-e29b-41d4-a716-446655440000", include_context: true
    - This returns the most appropriate task based on priorities, dependencies, and project state
 
 3. Updating progress:
-   - action: "update", task_id: "task-uuid", status: "in_progress", details: "Completed login UI, working on JWT integration"
+   - action: "update", task_id: "550e8400-e29b-41d4-a716-446655440005", status: "in_progress", details: "Completed login UI, working on JWT integration"
 
 4. Completing with context:
-   - action: "complete", task_id: "task-uuid", completion_summary: "Implemented full authentication flow with JWT tokens, refresh mechanism, and secure cookie storage", testing_notes: "Added unit tests for auth service, integration tests for login flow"
+   - action: "complete", task_id: "550e8400-e29b-41d4-a716-446655440006", completion_summary: "Implemented full authentication flow with JWT tokens, refresh mechanism, and secure cookie storage", testing_notes: "Added unit tests for auth service, integration tests for login flow"
 
 5. Finding related tasks:
    - action: "search", query: "authentication login", limit: 10
 
 6. Creating task with dependencies:
-   - action: "create", git_branch_id: "feature-branch-id", title: "Add login tests", description: "Unit and integration tests for login", dependencies: ["auth-task-uuid", "ui-task-uuid"]
+   - action: "create", git_branch_id: "550e8400-e29b-41d4-a716-446655440002", title: "Add login tests", description: "Unit and integration tests for login", dependencies: ["550e8400-e29b-41d4-a716-446655440003", "550e8400-e29b-41d4-a716-446655440004"]
 
 7. Managing dependencies:
-   - action: "add_dependency", task_id: "test-task-uuid", dependency_id: "api-task-uuid"
-   - action: "remove_dependency", task_id: "test-task-uuid", dependency_id: "old-dep-uuid"
+   - action: "add_dependency", task_id: "550e8400-e29b-41d4-a716-446655440007", dependency_id: "550e8400-e29b-41d4-a716-446655440008"
+   - action: "remove_dependency", task_id: "550e8400-e29b-41d4-a716-446655440007", dependency_id: "550e8400-e29b-41d4-a716-446655440009"
 
 🔄 DEPENDENCY WORKFLOW PATTERNS:
 • Sequential Tasks: Create tasks with dependencies to enforce completion order

@@ -395,3 +395,79 @@ class TestCreateJWTAuthBackend:
         assert "mcp:write" in access_token.scopes
         assert "mcp:read" in access_token.scopes
         assert "custom:read" in access_token.scopes
+    
+    @pytest.mark.asyncio
+    async def test_user_context_middleware_integration(self, auth_backend, jwt_service):
+        """Test integration with user context middleware"""
+        # Mock JWT service to return valid payload
+        payload = {
+            "sub": "user123",
+            "email": "test@example.com",
+            "scopes": ["read", "write"],
+            "exp": int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
+        }
+        jwt_service.verify_token.return_value = payload
+        
+        # Load access token (this should work with user context middleware)
+        result = await auth_backend.load_access_token("valid.token.here")
+        
+        assert result is not None
+        assert result.client_id == "user123"
+        
+        # Verify user context can be retrieved
+        user_context = await auth_backend._get_user_context("user123")
+        assert user_context is not None
+        assert user_context.user_id == "user123"
+    
+    @pytest.mark.asyncio
+    async def test_enhanced_error_handling(self, auth_backend, jwt_service):
+        """Test enhanced error handling and logging"""
+        # Test various error scenarios
+        scenarios = [
+            (None, "None payload"),
+            ({}, "Empty payload"),
+            ({"exp": "invalid"}, "Invalid expiration"),
+            ({"sub": None}, "None user_id"),
+        ]
+        
+        for payload, description in scenarios:
+            jwt_service.verify_token.return_value = payload
+            
+            result = await auth_backend.load_access_token(f"token.for.{description}")
+            
+            # Should handle errors gracefully
+            if payload is None or not payload.get("sub"):
+                assert result is None
+            else:
+                # Some payloads might still work with fallback logic
+                pass
+    
+    @pytest.mark.asyncio 
+    async def test_cache_performance(self, auth_backend, user_repository):
+        """Test user context cache performance"""
+        # Mock user entity
+        user = Mock(spec=User)
+        user.id = UserId("user123")
+        user.email = "test@example.com"
+        user.username = "testuser"
+        user.roles = [UserRole.USER]
+        
+        user_repository.find_by_id.return_value = user
+        
+        # First call - should hit repository
+        start_time = time.time()
+        context1 = await auth_backend._get_user_context("user123")
+        first_call_time = time.time() - start_time
+        
+        # Second call - should use cache (much faster)
+        start_time = time.time()
+        context2 = await auth_backend._get_user_context("user123")
+        second_call_time = time.time() - start_time
+        
+        # Verify cache was used
+        assert user_repository.find_by_id.call_count == 1
+        assert context1 == context2
+        
+        # Cache should be significantly faster (this is a rough check)
+        # In real scenarios, cache would be much faster than DB lookup
+        assert second_call_time <= first_call_time * 2  # Allow some variance

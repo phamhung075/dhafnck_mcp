@@ -7,6 +7,8 @@ Includes automatic context updates and progress tracking for all actions.
 
 import logging
 import asyncio
+import uuid
+import re
 from typing import Dict, Any, Optional, List, Annotated, Union
 from datetime import datetime, timezone
 from pydantic import Field # type: ignore
@@ -256,6 +258,28 @@ class SubtaskMCPController(ContextPropagationMixin):
             return {
                 "success": False,
                 "error": "Missing required field: completion_summary for complete action"
+            }
+        
+        # Validate UUID format for task_id
+        if not self._is_valid_uuid(task_id):
+            return {
+                "success": False,
+                "error": f"Invalid task_id format: '{task_id}'. Expected UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+                "error_code": "INVALID_FORMAT",
+                "field": "task_id",
+                "expected_format": "UUID (e.g., 550e8400-e29b-41d4-a716-446655440000)",
+                "hint": "Use a valid UUID for task_id. Get UUIDs from task creation or list operations."
+            }
+        
+        # Validate UUID format for subtask_id if provided
+        if subtask_id and not self._is_valid_uuid(subtask_id):
+            return {
+                "success": False,
+                "error": f"Invalid subtask_id format: '{subtask_id}'. Expected UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+                "error_code": "INVALID_FORMAT",
+                "field": "subtask_id",
+                "expected_format": "UUID (e.g., 550e8400-e29b-41d4-a716-446655440000)",
+                "hint": "Use a valid UUID for subtask_id. Get UUIDs from subtask creation or list operations."
             }
         
         # Enhanced validation for completion parameters
@@ -1254,3 +1278,32 @@ class SubtaskMCPController(ContextPropagationMixin):
             expected=expected,
             hint=hint
         )
+    
+    def _is_valid_uuid(self, uuid_string: str) -> bool:
+        """
+        Validate if a string is a valid UUID format.
+        
+        Accepts both formats:
+        - Standard UUID with hyphens: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+        - Hex format without hyphens: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx (32 chars)
+        
+        Args:
+            uuid_string: String to validate
+            
+        Returns:
+            True if valid UUID format, False otherwise
+        """
+        if not uuid_string or not isinstance(uuid_string, str):
+            return False
+            
+        uuid_string = uuid_string.strip()
+        
+        # Try to parse as UUID - this handles both formats
+        try:
+            uuid.UUID(uuid_string)
+            return True
+        except (ValueError, TypeError):
+            # Check if it's a 32-character hex string (UUID without hyphens)
+            if len(uuid_string) == 32 and re.match(r'^[0-9a-fA-F]{32}$', uuid_string):
+                return True
+            return False

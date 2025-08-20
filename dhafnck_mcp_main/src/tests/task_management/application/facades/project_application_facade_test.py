@@ -32,6 +32,7 @@ class TestProjectApplicationFacade:
         service.validate_integrity = AsyncMock()
         service.rebalance_agents = AsyncMock()
         service.delete_project = AsyncMock()
+        service.with_user = Mock(return_value=service)  # Return self for with_user
         return service
     
     @pytest.fixture
@@ -55,8 +56,10 @@ class TestProjectApplicationFacade:
             user_id="user-123"
         )
         
+        # Verify the service was scoped to user and create_project was called
+        mock_project_service.with_user.assert_called_once_with("user-123")
         mock_project_service.create_project.assert_called_once_with(
-            "Test Project", "Test Description", "user-123"
+            "Test Project", "Test Description"
         )
         assert result == expected_response
     
@@ -273,8 +276,10 @@ class TestProjectApplicationFacade:
         
         result = await facade.create_project("Test Project", "Test Description")
         
+        # The convenience method should call manage_project with no user_id
+        # so no with_user should be called, just the direct create_project call
         mock_project_service.create_project.assert_called_once_with(
-            "Test Project", "Test Description", None
+            "Test Project", "Test Description"
         )
         assert result == expected_response
     
@@ -304,7 +309,7 @@ class TestProjectApplicationFacade:
             
             facade = ProjectApplicationFacade()
             
-            MockService.assert_called_once_with(mock_repo)
+            MockService.assert_called_once_with(mock_repo, None)
             assert facade._project_service == mock_service_instance
     
     def test_facade_initialization_with_service(self, mock_project_service):
@@ -377,8 +382,9 @@ class TestProjectApplicationFacadeParameterHandling:
         # Test with minimal parameters
         result = await facade.manage_project(action="create", name="Test Project")
         
+        # Since no user_id provided, should use the facade's service directly
         mock_project_service.create_project.assert_called_once_with(
-            "Test Project", None, None
+            "Test Project", ""
         )
         assert result == expected_response
     

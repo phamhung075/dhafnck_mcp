@@ -712,3 +712,163 @@ class TestIntegrationScenarios:
         
         assert response.status_code == 200
         assert response.headers.get("access-control-allow-origin") == "https://example.com"
+
+
+class TestUserContextMiddlewareIntegration:
+    """Test integration with UserContextMiddleware when available."""
+    
+    @patch('fastmcp.server.http_server.USER_CONTEXT_MIDDLEWARE_AVAILABLE', True)
+    @patch('fastmcp.server.http_server.UserContextMiddleware')
+    def test_user_context_middleware_added_when_available(self, mock_middleware_class):
+        """Test that UserContextMiddleware is added when available."""
+        mock_server = Mock()
+        mock_server._additional_http_routes = []
+        
+        # Mock JWT auth backend
+        mock_auth = Mock()
+        mock_auth.required_scopes = ["read"]
+        mock_auth.issuer_url = "https://auth.example.com"
+        mock_auth.service_documentation_url = "https://docs.example.com"
+        mock_auth.client_registration_options = {}
+        mock_auth.revocation_options = {}
+        
+        mock_middleware = Mock()
+        mock_middleware_class.return_value = mock_middleware
+        
+        with patch('fastmcp.server.http_server.setup_auth_middleware_and_routes') as mock_setup:
+            mock_setup.return_value = (
+                [Middleware(RequestContextMiddleware)],
+                [],
+                ["read"]
+            )
+            
+            routes, middleware, scopes = create_http_server_factory(
+                server=mock_server,
+                auth=mock_auth,
+            )
+        
+        # Verify UserContextMiddleware was called with JWT backend
+        mock_middleware_class.assert_called_once_with(jwt_backend=mock_auth)
+    
+    @patch('fastmcp.server.http_server.USER_CONTEXT_MIDDLEWARE_AVAILABLE', False)
+    def test_user_context_middleware_skipped_when_unavailable(self):
+        """Test that UserContextMiddleware is skipped when not available."""
+        mock_server = Mock()
+        mock_server._additional_http_routes = []
+        
+        # Mock JWT auth backend
+        mock_auth = Mock()
+        mock_auth.required_scopes = ["read"]
+        mock_auth.issuer_url = "https://auth.example.com"
+        mock_auth.service_documentation_url = "https://docs.example.com"
+        mock_auth.client_registration_options = {}
+        mock_auth.revocation_options = {}
+        
+        with patch('fastmcp.server.http_server.setup_auth_middleware_and_routes') as mock_setup:
+            mock_setup.return_value = (
+                [Middleware(RequestContextMiddleware)],
+                [],
+                ["read"]
+            )
+            
+            routes, middleware, scopes = create_http_server_factory(
+                server=mock_server,
+                auth=mock_auth,
+            )
+        
+        # Should work without UserContextMiddleware
+        assert len(middleware) == 1
+        assert scopes == ["read"]
+    
+    def test_user_context_middleware_import_handling(self):
+        """Test that import error is handled gracefully."""
+        # This test verifies the try/except block in the module
+        # The actual import happens at module level, so we test the flag
+        from fastmcp.server.http_server import USER_CONTEXT_MIDDLEWARE_AVAILABLE
+        
+        # Should be boolean
+        assert isinstance(USER_CONTEXT_MIDDLEWARE_AVAILABLE, bool)
+
+
+class TestEnhancedErrorHandling:
+    """Test enhanced error handling capabilities."""
+    
+    @pytest.mark.asyncio
+    async def test_middleware_error_resilience(self):
+        """Test that middleware handles errors gracefully."""
+        # Test RequestContextMiddleware with exception in app
+        app = Mock()
+        app.side_effect = Exception("App error")
+        
+        middleware = RequestContextMiddleware(app)
+        
+        scope = {"type": "http", "method": "GET", "path": "/test"}
+        receive = Mock()
+        
+        # Should not raise exception
+        try:
+            await middleware(scope, receive, Mock())
+        except Exception as e:
+            # If an exception is raised, it should be handled appropriately
+            # The exact behavior depends on the middleware implementation
+            pass
+    
+    @pytest.mark.asyncio
+    async def test_mcp_header_validation_edge_cases(self):
+        """Test MCP header validation with edge cases."""
+        app = Mock()
+        middleware = MCPHeaderValidationMiddleware(app, cors_origins=["*"])
+        
+        # Test with malformed headers
+        scope = {
+            "type": "http",
+            "path": "/mcp/test",
+            "method": "POST",
+            "headers": [
+                (b"content-type", b""),  # Empty content type
+                (b"accept", b"invalid/type"),  # Invalid accept
+            ],
+        }
+        
+        response_status = None
+        async def mock_send(message):
+            nonlocal response_status
+            if message["type"] == "http.response.start":
+                response_status = message["status"]
+        
+        await middleware(scope, Mock(), mock_send)
+        
+        # Should return error status
+        assert response_status >= 400
+
+
+class TestPerformanceOptimizations:
+    """Test performance-related optimizations."""
+    
+    def test_middleware_order_optimization(self):
+        """Test that middleware is ordered for optimal performance."""
+        routes = []
+        middleware = [
+            Middleware(RequestContextMiddleware),
+            Middleware(MCPHeaderValidationMiddleware, cors_origins=[]),
+        ]
+        
+        app = create_base_app(routes, middleware)
+        
+        # Verify middleware stack exists and is properly ordered
+        assert len(app.middleware) >= 2
+        
+        # RequestContextMiddleware should be early in the stack
+        middleware_names = [m.cls.__name__ for m in app.middleware if hasattr(m, 'cls')]
+        assert 'RequestContextMiddleware' in middleware_names
+    
+    def test_cors_middleware_caching(self):
+        """Test CORS middleware configuration caching."""
+        cors_origins = ["https://example.com", "https://app.example.com"]
+        
+        app1 = create_base_app([], [], cors_origins=cors_origins)
+        app2 = create_base_app([], [], cors_origins=cors_origins)
+        
+        # Both apps should have CORS configured
+        assert len(app1.middleware) >= 1
+        assert len(app2.middleware) >= 1

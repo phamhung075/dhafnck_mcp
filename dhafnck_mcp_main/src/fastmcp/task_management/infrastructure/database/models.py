@@ -105,7 +105,7 @@ class Task(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
     context_id: Mapped[Optional[str]] = mapped_column(String)
     progress_percentage: Mapped[int] = mapped_column(Integer, default=0)
-    user_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # User isolation field
+    user_id: Mapped[str] = mapped_column(String, nullable=False)  # User isolation field - REQUIRED
     
     # Relationships
     git_branch: Mapped[ProjectGitBranch] = relationship("ProjectGitBranch", back_populates="tasks")
@@ -211,7 +211,7 @@ class Agent(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
     model_metadata: Mapped[Dict[str, Any]] = mapped_column("metadata", JSON, default=dict)
-    user_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # User isolation field
+    user_id: Mapped[str] = mapped_column(String, nullable=False)  # User isolation field - REQUIRED
     
     # Indexes
     __table_args__ = (
@@ -331,7 +331,7 @@ class ProjectContext(Base):
     delegation_rules: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True, default=dict)
     
     # User isolation
-    user_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    user_id: Mapped[str] = mapped_column(String, nullable=False)  # REQUIRED for user isolation
     
     # Timestamps and versioning
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, server_default=func.now())
@@ -378,7 +378,7 @@ class BranchContext(Base):
     inheritance_disabled: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True, default=False)
     
     # User isolation
-    user_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    user_id: Mapped[str] = mapped_column(String, nullable=False)  # REQUIRED for user isolation
     
     # Timestamps and versioning
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, server_default=func.now())
@@ -434,7 +434,7 @@ class TaskContext(Base):
     force_local_only: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True, default=False)
     
     # User isolation
-    user_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    user_id: Mapped[str] = mapped_column(String, nullable=False)  # REQUIRED for user isolation
     
     # Timestamps and versioning
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, server_default=func.now())

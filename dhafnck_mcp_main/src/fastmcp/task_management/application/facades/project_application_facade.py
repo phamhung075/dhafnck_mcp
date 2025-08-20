@@ -7,8 +7,16 @@ from ..services.project_management_service import ProjectManagementService
 from ...infrastructure.repositories.project_repository_factory import GlobalRepositoryManager
 
 class ProjectApplicationFacade:
-    def __init__(self, project_service: Optional[ProjectManagementService] = None):
-        self._project_service = project_service or ProjectManagementService(GlobalRepositoryManager.get_default())
+    def __init__(self, project_service: Optional[ProjectManagementService] = None, user_id: Optional[str] = None):
+        if project_service:
+            self._project_service = project_service
+        else:
+            # Create project service with user context if provided
+            self._project_service = ProjectManagementService(GlobalRepositoryManager.get_default(), user_id)
+    
+    def with_user(self, user_id: str) -> 'ProjectApplicationFacade':
+        """Create a new facade instance scoped to a specific user."""
+        return ProjectApplicationFacade(self._project_service.with_user(user_id))
 
     async def manage_project(
         self,
@@ -24,7 +32,9 @@ class ProjectApplicationFacade:
         if action == "create":
             if not name:
                 return {"success": False, "error": "Missing required field: name"}
-            return await self._project_service.create_project(name, description, user_id)
+            # Use user-scoped service if user_id is provided
+            service = self._project_service.with_user(user_id) if user_id else self._project_service
+            return await service.create_project(name, description or "")
         
         elif action == "get":
             if project_id:
