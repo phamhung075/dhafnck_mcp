@@ -23,8 +23,9 @@ from fastmcp.auth.interface.auth_endpoints import router as auth_router
 from fastmcp.auth.api.supabase_endpoints import router as supabase_router
 from fastmcp.auth.api.dev_endpoints import router as dev_router
 
-# Import the user-scoped task routes
+# Import the user-scoped task and project routes
 from fastmcp.server.routes.user_scoped_task_routes import router as user_scoped_tasks_router
+from fastmcp.server.routes.user_scoped_project_routes import router as user_scoped_projects_router
 from fastmcp.server.routes.token_router import router as token_router
 
 # Configure logging
@@ -57,6 +58,10 @@ app.include_router(supabase_router)  # Supabase auth endpoints (new)
 # Include user-scoped task routes with authentication
 app.include_router(user_scoped_tasks_router)  # User-scoped task endpoints at /api/v2/tasks/
 logger.info("✅ User-scoped task routes enabled at /api/v2/tasks/")
+
+# Include user-scoped project routes with authentication
+app.include_router(user_scoped_projects_router)  # User-scoped project endpoints at /api/v2/projects/
+logger.info("✅ User-scoped project routes enabled at /api/v2/projects/")
 
 # Include token management routes with authentication
 app.include_router(token_router)  # Token management endpoints at /api/v2/tokens/

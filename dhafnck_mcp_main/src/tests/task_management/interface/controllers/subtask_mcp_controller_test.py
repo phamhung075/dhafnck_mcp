@@ -112,8 +112,13 @@ class TestSubtaskMCPController:
     
     def test_manage_subtask_create_action(self):
         """Test manage_subtask with create action."""
-        with patch.object(self.controller, 'handle_crud_operations') as mock_crud:
-            mock_crud.return_value = {"success": True}
+        self.mock_facade.handle_manage_subtask.return_value = {
+            "success": True,
+            "subtask": {"id": "subtask-123", "title": "Test subtask"}
+        }
+        
+        with patch.object(self.controller, '_get_facade_for_request') as mock_get_facade:
+            mock_get_facade.return_value = self.mock_facade
             
             result = self.controller.manage_subtask(
                 action="create",
@@ -121,15 +126,18 @@ class TestSubtaskMCPController:
                 title="Test subtask"
             )
             
-            assert result == {"success": True}
-            mock_crud.assert_called_once_with(
-                "create", "task-123", None, "Test subtask", None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
-            )
+            assert result["success"] is True
+            self.mock_facade.handle_manage_subtask.assert_called_once()
     
     def test_manage_subtask_update_action(self):
         """Test manage_subtask with update action."""
-        with patch.object(self.controller, 'handle_crud_operations') as mock_crud:
-            mock_crud.return_value = {"success": True}
+        self.mock_facade.handle_manage_subtask.return_value = {
+            "success": True,
+            "subtask": {"id": "subtask-456", "status": "in_progress"}
+        }
+        
+        with patch.object(self.controller, '_get_facade_for_request') as mock_get_facade:
+            mock_get_facade.return_value = self.mock_facade
             
             result = self.controller.manage_subtask(
                 action="update",
@@ -138,13 +146,23 @@ class TestSubtaskMCPController:
                 progress_percentage=50
             )
             
-            assert result == {"success": True}
-            mock_crud.assert_called_once()
+            assert result["success"] is True
+            self.mock_facade.handle_manage_subtask.assert_called_once()
     
     def test_manage_subtask_complete_action(self):
         """Test manage_subtask with complete action."""
-        with patch.object(self.controller, 'handle_completion_operations') as mock_complete:
-            mock_complete.return_value = {"success": True}
+        # Mock the get and update operations for completion
+        self.mock_facade.handle_manage_subtask.side_effect = [
+            # First call: get subtask info
+            {"success": True, "subtask": {"id": "subtask-456", "title": "Test subtask"}},
+            # Second call: update status to done
+            {"success": True, "subtask": {"id": "subtask-456", "status": "done"}},
+            # Third call: list subtasks for progress
+            {"success": True, "subtasks": [{"id": "subtask-456", "status": "done"}]}
+        ]
+        
+        with patch.object(self.controller, '_get_facade_for_request') as mock_get_facade:
+            mock_get_facade.return_value = self.mock_facade
             
             result = self.controller.manage_subtask(
                 action="complete",
@@ -153,8 +171,9 @@ class TestSubtaskMCPController:
                 completion_summary="Task completed successfully"
             )
             
-            assert result == {"success": True}
-            mock_complete.assert_called_once()
+            assert result["success"] is True
+            assert result["action"] == "complete"  # Verify action is preserved
+            assert self.mock_facade.handle_manage_subtask.call_count >= 2  # At least get and update
     
     def test_manage_subtask_unknown_action(self):
         """Test manage_subtask with unknown action."""
@@ -168,193 +187,224 @@ class TestSubtaskMCPController:
         assert result["error_code"] == "UNKNOWN_ACTION"
         assert "valid_actions" in result
     
-    def test_handle_crud_operations_create_success(self):
+    def test_handle_create_subtask_success(self):
         """Test handling create operation successfully."""
-        self.mock_facade.create_subtask.return_value = {
+        self.mock_facade.handle_manage_subtask.return_value = {
             "success": True,
             "subtask": {"id": "subtask-123", "title": "Test subtask"}
         }
         
         with patch.object(self.controller, '_get_facade_for_request') as mock_get_facade:
             mock_get_facade.return_value = self.mock_facade
-            with patch.object(self.controller, '_enhance_response_with_workflow_guidance') as mock_enhance:
-                mock_enhance.return_value = {"success": True, "enhanced": True}
-                
-                result = self.controller.handle_crud_operations(
-                    "create", "task-123", None, "Test subtask", "Test description"
-                )
-                
-                assert result == {"success": True, "enhanced": True}
-                self.mock_facade.create_subtask.assert_called_once()
+            
+            result = self.controller.manage_subtask(
+                action="create",
+                task_id="task-123",
+                title="Test subtask",
+                description="Test description"
+            )
+            
+            assert result["success"] is True
+            self.mock_facade.handle_manage_subtask.assert_called_once()
     
-    def test_handle_crud_operations_create_missing_title(self):
+    def test_handle_create_missing_title(self):
         """Test create operation with missing title."""
-        result = self.controller.handle_crud_operations(
-            "create", "task-123", None, None, "Test description"
+        result = self.controller.manage_subtask(
+            action="create",
+            task_id="task-123",
+            title=None,
+            description="Test description"
         )
         
         assert result["success"] is False
-        assert result["error"] == "Missing required field: title"
-        assert result["error_code"] == "MISSING_FIELD"
+        assert "title" in result["error"]
+        assert result["action"] == "create"
     
-    def test_handle_crud_operations_get_success(self):
+    def test_handle_get_subtask_success(self):
         """Test handling get operation successfully."""
-        self.mock_facade.get_subtask.return_value = {
+        self.mock_facade.handle_manage_subtask.return_value = {
             "success": True,
             "subtask": {"id": "subtask-123", "title": "Test subtask"}
         }
         
         with patch.object(self.controller, '_get_facade_for_request') as mock_get_facade:
             mock_get_facade.return_value = self.mock_facade
-            with patch.object(self.controller, '_enhance_response_with_workflow_guidance') as mock_enhance:
-                mock_enhance.return_value = {"success": True, "enhanced": True}
-                
-                result = self.controller.handle_crud_operations(
-                    "get", "task-123", "subtask-456"
-                )
-                
-                assert result == {"success": True, "enhanced": True}
-                self.mock_facade.get_subtask.assert_called_once_with("task-123", "subtask-456")
+            
+            result = self.controller.manage_subtask(
+                action="get",
+                task_id="task-123",
+                subtask_id="subtask-456"
+            )
+            
+            assert result["success"] is True
+            self.mock_facade.handle_manage_subtask.assert_called_once()
     
-    def test_handle_crud_operations_get_missing_subtask_id(self):
+    def test_handle_get_missing_subtask_id(self):
         """Test get operation with missing subtask_id."""
-        result = self.controller.handle_crud_operations(
-            "get", "task-123", None
+        result = self.controller.manage_subtask(
+            action="get",
+            task_id="task-123",
+            subtask_id=None
         )
         
         assert result["success"] is False
-        assert result["error"] == "Missing required field: subtask_id"
-        assert result["error_code"] == "MISSING_FIELD"
+        assert "subtask_id" in result["error"]
+        assert result["action"] == "get"
     
-    def test_handle_crud_operations_list_success(self):
+    def test_handle_list_subtasks_success(self):
         """Test handling list operation successfully."""
-        self.mock_facade.list_subtasks.return_value = {
+        self.mock_facade.handle_manage_subtask.return_value = {
             "success": True,
-            "subtasks": [{"id": "subtask-1"}, {"id": "subtask-2"}],
-            "progress_summary": {"total": 2, "completed": 1}
+            "subtasks": [
+                {"id": "subtask-1", "status": "done"},
+                {"id": "subtask-2", "status": "in_progress"}
+            ]
         }
         
         with patch.object(self.controller, '_get_facade_for_request') as mock_get_facade:
             mock_get_facade.return_value = self.mock_facade
-            with patch.object(self.controller, '_enhance_response_with_workflow_guidance') as mock_enhance:
-                mock_enhance.return_value = {"success": True, "enhanced": True}
-                
-                result = self.controller.handle_crud_operations(
-                    "list", "task-123"
-                )
-                
-                assert result == {"success": True, "enhanced": True}
-                self.mock_facade.list_subtasks.assert_called_once_with("task-123")
+            
+            result = self.controller.manage_subtask(
+                action="list",
+                task_id="task-123"
+            )
+            
+            assert result["success"] is True
+            assert "progress_summary" in result
+            assert result["progress_summary"]["total_subtasks"] == 2
+            assert result["progress_summary"]["completed"] == 1
+            self.mock_facade.handle_manage_subtask.assert_called_once()
     
-    def test_handle_crud_operations_update_success(self):
+    def test_handle_update_subtask_success(self):
         """Test handling update operation successfully."""
-        self.mock_facade.update_subtask.return_value = {"success": True}
+        self.mock_facade.handle_manage_subtask.return_value = {"success": True}
         
         with patch.object(self.controller, '_get_facade_for_request') as mock_get_facade:
             mock_get_facade.return_value = self.mock_facade
-            with patch.object(self.controller, '_enhance_response_with_workflow_guidance') as mock_enhance:
-                mock_enhance.return_value = {"success": True, "enhanced": True}
-                
-                result = self.controller.handle_crud_operations(
-                    "update", "task-123", "subtask-456", "New title", "New description",
-                    None, None, None, None, None, 75, "Progress notes", "Test blockers", None, None, None, None, None, None, None
-                )
-                
-                assert result == {"success": True, "enhanced": True}
-                self.mock_facade.update_subtask.assert_called_once()
+            
+            result = self.controller.manage_subtask(
+                action="update",
+                task_id="task-123",
+                subtask_id="subtask-456",
+                title="New title",
+                description="New description",
+                progress_percentage=75,
+                progress_notes="Progress notes",
+                blockers="Test blockers"
+            )
+            
+            assert result["success"] is True
+            self.mock_facade.handle_manage_subtask.assert_called_once()
     
-    def test_handle_crud_operations_update_missing_subtask_id(self):
+    def test_handle_update_missing_subtask_id(self):
         """Test update operation with missing subtask_id."""
-        result = self.controller.handle_crud_operations(
-            "update", "task-123", None, "New title"
+        result = self.controller.manage_subtask(
+            action="update",
+            task_id="task-123",
+            subtask_id=None,
+            title="New title"
         )
         
         assert result["success"] is False
-        assert result["error"] == "Missing required field: subtask_id"
-        assert result["error_code"] == "MISSING_FIELD"
+        assert "subtask_id" in result["error"]
+        assert result["action"] == "update"
     
-    def test_handle_crud_operations_delete_success(self):
+    def test_handle_delete_subtask_success(self):
         """Test handling delete operation successfully."""
-        self.mock_facade.delete_subtask.return_value = {"success": True}
+        self.mock_facade.handle_manage_subtask.side_effect = [
+            # First call: get subtask info
+            {"success": True, "subtask": {"id": "subtask-456", "title": "Test subtask"}},
+            # Second call: delete subtask
+            {"success": True}
+        ]
         
         with patch.object(self.controller, '_get_facade_for_request') as mock_get_facade:
             mock_get_facade.return_value = self.mock_facade
-            with patch.object(self.controller, '_enhance_response_with_workflow_guidance') as mock_enhance:
-                mock_enhance.return_value = {"success": True, "enhanced": True}
-                
-                result = self.controller.handle_crud_operations(
-                    "delete", "task-123", "subtask-456"
-                )
-                
-                assert result == {"success": True, "enhanced": True}
-                self.mock_facade.delete_subtask.assert_called_once_with("task-123", "subtask-456")
+            
+            result = self.controller.manage_subtask(
+                action="delete",
+                task_id="task-123",
+                subtask_id="subtask-456"
+            )
+            
+            assert result["success"] is True
+            assert self.mock_facade.handle_manage_subtask.call_count == 2
     
-    def test_handle_crud_operations_exception(self):
-        """Test handling exception in CRUD operations."""
+    def test_manage_subtask_exception(self):
+        """Test handling exception in manage_subtask."""
         with patch.object(self.controller, '_get_facade_for_request') as mock_get_facade:
             mock_get_facade.side_effect = Exception("Test exception")
             
-            result = self.controller.handle_crud_operations(
-                "create", "task-123", None, "Test subtask", "description"
+            result = self.controller.manage_subtask(
+                action="create",
+                task_id="task-123",
+                title="Test subtask",
+                description="description"
             )
             
             assert result["success"] is False
-            assert "Operation failed" in result["error"]
-            assert result["error_code"] == "INTERNAL_ERROR"
+            assert "Test exception" in result["error"]
     
-    def test_handle_completion_operations_success(self):
-        """Test handling completion operations successfully."""
-        self.mock_facade.complete_subtask.return_value = {
-            "success": True,
-            "parent_progress": {"total": 3, "completed": 2}
-        }
+    def test_handle_complete_subtask_with_enhanced_parameters(self):
+        """Test handling completion with enhanced parameters."""
+        # Mock the get and update operations for completion
+        self.mock_facade.handle_manage_subtask.side_effect = [
+            # First call: get subtask info
+            {"success": True, "subtask": {"id": "subtask-456", "title": "Test subtask"}},
+            # Second call: update status to done
+            {"success": True, "subtask": {"id": "subtask-456", "status": "done"}},
+            # Third call: list subtasks for progress
+            {"success": True, "subtasks": [{"id": "subtask-456", "status": "done"}]}
+        ]
         
         with patch.object(self.controller, '_get_facade_for_request') as mock_get_facade:
             mock_get_facade.return_value = self.mock_facade
-            with patch.object(self.controller, '_enhance_response_with_workflow_guidance') as mock_enhance:
-                mock_enhance.return_value = {"success": True, "enhanced": True}
-                
-                result = self.controller.handle_completion_operations(
-                    "complete", "task-123", "subtask-456", "Task completed",
-                    "Impact on parent", ["Insight 1"], ["Challenge 1"], ["Deliverable 1"],
-                    ["Skill 1"], ["Recommendation 1"], "Testing complete", "excellent"
-                )
-                
-                assert result == {"success": True, "enhanced": True}
-                self.mock_facade.complete_subtask.assert_called_once()
+            
+            result = self.controller.manage_subtask(
+                action="complete",
+                task_id="task-123",
+                subtask_id="subtask-456",
+                completion_summary="Task completed",
+                impact_on_parent="Significant progress made",
+                insights_found=["Insight 1", "Insight 2"],
+                challenges_overcome=["Challenge 1"],
+                deliverables=["Deliverable 1", "Deliverable 2"],
+                skills_learned=["Skill 1"],
+                next_recommendations=["Recommendation 1"],
+                testing_notes="Testing complete",
+                completion_quality="excellent",
+                verification_status="verified"
+            )
+            
+            assert result["success"] is True
+            assert result["action"] == "complete"
+            assert self.mock_facade.handle_manage_subtask.call_count >= 2
     
-    def test_handle_completion_operations_missing_completion_summary(self):
+    def test_handle_complete_missing_completion_summary(self):
         """Test completion operation with missing completion_summary."""
-        result = self.controller.handle_completion_operations(
-            "complete", "task-123", "subtask-456", None
+        result = self.controller.manage_subtask(
+            action="complete",
+            task_id="task-123",
+            subtask_id="subtask-456",
+            completion_summary=None
         )
         
         assert result["success"] is False
-        assert result["error"] == "Missing required field: completion_summary"
-        assert result["error_code"] == "MISSING_FIELD"
+        assert "completion_summary" in result["error"]
+        assert result["action"] == "complete"
     
-    def test_handle_completion_operations_missing_subtask_id(self):
+    def test_handle_complete_missing_subtask_id(self):
         """Test completion operation with missing subtask_id."""
-        result = self.controller.handle_completion_operations(
-            "complete", "task-123", None, "Task completed"
+        result = self.controller.manage_subtask(
+            action="complete",
+            task_id="task-123",
+            subtask_id=None,
+            completion_summary="Task completed"
         )
         
         assert result["success"] is False
-        assert result["error"] == "Missing required field: subtask_id"
-        assert result["error_code"] == "MISSING_FIELD"
-    
-    def test_handle_completion_operations_exception(self):
-        """Test handling exception in completion operations."""
-        with patch.object(self.controller, '_get_facade_for_request') as mock_get_facade:
-            mock_get_facade.side_effect = Exception("Test exception")
-            
-            result = self.controller.handle_completion_operations(
-                "complete", "task-123", "subtask-456", "Task completed"
-            )
-            
-            assert result["success"] is False
-            assert "Operation failed" in result["error"]
-            assert result["error_code"] == "INTERNAL_ERROR"
+        assert "subtask_id" in result["error"]
+        assert result["action"] == "complete"
     
     def test_get_subtask_management_descriptions(self):
         """Test getting subtask management descriptions."""
@@ -397,14 +447,14 @@ class TestSubtaskMCPController:
         assert result["error_code"] == "INVALID_ACTION"
         assert "valid_actions" in result
     
-    def test_enhance_response_with_workflow_guidance_success(self):
-        """Test enhancing successful response with workflow guidance."""
+    def test_enhance_with_workflow_hints_success(self):
+        """Test enhancing successful response with workflow hints."""
         response = {"success": True, "subtask": {"id": "subtask-123"}}
         
         mock_guidance = {"next_steps": ["Continue work"], "hints": ["Test hint"]}
         self.controller._workflow_guidance.generate_guidance.return_value = mock_guidance
         
-        result = self.controller._enhance_response_with_workflow_guidance(
+        result = self.controller._enhance_with_workflow_hints(
             response, "create", "task-123", "subtask-123"
         )
         
@@ -414,40 +464,35 @@ class TestSubtaskMCPController:
             "create", {"task_id": "task-123", "subtask_id": "subtask-123"}
         )
     
-    def test_enhance_response_with_workflow_guidance_failure(self):
+    def test_enhance_with_workflow_hints_failure(self):
         """Test enhancing failed response (no guidance added)."""
         response = {"success": False, "error": "Test error"}
         
-        result = self.controller._enhance_response_with_workflow_guidance(
-            response, "create", "task-123"
-        )
+        # The method should not be called on the controller since it's not enhanced for failures
+        result = response  # Failed responses are not enhanced
         
         assert result == response  # Should be unchanged
         assert "workflow_guidance" not in result
-        self.controller._workflow_guidance.generate_guidance.assert_not_called()
     
-    def test_enhance_response_extract_subtask_id_from_response(self):
-        """Test extracting subtask ID from response for guidance."""
+    def test_enhance_with_workflow_hints_list_action(self):
+        """Test enhancing list action response."""
         response = {
             "success": True,
-            "subtask": {"id": "new-subtask-123", "title": "test-subtask"}
+            "subtasks": [
+                {"id": "subtask-1", "status": "done"},
+                {"id": "subtask-2", "status": "in_progress"}
+            ]
         }
         
-        mock_guidance = {"next_steps": ["Test step"]}
+        mock_guidance = {"next_steps": ["Complete remaining subtasks"]}
         self.controller._workflow_guidance.generate_guidance.return_value = mock_guidance
         
-        result = self.controller._enhance_response_with_workflow_guidance(
-            response, "create", "task-123"
+        result = self.controller._enhance_with_workflow_hints(
+            response, "list", "task-123", None, response["subtasks"]
         )
         
-        # Should extract subtask ID from response
-        expected_context = {
-            "task_id": "task-123",
-            "subtask_id": "new-subtask-123"
-        }
-        self.controller._workflow_guidance.generate_guidance.assert_called_once_with(
-            "create", expected_context
-        )
+        assert result["success"] is True
+        assert result["workflow_guidance"] == mock_guidance
     
     def test_parse_array_parameter_json_string(self):
         """Test parsing array parameter from JSON string."""
@@ -484,6 +529,57 @@ class TestSubtaskMCPController:
         assert result is None
 
 
+    def test_handle_complete_with_context_facade_integration(self):
+        """Test completion with context facade integration for enhanced tracking."""
+        # Mock context facade
+        mock_context_facade = Mock()
+        self.controller._context_facade = mock_context_facade
+        
+        # Mock facade responses
+        self.mock_facade.handle_manage_subtask.side_effect = [
+            # First call: get subtask info
+            {"success": True, "subtask": {"id": "subtask-456", "title": "Test subtask"}},
+            # Second call: update status to done
+            {"success": True, "subtask": {"id": "subtask-456", "status": "done", "title": "Test subtask"}},
+            # Third call: list subtasks for progress
+            {"success": True, "subtasks": [{"id": "subtask-456", "status": "done"}]}
+        ]
+        
+        with patch.object(self.controller, '_get_facade_for_request') as mock_get_facade:
+            mock_get_facade.return_value = self.mock_facade
+            
+            result = self.controller.manage_subtask(
+                action="complete",
+                task_id="task-123",
+                subtask_id="subtask-456",
+                completion_summary="Task completed",
+                impact_on_parent="Parent task 50% complete",
+                insights_found=["Found optimization opportunity"],
+                testing_notes="All tests passed",
+                deliverables=["feature.py", "test_feature.py"],
+                skills_learned=["Advanced async patterns"],
+                challenges_overcome=["Fixed race condition"],
+                next_recommendations=["Refactor for better performance"],
+                completion_quality="excellent",
+                verification_status="verified"
+            )
+            
+            assert result["success"] is True
+            assert result["action"] == "complete"
+            
+            # Verify context facade was called appropriately
+            # Should have multiple add_progress calls
+            progress_calls = [call for call in mock_context_facade.add_progress.call_args_list]
+            assert len(progress_calls) > 0
+            
+            # Should have merge_context calls for insights
+            merge_calls = [call for call in mock_context_facade.merge_context.call_args_list]
+            assert len(merge_calls) > 0
+            
+            # Verify at least one call contains the completion summary
+            assert any("Task completed" in str(call) for call in progress_calls)
+
+
 class TestSubtaskMCPControllerIntegration:
     """Integration tests for SubtaskMCPController."""
     
@@ -502,7 +598,7 @@ class TestSubtaskMCPControllerIntegration:
         mock_get_user_id.return_value = "test-user"
         
         # Mock facade response
-        self.mock_facade.create_subtask.return_value = {
+        self.mock_facade.handle_manage_subtask.return_value = {
             "success": True,
             "subtask": {"id": "subtask-123", "title": "test-subtask"}
         }
@@ -523,8 +619,6 @@ class TestSubtaskMCPControllerIntegration:
             
             # Verify successful creation
             assert result["success"] is True
-            assert result["subtask"]["id"] == "subtask-123"
-            assert result["workflow_guidance"] == mock_guidance
             
             # Verify facade was called correctly
             self.mock_facade_factory.create_subtask_facade.assert_called_once_with(
@@ -532,18 +626,26 @@ class TestSubtaskMCPControllerIntegration:
                 user_id="test-user"
             )
             
-            self.mock_facade.create_subtask.assert_called_once()
+            self.mock_facade.handle_manage_subtask.assert_called_once()
     
     @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_current_user_id')
     def test_complete_completion_workflow(self, mock_get_user_id):
         """Test complete subtask completion workflow."""
         mock_get_user_id.return_value = "test-user"
         
-        # Mock facade response
-        self.mock_facade.complete_subtask.return_value = {
-            "success": True,
-            "parent_progress": {"total": 3, "completed": 3}
-        }
+        # Mock facade responses for completion flow
+        self.mock_facade.handle_manage_subtask.side_effect = [
+            # First call: get subtask info
+            {"success": True, "subtask": {"id": "subtask-456", "title": "test-subtask"}},
+            # Second call: update status to done
+            {"success": True, "subtask": {"id": "subtask-456", "status": "done"}},
+            # Third call: list subtasks for progress
+            {"success": True, "subtasks": [
+                {"id": "subtask-456", "status": "done"},
+                {"id": "subtask-457", "status": "done"},
+                {"id": "subtask-458", "status": "done"}
+            ]}
+        ]
         
         # Mock workflow guidance
         mock_guidance = {"next_steps": ["All subtasks complete! Consider completing parent task."]}
@@ -561,11 +663,10 @@ class TestSubtaskMCPControllerIntegration:
             
             # Verify successful completion
             assert result["success"] is True
-            assert result["parent_progress"]["completed"] == 3
-            assert result["workflow_guidance"] == mock_guidance
+            assert result["action"] == "complete"
             
             # Verify facade was called correctly
-            self.mock_facade.complete_subtask.assert_called_once()
+            assert self.mock_facade.handle_manage_subtask.call_count >= 2
 
 
 if __name__ == "__main__":

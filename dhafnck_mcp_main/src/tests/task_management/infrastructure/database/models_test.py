@@ -147,6 +147,146 @@ class TestDatabaseModels:
         assert retrieved_token.usage_count == 10
         assert retrieved_token.last_used_at == now
     
+    def test_api_token_unique_hash_constraint(self, session):
+        """Test APIToken token_hash uniqueness constraint."""
+        from sqlalchemy.exc import IntegrityError
+        
+        # Create first token
+        token1 = APIToken(
+            id=str(uuid4()),
+            user_id="test-user-999",
+            name="Token 1",
+            token_hash="unique_hash_123"
+        )
+        session.add(token1)
+        session.commit()
+        
+        # Try to create second token with same hash
+        token2 = APIToken(
+            id=str(uuid4()),
+            user_id="test-user-999",
+            name="Token 2",
+            token_hash="unique_hash_123"  # Same hash
+        )
+        session.add(token2)
+        
+        # Should raise integrity error
+        with pytest.raises(IntegrityError):
+            session.commit()
+        session.rollback()
+    
+    def test_api_token_deactivation(self, session):
+        """Test APIToken deactivation behavior."""
+        # Create active token
+        token = APIToken(
+            id=str(uuid4()),
+            user_id="test-user-888",
+            name="Active Token",
+            token_hash="active_token_hash",
+            is_active=True
+        )
+        session.add(token)
+        session.commit()
+        
+        # Deactivate token
+        token.is_active = False
+        session.commit()
+        
+        # Verify deactivation
+        deactivated = session.query(APIToken).filter_by(id=token.id).first()
+        assert deactivated.is_active is False
+    
+    def test_user_id_not_null_constraints(self, session):
+        """Test that user_id cannot be null on models that require it."""
+        from sqlalchemy.exc import IntegrityError
+        
+        # Test Project without user_id
+        project = Project(
+            id=str(uuid4()),
+            name="Test Project",
+            description="Test Description",
+            user_id=None  # Explicitly set to None
+        )
+        session.add(project)
+        
+        with pytest.raises(IntegrityError):
+            session.commit()
+        session.rollback()
+        
+        # Test Task without user_id
+        # First need to create project and branch
+        project = Project(
+            id=str(uuid4()),
+            name="Valid Project",
+            description="For task test",
+            user_id="test-user-777"
+        )
+        branch = GitBranch(
+            id=str(uuid4()),
+            project_id=project.id,
+            git_branch_name="main",
+            user_id="test-user-777"
+        )
+        session.add_all([project, branch])
+        session.commit()
+        
+        task = Task(
+            id=str(uuid4()),
+            git_branch_id=branch.id,
+            title="Test Task",
+            user_id=None  # Explicitly set to None
+        )
+        session.add(task)
+        
+        with pytest.raises(IntegrityError):
+            session.commit()
+        session.rollback()
+        
+        # Test Agent without user_id
+        agent = Agent(
+            id=str(uuid4()),
+            project_id=project.id,
+            name="Test Agent",
+            user_id=None  # Explicitly set to None
+        )
+        session.add(agent)
+        
+        with pytest.raises(IntegrityError):
+            session.commit()
+        session.rollback()
+    
+    def test_user_isolation_boundaries(self, session):
+        """Test that user data is properly isolated."""
+        # Create projects for two different users
+        project1 = Project(
+            id=str(uuid4()),
+            name="User 1 Project",
+            description="Project for user 1",
+            user_id="user-001"
+        )
+        project2 = Project(
+            id=str(uuid4()),
+            name="User 2 Project",
+            description="Project for user 2",
+            user_id="user-002"
+        )
+        session.add_all([project1, project2])
+        session.commit()
+        
+        # Query projects for user1
+        user1_projects = session.query(Project).filter_by(user_id="user-001").all()
+        assert len(user1_projects) == 1
+        assert user1_projects[0].name == "User 1 Project"
+        
+        # Query projects for user2
+        user2_projects = session.query(Project).filter_by(user_id="user-002").all()
+        assert len(user2_projects) == 1
+        assert user2_projects[0].name == "User 2 Project"
+        
+        # Verify no cross-user access
+        assert all(p.user_id == "user-001" for p in user1_projects)
+        assert all(p.user_id == "user-002" for p in user2_projects)
+    
     def test_project_model(self, session):
         """Test Project model creation and fields"""
         project = Project(

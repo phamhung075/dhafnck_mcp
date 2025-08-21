@@ -27,29 +27,33 @@ REQUIRED BEHAVIORS:
 ## Missing Test Files - CREATE IMMEDIATELY:
 
 ## Stale Test Files (Source Newer Than Test)
-- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/mcp_integration/jwt_auth_backend.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/auth/mcp_integration/jwt_auth_backend_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/services/project_management_service.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/task_management/application/services/project_management_service_test.py`
   - **Days stale**: 0
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/http_server.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/server/http_server_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/use_cases/create_project.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/task_management/application/use_cases/create_project_test.py`
   - **Days stale**: 0
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/mcp_entry_point.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/server/mcp_entry_point_test.py`
-  - **Days stale**: 1
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/database/models.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/database/models_test.py`
+  - **Days stale**: 0
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/factories/project_facade_factory.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/application/factories/project_facade_factory_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/subtask_mcp_controller.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/subtask_mcp_controller_test.py`
+  - **Days stale**: 0
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/task_mcp_controller.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/task_mcp_controller_test.py`
   - **Days stale**: 0
 
 
 ## Missing Test Files
-- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/mcp_integration/user_context_middleware.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/auth/mcp_integration/user_context_middleware_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/database/migrations/add_user_id_not_null_constraints.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/database/migrations/add_user_id_not_null_constraints_test.py`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/auth_helper.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/auth_helper_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/desc/task/manage_task_description.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/desc/task/manage_task_description_test.py`
 
 
 ## EXECUTION COMMANDS - DO NOW:

@@ -366,6 +366,25 @@ def create_sse_app(
     except ImportError as e:
         logger.warning(f"Could not import token management routes: {e}")
     
+    # Add user-scoped V2 routes using the same pattern as Supabase auth
+    try:
+        from .routes.user_scoped_project_routes import router as project_router
+        from .routes.user_scoped_task_routes import router as task_router
+        from fastapi import FastAPI
+        from starlette.routing import Mount
+        
+        # Create a minimal FastAPI app for V2 routes
+        v2_app = FastAPI()
+        v2_app.include_router(project_router)
+        v2_app.include_router(task_router)
+        
+        # Mount the FastAPI app as a sub-application
+        server_routes.append(Mount("/", app=v2_app))
+        logger.info("User-scoped V2 routes registered at /api/v2/projects and /api/v2/tasks")
+            
+    except ImportError as e:
+        logger.warning(f"Could not import user-scoped V2 routes: {e}")
+    
     # Add OAuth2 auth endpoints using bridge pattern
     try:
         from fastmcp.auth.bridge.fastapi_mount import integrate_auth_with_mcp_server
@@ -619,6 +638,25 @@ def create_streamable_http_app(
         logger.info(f"Token management routes registered for streamable HTTP at /api/v2/tokens ({len(token_routes)} endpoints)")
     except ImportError as e:
         logger.warning(f"Could not import token management routes for streamable HTTP: {e}")
+    
+    # Add user-scoped V2 routes for streamable HTTP
+    try:
+        from .routes.user_scoped_project_routes import router as project_router
+        from .routes.user_scoped_task_routes import router as task_router
+        from fastapi import FastAPI
+        from starlette.routing import Mount
+        
+        # Create a minimal FastAPI app for V2 routes
+        v2_app = FastAPI()
+        v2_app.include_router(project_router)
+        v2_app.include_router(task_router)
+        
+        # Mount the FastAPI app as a sub-application
+        server_routes.append(Mount("/", app=v2_app))
+        logger.info("User-scoped V2 routes registered for streamable HTTP at /api/v2/projects and /api/v2/tasks")
+            
+    except ImportError as e:
+        logger.warning(f"Could not import user-scoped V2 routes for streamable HTTP: {e}")
     
     # Add MCP registration routes for Claude and other MCP clients
     try:

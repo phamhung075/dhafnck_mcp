@@ -110,7 +110,14 @@ class GitBranchMCPController(ContextPropagationMixin):
         Returns:
             GitBranchApplicationFacade instance
         """
-        return self._git_branch_facade_factory.create_git_branch_facade(project_id=project_id)
+        # Extract user_id from authentication context
+        user_id = get_current_user_id()
+        
+        # Create facade with user context
+        return self._git_branch_facade_factory.create_git_branch_facade(
+            project_id=project_id, 
+            user_id=user_id
+        )
     
     def manage_git_branch(
         self,

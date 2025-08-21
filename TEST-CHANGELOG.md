@@ -4,6 +4,85 @@ All notable changes to test files in the DhafnckMCP AI Agent Orchestration Platf
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [Semantic](https://semver.org/spec/v1.0.0.html)
 
+## [2025-08-20] - Comprehensive Test Updates for Enhanced Features
+
+### Added - User Isolation and Authentication Tests
+- **File**: `dhafnck_mcp_main/src/tests/task_management/application/use_cases/create_project_test.py`
+  - Added `test_create_project_with_user_scoped_repository` - Tests user-scoped repository behavior
+  - Added `test_create_project_repository_without_user_id` - Tests fallback when repository lacks user_id
+  - Added `test_create_project_strict_authentication_mode` - Tests behavior when authentication is required
+  - Added `test_create_project_validate_user_id_failure` - Tests handling of user_id validation failures
+  - Added `test_create_project_context_factory_creation_failure` - Tests context factory creation failures
+  - Added `test_create_project_logs_authentication_bypass` - Tests authentication bypass logging
+
+### Added - Database Model Constraint Tests
+- **File**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/database/models_test.py`
+  - Added `test_api_token_unique_hash_constraint` - Tests APIToken token_hash uniqueness
+  - Added `test_api_token_deactivation` - Tests APIToken deactivation behavior
+  - Added `test_user_id_not_null_constraints` - Tests user_id NOT NULL constraints across models
+  - Added `test_user_isolation_boundaries` - Tests proper user data isolation
+
+### Added - Response Enrichment and Parameter Enforcement Tests
+- **File**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/task_mcp_controller_test.py`
+  - Added `test_response_enrichment_service_integration` - Tests Vision System integration
+  - Added `test_parameter_enforcement_service` - Tests boolean parameter normalization
+  - Added `test_array_parameter_normalization` - Tests array parameter handling (assignees, labels)
+  - Added `test_dependencies_parameter_handling` - Tests dependencies parameter in create action
+  - Added `test_vision_system_error_handling` - Tests graceful handling of Vision System failures
+  - Added `test_estimated_effort_parameter` - Tests estimated_effort parameter
+  - Added `test_due_date_parameter_validation` - Tests due_date ISO format validation
+  - Added `test_force_full_generation_parameter` - Tests force_full_generation boolean parameter
+  - Added `test_context_staleness_detection` - Tests context staleness indicators
+
+### Added - New Test Files
+- **File**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/database/migrations/add_user_id_not_null_constraints_test.py`
+  - Comprehensive test suite for user_id NOT NULL constraints migration
+  - Tests upgrade and downgrade migration functionality
+  - Tests constraint enforcement on all affected tables
+  - Tests context tables user_id requirements
+
+- **File**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/desc/task/manage_task_description_test.py`
+  - Tests for task description controller parameter definitions
+  - Tests tool constants and metadata
+  - Tests parameter structure and validation rules
+  - Tests Vision System parameter descriptions
+
+### Fixed - Subtask MCP Controller Test Update
+
+#### Updated Test Method Compatibility
+- **File**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/subtask_mcp_controller_test.py`
+  - Removed deprecated `handle_crud_operations` and `handle_completion_operations` test methods
+  - Updated all tests to use the unified `manage_subtask` method
+  - Fixed test assertions to match new controller implementation
+
+#### Enhanced Test Coverage for New Features
+- **Added tests for enhanced completion parameters**:
+  - `deliverables` - List of work products created
+  - `skills_learned` - Skills acquired during subtask work
+  - `challenges_overcome` - Problems solved during implementation
+  - `next_recommendations` - Suggestions for future work
+  - `completion_quality` - Quality assessment (excellent/good/satisfactory/needs_improvement)
+  - `verification_status` - Verification state (verified/pending_review/needs_testing/failed_verification)
+
+#### Context Facade Integration Tests
+- **Added test**: `test_handle_complete_with_context_facade_integration`
+  - Verifies context updates during completion
+  - Tests multiple `add_progress` calls for comprehensive tracking
+  - Validates `merge_context` calls for insights and learnings
+  - Ensures completion summary is properly tracked
+
+#### Updated Test Methods
+- **Refactored test methods to match new controller architecture**:
+  - `test_manage_subtask_create_action` - Uses facade's `handle_manage_subtask`
+  - `test_manage_subtask_update_action` - Updated for new method signature
+  - `test_manage_subtask_complete_action` - Tests multi-step completion flow
+  - `test_enhance_with_workflow_hints_*` - Renamed from `_enhance_response_with_workflow_guidance`
+
+#### Integration Test Updates
+- **Fixed complete workflow tests**:
+  - `test_complete_create_workflow` - Updated to use `handle_manage_subtask`
+  - `test_complete_completion_workflow` - Tests full completion flow with get/update/list operations
+
 ## [2025-08-20] - Comprehensive Test Suite Completion
 
 ### Added - Test Orchestrator Agent Execution

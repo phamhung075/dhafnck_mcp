@@ -7,9 +7,10 @@ from ..services.git_branch_service import GitBranchService
 from ...domain.repositories.project_repository import ProjectRepository
 
 class GitBranchApplicationFacade:
-    def __init__(self, git_branch_service: Optional[GitBranchService] = None, project_repo: Optional[ProjectRepository] = None, project_id: Optional[str] = None):
+    def __init__(self, git_branch_service: Optional[GitBranchService] = None, project_repo: Optional[ProjectRepository] = None, project_id: Optional[str] = None, user_id: Optional[str] = None):
         self._git_branch_service = git_branch_service or GitBranchService(project_repo)
         self._project_id = project_id
+        self._user_id = user_id
 
     async def create_tree(self, project_id: str, tree_name: str, description: str = "") -> Dict[str, Any]:
         """Facade method to create a new task tree (branch)."""

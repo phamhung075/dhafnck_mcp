@@ -33,30 +33,36 @@ class GitBranchFacadeFactory:
         logger.info("GitBranchFacadeFactory initialized")
     
     def create_git_branch_facade(self, 
-                                project_id: str = "default_project") -> GitBranchApplicationFacade:
+                                project_id: str = "default_project",
+                                user_id: Optional[str] = None) -> GitBranchApplicationFacade:
         """
         Create a git branch application facade with proper dependency injection.
         
         Args:
             project_id: Project identifier for scoping
+            user_id: User identifier for authentication
             
         Returns:
             GitBranchApplicationFacade instance with injected dependencies
         """
-        # Create cache key
-        cache_key = f"{project_id}"
+        # Create cache key including user_id for proper isolation
+        cache_key = f"{project_id}:{user_id or 'no_user'}"
         
         # Check cache first
         if cache_key in self._facades_cache:
             logger.debug(f"Returning cached git branch facade for {cache_key}")
             return self._facades_cache[cache_key]
         
-        # Create GitBranchService - it will get its own project repository
+        # Create GitBranchService with user context
         from ..services.git_branch_service import GitBranchService
-        git_branch_service = GitBranchService()
+        git_branch_service = GitBranchService(user_id=user_id)
         
-        # Create facade with service and project_id
-        facade = GitBranchApplicationFacade(git_branch_service=git_branch_service, project_id=project_id)
+        # Create facade with service, project_id and user_id
+        facade = GitBranchApplicationFacade(
+            git_branch_service=git_branch_service, 
+            project_id=project_id,
+            user_id=user_id
+        )
         
         # Cache the facade
         self._facades_cache[cache_key] = facade

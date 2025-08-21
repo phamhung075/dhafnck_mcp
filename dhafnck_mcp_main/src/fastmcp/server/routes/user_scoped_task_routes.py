@@ -10,7 +10,13 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from ...auth.interface.fastapi_auth import get_current_user, get_db
+from ...auth.interface.fastapi_auth import get_db
+# Use Supabase authentication for V2 routes
+try:
+    from ...auth.interface.supabase_fastapi_auth import get_current_user
+except ImportError:
+    # Fallback to local JWT if Supabase auth not available
+    from ...auth.interface.fastapi_auth import get_current_user
 from ...auth.domain.entities.user import User
 from ...task_management.application.facades.task_application_facade import TaskApplicationFacade
 from ...task_management.infrastructure.repositories.orm.task_repository import TaskRepository

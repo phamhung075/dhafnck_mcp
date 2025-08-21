@@ -1,5 +1,11 @@
 # DhafnckMCP Usage Guide for AI Agents
 
+## 🤖 Agent Switching - Use The Right Specialist
+
+### ⚠️ CRITICAL: Agent Loading and Interface Compliance
+
+**When you call `mcp__dhafnck_mcp_http__call_agent`, use the Task tool to launching a complete agent specification from the MCP server's agent-library. This is equivalent to use the Task tool to launching agents from `.claude/agents` or `~/.claude/agents` in Claude Desktop.**. These agents can use all tools disponible if need, include build in claude code tools and mcp__dhafnck_mcp for manage task and context.
+
 ## 🚀 Quick Start - Your First Actions
 
 ```python
@@ -88,14 +94,6 @@ context = mcp__dhafnck_mcp_http__manage_context(
 )
 # Context will contain all updates from this branch, project, and global levels
 ```
-
-## 🤖 Agent Switching - Use The Right Specialist
-
-### ⚠️ CRITICAL: Agent Loading and Interface Compliance
-
-**When you call `mcp__dhafnck_mcp_http__call_agent`, you are loading a complete agent specification from the MCP server's agent-library. This is equivalent to loading agents from `.claude/agents` or `~/.claude/agents` in Claude Desktop.**. These agents can use all tools disponible if need, include build in claude code tools and mcp__dhafnck_mcp for manage task and context.
-
-
 
 **MANDATORY PROCEDURE:**
 1. **Load Agent**: Call `mcp__dhafnck_mcp_http__call_agent(name_agent="@agent_name")`

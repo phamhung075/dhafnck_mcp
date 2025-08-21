@@ -18,6 +18,8 @@ from uuid import uuid4
 from fastmcp.task_management.application.use_cases.create_project import CreateProjectUseCase
 from fastmcp.task_management.domain.entities.project import Project
 from fastmcp.task_management.domain.repositories.project_repository import ProjectRepository
+from fastmcp.shared.infrastructure.auth.auth_config import AuthConfig
+from fastmcp.shared.infrastructure.auth.exceptions import UserAuthenticationRequiredError
 
 
 class TestCreateProjectUseCase:
@@ -300,3 +302,148 @@ class TestCreateProjectUseCase:
         assert isinstance(saved_project.updated_at, datetime)
         assert len(saved_project.git_branchs) == 1
         assert "main" in saved_project.git_branchs
+
+    @pytest.mark.asyncio
+    async def test_create_project_with_user_scoped_repository(self):
+        """Test project creation with user-scoped repository."""
+        # Add user_id attribute to mock repository
+        self.mock_repository.user_id = "user-123"
+        
+        use_case = CreateProjectUseCase(self.mock_repository)
+        
+        with patch("fastmcp.shared.infrastructure.auth.auth_validation.validate_user_id") as mock_validate:
+            mock_validate.return_value = None  # Valid user_id
+            
+            with patch("fastmcp.shared.interfaces.context.unified_context_facade_factory.UnifiedContextFacadeFactory") as mock_factory:
+                mock_facade = AsyncMock()
+                mock_facade.create_context = AsyncMock(return_value={"success": True})
+                mock_factory.return_value.create_facade = MagicMock(return_value=mock_facade)
+                
+                result = await use_case.execute(
+                    name="Test Project",
+                    description="Test Description"
+                )
+                
+                assert result["success"] is True
+                
+                # Verify validate_user_id was called with repository user_id
+                mock_validate.assert_called_once_with("user-123")
+                
+                # Verify context was created with correct user_id
+                mock_facade.create_context.assert_called_once()
+                context_call = mock_facade.create_context.call_args[1]
+                assert context_call["data"]["user_id"] == "user-123"
+
+    @pytest.mark.asyncio
+    async def test_create_project_repository_without_user_id(self):
+        """Test fallback behavior when repository lacks user_id."""
+        # Ensure repository doesn't have user_id attribute
+        if hasattr(self.mock_repository, 'user_id'):
+            delattr(self.mock_repository, 'user_id')
+        
+        use_case = CreateProjectUseCase(self.mock_repository)
+        
+        with patch("fastmcp.shared.infrastructure.auth.auth_config.AuthConfig.is_default_user_allowed") as mock_auth:
+            mock_auth.return_value = True  # Compatibility mode
+            
+            with patch("fastmcp.shared.infrastructure.auth.auth_config.AuthConfig.log_authentication_bypass") as mock_log:
+                result = await use_case.execute(
+                    name="Test Project",
+                    description="Test Description"
+                )
+                
+                assert result["success"] is True
+                
+                # Verify compatibility mode was used
+                mock_auth.assert_called_once()
+                mock_log.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_create_project_strict_authentication_mode(self):
+        """Test project creation fails when authentication is required."""
+        # Ensure repository doesn't have user_id
+        if hasattr(self.mock_repository, 'user_id'):
+            delattr(self.mock_repository, 'user_id')
+        
+        use_case = CreateProjectUseCase(self.mock_repository)
+        
+        with patch("fastmcp.shared.infrastructure.auth.auth_config.AuthConfig.is_default_user_allowed") as mock_auth:
+            mock_auth.return_value = False  # Strict mode
+            
+            # Should still succeed but without context creation
+            result = await use_case.execute(
+                name="Test Project",
+                description="Test Description"
+            )
+            
+            assert result["success"] is True
+            assert "Project created successfully" in result["message"]
+
+    @pytest.mark.asyncio 
+    async def test_create_project_validate_user_id_failure(self):
+        """Test handling when user_id validation fails."""
+        self.mock_repository.user_id = "invalid-user"
+        
+        use_case = CreateProjectUseCase(self.mock_repository)
+        
+        with patch("fastmcp.shared.infrastructure.auth.auth_validation.validate_user_id") as mock_validate:
+            mock_validate.side_effect = ValueError("Invalid user ID format")
+            
+            # Should still create project but without context
+            result = await use_case.execute(
+                name="Test Project", 
+                description="Test Description"
+            )
+            
+            assert result["success"] is True
+            assert "Project created successfully" in result["message"]
+
+    @pytest.mark.asyncio
+    async def test_create_project_context_factory_creation_failure(self):
+        """Test handling when context factory creation fails."""
+        self.mock_repository.user_id = "user-123"
+        
+        use_case = CreateProjectUseCase(self.mock_repository)
+        
+        with patch("fastmcp.shared.infrastructure.auth.auth_validation.validate_user_id") as mock_validate:
+            mock_validate.return_value = None
+            
+            with patch("fastmcp.shared.interfaces.context.unified_context_facade_factory.UnifiedContextFacadeFactory") as mock_factory:
+                mock_factory.side_effect = Exception("Factory creation failed")
+                
+                # Should still create project
+                result = await use_case.execute(
+                    name="Test Project",
+                    description="Test Description"
+                )
+                
+                assert result["success"] is True
+                assert "Project created successfully" in result["message"]
+
+    @pytest.mark.asyncio
+    async def test_create_project_logs_authentication_bypass(self):
+        """Test that authentication bypass is logged in compatibility mode."""
+        if hasattr(self.mock_repository, 'user_id'):
+            delattr(self.mock_repository, 'user_id')
+        
+        use_case = CreateProjectUseCase(self.mock_repository)
+        
+        with patch("fastmcp.shared.infrastructure.auth.auth_config.AuthConfig.is_default_user_allowed") as mock_auth:
+            mock_auth.return_value = True
+            
+            with patch("fastmcp.shared.infrastructure.auth.auth_config.AuthConfig.log_authentication_bypass") as mock_log:
+                with patch("fastmcp.shared.infrastructure.auth.auth_config.AuthConfig.get_default_user_id") as mock_default:
+                    mock_default.return_value = "default_user"
+                    
+                    result = await use_case.execute(
+                        name="Test Project",
+                        description="Test Description"
+                    )
+                    
+                    assert result["success"] is True
+                    
+                    # Verify bypass was logged
+                    mock_log.assert_called_once_with(
+                        operation="create_project",
+                        reason="No authenticated user in repository context"
+                    )

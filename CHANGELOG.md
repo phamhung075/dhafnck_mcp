@@ -6,7 +6,91 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Fixed - Project Routes Registration in API Server (2025-08-21)
+- **Fixed missing project routes in API server causing frontend project list to be empty**:
+  - Added import and registration of `user_scoped_project_routes` in api_server.py
+  - Project routes now properly registered at `/api/v2/projects/` endpoint
+  - Enables frontend to fetch and display projects when authenticated
+  - File: `dhafnck_mcp_main/src/fastmcp/auth/api_server.py`
+  - Issue: Frontend was receiving 404 errors when trying to fetch projects
+  - Resolution: Projects are created and stored correctly in backend, but routes weren't registered
+  - Authentication flow verified:
+    - Frontend correctly stores Supabase JWT in cookies as `access_token`
+    - Frontend correctly sends token in `Authorization: Bearer` header
+    - Backend properly validates Supabase JWT tokens
+    - User must be logged in with valid Supabase account to access projects
+
+### Fixed - V2 API Routes Registration and Authentication (2025-08-21)
+- **Fixed V2 API routes not being registered in HTTP server**:
+  - Added user-scoped project routes registration at /api/v2/projects
+  - Added user-scoped task routes registration at /api/v2/tasks
+  - Mounted FastAPI sub-application for V2 endpoints
+  - Resolves frontend issue where projects weren't showing in sidebar when authenticated
+  - File: `dhafnck_mcp_main/src/fastmcp/server/http_server.py`
+
+- **Fixed V2 API authentication mismatch**:
+  - Created Supabase authentication handler for V2 routes (`supabase_fastapi_auth.py`)
+  - Updated V2 project and task routes to use Supabase JWT validation
+  - Resolves 401 Unauthorized errors when frontend sends Supabase tokens
+  - Files: 
+    - `dhafnck_mcp_main/src/fastmcp/auth/interface/supabase_fastapi_auth.py` (new)
+    - `dhafnck_mcp_main/src/fastmcp/server/routes/user_scoped_project_routes.py`
+    - `dhafnck_mcp_main/src/fastmcp/server/routes/user_scoped_task_routes.py`
+
+### Fixed - Subtask MCP Controller Test Compatibility (2025-08-20)
+- **Updated SubtaskMCPController tests for enhanced completion flow**:
+  - Removed deprecated `handle_crud_operations` and `handle_completion_operations` test methods
+  - Updated all tests to use the unified `manage_subtask` method matching current controller implementation
+  - Added test coverage for new enhanced completion parameters: deliverables, skills_learned, challenges_overcome, next_recommendations, completion_quality, verification_status
+  - Added context facade integration test to verify comprehensive context tracking during completion
+  - Fixed workflow guidance tests to use `_enhance_with_workflow_hints` instead of deprecated method
+  - Updated integration tests to properly mock multi-step completion flow (get/update/list operations)
+  - File: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/subtask_mcp_controller_test.py`
+
+### Fixed - UUID Validation and Authentication Context (2025-08-21)
+- **UUID Validation in Controllers**:
+  - Added UUID format validation to TaskMCPController for git_branch_id and task_id parameters
+  - Added UUID format validation to SubtaskMCPController for task_id and subtask_id parameters  
+  - Fixed documentation examples showing invalid UUID placeholders like "current-branch-id"
+  - Prevents PostgreSQL UUID casting errors with clear validation messages
+  
+- **Git Branch Authentication Context**:
+  - Updated GitBranchMCPController to extract user_id from authentication context using get_current_user_id()
+  - Modified GitBranchFacadeFactory to accept and pass user_id to GitBranchService
+  - Updated GitBranchApplicationFacade to store and use user_id for operations
+  - Fixed "No user ID was provided" errors in git branch creation
+  
+- **Controllers Needing UUID Validation** (Identified for future update):
+  - ProjectMCPController (project_id)
+  - AgentMCPController (project_id, agent_id, git_branch_id)
+  - UnifiedContextController (context_id, task_id, git_branch_id, project_id)
+  - DependencyMCPController (task_id, dependency_id)
+
 ### Added - Test Suite Completion by Test Orchestrator Agent (2025-08-20)
+- **Comprehensive test coverage for user isolation and authentication**:
+  - Added tests for user-scoped repository behavior in create_project_test.py
+  - Added tests for authentication mode enforcement and bypass logging
+  - Added tests for user_id validation and context creation failures
+  - File: `dhafnck_mcp_main/src/tests/task_management/application/use_cases/create_project_test.py`
+
+- **Enhanced database model constraint tests**:
+  - Added tests for APIToken unique hash constraint and deactivation
+  - Added tests for user_id NOT NULL constraints across all models
+  - Added tests for user isolation boundaries between different users
+  - File: `dhafnck_mcp_main/src/tests/task_management/infrastructure/database/models_test.py`
+
+- **Response enrichment and parameter enforcement tests**:
+  - Added tests for ResponseEnrichmentService integration with Vision System
+  - Added tests for parameter normalization (boolean, array, dependencies)
+  - Added tests for Vision System error handling and graceful degradation
+  - Added tests for context staleness detection and indicators
+  - File: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/task_mcp_controller_test.py`
+
+- **Created missing test files**:
+  - Created add_user_id_not_null_constraints_test.py for migration testing
+  - Created manage_task_description_test.py for task description controller
+  - Files: `dhafnck_mcp_main/src/tests/task_management/infrastructure/database/migrations/add_user_id_not_null_constraints_test.py`,
+    `dhafnck_mcp_main/src/tests/task_management/interface/controllers/desc/task/manage_task_description_test.py`
 - ✅ **Comprehensive test coverage completion**: Successfully executed comprehensive test orchestration using @test_orchestrator_agent
 - ✅ **17 test files processed**: Updated 2 stale test files and created 15 missing test files with 297 test methods
 - ✅ **100% coverage achieved**: All previously missing source files now have comprehensive test coverage

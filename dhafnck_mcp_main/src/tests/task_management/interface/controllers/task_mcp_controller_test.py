@@ -12,12 +12,14 @@ Tests the task MCP controller including:
 
 import pytest
 import logging
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch, MagicMock, AsyncMock
 from typing import Dict, Any
 
 from fastmcp.task_management.interface.controllers.task_mcp_controller import TaskMCPController
 from fastmcp.task_management.application.factories.task_facade_factory import TaskFacadeFactory
 from fastmcp.task_management.application.facades.task_application_facade import TaskApplicationFacade
+from fastmcp.task_management.application.services.response_enrichment_service import ResponseEnrichmentService
+from fastmcp.task_management.application.services.parameter_enforcement_service import ParameterEnforcementService
 from fastmcp.task_management.domain.exceptions.authentication_exceptions import (
     UserAuthenticationRequiredError,
     DefaultUserProhibitedError
@@ -614,6 +616,232 @@ class TestTaskMCPControllerIntegration:
             
             # Verify facade was called correctly
             self.mock_facade.get_next_task.assert_called_once_with(True)
+
+    # Response Enrichment Tests
+    def test_response_enrichment_service_integration(self):
+        """Test integration with ResponseEnrichmentService."""
+        with patch.object(self.mock_facade, 'create_task') as mock_create:
+            with patch('fastmcp.task_management.application.services.response_enrichment_service.ResponseEnrichmentService.enrich_response') as mock_enrich:
+                # Setup mock returns
+                task_data = {
+                    "id": "task-789",
+                    "title": "Test Task",
+                    "status": "todo"
+                }
+                mock_create.return_value = {"success": True, "task": task_data}
+                mock_enrich.return_value = {
+                    "success": True,
+                    "task": task_data,
+                    "vision_insights": {
+                        "workflow_hints": ["Start with implementation"],
+                        "next_actions": ["Add unit tests"],
+                        "progress_indicator": "Not started"
+                    }
+                }
+                
+                with patch('fastmcp.task_management.interface.controllers.task_mcp_controller.validate_user_id') as mock_validate:
+                    mock_validate.return_value = "test-user"
+                    
+                    result = self.controller.manage_task(
+                        action="create",
+                        git_branch_id="branch-123",
+                        title="Test Task"
+                    )
+                    
+                    assert result["success"] is True
+                    assert "vision_insights" in result
+                    assert result["vision_insights"]["workflow_hints"] == ["Start with implementation"]
+
+    def test_parameter_enforcement_service(self):
+        """Test parameter enforcement for different types."""
+        # Test boolean parameter normalization
+        with patch.object(self.mock_facade, 'list_tasks') as mock_list:
+            mock_list.return_value = {"success": True, "tasks": []}
+            
+            with patch('fastmcp.task_management.interface.controllers.task_mcp_controller.validate_user_id') as mock_validate:
+                mock_validate.return_value = "test-user"
+                
+                # Test various boolean formats
+                for bool_val in ["true", "True", "TRUE", "yes", "1", "on"]:
+                    result = self.controller.manage_task(
+                        action="list",
+                        git_branch_id="branch-123",
+                        include_context=bool_val
+                    )
+                    assert result["success"] is True
+
+    def test_array_parameter_normalization(self):
+        """Test array parameter normalization (assignees, labels, dependencies)."""
+        with patch.object(self.mock_facade, 'create_task') as mock_create:
+            mock_create.return_value = {
+                "success": True,
+                "task": {"id": "task-999"}
+            }
+            
+            with patch('fastmcp.task_management.interface.controllers.task_mcp_controller.validate_user_id') as mock_validate:
+                mock_validate.return_value = "test-user"
+                
+                # Test comma-separated string
+                result = self.controller.manage_task(
+                    action="create",
+                    git_branch_id="branch-123",
+                    title="Test Task",
+                    assignees="user1,user2,user3",
+                    labels="bug,high-priority,frontend"
+                )
+                
+                assert result["success"] is True
+                call_kwargs = mock_create.call_args[1]
+                assert "assignees" in call_kwargs
+                assert "labels" in call_kwargs
+
+    def test_dependencies_parameter_handling(self):
+        """Test dependencies parameter in create action."""
+        with patch.object(self.mock_facade, 'create_task') as mock_create:
+            mock_create.return_value = {
+                "success": True,
+                "task": {"id": "task-888"}
+            }
+            
+            with patch('fastmcp.task_management.interface.controllers.task_mcp_controller.validate_user_id') as mock_validate:
+                mock_validate.return_value = "test-user"
+                
+                # Test array format
+                deps = ["dep-1", "dep-2"]
+                result = self.controller.manage_task(
+                    action="create",
+                    git_branch_id="branch-123",
+                    title="Test Task",
+                    dependencies=deps
+                )
+                
+                assert result["success"] is True
+                call_kwargs = mock_create.call_args[1]
+                assert "dependencies" in call_kwargs
+
+    def test_vision_system_error_handling(self):
+        """Test handling when Vision System enrichment fails."""
+        with patch.object(self.mock_facade, 'get_task') as mock_get:
+            mock_get.return_value = {
+                "success": True,
+                "task": {"id": "task-777", "title": "Test"}
+            }
+            
+            with patch('fastmcp.task_management.application.services.response_enrichment_service.ResponseEnrichmentService.enrich_response') as mock_enrich:
+                # Simulate Vision System failure
+                mock_enrich.side_effect = Exception("Vision System unavailable")
+                
+                with patch('fastmcp.task_management.interface.controllers.task_mcp_controller.validate_user_id') as mock_validate:
+                    mock_validate.return_value = "test-user"
+                    
+                    result = self.controller.manage_task(
+                        action="get",
+                        task_id="task-777"
+                    )
+                    
+                    # Should still return task data without enrichment
+                    assert result["success"] is True
+                    assert result["task"]["id"] == "task-777"
+
+    def test_estimated_effort_parameter(self):
+        """Test estimated_effort parameter handling."""
+        with patch.object(self.mock_facade, 'update_task') as mock_update:
+            mock_update.return_value = {"success": True}
+            
+            with patch('fastmcp.task_management.interface.controllers.task_mcp_controller.validate_user_id') as mock_validate:
+                mock_validate.return_value = "test-user"
+                
+                result = self.controller.manage_task(
+                    action="update",
+                    task_id="task-666",
+                    estimated_effort="3 days"
+                )
+                
+                assert result["success"] is True
+                call_kwargs = mock_update.call_args[1]
+                assert call_kwargs.get("estimated_effort") == "3 days"
+
+    def test_due_date_parameter_validation(self):
+        """Test due_date parameter validation."""
+        with patch.object(self.mock_facade, 'create_task') as mock_create:
+            mock_create.return_value = {
+                "success": True,
+                "task": {"id": "task-555"}
+            }
+            
+            with patch('fastmcp.task_management.interface.controllers.task_mcp_controller.validate_user_id') as mock_validate:
+                mock_validate.return_value = "test-user"
+                
+                # Test ISO date format
+                result = self.controller.manage_task(
+                    action="create",
+                    git_branch_id="branch-123",
+                    title="Test Task",
+                    due_date="2024-12-31"
+                )
+                
+                assert result["success"] is True
+                call_kwargs = mock_create.call_args[1]
+                assert call_kwargs.get("due_date") == "2024-12-31"
+
+    def test_force_full_generation_parameter(self):
+        """Test force_full_generation boolean parameter."""
+        with patch.object(self.mock_facade, 'get_next_task') as mock_next:
+            mock_next.return_value = {
+                "success": True,
+                "task": {"id": "task-444"}
+            }
+            
+            with patch('fastmcp.task_management.interface.controllers.task_mcp_controller.validate_user_id') as mock_validate:
+                mock_validate.return_value = "test-user"
+                
+                result = self.controller.manage_task(
+                    action="next",
+                    git_branch_id="branch-123",
+                    force_full_generation="yes"
+                )
+                
+                assert result["success"] is True
+
+    def test_context_staleness_detection(self):
+        """Test context staleness detection in responses."""
+        with patch.object(self.mock_facade, 'get_task') as mock_get:
+            # Simulate task with stale context
+            mock_get.return_value = {
+                "success": True,
+                "task": {
+                    "id": "task-333",
+                    "title": "Test Task",
+                    "context_metadata": {
+                        "last_updated": "2024-01-01T00:00:00Z",
+                        "staleness_days": 30
+                    }
+                }
+            }
+            
+            with patch('fastmcp.task_management.application.services.response_enrichment_service.ResponseEnrichmentService.enrich_response') as mock_enrich:
+                mock_enrich.return_value = {
+                    "success": True,
+                    "task": mock_get.return_value["task"],
+                    "context_state": {
+                        "is_stale": True,
+                        "staleness_indicator": "⚠️ Context is 30 days old",
+                        "recommendation": "Consider updating context with recent changes"
+                    }
+                }
+                
+                with patch('fastmcp.task_management.interface.controllers.task_mcp_controller.validate_user_id') as mock_validate:
+                    mock_validate.return_value = "test-user"
+                    
+                    result = self.controller.manage_task(
+                        action="get",
+                        task_id="task-333",
+                        include_context=True
+                    )
+                    
+                    assert result["success"] is True
+                    assert result["context_state"]["is_stale"] is True
+                    assert "Context is 30 days old" in result["context_state"]["staleness_indicator"]
 
 
 if __name__ == "__main__":
