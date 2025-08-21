@@ -27,33 +27,43 @@ REQUIRED BEHAVIORS:
 ## Missing Test Files - CREATE IMMEDIATELY:
 
 ## Stale Test Files (Source Newer Than Test)
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/services/project_management_service.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/application/services/project_management_service_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/api_server.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/auth/api_server_test.py`
+  - **Days stale**: 1
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/infrastructure/supabase_auth.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/auth/infrastructure/supabase_auth_test.py`
+  - **Days stale**: 2
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/http_server.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/server/http_server_test.py`
   - **Days stale**: 0
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/use_cases/create_project.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/application/use_cases/create_project_test.py`
-  - **Days stale**: 0
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/user_scoped_project_routes.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/server/routes/user_scoped_project_routes_test.py`
+  - **Days stale**: 1
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/database/models.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/database/models_test.py`
-  - **Days stale**: 0
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/user_scoped_task_routes.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/server/routes/user_scoped_task_routes_test.py`
+  - **Days stale**: 1
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/subtask_mcp_controller.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/subtask_mcp_controller_test.py`
-  - **Days stale**: 0
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/task_mcp_controller.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/task_mcp_controller_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/git_branch_mcp_controller.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/git_branch_mcp_controller_test.py`
   - **Days stale**: 0
 
 
 ## Missing Test Files
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/database/migrations/add_user_id_not_null_constraints.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/database/migrations/add_user_id_not_null_constraints_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/interface/dev_auth.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/auth/interface/dev_auth_test.py`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/desc/task/manage_task_description.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/desc/task/manage_task_description_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/interface/supabase_fastapi_auth.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/auth/interface/supabase_fastapi_auth_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/facades/git_branch_application_facade.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/facades/git_branch_application_facade_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/factories/git_branch_facade_factory.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/factories/git_branch_facade_factory_test.py`
 
 
 ## EXECUTION COMMANDS - DO NOW:

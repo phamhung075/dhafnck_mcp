@@ -126,6 +126,53 @@ class UserRepository:
             logger.error(f"Error getting user by ID: {e}")
             return None
     
+    def find_by_id(self, user_id: str) -> Optional[DomainUser]:
+        """
+        Synchronous method to get user by ID (for compatibility with Supabase auth)
+        
+        Args:
+            user_id: User's unique identifier
+            
+        Returns:
+            User if found, None otherwise
+        """
+        try:
+            db_user = self.session.query(UserModel).filter_by(id=user_id).first()
+            if not db_user:
+                return None
+            
+            # Create domain object directly to avoid any potential database access
+            from ...domain.entities.user import User as DomainUser, UserStatus, UserRole
+            
+            return DomainUser(
+                id=str(db_user.id),
+                email=db_user.email,
+                username=db_user.username,
+                password_hash=db_user.password_hash,
+                full_name=db_user.full_name,
+                status=UserStatus(db_user.status) if isinstance(db_user.status, str) else db_user.status,
+                roles=[UserRole(role) if isinstance(role, str) else role for role in (db_user.roles or [])],
+                email_verified=db_user.email_verified,
+                email_verified_at=db_user.email_verified_at,
+                last_login_at=db_user.last_login_at,
+                failed_login_attempts=db_user.failed_login_attempts or 0,
+                locked_until=db_user.locked_until,
+                password_changed_at=db_user.password_changed_at,
+                password_reset_token=db_user.password_reset_token,
+                password_reset_expires=db_user.password_reset_expires,
+                refresh_token_family=db_user.refresh_token_family,
+                refresh_token_version=db_user.refresh_token_version or 0,
+                created_at=db_user.created_at,
+                updated_at=db_user.updated_at,
+                created_by=db_user.created_by,
+                project_ids=db_user.project_ids or [],
+                default_project_id=db_user.default_project_id,
+                metadata=db_user.metadata or {}
+            )
+        except Exception as e:
+            logger.error(f"Error finding user by ID: {e}")
+            return None
+    
     async def get_by_email(self, email: str) -> Optional[DomainUser]:
         """
         Get user by email

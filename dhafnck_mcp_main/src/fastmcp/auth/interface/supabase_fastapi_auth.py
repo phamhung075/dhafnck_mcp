@@ -85,20 +85,28 @@ async def get_current_user_supabase(
             email = supabase_user.email if hasattr(supabase_user, 'email') else supabase_user.get('email')
             user_metadata = supabase_user.user_metadata if hasattr(supabase_user, 'user_metadata') else supabase_user.get('user_metadata', {})
             
-            user = User(
+            from ..domain.entities.user import UserStatus, UserRole
+            from ..infrastructure.database.models import User as UserModel
+            
+            # Create domain user
+            domain_user = User(
                 id=user_id,
                 email=email,
                 username=user_metadata.get('username', email.split('@')[0] if email else 'user'),
                 full_name=user_metadata.get('full_name', ''),
-                is_active=True,
-                is_superuser=False,
-                hashed_password=""  # No password stored for Supabase users
+                password_hash="",  # No password stored for Supabase users
+                status=UserStatus.ACTIVE,
+                roles=[UserRole.USER],
+                email_verified=True  # Supabase users are verified through Supabase
             )
             
-            # Save the user
-            db.add(user)
+            # Convert to database model and save
+            db_user = UserModel.from_domain(domain_user)
+            db.add(db_user)
             db.commit()
-            db.refresh(user)
+            
+            # Convert back to domain entity
+            user = db_user.to_domain()
             
             logger.info(f"Created local user from Supabase auth: {user.email}")
         
