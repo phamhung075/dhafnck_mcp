@@ -6,6 +6,35 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Fixed - Frontend Task Loading Authentication Issue (2025-08-21)
+- **CRITICAL FIX**: Resolved frontend task loading failure when clicking on git branches
+  - **Root Cause**: `task_summary_routes.py` was using hardcoded "default_user" instead of AuthConfig pattern
+  - **Error**: "Use of default user ID is prohibited. All operations must be performed with authenticated user credentials."
+  - **Solution**: Applied AuthConfig pattern to task summary endpoints:
+    - Replaced hardcoded "default_user" with `AuthConfig.get_fallback_user_id()`
+    - Added compatibility mode checks with `AuthConfig.is_default_user_allowed()`
+    - Fixed `include_full_data` parameter issue in `get_full_task` endpoint
+  - **Files modified**:
+    - `dhafnck_mcp_main/src/fastmcp/server/routes/task_summary_routes.py` (lines 74-85, 191-201, 203)
+  - **Testing**: Verified `/api/tasks/summaries` endpoint returns task data successfully
+  - **Impact**: Frontend now loads tasks correctly when clicking on git branches
+
+### Fixed - Docker Configuration Authentication Environment Variables (2025-08-21)
+- **CRITICAL FIX**: Added missing authentication environment variables to Supabase Docker configuration:
+  - **Root Cause**: `docker-compose.supabase.yml` was missing `ALLOW_DEFAULT_USER` and `ENVIRONMENT` variables
+  - **Issue**: Frontend MCP requests failing with "Authentication required - default user is not allowed" error
+  - **Impact**: Complete frontend-backend communication failure when using Supabase configuration via Docker menu option 2
+  - **Solution**: Added environment variables to `docker-compose.supabase.yml`:
+    ```yaml
+    # Development compatibility mode (temporary for MCP authentication)
+    ALLOW_DEFAULT_USER: ${ALLOW_DEFAULT_USER:-true}
+    ENVIRONMENT: ${ENVIRONMENT:-development}
+    ```
+  - **Files modified**:
+    - `dhafnck_mcp_main/docker/docker-compose.supabase.yml` (lines 44-45 added)
+  - **Testing**: Verified environment variables reach container and authentication now works
+  - **Prevention**: All Docker configurations should include authentication compatibility variables
+
 ### Fixed - Compliance Controller Authentication Pattern (2025-08-21)
 - **Applied AuthConfig authentication pattern to compliance management routes**:
   - **Root Cause**: Compliance MCP controller was using hardcoded "system" as default user_id

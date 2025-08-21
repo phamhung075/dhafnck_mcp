@@ -150,13 +150,17 @@ class TestDatabaseModels:
     def test_api_token_unique_hash_constraint(self, session):
         """Test APIToken token_hash uniqueness constraint."""
         from sqlalchemy.exc import IntegrityError
+        from datetime import datetime, timedelta
+        
+        expires_at = datetime.utcnow() + timedelta(days=30)
         
         # Create first token
         token1 = APIToken(
             id=str(uuid4()),
             user_id="test-user-999",
             name="Token 1",
-            token_hash="unique_hash_123"
+            token_hash="unique_hash_123",
+            expires_at=expires_at
         )
         session.add(token1)
         session.commit()
@@ -166,7 +170,8 @@ class TestDatabaseModels:
             id=str(uuid4()),
             user_id="test-user-999",
             name="Token 2",
-            token_hash="unique_hash_123"  # Same hash
+            token_hash="unique_hash_123",  # Same hash
+            expires_at=expires_at
         )
         session.add(token2)
         
@@ -177,13 +182,18 @@ class TestDatabaseModels:
     
     def test_api_token_deactivation(self, session):
         """Test APIToken deactivation behavior."""
+        from datetime import datetime, timedelta
+        
+        expires_at = datetime.utcnow() + timedelta(days=30)
+        
         # Create active token
         token = APIToken(
             id=str(uuid4()),
             user_id="test-user-888",
             name="Active Token",
             token_hash="active_token_hash",
-            is_active=True
+            is_active=True,
+            expires_at=expires_at
         )
         session.add(token)
         session.commit()
@@ -221,11 +231,10 @@ class TestDatabaseModels:
             description="For task test",
             user_id="test-user-777"
         )
-        branch = GitBranch(
+        branch = ProjectGitBranch(
             id=str(uuid4()),
             project_id=project.id,
-            git_branch_name="main",
-            user_id="test-user-777"
+            name="main"
         )
         session.add_all([project, branch])
         session.commit()
@@ -502,16 +511,14 @@ class TestDatabaseModels:
             id=str(uuid4()),
             branch_id=str(uuid4()),
             parent_project_id=project_ctx.id,
-            data={"branch": "data"},
-            user_id="test-user-123"
+            data={"branch": "data"}
         )
         
         task_ctx = TaskContext(
             id=str(uuid4()),
             task_id=str(uuid4()),
             parent_branch_context_id=branch_ctx.id,
-            data={"task": "data"},
-            user_id="test-user-123"
+            data={"task": "data"}
         )
         
         session.add_all([global_ctx, project_ctx, branch_ctx, task_ctx])
@@ -586,7 +593,8 @@ class TestDatabaseModels:
             id=str(uuid4()),
             title="Test Task",
             description="Test",
-            git_branch_id=branch.id
+            git_branch_id=branch.id,
+            user_id="test-user-123"
         )
         
         session.add_all([project, branch, task])
@@ -609,7 +617,8 @@ class TestDatabaseModels:
             id=str(uuid4()),
             title="Test Task",
             description="Test",
-            git_branch_id=branch.id
+            git_branch_id=branch.id,
+            user_id="test-user-123"
         )
         
         # Create duplicate assignee
@@ -662,7 +671,8 @@ class TestDatabaseModels:
         # Test ProjectContext with minimal fields
         project_ctx = ProjectContext(
             id=str(uuid4()),
-            data={"test": "data"}
+            data={"test": "data"},
+            user_id="test-user-123"
         )
         
         session.add(project_ctx)
@@ -684,7 +694,8 @@ class TestDatabaseModels:
             id=str(uuid4()),
             title="Test Task",
             description="Test",
-            git_branch_id=branch.id
+            git_branch_id=branch.id,
+            user_id="test-user-123"
         )
         
         subtask = TaskSubtask(
@@ -775,6 +786,7 @@ class TestDatabaseModels:
             capabilities=["CODE_GENERATION", "TESTING", "DEBUGGING"],
             status="busy",
             availability_score=0.3,
+            user_id="test-user-123",
             model_metadata={
                 "version": "2.0",
                 "features": ["async", "parallel"],

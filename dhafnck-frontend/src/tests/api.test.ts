@@ -1,5 +1,6 @@
 import * as api from '../api';
 import * as apiV2 from '../services/apiV2';
+import Cookies from 'js-cookie';
 
 // Mock services/apiV2
 jest.mock('../services/apiV2', () => ({
@@ -11,12 +12,25 @@ jest.mock('../services/apiV2', () => ({
     completeTask: jest.fn()
   },
   projectApiV2: {
-    getProjects: jest.fn()
+    getProjects: jest.fn(),
+    createProject: jest.fn(),
+    updateProject: jest.fn(),
+    deleteProject: jest.fn()
   },
   agentApiV2: {
-    getAgents: jest.fn()
+    getAgents: jest.fn(),
+    createAgent: jest.fn(),
+    updateAgent: jest.fn(),
+    deleteAgent: jest.fn()
   },
   isAuthenticated: jest.fn()
+}));
+
+// Mock js-cookie
+jest.mock('js-cookie', () => ({
+  get: jest.fn(),
+  set: jest.fn(),
+  remove: jest.fn()
 }));
 
 // Mock fetch globally
@@ -962,6 +976,99 @@ describe('api.ts', () => {
       });
     });
 
+    describe('createProject', () => {
+      const newProject = {
+        name: 'New Project',
+        description: 'A new test project'
+      };
+
+      it('should create project successfully', async () => {
+        const mockResponse = {
+          result: {
+            content: [{
+              text: JSON.stringify({
+                success: true,
+                data: {
+                  project: { id: 'proj-123', ...newProject, git_branchs: {} }
+                }
+              })
+            }]
+          }
+        };
+        (global.fetch as any).mockResolvedValue({
+          json: jest.fn().mockResolvedValue(mockResponse)
+        });
+
+        const result = await api.createProject(newProject);
+
+        expect(result).toMatchObject(newProject);
+        expect(result?.id).toBe('proj-123');
+        const fetchCall = (global.fetch as any).mock.calls[0];
+        const body = JSON.parse(fetchCall[1].body);
+        expect(body.params.arguments).toMatchObject({
+          action: 'create',
+          ...newProject
+        });
+      });
+
+      it('should return null on failure', async () => {
+        const mockResponse = {
+          result: {
+            content: [{
+              text: JSON.stringify({
+                success: false,
+                error: 'Project name already exists'
+              })
+            }]
+          }
+        };
+        (global.fetch as any).mockResolvedValue({
+          json: jest.fn().mockResolvedValue(mockResponse)
+        });
+
+        const result = await api.createProject(newProject);
+
+        expect(result).toBeNull();
+      });
+    });
+
+    describe('updateProject', () => {
+      const projectId = 'proj-123';
+      const updates = {
+        name: 'Updated Project Name',
+        description: 'Updated description'
+      };
+
+      it('should update project successfully', async () => {
+        const mockResponse = {
+          result: {
+            content: [{
+              text: JSON.stringify({
+                success: true,
+                data: {
+                  project: { id: projectId, ...updates }
+                }
+              })
+            }]
+          }
+        };
+        (global.fetch as any).mockResolvedValue({
+          json: jest.fn().mockResolvedValue(mockResponse)
+        });
+
+        const result = await api.updateProject(projectId, updates);
+
+        expect(result).toMatchObject({ id: projectId, ...updates });
+        const fetchCall = (global.fetch as any).mock.calls[0];
+        const body = JSON.parse(fetchCall[1].body);
+        expect(body.params.arguments).toMatchObject({
+          action: 'update',
+          project_id: projectId,
+          ...updates
+        });
+      });
+    });
+
     describe('deleteProject', () => {
       const projectId = 'proj-123';
 
@@ -1039,6 +1146,59 @@ describe('api.ts', () => {
     const projectId = 'proj-123';
     const branchName = 'feature-auth';
     const description = 'Authentication feature branch';
+
+    describe('listGitBranches', () => {
+      it('should list branches for a project', async () => {
+        const mockBranches = [
+          { id: 'branch-1', name: 'main', description: 'Main branch' },
+          { id: 'branch-2', name: 'feature', description: 'Feature branch' }
+        ];
+        const mockResponse = {
+          result: {
+            content: [{
+              text: JSON.stringify({
+                success: true,
+                data: {
+                  git_branchs: mockBranches
+                }
+              })
+            }]
+          }
+        };
+        (global.fetch as any).mockResolvedValue({
+          json: jest.fn().mockResolvedValue(mockResponse)
+        });
+
+        const result = await api.listGitBranches(projectId);
+
+        expect(result).toEqual(mockBranches);
+        const fetchCall = (global.fetch as any).mock.calls[0];
+        const body = JSON.parse(fetchCall[1].body);
+        expect(body.params.arguments).toMatchObject({
+          action: 'list',
+          project_id: projectId
+        });
+      });
+
+      it('should return empty array on failure', async () => {
+        const mockResponse = {
+          result: {
+            content: [{
+              text: JSON.stringify({
+                success: false
+              })
+            }]
+          }
+        };
+        (global.fetch as any).mockResolvedValue({
+          json: jest.fn().mockResolvedValue(mockResponse)
+        });
+
+        const result = await api.listGitBranches(projectId);
+
+        expect(result).toEqual([]);
+      });
+    });
 
     describe('createBranch', () => {
       it('should create branch with git-friendly name', async () => {
@@ -1122,6 +1282,56 @@ describe('api.ts', () => {
   });
 
   describe('Agent Management', () => {
+    const projectId = 'proj-123';
+
+    describe('listAgents', () => {
+      it('should list agents for a project', async () => {
+        const mockAgents = [
+          { id: 'agent-1', name: '@coding_agent', project_id: projectId },
+          { id: 'agent-2', name: '@test_agent', project_id: projectId }
+        ];
+        const mockResponse = {
+          result: {
+            content: [{
+              text: JSON.stringify({
+                agents: mockAgents
+              })
+            }]
+          }
+        };
+        (global.fetch as any).mockResolvedValue({
+          json: jest.fn().mockResolvedValue(mockResponse)
+        });
+
+        const result = await api.listAgents(projectId);
+
+        expect(result).toEqual(mockAgents);
+        const fetchCall = (global.fetch as any).mock.calls[0];
+        const body = JSON.parse(fetchCall[1].body);
+        expect(body.params.arguments).toMatchObject({
+          action: 'list',
+          project_id: projectId
+        });
+      });
+
+      it('should return empty array on error', async () => {
+        const mockResponse = {
+          result: {
+            content: [{
+              text: 'invalid json'
+            }]
+          }
+        };
+        (global.fetch as any).mockResolvedValue({
+          json: jest.fn().mockResolvedValue(mockResponse)
+        });
+
+        const result = await api.listAgents(projectId);
+
+        expect(result).toEqual([]);
+      });
+    });
+
     describe('callAgent', () => {
       const agentName = '@test_orchestrator_agent';
 
@@ -1342,6 +1552,525 @@ describe('api.ts', () => {
 
         expect(count).toBe(0);
       });
+    });
+  });
+
+  describe('V2 API Integration', () => {
+    describe('listTasks with V2 API response format', () => {
+      it('should handle V2 response with tasks array directly', async () => {
+        (apiV2.isAuthenticated as any).mockReturnValue(true);
+        const mockTasks = [
+          { id: '1', title: 'Task 1', status: 'todo' },
+          { id: '2', title: 'Task 2', status: 'done' }
+        ];
+        (apiV2.taskApiV2.getTasks as any).mockResolvedValue(mockTasks);
+
+        const result = await api.listTasks();
+
+        expect(result).toEqual(mockTasks);
+      });
+
+      it('should handle V2 response with nested tasks structure', async () => {
+        (apiV2.isAuthenticated as any).mockReturnValue(true);
+        const mockTasks = [
+          { id: '1', title: 'Task 1', status: 'todo' },
+          { id: '2', title: 'Task 2', status: 'done' }
+        ];
+        (apiV2.taskApiV2.getTasks as any).mockResolvedValue({ tasks: mockTasks });
+
+        const result = await api.listTasks();
+
+        expect(result).toEqual(mockTasks);
+      });
+    });
+
+    describe('listProjects with V2 API response format', () => {
+      it('should handle V2 response with projects wrapper', async () => {
+        (apiV2.isAuthenticated as any).mockReturnValue(true);
+        const mockProjects = [
+          { id: '1', name: 'Project 1', git_branchs: {} },
+          { id: '2', name: 'Project 2', git_branchs: {} }
+        ];
+        (apiV2.projectApiV2.getProjects as any).mockResolvedValue({ projects: mockProjects });
+
+        const result = await api.listProjects();
+
+        expect(result).toEqual(mockProjects);
+      });
+    });
+  });
+
+  describe('Error Handling Edge Cases', () => {
+    describe('updateTask error handling', () => {
+      it('should handle error object with message property', async () => {
+        const mockResponse = {
+          result: {
+            content: [{
+              text: JSON.stringify({
+                success: false,
+                error: { message: 'Detailed error message' }
+              })
+            }]
+          }
+        };
+        (global.fetch as any).mockResolvedValue({
+          json: jest.fn().mockResolvedValue(mockResponse)
+        });
+
+        await expect(api.updateTask('123', { title: 'Test' }))
+          .rejects.toThrow('Detailed error message');
+      });
+
+      it('should handle error object without message', async () => {
+        const mockResponse = {
+          result: {
+            content: [{
+              text: JSON.stringify({
+                success: false,
+                error: { code: 'ERROR_CODE' }
+              })
+            }]
+          }
+        };
+        (global.fetch as any).mockResolvedValue({
+          json: jest.fn().mockResolvedValue(mockResponse)
+        });
+
+        await expect(api.updateTask('123', { title: 'Test' }))
+          .rejects.toThrow('{"code":"ERROR_CODE"}');
+      });
+
+      it('should handle response with error property in data', async () => {
+        const mockResponse = {
+          error: {
+            message: 'RPC error'
+          }
+        };
+        (global.fetch as any).mockResolvedValue({
+          json: jest.fn().mockResolvedValue(mockResponse)
+        });
+
+        await expect(api.updateTask('123', { title: 'Test' }))
+          .rejects.toThrow('RPC error');
+      });
+    });
+
+    describe('updateSubtask error handling', () => {
+      it('should handle string error', async () => {
+        const mockResponse = {
+          result: {
+            content: [{
+              text: JSON.stringify({
+                success: false,
+                error: 'Simple error message'
+              })
+            }]
+          }
+        };
+        (global.fetch as any).mockResolvedValue({
+          json: jest.fn().mockResolvedValue(mockResponse)
+        });
+
+        await expect(api.updateSubtask('task-123', 'sub-123', { title: 'Test' }))
+          .rejects.toThrow('Simple error message');
+      });
+
+      it('should handle non-Error exceptions', async () => {
+        const mockResponse = {
+          result: {
+            content: [{
+              text: JSON.stringify({
+                success: false
+              })
+            }]
+          }
+        };
+        (global.fetch as any).mockResolvedValue({
+          json: jest.fn().mockResolvedValue(mockResponse)
+        });
+
+        await expect(api.updateSubtask('task-123', 'sub-123', { title: 'Test' }))
+          .rejects.toThrow('Unexpected response from server');
+      });
+    });
+  });
+
+  describe('Assignee Handling', () => {
+    it('should handle assignees as objects with assignee_id', async () => {
+      const mockResponse = {
+        result: {
+          content: [{
+            text: JSON.stringify({
+              success: true,
+              data: {
+                tasks: [{
+                  id: '1',
+                  title: 'Task 1',
+                  assignees: [
+                    { assignee_id: 'user1' },
+                    { assignee_id: 'user2' }
+                  ]
+                }]
+              }
+            })
+          }]
+        }
+      };
+      (global.fetch as any).mockResolvedValue({
+        json: jest.fn().mockResolvedValue(mockResponse)
+      });
+
+      const result = await api.listTasks();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].assignees).toEqual(['user1', 'user2']);
+    });
+
+    it('should handle assignees as JSON string', async () => {
+      const mockResponse = {
+        result: {
+          content: [{
+            text: JSON.stringify({
+              success: true,
+              data: {
+                tasks: [{
+                  id: '1',
+                  title: 'Task 1',
+                  assignees: '["user1", "user2"]'
+                }]
+              }
+            })
+          }]
+        }
+      };
+      (global.fetch as any).mockResolvedValue({
+        json: jest.fn().mockResolvedValue(mockResponse)
+      });
+
+      const result = await api.listTasks();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].assignees).toEqual(['user1', 'user2']);
+    });
+
+    it('should handle assignees as single string', async () => {
+      const mockResponse = {
+        result: {
+          content: [{
+            text: JSON.stringify({
+              success: true,
+              data: {
+                tasks: [{
+                  id: '1',
+                  title: 'Task 1',
+                  assignees: 'single-user'
+                }]
+              }
+            })
+          }]
+        }
+      };
+      (global.fetch as any).mockResolvedValue({
+        json: jest.fn().mockResolvedValue(mockResponse)
+      });
+
+      const result = await api.listTasks();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].assignees).toEqual(['single-user']);
+    });
+
+    it('should filter out invalid assignee entries', async () => {
+      const mockResponse = {
+        result: {
+          content: [{
+            text: JSON.stringify({
+              success: true,
+              data: {
+                tasks: [{
+                  id: '1',
+                  title: 'Task 1',
+                  assignees: ['user1', null, '[', ']', '', { id: 'user2' }, { invalid: 'object' }]
+                }]
+              }
+            })
+          }]
+        }
+      };
+      (global.fetch as any).mockResolvedValue({
+        json: jest.fn().mockResolvedValue(mockResponse)
+      });
+
+      const result = await api.listTasks();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].assignees).toEqual(['user1', 'user2']);
+    });
+
+    it('should handle empty or invalid assignees', async () => {
+      const mockResponse = {
+        result: {
+          content: [{
+            text: JSON.stringify({
+              success: true,
+              data: {
+                tasks: [{
+                  id: '1',
+                  title: 'Task 1',
+                  assignees: {}
+                }]
+              }
+            })
+          }]
+        }
+      };
+      (global.fetch as any).mockResolvedValue({
+        json: jest.fn().mockResolvedValue(mockResponse)
+      });
+
+      const result = await api.listTasks();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].assignees).toEqual([]);
+    });
+  });
+
+  describe('Subtask ID handling', () => {
+    it('should handle subtasks with value property', async () => {
+      const mockResponse = {
+        result: {
+          content: [{
+            text: JSON.stringify({
+              success: true,
+              data: {
+                tasks: [{
+                  id: '1',
+                  title: 'Task 1',
+                  subtasks: [
+                    { value: 'subtask-uuid-1' },
+                    { value: 'subtask-uuid-2' }
+                  ]
+                }]
+              }
+            })
+          }]
+        }
+      };
+      (global.fetch as any).mockResolvedValue({
+        json: jest.fn().mockResolvedValue(mockResponse)
+      });
+
+      const result = await api.listTasks();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].subtasks).toEqual(['subtask-uuid-1', 'subtask-uuid-2']);
+    });
+
+    it('should filter out null subtask values', async () => {
+      const mockResponse = {
+        result: {
+          content: [{
+            text: JSON.stringify({
+              success: true,
+              data: {
+                tasks: [{
+                  id: '1',
+                  title: 'Task 1',
+                  subtasks: ['sub1', null, { id: 'sub2' }, { value: 'sub3' }, { invalid: 'object' }]
+                }]
+              }
+            })
+          }]
+        }
+      };
+      (global.fetch as any).mockResolvedValue({
+        json: jest.fn().mockResolvedValue(mockResponse)
+      });
+
+      const result = await api.listTasks();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].subtasks).toEqual(['sub1', 'sub2', 'sub3']);
+    });
+  });
+
+  describe('Branch Management Edge Cases', () => {
+    describe('createBranch', () => {
+      it('should handle branch name with spaces and special characters', async () => {
+        const projectId = 'proj-123';
+        const branchName = 'Feature Branch With Spaces!';
+        const expectedName = 'feature-branch-with-spaces!';
+        
+        const mockResponse = {
+          result: {
+            content: [{
+              text: JSON.stringify({
+                success: true,
+                data: {
+                  git_branch: {
+                    id: 'branch-123',
+                    name: expectedName,
+                    description: 'Test'
+                  }
+                }
+              })
+            }]
+          }
+        };
+        (global.fetch as any).mockResolvedValue({
+          json: jest.fn().mockResolvedValue(mockResponse)
+        });
+
+        await api.createBranch(projectId, branchName, 'Test');
+
+        const fetchCall = (global.fetch as any).mock.calls[0];
+        const body = JSON.parse(fetchCall[1].body);
+        expect(body.params.arguments.git_branch_name).toBe(expectedName);
+      });
+
+      it('should handle response with git_branch in root', async () => {
+        const mockResponse = {
+          result: {
+            content: [{
+              text: JSON.stringify({
+                success: true,
+                git_branch: {
+                  id: 'branch-123',
+                  name: 'feature-test'
+                }
+              })
+            }]
+          }
+        };
+        (global.fetch as any).mockResolvedValue({
+          json: jest.fn().mockResolvedValue(mockResponse)
+        });
+
+        const result = await api.createBranch('proj-123', 'Feature Test');
+
+        expect(result).toMatchObject({
+          id: 'branch-123',
+          name: 'feature-test'
+        });
+      });
+    });
+
+    describe('deleteBranch', () => {
+      it('should handle parse errors gracefully', async () => {
+        const mockResponse = {
+          result: {
+            content: [{
+              text: 'invalid json'
+            }]
+          }
+        };
+        (global.fetch as any).mockResolvedValue({
+          json: jest.fn().mockResolvedValue(mockResponse)
+        });
+
+        const result = await api.deleteBranch('proj-123', 'branch-123');
+
+        expect(result).toBe(false);
+      });
+
+      it('should handle missing result content', async () => {
+        const mockResponse = {
+          result: {}
+        };
+        (global.fetch as any).mockResolvedValue({
+          json: jest.fn().mockResolvedValue(mockResponse)
+        });
+
+        const result = await api.deleteBranch('proj-123', 'branch-123');
+
+        expect(result).toBe(false);
+      });
+    });
+  });
+
+  describe('fetchTasks', () => {
+    it('should call listTasks with git_branch_id', async () => {
+      const projectId = 'proj-123';
+      const branchName = 'main';
+      
+      const mockResponse = {
+        result: {
+          content: [{
+            text: JSON.stringify({
+              success: true,
+              data: { tasks: [] }
+            })
+          }]
+        }
+      };
+      (global.fetch as any).mockResolvedValue({
+        json: jest.fn().mockResolvedValue(mockResponse)
+      });
+
+      await api.fetchTasks(projectId, branchName);
+
+      // fetchTasks should call listTasks internally
+      expect(global.fetch).toHaveBeenCalled();
+    });
+  });
+
+  describe('fetchSubtasks', () => {
+    it('should call listSubtasks with task_id', async () => {
+      const projectId = 'proj-123';
+      const branchName = 'main';
+      const taskId = 'task-123';
+      
+      const mockResponse = {
+        result: {
+          content: [{
+            text: JSON.stringify({
+              success: true,
+              data: { subtasks: [] }
+            })
+          }]
+        }
+      };
+      (global.fetch as any).mockResolvedValue({
+        json: jest.fn().mockResolvedValue(mockResponse)
+      });
+
+      const result = await api.fetchSubtasks(projectId, branchName, taskId);
+
+      expect(result).toEqual([]);
+      const fetchCall = (global.fetch as any).mock.calls[0];
+      const body = JSON.parse(fetchCall[1].body);
+      expect(body.params.arguments.task_id).toBe(taskId);
+    });
+  });
+
+  describe('listContexts', () => {
+    it('should list contexts with filters', async () => {
+      const filters = { status: 'active' };
+      const mockResponse = {
+        result: {
+          content: [{
+            text: JSON.stringify({
+              success: true,
+              contexts: [{ id: 'ctx-1' }, { id: 'ctx-2' }]
+            })
+          }]
+        }
+      };
+      (global.fetch as any).mockResolvedValue({
+        json: jest.fn().mockResolvedValue(mockResponse)
+      });
+
+      const result = await api.listContexts('task', filters);
+
+      expect(result).toMatchObject({
+        success: true,
+        contexts: [{ id: 'ctx-1' }, { id: 'ctx-2' }]
+      });
+      
+      const fetchCall = (global.fetch as any).mock.calls[0];
+      const body = JSON.parse(fetchCall[1].body);
+      expect(body.params.arguments.level).toBe('task');
+      expect(body.params.arguments.filters).toEqual(filters);
     });
   });
 });

@@ -97,7 +97,7 @@ async def create_task(
 
 @router.get("/", response_model=dict)
 async def list_tasks(
-    status: Optional[str] = None,
+    task_status: Optional[str] = None,
     priority: Optional[str] = None,
     limit: int = 50,
     current_user: User = Depends(get_current_user),
@@ -118,7 +118,7 @@ async def list_tasks(
         
         # Build request
         list_request = ListTasksRequest(
-            status=status,
+            status=task_status,
             priority=priority,
             limit=limit
         )

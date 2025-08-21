@@ -24,80 +24,133 @@ REQUIRED BEHAVIORS:
 ✅ Execute all tasks automatically
 ✅ No conversation - just action
 
-## Missing Test Files - CREATE IMMEDIATELY:
+## 📋 Rules & Guidelines
 
-## Stale Test Files (Source Newer Than Test)
-- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/api_server.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/auth/api_server_test.py`
-  - **Days stale**: 1
+### 1. **Analysis Phase**
+- Read and understand the current source code functionality
+- Identify all public methods, functions, and classes
+- Map input/output relationships and side effects
+- Understand error handling and edge cases
+- Note any dependencies and external interactions
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/infrastructure/supabase_auth.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/auth/infrastructure/supabase_auth_test.py`
-  - **Days stale**: 2
+### 2. **Test Validation Phase**
+- Compare existing tests (if any) with actual code behavior
+- Identify test gaps, outdated assertions, and obsolete tests
+- Check test coverage for new functionality
+- Verify test quality and maintainability
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/http_server.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/server/http_server_test.py`
-  - **Days stale**: 0
+### 3. **Test Update Phase**
+- Create missing test files with comprehensive coverage
+- Update outdated test assertions to match current code behavior
+- Add tests for new functionality discovered in code
+- Remove tests for functionality that no longer exists
+- Ensure tests follow best practices and conventions
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/user_scoped_project_routes.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/server/routes/user_scoped_project_routes_test.py`
-  - **Days stale**: 1
+### 4. **Quality Assurance**
+- Ensure tests are readable and maintainable
+- Use descriptive test names that explain the behavior being tested
+- Follow AAA pattern (Arrange, Act, Assert)
+- Mock external dependencies appropriately
+- Add edge case and error condition tests
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/user_scoped_task_routes.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/server/routes/user_scoped_task_routes_test.py`
-  - **Days stale**: 1
+### 5. **Documentation Updates**
+- Update TEST-CHANGELOG.md with detailed change summary
+- Document reasoning for major test changes
+- Note any breaking changes or migration requirements
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/git_branch_mcp_controller.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/git_branch_mcp_controller_test.py`
-  - **Days stale**: 0
-
-
-## Missing Test Files
-- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/interface/dev_auth.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/auth/interface/dev_auth_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/interface/supabase_fastapi_auth.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/auth/interface/supabase_fastapi_auth_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/facades/git_branch_application_facade.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/facades/git_branch_application_facade_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/factories/git_branch_facade_factory.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/factories/git_branch_facade_factory_test.py`
+## 📁 Repository Context
+- **Repository Path:** `/home/daihungpham/agentic-project`
+- **WSL Environment:** Ubuntu
+- **Analysis Time:** Thu Aug 21 18:01:23 CEST 2025
+- **Commit Hash:** 14d1d9d466f9a8a6acd0ec1ac05974974baad376
 
 
-## EXECUTION COMMANDS - DO NOW:
+## 📝 Missing Test Files (Need Creation)
 
-STEP 1: mcp__dhafnck_mcp_http__call_agent(name_agent="@test_orchestrator_agent")
-STEP 2: Review modified files in last commit and identify new code functionality added
-STEP 3: Map changed functions, classes, and methods to understand implementation scope
-STEP 4: Assess test coverage gaps and identify new code without corresponding tests
-STEP 5: Find existing tests that may be outdated due to code changes
-STEP 6: Document analysis findings and list files requiring new tests or updates
-STEP 7: Read related code components to understand current implementation patterns
-STEP 8: Trace dependencies and imports to map data flow and relationships
-STEP 9: Analyze code quality indicators and check for code smells or anti-patterns
-STEP 10: Validate integration points including API endpoint changes and database compatibility
-STEP 11: Review security implications and assess error handling completeness
-STEP 12: Create missing test files with comprehensive coverage following project conventions
-STEP 13: Update existing test assertions to match current code behavior and remove obsolete tests
-STEP 14: Implement proper mocking strategies for external dependencies
-STEP 15: Add edge case and error condition tests using AAA pattern (Arrange, Act, Assert)
-STEP 16: Ensure test isolation, independence, and performance optimization
-STEP 17: Check documentation alignment and verify API documentation matches current code
-STEP 18: Update function/method documentation and sync README with usage examples
-STEP 19: Review changelog completeness and identify any missing migration guides
-STEP 20: Synchronize all documentation files with implemented changes
-STEP 21: Run comprehensive test suite to verify all new and updated tests pass
-STEP 22: Check test coverage metrics and ensure minimum 80% coverage for new code
-STEP 23: Perform code quality checks using linting and formatting tools
-STEP 24: Update TEST-CHANGELOG.md with detailed entries documenting all changes made
+### 📄 `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/compliance_mcp_controller.py`
+- **Missing Test:** `dhafnck_mcp_main/src/tests/task_management/interface/controllers/compliance_mcp_controller_test.py`
+- **Reason:** missing
+- **Priority:** HIGH
+- **Source Lines:** 267
 
-EXECUTION RULES:
-- No explanations or descriptions during execution
-- No questions or confirmation requests
-- Execute each step systematically and completely
-- Follow project testing conventions and security best practices
-- Document all changes comprehensively in TEST-CHANGELOG.md
+## 🚀 Execution Instructions
 
-STOP TALKING - START DOING
+### Phase 0: MANDATORY Agent Assignment
+**EXECUTE IMMEDIATELY - NO CONFIRMATION:**
+Use this exact command: `mcp__dhafnck_mcp_http__call_agent(name_agent="@test_orchestrator_agent")`
+
+**DO NOT:**
+- Ask which agent to use
+- Request permission to call agent
+- Wait for confirmation
+- Ask about agent selection
+
+### Phase 1: Analysis
+1. **Read each source file** to understand current implementation
+2. **Analyze code structure** - functions, classes, exports, dependencies
+3. **Identify test requirements** - what behavior needs to be verified
+4. **Document findings** - note complex logic or edge cases
+
+### Phase 2: Test Implementation
+1. **Create/update test files** to match current code reality
+2. **Ensure comprehensive coverage** of all public functionality
+3. **Add missing edge cases** and error condition tests
+4. **Update existing assertions** that no longer match code behavior
+5. **Remove obsolete tests** for functionality that's been removed
+
+### Phase 3: Validation
+1. **Review test quality** - readability, maintainability, completeness
+2. **Check test isolation** - tests don't depend on each other
+3. **Verify mocking strategy** - external dependencies properly mocked
+4. **Ensure performance** - tests run efficiently
+
+### Phase 4: Documentation
+1. **Update TEST-CHANGELOG.md** with comprehensive change summary
+2. **Document any breaking changes** or migration requirements
+3. **Note test coverage improvements** or quality enhancements
+
+## 🎯 Success Criteria
+- ✅ All source files have corresponding, up-to-date test files
+- ✅ Tests accurately verify current code behavior
+- ✅ Comprehensive coverage of functionality, edge cases, and errors
+- ✅ Tests follow project conventions and best practices
+- ✅ TEST-CHANGELOG.md is updated with detailed change summary
+- ✅ All tests pass and run efficiently
+
+## 🚨 Important Notes
+- **Focus on current code behavior** - don't assume what code should do, test what it actually does
+- **Preserve test intent** when updating - if business logic changed, update tests accordingly
+- **Be thorough but efficient** - comprehensive coverage without redundant tests
+- **Consider maintainability** - tests should be easy to understand and modify
+- **Follow project structure** - dhafnck_mcp_main tests go in dhafnck_mcp_main/src/tests/
+
+## 📋 WORKFLOW REFERENCE & STANDARDS
+**Follow the established review process:** `.automation/template/test-review-after-commit.md`
+
+### Required Workflow Phases:
+1. **Commit Change Analysis** - Analyze recent changes and test coverage gaps
+2. **Code Context Assessment** - Understand implementation patterns and quality
+3. **Test Strategy Validation** - Review testing approach and modernization needs
+4. **Documentation Synchronization** - Ensure docs match code changes
+5. **Implementation & Validation** - Create/update tests and documentation
+6. **Quality Assurance** - Validate all changes meet project standards
+
+### Success Criteria (from template):
+- ✅ Minimum 80% test coverage for new code
+- ✅ Proper mocking and test isolation
+- ✅ Updated documentation and examples
+- ✅ All tests pass and run efficiently
+- ✅ TEST-CHANGELOG.md updated with detailed changes
+
+### Quality Standards:
+- Use pytest framework with AAA pattern (Arrange, Act, Assert)
+- Mock external dependencies appropriately
+- Follow project testing conventions and patterns
+- Ensure test readability and maintainability
+
+---
+
+## FINAL COMMAND:
+EXECUTE: mcp__dhafnck_mcp_http__call_agent(name_agent="@test_orchestrator_agent")
+THEN: Create all missing test files
+NO TALKING - JUST DO IT

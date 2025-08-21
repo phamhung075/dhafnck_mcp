@@ -107,12 +107,13 @@ class TestTaskApplicationFacadeCreateTask:
                         facade = TaskApplicationFacade(task_repository=mock_task_repository)
                         return facade
     
+    @patch('fastmcp.task_management.application.facades.task_application_facade.get_current_user_id')
     @patch('fastmcp.task_management.application.facades.task_application_facade.AuthConfig')
-    def test_create_task_success(self, mock_auth_config, facade):
+    def test_create_task_success(self, mock_auth_config, mock_get_user_id, facade):
         """Test successful task creation"""
         # Mock authentication
-        mock_auth_config.is_default_user_allowed.return_value = True
-        mock_auth_config.get_fallback_user_id.return_value = "default_user"
+        mock_get_user_id.return_value = "test-user-123"
+        mock_auth_config.is_default_user_allowed.return_value = False
         
         # Mock use case response
         mock_response = Mock()
@@ -140,8 +141,11 @@ class TestTaskApplicationFacadeCreateTask:
         assert "task" in result
         assert result["message"] == "Task created successfully"
     
-    def test_create_task_validation_error(self, facade):
+    @patch('fastmcp.task_management.application.facades.task_application_facade.get_current_user_id')
+    def test_create_task_validation_error(self, mock_get_user_id, facade):
         """Test task creation with validation error"""
+        mock_get_user_id.return_value = "test-user-123"
+        
         request = CreateTaskRequest(
             title="",  # Empty title should fail validation
             description="Test Description",
@@ -154,8 +158,11 @@ class TestTaskApplicationFacadeCreateTask:
         assert result["action"] == "create"
         assert "title is required" in result["error"]
     
-    def test_create_task_title_too_long(self, facade):
+    @patch('fastmcp.task_management.application.facades.task_application_facade.get_current_user_id')
+    def test_create_task_title_too_long(self, mock_get_user_id, facade):
         """Test task creation with title too long"""
+        mock_get_user_id.return_value = "test-user-123"
+        
         request = CreateTaskRequest(
             title="x" * 201,  # Title too long
             description="Test Description",
@@ -167,6 +174,42 @@ class TestTaskApplicationFacadeCreateTask:
         assert result["success"] is False
         assert result["action"] == "create"
         assert "cannot exceed 200 characters" in result["error"]
+    
+    @patch('fastmcp.task_management.application.facades.task_application_facade.get_current_user_id')
+    @patch('fastmcp.task_management.application.facades.task_application_facade.AuthConfig')
+    def test_create_task_compatibility_mode(self, mock_auth_config, mock_get_user_id, facade):
+        """Test task creation in compatibility mode"""
+        # Mock authentication failure with compatibility mode fallback
+        from fastmcp.task_management.domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
+        mock_get_user_id.side_effect = UserAuthenticationRequiredError("Authentication required")
+        mock_auth_config.is_default_user_allowed.return_value = True
+        mock_auth_config.get_fallback_user_id.return_value = "compatibility-default-user"
+        
+        # Mock use case response
+        mock_response = Mock()
+        mock_response.success = True
+        mock_response.task = Mock()
+        mock_response.task.id = "task-123"
+        mock_response.message = "Task created successfully"
+        
+        facade._create_task_use_case.execute.return_value = mock_response
+        
+        # Mock context sync service
+        mock_sync_response = Mock()
+        facade._task_context_sync_service.sync_context_and_get_task = AsyncMock(return_value=mock_sync_response)
+        
+        request = CreateTaskRequest(
+            title="Test Task",
+            description="Test Description",
+            git_branch_id="branch-123"
+        )
+        
+        result = facade.create_task(request)
+        
+        assert result["success"] is True
+        assert result["action"] == "create"
+        assert "task" in result
+        assert result["message"] == "Task created successfully"
 
 
 class TestTaskApplicationFacadeUpdateTask:
@@ -494,8 +537,14 @@ class TestTaskApplicationFacadeGetNextTask:
                     return facade
     
     @pytest.mark.asyncio
-    async def test_get_next_task_success(self, facade):
+    @patch('fastmcp.task_management.application.facades.task_application_facade.get_current_user_id')
+    @patch('fastmcp.task_management.application.facades.task_application_facade.AuthConfig')
+    async def test_get_next_task_success(self, mock_auth_config, mock_get_user_id, facade):
         """Test successful next task retrieval"""
+        # Mock authentication
+        mock_get_user_id.return_value = "test-user-123"
+        mock_auth_config.is_default_user_allowed.return_value = False
+        
         mock_response = Mock()
         mock_response.has_next = True
         mock_response.next_item = {"id": "task-123", "title": "Next Task"}
@@ -613,11 +662,12 @@ class TestTaskApplicationFacadeContextDerivation:
         with patch('fastmcp.task_management.application.facades.task_application_facade.UnifiedContextFacadeFactory'):
             with patch('fastmcp.task_management.application.facades.task_application_facade.TaskContextRepository'):
                 with patch('fastmcp.task_management.application.facades.task_application_facade.get_db_config'):
-                    facade = TaskApplicationFacade(
-                        task_repository=mock_task_repository,
-                        git_branch_repository=mock_git_branch_repository
-                    )
-                    return facade
+                    with patch('fastmcp.task_management.application.facades.task_application_facade.TaskContextSyncService'):
+                        facade = TaskApplicationFacade(
+                            task_repository=mock_task_repository,
+                            git_branch_repository=mock_git_branch_repository
+                        )
+                        return facade
     
     @pytest.mark.asyncio
     async def test_derive_context_from_git_branch_id_success(self, facade, mock_git_branch_repository):

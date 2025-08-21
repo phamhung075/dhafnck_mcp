@@ -34,6 +34,10 @@ services:
       DHAFNCK_AUTH_ENABLED: true
       DHAFNCK_MVP_MODE: false
       SUPABASE_URL: ""
+      
+      # Development compatibility mode (temporary)
+      ALLOW_DEFAULT_USER: true
+      ENVIRONMENT: development
       SUPABASE_ANON_KEY: ""
       DHAFNCK_TOKEN: ""
       FASTMCP_TRANSPORT: streamable-http

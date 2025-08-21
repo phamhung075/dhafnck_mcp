@@ -41,6 +41,9 @@ class TestDomainConstants:
         assert len(PROHIBITED_DEFAULT_IDS) >= 7
         assert 'default_id' in PROHIBITED_DEFAULT_IDS
         assert '00000000-0000-0000-0000-000000000000' in PROHIBITED_DEFAULT_IDS
+        
+        # Verify that compatibility-default-user is NOT in the prohibited list
+        assert 'compatibility-default-user' not in PROHIBITED_DEFAULT_IDS
     
     def test_validate_user_id_valid_inputs(self):
         """Test validate_user_id with valid user IDs."""
@@ -52,7 +55,8 @@ class TestDomainConstants:
             "user_name",
             "User.Name",
             "valid-user-id",
-            "a" * 50  # Long but valid
+            "a" * 50,  # Long but valid
+            "compatibility-default-user"  # Compatibility mode user is allowed
         ]
         
         for user_id in valid_user_ids:
@@ -317,3 +321,24 @@ class TestDomainConstants:
         for user_id in mixed_case_ids:
             result = validate_user_id(user_id, "Case test")
             assert result == user_id  # Original case should be preserved
+    
+    def test_compatibility_mode_user_allowed(self):
+        """Test that compatibility-default-user is allowed for migration purposes."""
+        compatibility_user = "compatibility-default-user"
+        
+        # Should pass validation
+        result = validate_user_id(compatibility_user, "Compatibility test")
+        assert result == compatibility_user
+        
+        # Also test with require_authenticated_user
+        result2 = require_authenticated_user(compatibility_user, "Compatibility test")
+        assert result2 == compatibility_user
+    
+    def test_compatibility_user_not_in_prohibited_list(self):
+        """Test that compatibility-default-user is explicitly not prohibited."""
+        # The compatibility user should NOT be in the prohibited list
+        assert "compatibility-default-user" not in PROHIBITED_DEFAULT_IDS
+        
+        # But other default-like names should still be prohibited
+        assert "default_user" in PROHIBITED_DEFAULT_IDS
+        assert "default" in PROHIBITED_DEFAULT_IDS

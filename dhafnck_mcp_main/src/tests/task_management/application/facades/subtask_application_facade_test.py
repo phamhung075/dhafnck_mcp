@@ -433,15 +433,17 @@ class TestSubtaskApplicationFacadeContextDerivation:
         mock_system_repo.find_by_id.return_value = None
         mock_task_repository_factory.create_system_repository.return_value = mock_system_repo
         
-        with patch('fastmcp.task_management.application.facades.subtask_application_facade.AuthConfig') as mock_auth_config:
-            mock_auth_config.is_default_user_allowed.return_value = True
-            mock_auth_config.get_fallback_user_id.return_value = "default_user"
-            
-            result = facade._derive_context_from_task("nonexistent-task")
-            
-            assert result["project_id"] == "default_project"
-            assert result["git_branch_name"] == "main"
-            assert result["user_id"] == "default_user"
+        with patch('fastmcp.task_management.application.facades.subtask_application_facade.get_authenticated_user_id') as mock_get_user:
+            with patch('fastmcp.task_management.application.facades.subtask_application_facade.AuthConfig') as mock_auth_config:
+                mock_get_user.side_effect = UserAuthenticationRequiredError("Authentication required")
+                mock_auth_config.is_default_user_allowed.return_value = True
+                mock_auth_config.get_fallback_user_id.return_value = "compatibility-default-user"
+                
+                result = facade._derive_context_from_task("nonexistent-task")
+                
+                assert result["project_id"] == "default_project"
+                assert result["git_branch_name"] == "main"
+                assert result["user_id"] == "compatibility-default-user"
     
     def test_derive_context_from_git_branch_id_success(self, facade):
         """Test successful context derivation from git branch ID"""
@@ -476,23 +478,85 @@ class TestSubtaskApplicationFacadeContextDerivation:
                 mock_connect.return_value.__enter__.return_value = mock_conn
                 mock_conn.execute.return_value.fetchone.return_value = None
                 
-                with patch('fastmcp.task_management.application.facades.subtask_application_facade.AuthConfig') as mock_auth_config:
-                    mock_auth_config.is_default_user_allowed.return_value = True
-                    mock_auth_config.get_fallback_user_id.return_value = "default_user"
-                    
-                    result = facade._derive_context_from_git_branch_id("nonexistent-branch")
-                    
-                    assert result["project_id"] == "default_project"
-                    assert result["git_branch_name"] == "main"
-                    assert result["user_id"] == "default_user"
+                with patch('fastmcp.task_management.application.facades.subtask_application_facade.get_authenticated_user_id') as mock_get_user:
+                    with patch('fastmcp.task_management.application.facades.subtask_application_facade.AuthConfig') as mock_auth_config:
+                        mock_get_user.side_effect = UserAuthenticationRequiredError("Authentication required")
+                        mock_auth_config.is_default_user_allowed.return_value = True
+                        mock_auth_config.get_fallback_user_id.return_value = "compatibility-default-user"
+                        
+                        result = facade._derive_context_from_git_branch_id("nonexistent-branch")
+                        
+                        assert result["project_id"] == "default_project"
+                        assert result["git_branch_name"] == "main"
+                        assert result["user_id"] == "compatibility-default-user"
     
-    def test_authentication_required_when_default_not_allowed(self, facade):
+    def test_authentication_required_when_default_not_allowed(self, facade, mock_task_repository_factory):
         """Test that authentication error is raised when default user not allowed"""
-        with patch('fastmcp.task_management.application.facades.subtask_application_facade.AuthConfig') as mock_auth_config:
-            mock_auth_config.is_default_user_allowed.return_value = False
+        # Mock task not found
+        mock_system_repo = Mock()
+        mock_system_repo.find_by_id.return_value = None
+        mock_task_repository_factory.create_system_repository.return_value = mock_system_repo
+        
+        with patch('fastmcp.task_management.application.facades.subtask_application_facade.get_authenticated_user_id') as mock_get_user:
+            mock_get_user.side_effect = UserAuthenticationRequiredError("Authentication required")
             
-            with pytest.raises(UserAuthenticationRequiredError):
-                facade._derive_context_from_task("task-123")
+            with patch('fastmcp.task_management.application.facades.subtask_application_facade.AuthConfig') as mock_auth_config:
+                mock_auth_config.is_default_user_allowed.return_value = False
+                
+                with patch('os.getenv') as mock_getenv:
+                    mock_getenv.return_value = 'production'  # Not development
+                    
+                    with pytest.raises(UserAuthenticationRequiredError):
+                        facade._derive_context_from_task("task-123")
+    
+    def test_authentication_fallback_in_development(self, facade, mock_task_repository_factory):
+        """Test authentication fallback to compatibility mode in development"""
+        # Mock task not found
+        mock_system_repo = Mock()
+        mock_system_repo.find_by_id.return_value = None
+        mock_task_repository_factory.create_system_repository.return_value = mock_system_repo
+        
+        with patch('fastmcp.task_management.application.facades.subtask_application_facade.get_authenticated_user_id') as mock_get_user:
+            mock_get_user.side_effect = UserAuthenticationRequiredError("Authentication required")
+            
+            with patch('fastmcp.task_management.application.facades.subtask_application_facade.AuthConfig') as mock_auth_config:
+                mock_auth_config.is_default_user_allowed.return_value = False
+                mock_auth_config.log_authentication_bypass = Mock()
+                
+                with patch('os.getenv') as mock_getenv:
+                    mock_getenv.return_value = 'development'  # Development environment
+                    
+                    result = facade._derive_context_from_task("task-123")
+                    
+                    assert result["user_id"] == "compatibility-default-user"
+                    mock_auth_config.log_authentication_bypass.assert_called_with(
+                        "Subtask context derivation", "forced compatibility mode"
+                    )
+    
+    def test_derive_context_from_git_branch_authentication_handling(self, facade):
+        """Test authentication handling in derive_context_from_git_branch_id"""
+        with patch('fastmcp.task_management.application.facades.subtask_application_facade.get_database_path') as mock_get_db_path:
+            with patch('sqlite3.connect') as mock_connect:
+                mock_get_db_path.return_value = "/test/db.sqlite"
+                
+                mock_conn = Mock()
+                mock_connect.return_value.__enter__.return_value = mock_conn
+                mock_conn.execute.return_value.fetchone.return_value = None  # Branch not found
+                
+                with patch('fastmcp.task_management.application.facades.subtask_application_facade.get_authenticated_user_id') as mock_get_user:
+                    mock_get_user.side_effect = UserAuthenticationRequiredError("Authentication required")
+                    
+                    with patch('fastmcp.task_management.application.facades.subtask_application_facade.AuthConfig') as mock_auth_config:
+                        mock_auth_config.is_default_user_allowed.return_value = True
+                        mock_auth_config.get_fallback_user_id.return_value = "compatibility-default-user"
+                        mock_auth_config.log_authentication_bypass = Mock()
+                        
+                        result = facade._derive_context_from_git_branch_id("branch-123")
+                        
+                        assert result["user_id"] == "compatibility-default-user"
+                        mock_auth_config.log_authentication_bypass.assert_called_with(
+                            "Subtask context derivation", "compatibility mode"
+                        )
 
 
 class TestSubtaskApplicationFacadeRepositorySelection:

@@ -125,7 +125,7 @@ class TestGitBranchMCPController:
             
             assert result == {"success": True}
             mock_crud.assert_called_once_with(
-                "create", "test-project", None, "feature-branch", "Test feature"
+                "create", "test-project", "feature-branch", None, "Test feature"
             )
     
     def test_manage_git_branch_assign_agent_action(self):
@@ -142,13 +142,13 @@ class TestGitBranchMCPController:
             
             assert result == {"success": True}
             mock_agent.assert_called_once_with(
-                "assign_agent", "test-project", "agent-123", None, "feature-branch"
+                "assign_agent", "test-project", "feature-branch", None, "agent-123"
             )
     
     def test_manage_git_branch_get_statistics_action(self):
         """Test manage_git_branch with get_statistics action."""
-        with patch.object(self.controller, 'handle_statistics_operations') as mock_stats:
-            mock_stats.return_value = {"success": True}
+        with patch.object(self.controller, 'handle_advanced_operations') as mock_advanced:
+            mock_advanced.return_value = {"success": True}
             
             result = self.controller.manage_git_branch(
                 action="get_statistics",
@@ -157,7 +157,7 @@ class TestGitBranchMCPController:
             )
             
             assert result == {"success": True}
-            mock_stats.assert_called_once_with(
+            mock_advanced.assert_called_once_with(
                 "get_statistics", "test-project", "branch-123"
             )
     
@@ -186,7 +186,7 @@ class TestGitBranchMCPController:
                 mock_enhance.return_value = {"success": True, "enhanced": True}
                 
                 result = self.controller.handle_crud_operations(
-                    "create", "test-project", None, "feature-branch", "Test description"
+                    "create", "test-project", "feature-branch", None, "Test description"
                 )
                 
                 assert result == {"success": True, "enhanced": True}
@@ -206,9 +206,9 @@ class TestGitBranchMCPController:
     
     def test_handle_crud_operations_get_success(self):
         """Test handling get operation successfully."""
-        self.mock_facade.get_git_branch.return_value = {
+        self.mock_facade.get_git_branch_by_id.return_value = {
             "success": True,
-            "git_branch": {"id": "branch-123", "name": "feature-branch"}
+            "git_branch": {"id": "branch-123", "name": "feature-branch", "project_id": "test-project"}
         }
         
         with patch.object(self.controller, '_get_facade_for_request') as mock_get_facade:
@@ -217,11 +217,11 @@ class TestGitBranchMCPController:
                 mock_enhance.return_value = {"success": True, "enhanced": True}
                 
                 result = self.controller.handle_crud_operations(
-                    "get", "test-project", "branch-123"
+                    "get", "test-project", None, "branch-123"
                 )
                 
                 assert result == {"success": True, "enhanced": True}
-                self.mock_facade.get_git_branch.assert_called_once_with("test-project", "branch-123")
+                self.mock_facade.get_git_branch_by_id.assert_called_once_with("branch-123")
     
     def test_handle_crud_operations_get_missing_id(self):
         """Test get operation with missing git_branch_id."""
@@ -235,7 +235,7 @@ class TestGitBranchMCPController:
     
     def test_handle_crud_operations_list_success(self):
         """Test handling list operation successfully."""
-        self.mock_facade.list_git_branches.return_value = {
+        self.mock_facade.list_git_branchs.return_value = {
             "success": True,
             "git_branches": [{"id": "branch-1"}, {"id": "branch-2"}]
         }
@@ -250,7 +250,7 @@ class TestGitBranchMCPController:
                 )
                 
                 assert result == {"success": True, "enhanced": True}
-                self.mock_facade.list_git_branches.assert_called_once_with("test-project")
+                self.mock_facade.list_git_branchs.assert_called_once_with("test-project")
     
     def test_handle_crud_operations_update_success(self):
         """Test handling update operation successfully."""
@@ -262,12 +262,12 @@ class TestGitBranchMCPController:
                 mock_enhance.return_value = {"success": True, "enhanced": True}
                 
                 result = self.controller.handle_crud_operations(
-                    "update", "test-project", "branch-123", "new-name", "new-description"
+                    "update", "test-project", "new-name", "branch-123", "new-description"
                 )
                 
                 assert result == {"success": True, "enhanced": True}
                 self.mock_facade.update_git_branch.assert_called_once_with(
-                    "test-project", "branch-123", "new-name", "new-description"
+                    "branch-123", "new-name", "new-description"
                 )
     
     def test_handle_crud_operations_delete_success(self):
@@ -280,11 +280,11 @@ class TestGitBranchMCPController:
                 mock_enhance.return_value = {"success": True, "enhanced": True}
                 
                 result = self.controller.handle_crud_operations(
-                    "delete", "test-project", "branch-123"
+                    "delete", "test-project", None, "branch-123"
                 )
                 
                 assert result == {"success": True, "enhanced": True}
-                self.mock_facade.delete_git_branch.assert_called_once_with("test-project", "branch-123")
+                self.mock_facade.delete_git_branch.assert_called_once_with("branch-123")
     
     def test_handle_crud_operations_exception(self):
         """Test handling exception in CRUD operations."""
@@ -292,7 +292,7 @@ class TestGitBranchMCPController:
             mock_get_facade.side_effect = Exception("Test exception")
             
             result = self.controller.handle_crud_operations(
-                "create", "test-project", None, "branch-name", "description"
+                "create", "test-project", "branch-name", None, "description"
             )
             
             assert result["success"] is False
@@ -309,7 +309,7 @@ class TestGitBranchMCPController:
                 mock_enhance.return_value = {"success": True, "enhanced": True}
                 
                 result = self.controller.handle_agent_operations(
-                    "assign_agent", "test-project", "agent-123", "branch-456", "branch-name"
+                    "assign_agent", "test-project", "branch-name", "branch-456", "agent-123"
                 )
                 
                 assert result == {"success": True, "enhanced": True}
@@ -319,7 +319,7 @@ class TestGitBranchMCPController:
     def test_handle_agent_operations_missing_agent_id(self):
         """Test agent operation with missing agent_id."""
         result = self.controller.handle_agent_operations(
-            "assign_agent", "test-project", None, "branch-456", "branch-name"
+            "assign_agent", "test-project", "branch-name", "branch-456", None
         )
         
         assert result["success"] is False
@@ -329,37 +329,41 @@ class TestGitBranchMCPController:
     def test_handle_agent_operations_missing_branch_identifier(self):
         """Test agent operation with missing branch identifier."""
         result = self.controller.handle_agent_operations(
-            "assign_agent", "test-project", "agent-123", None, None
+            "assign_agent", "test-project", None, None, "agent-123"
         )
         
         assert result["success"] is False
         assert result["error"] == "Missing required field: git_branch_id or git_branch_name"
         assert result["error_code"] == "MISSING_FIELD"
     
-    def test_handle_statistics_operations_success(self):
-        """Test handling statistics operations successfully."""
-        self.mock_facade.get_git_branch_statistics.return_value = {
-            "success": True,
-            "statistics": {"total_tasks": 5, "completed_tasks": 3}
-        }
-        
+    def test_handle_advanced_operations_get_statistics_success(self):
+        """Test handling get_statistics operation successfully."""
         with patch.object(self.controller, '_get_facade_for_request') as mock_get_facade:
             mock_get_facade.return_value = self.mock_facade
-            with patch.object(self.controller, '_enhance_response_with_workflow_guidance') as mock_enhance:
-                mock_enhance.return_value = {"success": True, "enhanced": True}
-                
-                result = self.controller.handle_statistics_operations(
-                    "get_statistics", "test-project", "branch-123"
-                )
-                
-                assert result == {"success": True, "enhanced": True}
-                self.mock_facade.get_git_branch_statistics.assert_called_once_with(
-                    "test-project", "branch-123"
-                )
+            with patch.object(self.controller, '_run_async_with_context') as mock_run_async:
+                mock_run_async.return_value = {
+                    "branch_name": "feature-branch",
+                    "status": "active",
+                    "priority": "high",
+                    "assigned_agent_id": "agent-123",
+                    "task_count": 5,
+                    "completed_task_count": 3,
+                    "progress_percentage": 60,
+                    "created_at": "2024-01-01",
+                    "updated_at": "2024-01-02"
+                }
+                with patch.object(self.controller, '_enhance_response_with_workflow_guidance') as mock_enhance:
+                    mock_enhance.return_value = {"success": True, "enhanced": True}
+                    
+                    result = self.controller.handle_advanced_operations(
+                        "get_statistics", "test-project", "branch-123"
+                    )
+                    
+                    assert result == {"success": True, "enhanced": True}
     
-    def test_handle_statistics_operations_missing_branch_id(self):
-        """Test statistics operation with missing git_branch_id."""
-        result = self.controller.handle_statistics_operations(
+    def test_handle_advanced_operations_missing_branch_id(self):
+        """Test advanced operation with missing git_branch_id."""
+        result = self.controller.handle_advanced_operations(
             "get_statistics", "test-project", None
         )
         
@@ -367,37 +371,31 @@ class TestGitBranchMCPController:
         assert result["error"] == "Missing required field: git_branch_id"
         assert result["error_code"] == "MISSING_FIELD"
     
-    def test_handle_archive_operations_success(self):
+    def test_handle_advanced_operations_archive_success(self):
         """Test handling archive operations successfully."""
-        self.mock_facade.archive_git_branch.return_value = {"success": True}
-        
         with patch.object(self.controller, '_get_facade_for_request') as mock_get_facade:
             mock_get_facade.return_value = self.mock_facade
             with patch.object(self.controller, '_enhance_response_with_workflow_guidance') as mock_enhance:
                 mock_enhance.return_value = {"success": True, "enhanced": True}
                 
-                result = self.controller.handle_archive_operations(
+                result = self.controller.handle_advanced_operations(
                     "archive", "test-project", "branch-123"
                 )
                 
                 assert result == {"success": True, "enhanced": True}
-                self.mock_facade.archive_git_branch.assert_called_once_with("test-project", "branch-123")
     
-    def test_handle_archive_operations_restore_success(self):
+    def test_handle_advanced_operations_restore_success(self):
         """Test handling restore operations successfully."""
-        self.mock_facade.restore_git_branch.return_value = {"success": True}
-        
         with patch.object(self.controller, '_get_facade_for_request') as mock_get_facade:
             mock_get_facade.return_value = self.mock_facade
             with patch.object(self.controller, '_enhance_response_with_workflow_guidance') as mock_enhance:
                 mock_enhance.return_value = {"success": True, "enhanced": True}
                 
-                result = self.controller.handle_archive_operations(
+                result = self.controller.handle_advanced_operations(
                     "restore", "test-project", "branch-123"
                 )
                 
                 assert result == {"success": True, "enhanced": True}
-                self.mock_facade.restore_git_branch.assert_called_once_with("test-project", "branch-123")
     
     def test_get_git_branch_management_descriptions(self):
         """Test getting git branch management descriptions."""

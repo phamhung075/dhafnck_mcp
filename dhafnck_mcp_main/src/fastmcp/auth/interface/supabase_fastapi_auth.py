@@ -21,8 +21,15 @@ logger = logging.getLogger(__name__)
 # Use HTTPBearer for extracting Bearer tokens
 security = HTTPBearer()
 
-# Initialize Supabase auth service
-supabase_auth = SupabaseAuthService()
+# Initialize Supabase auth service lazily
+supabase_auth = None
+
+def get_supabase_auth():
+    """Get or create Supabase auth service instance."""
+    global supabase_auth
+    if supabase_auth is None:
+        supabase_auth = SupabaseAuthService()
+    return supabase_auth
 
 
 async def get_current_user_supabase(
@@ -56,7 +63,7 @@ async def get_current_user_supabase(
     
     try:
         # Verify token with Supabase
-        result = await supabase_auth.verify_token(token)
+        result = await get_supabase_auth().verify_token(token)
         
         if not result.success or not result.user:
             raise HTTPException(

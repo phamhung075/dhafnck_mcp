@@ -29,6 +29,10 @@ services:
       # Debug settings
       - SQL_DEBUG=false
       - LOG_LEVEL=INFO
+      
+      # Authentication settings (temporary for development)
+      - ALLOW_DEFAULT_USER=true
+      - ENVIRONMENT=development
     
     extra_hosts:
       # Allow container to connect to host's PostgreSQL

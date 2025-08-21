@@ -8,6 +8,7 @@ and various authentication contexts.
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 import logging
+import os
 
 from fastmcp.task_management.interface.controllers.auth_helper import (
     get_authenticated_user_id,
@@ -135,10 +136,12 @@ class TestGetAuthenticatedUserId:
                     
                     assert result == "fallback_user"
     
+    @patch('os.getenv')
     @patch('fastmcp.task_management.interface.controllers.auth_helper.get_current_user_id')
-    def test_compatibility_mode_disabled_raises_error(self, mock_get_current_user_id):
+    def test_compatibility_mode_disabled_raises_error(self, mock_get_current_user_id, mock_getenv):
         """Test that error is raised when compatibility mode is disabled."""
         mock_get_current_user_id.return_value = None
+        mock_getenv.return_value = 'production'  # Not in development
         
         with patch('mcp.server.auth.context.auth_context') as mock_context:
             mock_context.get.return_value = None
@@ -168,6 +171,53 @@ class TestGetAuthenticatedUserId:
                     
                     assert result == "fallback_user"
                     mock_config.log_authentication_bypass.assert_called_once_with("test_op", "compatibility mode")
+    
+    @patch('os.getenv')
+    @patch('fastmcp.task_management.interface.controllers.auth_helper.get_current_user_id')
+    def test_dev_environment_temporary_fix(self, mock_get_current_user_id, mock_getenv):
+        """Test temporary development environment fix for git branch authentication."""
+        mock_get_current_user_id.return_value = None
+        
+        # Test with different development environment values
+        dev_environments = ['development', 'dev', '']  # Empty string for local dev
+        
+        for env_value in dev_environments:
+            mock_getenv.return_value = env_value
+            
+            with patch('mcp.server.auth.context.auth_context') as mock_context:
+                mock_context.get.return_value = None
+                
+                with patch('fastmcp.task_management.interface.controllers.auth_helper.AuthConfig') as mock_config:
+                    mock_config.is_default_user_allowed.return_value = False
+                    mock_config.log_authentication_bypass = Mock()
+                    
+                    with patch('fastmcp.task_management.domain.constants.validate_user_id') as mock_validate:
+                        mock_validate.return_value = "compatibility-default-user"
+                        
+                        result = get_authenticated_user_id(None, "test_op")
+                        
+                        assert result == "compatibility-default-user"
+                        mock_config.log_authentication_bypass.assert_called_with(
+                            "test_op", 
+                            "forced compatibility mode for git branch fix"
+                        )
+    
+    @patch('os.getenv')
+    @patch('fastmcp.task_management.interface.controllers.auth_helper.get_current_user_id')
+    def test_non_dev_environment_no_temporary_fix(self, mock_get_current_user_id, mock_getenv):
+        """Test that temporary fix is not applied in non-development environments."""
+        mock_get_current_user_id.return_value = None
+        mock_getenv.return_value = 'production'
+        
+        with patch('mcp.server.auth.context.auth_context') as mock_context:
+            mock_context.get.return_value = None
+            
+            with patch('fastmcp.task_management.interface.controllers.auth_helper.AuthConfig') as mock_config:
+                mock_config.is_default_user_allowed.return_value = False
+                
+                # Should raise error in production when no auth available
+                with pytest.raises(UserAuthenticationRequiredError):
+                    get_authenticated_user_id(None, "test_op")
     
     def test_user_context_not_available_fallback(self):
         """Test behavior when USER_CONTEXT_AVAILABLE is False."""

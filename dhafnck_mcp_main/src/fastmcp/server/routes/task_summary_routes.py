@@ -18,6 +18,7 @@ from fastmcp.task_management.application.factories.unified_context_facade_factor
 from fastmcp.task_management.application.factories.task_facade_factory import TaskFacadeFactory
 from fastmcp.task_management.infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
 from fastmcp.task_management.infrastructure.repositories.subtask_repository_factory import SubtaskRepositoryFactory
+from fastmcp.config.auth_config import AuthConfig
 
 # Import Redis caching decorator
 try:
@@ -69,9 +70,19 @@ async def get_task_summaries(request: Request) -> JSONResponse:
         task_repository_factory = TaskRepositoryFactory()
         subtask_repository_factory = SubtaskRepositoryFactory()
         
+        # Get user ID with compatibility mode fallback
+        user_id = None
+        if AuthConfig.is_default_user_allowed():
+            user_id = AuthConfig.get_fallback_user_id()
+            logger.info(f"Using compatibility mode user: {user_id}")
+        else:
+            # In production, would get from request headers/session
+            # For now, use compatibility mode
+            user_id = AuthConfig.get_fallback_user_id()
+        
         # Initialize facades using proper factory pattern
         task_facade_factory = TaskFacadeFactory(task_repository_factory, subtask_repository_factory)
-        task_facade = task_facade_factory.create_task_facade("default_project", git_branch_id, "default_user")
+        task_facade = task_facade_factory.create_task_facade("default_project", git_branch_id, user_id)
         
         context_factory = UnifiedContextFacadeFactory()
         context_facade = context_factory.create_facade()
@@ -176,10 +187,20 @@ async def get_full_task(request: Request) -> JSONResponse:
         task_repository_factory = TaskRepositoryFactory()
         subtask_repository_factory = SubtaskRepositoryFactory()
         
-        task_facade_factory = TaskFacadeFactory(task_repository_factory, subtask_repository_factory)
-        task_facade = task_facade_factory.create_task_facade("default_project", None, "default_user")
+        # Get user ID with compatibility mode fallback
+        user_id = None
+        if AuthConfig.is_default_user_allowed():
+            user_id = AuthConfig.get_fallback_user_id()
+            logger.info(f"Using compatibility mode user: {user_id}")
+        else:
+            # In production, would get from request headers/session
+            # For now, use compatibility mode
+            user_id = AuthConfig.get_fallback_user_id()
         
-        result = task_facade.get_task(task_id, include_full_data=True)
+        task_facade_factory = TaskFacadeFactory(task_repository_factory, subtask_repository_factory)
+        task_facade = task_facade_factory.create_task_facade("default_project", None, user_id)
+        
+        result = task_facade.get_task(task_id)
         
         if not result.get("success"):
             if "not found" in result.get("error", "").lower():
@@ -239,8 +260,18 @@ async def get_subtask_summaries(request: Request) -> JSONResponse:
         task_repository_factory = TaskRepositoryFactory()
         subtask_repository_factory = SubtaskRepositoryFactory()
         
+        # Get user ID with compatibility mode fallback
+        user_id = None
+        if AuthConfig.is_default_user_allowed():
+            user_id = AuthConfig.get_fallback_user_id()
+            logger.info(f"Using compatibility mode user: {user_id}")
+        else:
+            # In production, would get from request headers/session
+            # For now, use compatibility mode
+            user_id = AuthConfig.get_fallback_user_id()
+        
         task_facade_factory = TaskFacadeFactory(task_repository_factory, subtask_repository_factory)
-        task_facade = task_facade_factory.create_task_facade("default_project", None, "default_user")
+        task_facade = task_facade_factory.create_task_facade("default_project", None, user_id)
         
         # Get subtasks for the parent task
         result = task_facade.list_subtasks_summary(

@@ -40,6 +40,10 @@ services:
       DHAFNCK_MVP_MODE: ${DHAFNCK_MVP_MODE:-true}
       DHAFNCK_TOKEN: ${DHAFNCK_TOKEN:-}
       
+      # Development compatibility mode (temporary for MCP authentication)
+      ALLOW_DEFAULT_USER: ${ALLOW_DEFAULT_USER:-true}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      
       # JWT Authentication
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}

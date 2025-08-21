@@ -37,7 +37,8 @@ class TestAuthConfig:
     
     def test_is_default_user_allowed_default_false(self):
         """Test that default user is not allowed by default."""
-        # No environment variable set
+        # No environment variable set, and not in development
+        os.environ['ENVIRONMENT'] = 'production'
         assert AuthConfig.is_default_user_allowed() is False
     
     def test_is_default_user_allowed_true_values(self):
@@ -51,6 +52,9 @@ class TestAuthConfig:
     def test_is_default_user_allowed_false_values(self):
         """Test various false values for ALLOW_DEFAULT_USER."""
         false_values = ['false', 'False', 'FALSE', '0', 'no', 'No', 'NO', 'off', 'Off', 'OFF', 'invalid', '']
+        
+        # Set production environment to avoid development override
+        os.environ['ENVIRONMENT'] = 'production'
         
         for value in false_values:
             os.environ['ALLOW_DEFAULT_USER'] = value
@@ -78,6 +82,7 @@ class TestAuthConfig:
     def test_get_fallback_user_id_not_allowed(self):
         """Test getting fallback user ID when not allowed raises exception."""
         os.environ['ALLOW_DEFAULT_USER'] = 'false'
+        os.environ['ENVIRONMENT'] = 'production'  # Ensure not in development
         
         with pytest.raises(UserAuthenticationRequiredError) as exc_info:
             AuthConfig.get_fallback_user_id()
@@ -98,6 +103,7 @@ class TestAuthConfig:
     
     def test_should_enforce_authentication_default(self):
         """Test that authentication is enforced by default."""
+        os.environ['ENVIRONMENT'] = 'production'  # Ensure not in development
         assert AuthConfig.should_enforce_authentication() is True
     
     def test_should_enforce_authentication_compatibility_mode(self):
@@ -116,6 +122,7 @@ class TestAuthConfig:
     def test_validate_migration_readiness_ready(self):
         """Test migration readiness when system is ready."""
         # Default state - no compatibility mode
+        os.environ['ENVIRONMENT'] = 'production'  # Ensure not in development
         result = AuthConfig.validate_migration_readiness()
         
         assert result['ready'] is True
@@ -158,6 +165,8 @@ class TestAuthConfig:
     def test_validate_migration_readiness_unknown_environment(self):
         """Test migration readiness with unknown environment."""
         # No ENVIRONMENT variable set
+        os.environ.pop('ENVIRONMENT', None)
+        os.environ['ALLOW_DEFAULT_USER'] = 'false'  # Ensure no compatibility mode
         result = AuthConfig.validate_migration_readiness()
         
         assert result['environment'] == 'unknown'
@@ -181,6 +190,7 @@ class TestAuthConfig:
         
         # Disable compatibility mode
         os.environ['ALLOW_DEFAULT_USER'] = 'false'
+        os.environ['ENVIRONMENT'] = 'production'  # Ensure not in development
         
         # Check that methods are consistent
         assert AuthConfig.is_default_user_allowed() is False
@@ -208,10 +218,63 @@ class TestAuthConfig:
         debug_call_args = mock_logger.debug.call_args[0][0]
         assert "Default user check called from:" in debug_call_args
     
+    def test_development_environment_temporary_fix(self, caplog):
+        """Test temporary fix that forces compatibility mode in development."""
+        # Test development environment
+        os.environ['ENVIRONMENT'] = 'development'
+        os.environ.pop('ALLOW_DEFAULT_USER', None)  # Ensure not explicitly set
+        
+        with caplog.at_level(logging.WARNING):
+            result = AuthConfig.is_default_user_allowed()
+        
+        assert result is True
+        assert "TEMPORARY FIX" in caplog.text
+        
+        # Test dev environment (alternative spelling)
+        os.environ['ENVIRONMENT'] = 'dev'
+        os.environ.pop('ALLOW_DEFAULT_USER', None)
+        
+        with caplog.at_level(logging.WARNING):
+            result = AuthConfig.is_default_user_allowed()
+        
+        assert result is True
+    
+    def test_development_environment_with_explicit_true(self):
+        """Test that explicit ALLOW_DEFAULT_USER=true works in development."""
+        os.environ['ENVIRONMENT'] = 'development'
+        os.environ['ALLOW_DEFAULT_USER'] = 'true'
+        
+        # Explicit true should work
+        assert AuthConfig.is_default_user_allowed() is True
+    
+    def test_production_environment_not_affected_by_temporary_fix(self):
+        """Test that production environment is not affected by temporary fix."""
+        os.environ['ENVIRONMENT'] = 'production'
+        os.environ.pop('ALLOW_DEFAULT_USER', None)
+        
+        assert AuthConfig.is_default_user_allowed() is False
+    
+    def test_temporary_fix_logging(self, caplog):
+        """Test that temporary fix logs appropriate warning."""
+        os.environ['ENVIRONMENT'] = 'development'
+        os.environ.pop('ALLOW_DEFAULT_USER', None)
+        
+        with caplog.at_level(logging.WARNING):
+            result = AuthConfig.is_default_user_allowed()
+        
+        assert result is True
+        assert "TEMPORARY FIX" in caplog.text
+        assert "git branch auth fix" in caplog.text
+        assert "development" in caplog.text
+    
     def test_thread_safety(self):
         """Test thread safety of AuthConfig methods."""
         import threading
         import time
+        
+        # Set a stable environment for thread safety test
+        os.environ['ENVIRONMENT'] = 'production'
+        os.environ['ALLOW_DEFAULT_USER'] = 'false'
         
         results = []
         errors = []

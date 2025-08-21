@@ -96,14 +96,58 @@ class TestProjectRepositoryFactory:
             )
     
     @patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.AuthConfig')
-    def test_create_repository_no_user_id_no_compatibility(self, mock_auth_config):
+    @patch('os.getenv')
+    def test_create_repository_no_user_id_no_compatibility(self, mock_getenv, mock_auth_config):
         """Test repository creation without user ID when compatibility is disabled."""
         mock_auth_config.is_default_user_allowed.return_value = False
+        mock_getenv.return_value = 'production'  # Not in development
         
         with pytest.raises(UserAuthenticationRequiredError) as exc_info:
             ProjectRepositoryFactory.create(user_id=None)
         
         assert "Project repository creation" in str(exc_info.value)
+    
+    @patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.AuthConfig')
+    @patch('os.getenv')
+    def test_create_repository_dev_environment_temporary_fix(self, mock_getenv, mock_auth_config):
+        """Test temporary development environment fix for git branch authentication."""
+        mock_auth_config.is_default_user_allowed.return_value = False
+        mock_auth_config.log_authentication_bypass = Mock()
+        
+        # Test with different development environment values
+        dev_environments = ['development', 'dev', '']  # Empty string for local dev
+        
+        for env_value in dev_environments:
+            mock_getenv.return_value = env_value
+            
+            with patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.ORMProjectRepository') as mock_orm:
+                mock_instance = Mock(spec=ProjectRepository)
+                mock_orm.return_value = mock_instance
+                
+                # Should use compatibility-default-user even when compatibility mode is disabled
+                result = ProjectRepositoryFactory.create(user_id=None)
+                
+                assert result == mock_instance
+                mock_auth_config.log_authentication_bypass.assert_called_with(
+                    "Project repository creation", 
+                    "forced compatibility mode for git branch fix"
+                )
+    
+    @patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.logger')
+    @patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.AuthConfig')
+    @patch('os.getenv')
+    def test_create_repository_dev_environment_logs_warning(self, mock_getenv, mock_auth_config, mock_logger):
+        """Test that temporary dev fix logs appropriate warning."""
+        mock_auth_config.is_default_user_allowed.return_value = False
+        mock_getenv.return_value = 'development'
+        
+        with patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.ORMProjectRepository'):
+            ProjectRepositoryFactory.create(user_id=None)
+            
+            # Should log warning about temporary fix
+            warning_calls = [call for call in mock_logger.warning.call_args_list 
+                           if "TEMPORARY FIX" in str(call)]
+            assert len(warning_calls) > 0
     
     @patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.validate_user_id')
     def test_create_repository_prohibited_user_id(self, mock_validate):
