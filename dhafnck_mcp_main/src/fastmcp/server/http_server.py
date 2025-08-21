@@ -350,13 +350,7 @@ def create_sse_app(
     except ImportError as e:
         logger.warning(f"Could not import Supabase auth integration routes: {e}")
     
-    # Add task summary routes for lazy loading optimization
-    try:
-        from .routes.task_summary_routes import task_summary_routes
-        server_routes.extend(task_summary_routes)
-        logger.info("Task summary routes registered for lazy loading optimization")
-    except ImportError as e:
-        logger.warning(f"Could not import task summary routes: {e}")
+    # Task summary routes now registered as FastAPI router in V2 section below
     
     # Add token management routes
     try:
@@ -370,6 +364,7 @@ def create_sse_app(
     try:
         from .routes.user_scoped_project_routes import router as project_router
         from .routes.user_scoped_task_routes import router as task_router
+        from .routes.task_summary_routes import task_summary_router
         from fastapi import FastAPI
         from starlette.routing import Mount
         
@@ -377,10 +372,11 @@ def create_sse_app(
         v2_app = FastAPI()
         v2_app.include_router(project_router)
         v2_app.include_router(task_router)
+        v2_app.include_router(task_summary_router)
         
         # Mount the FastAPI app as a sub-application
         server_routes.append(Mount("/", app=v2_app))
-        logger.info("User-scoped V2 routes registered at /api/v2/projects and /api/v2/tasks")
+        logger.info("User-scoped V2 routes registered with task summaries at /api/v2/projects, /api/v2/tasks, and /api/tasks")
             
     except ImportError as e:
         logger.warning(f"Could not import user-scoped V2 routes: {e}")
@@ -616,12 +612,7 @@ def create_streamable_http_app(
         logger.warning(f"Could not import Supabase auth integration routes: {e}")
     
     # Add task summary routes for lazy loading optimization
-    try:
-        from .routes.task_summary_routes import task_summary_routes
-        server_routes.extend(task_summary_routes)
-        logger.info("Task summary routes registered for streamable HTTP optimization")
-    except ImportError as e:
-        logger.warning(f"Could not import task summary routes: {e}")
+    # Task summary routes now registered as FastAPI router in V2 section above
     
     # Add branch summary routes for sidebar optimization
     try:
@@ -643,6 +634,7 @@ def create_streamable_http_app(
     try:
         from .routes.user_scoped_project_routes import router as project_router
         from .routes.user_scoped_task_routes import router as task_router
+        from .routes.task_summary_routes import task_summary_router
         from fastapi import FastAPI
         from starlette.routing import Mount
         
@@ -650,10 +642,11 @@ def create_streamable_http_app(
         v2_app = FastAPI()
         v2_app.include_router(project_router)
         v2_app.include_router(task_router)
+        v2_app.include_router(task_summary_router)
         
         # Mount the FastAPI app as a sub-application
         server_routes.append(Mount("/", app=v2_app))
-        logger.info("User-scoped V2 routes registered for streamable HTTP at /api/v2/projects and /api/v2/tasks")
+        logger.info("User-scoped V2 routes registered for streamable HTTP with task summaries at /api/v2/projects, /api/v2/tasks, and /api/tasks")
             
     except ImportError as e:
         logger.warning(f"Could not import user-scoped V2 routes for streamable HTTP: {e}")

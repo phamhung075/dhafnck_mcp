@@ -6,11 +6,11 @@ frontend loading performance. Now includes Redis caching with 5-minute TTL
 for improved response times on repeat requests.
 """
 
-from starlette.requests import Request
-from starlette.responses import JSONResponse
-from starlette.routing import Route
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 import logging
 import json
+from typing import Optional
 
 from fastmcp.task_management.application.facades.task_application_facade import TaskApplicationFacade
 from fastmcp.task_management.application.facades.unified_context_facade import UnifiedContextFacade
@@ -18,7 +18,15 @@ from fastmcp.task_management.application.factories.unified_context_facade_factor
 from fastmcp.task_management.application.factories.task_facade_factory import TaskFacadeFactory
 from fastmcp.task_management.infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
 from fastmcp.task_management.infrastructure.repositories.subtask_repository_factory import SubtaskRepositoryFactory
-from fastmcp.config.auth_config import AuthConfig
+from fastmcp.auth.interface.fastapi_auth import get_db
+from fastmcp.auth.domain.entities.user import User
+
+# Use Supabase authentication
+try:
+    from fastmcp.auth.interface.supabase_fastapi_auth import get_current_user
+except ImportError:
+    # Fallback to local JWT if Supabase auth not available
+    from fastmcp.auth.interface.fastapi_auth import get_current_user
 
 # Import Redis caching decorator
 try:
@@ -35,9 +43,21 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+router = APIRouter(prefix="/api", tags=["Task Summaries"])
 
+
+@router.post("/tasks/summaries")
 @redis_cache(ttl=300, key_prefix="task_summaries")
-async def get_task_summaries(request: Request) -> JSONResponse:
+async def get_task_summaries(
+    git_branch_id: str,
+    page: int = 1,
+    limit: int = 20,
+    include_counts: bool = True,
+    status_filter: Optional[str] = None,
+    priority_filter: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
     Get lightweight task summaries for list views.
     
@@ -70,15 +90,9 @@ async def get_task_summaries(request: Request) -> JSONResponse:
         task_repository_factory = TaskRepositoryFactory()
         subtask_repository_factory = SubtaskRepositoryFactory()
         
-        # Get user ID with compatibility mode fallback
-        user_id = None
-        if AuthConfig.is_default_user_allowed():
-            user_id = AuthConfig.get_fallback_user_id()
-            logger.info(f"Using compatibility mode user: {user_id}")
-        else:
-            # In production, would get from request headers/session
-            # For now, use compatibility mode
-            user_id = AuthConfig.get_fallback_user_id()
+        # Use authenticated user
+        user_id = current_user.id
+        logger.info(f"Loading data for user: {current_user.email}")
         
         # Initialize facades using proper factory pattern
         task_facade_factory = TaskFacadeFactory(task_repository_factory, subtask_repository_factory)
@@ -162,8 +176,13 @@ async def get_task_summaries(request: Request) -> JSONResponse:
         )
 
 
+@router.get("/tasks/{task_id}")
 @redis_cache(ttl=300, key_prefix="full_task")
-async def get_full_task(request: Request) -> JSONResponse:
+async def get_full_task(
+    task_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
     Get full task data on demand.
     
@@ -173,12 +192,10 @@ async def get_full_task(request: Request) -> JSONResponse:
     Cached with 5-minute TTL for improved performance.
     """
     try:
-        task_id = request.path_params.get("task_id")
-        
         if not task_id:
-            return JSONResponse(
-                {"error": "task_id is required"},
-                status_code=400
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="task_id is required"
             )
         
         logger.info(f"Loading full task data for task {task_id}")
@@ -187,15 +204,9 @@ async def get_full_task(request: Request) -> JSONResponse:
         task_repository_factory = TaskRepositoryFactory()
         subtask_repository_factory = SubtaskRepositoryFactory()
         
-        # Get user ID with compatibility mode fallback
-        user_id = None
-        if AuthConfig.is_default_user_allowed():
-            user_id = AuthConfig.get_fallback_user_id()
-            logger.info(f"Using compatibility mode user: {user_id}")
-        else:
-            # In production, would get from request headers/session
-            # For now, use compatibility mode
-            user_id = AuthConfig.get_fallback_user_id()
+        # Use authenticated user
+        user_id = current_user.id
+        logger.info(f"Loading data for user: {current_user.email}")
         
         task_facade_factory = TaskFacadeFactory(task_repository_factory, subtask_repository_factory)
         task_facade = task_facade_factory.create_task_facade("default_project", None, user_id)
@@ -204,34 +215,42 @@ async def get_full_task(request: Request) -> JSONResponse:
         
         if not result.get("success"):
             if "not found" in result.get("error", "").lower():
-                return JSONResponse(
-                    {"error": f"Task {task_id} not found"},
-                    status_code=404
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Task {task_id} not found"
                 )
-            return JSONResponse(
-                {"error": result.get("error", "Failed to fetch task")},
-                status_code=500
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=result.get("error", "Failed to fetch task")
             )
         
         task_data = result.get("task")
         if not task_data:
-            return JSONResponse(
-                {"error": f"Task {task_id} not found"},
-                status_code=404
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Task {task_id} not found"
             )
         
-        return JSONResponse(task_data)
+        return task_data
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error fetching full task {task_id}: {e}")
-        return JSONResponse(
-            {"error": str(e)},
-            status_code=500
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
         )
 
 
+@router.post("/subtasks/summaries")
 @redis_cache(ttl=300, key_prefix="subtask_summaries")
-async def get_subtask_summaries(request: Request) -> JSONResponse:
+async def get_subtask_summaries(
+    parent_task_id: str,
+    include_counts: bool = True,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
     Get lightweight subtask summaries for a parent task.
     
@@ -241,17 +260,10 @@ async def get_subtask_summaries(request: Request) -> JSONResponse:
     Cached with 5-minute TTL for improved performance.
     """
     try:
-        # Parse request body
-        body = await request.body()
-        data = json.loads(body) if body else {}
-        
-        parent_task_id = data.get("parent_task_id")
-        include_counts = data.get("include_counts", True)
-        
         if not parent_task_id:
-            return JSONResponse(
-                {"error": "parent_task_id is required"},
-                status_code=400
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="parent_task_id is required"
             )
         
         logger.info(f"Loading subtask summaries for parent task {parent_task_id}")
@@ -260,15 +272,9 @@ async def get_subtask_summaries(request: Request) -> JSONResponse:
         task_repository_factory = TaskRepositoryFactory()
         subtask_repository_factory = SubtaskRepositoryFactory()
         
-        # Get user ID with compatibility mode fallback
-        user_id = None
-        if AuthConfig.is_default_user_allowed():
-            user_id = AuthConfig.get_fallback_user_id()
-            logger.info(f"Using compatibility mode user: {user_id}")
-        else:
-            # In production, would get from request headers/session
-            # For now, use compatibility mode
-            user_id = AuthConfig.get_fallback_user_id()
+        # Use authenticated user
+        user_id = current_user.id
+        logger.info(f"Loading subtask summaries for user: {current_user.email}")
         
         task_facade_factory = TaskFacadeFactory(task_repository_factory, subtask_repository_factory)
         task_facade = task_facade_factory.create_task_facade("default_project", None, user_id)
@@ -280,9 +286,9 @@ async def get_subtask_summaries(request: Request) -> JSONResponse:
         )
         
         if not result.get("success"):
-            return JSONResponse(
-                {"error": result.get("error", "Failed to fetch subtasks")},
-                status_code=500
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=result.get("error", "Failed to fetch subtasks")
             )
         
         subtasks_data = result.get("subtasks", [])
@@ -325,29 +331,34 @@ async def get_subtask_summaries(request: Request) -> JSONResponse:
         }
         
         logger.info(f"Returned {len(subtask_summaries)} subtask summaries for task {parent_task_id}")
-        return JSONResponse(response)
+        return response
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error fetching subtask summaries: {e}")
-        return JSONResponse(
-            {"error": str(e)},
-            status_code=500
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
         )
 
 
-async def get_task_context_summary(request: Request) -> JSONResponse:
+@router.get("/tasks/{task_id}/context/summary")
+async def get_task_context_summary(
+    task_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
     Get lightweight context summary for a task.
     
     Checks if a task has context without loading the full context data.
     """
     try:
-        task_id = request.path_params.get("task_id")
-        
         if not task_id:
-            return JSONResponse(
-                {"error": "task_id is required"},
-                status_code=400
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="task_id is required"
             )
         
         # Initialize facade
@@ -357,26 +368,30 @@ async def get_task_context_summary(request: Request) -> JSONResponse:
         result = context_facade.get_context_summary(task_id)
         
         if not result.get("success"):
-            return JSONResponse({
+            return {
                 "has_context": False,
                 "error": result.get("error")
-            })
+            }
         
-        return JSONResponse({
+        return {
             "has_context": result.get("has_context", False),
             "context_size": result.get("context_size", 0),
             "last_updated": result.get("last_updated")
-        })
+        }
         
     except Exception as e:
         logger.error(f"Error checking context for task {task_id}: {e}")
-        return JSONResponse({
+        return {
             "has_context": False,
             "error": str(e)
-        })
+        }
 
 
-async def get_performance_metrics(request: Request) -> JSONResponse:
+@router.get("/performance/metrics")
+async def get_performance_metrics(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
     Get performance metrics for lazy loading endpoints.
     
@@ -392,7 +407,7 @@ async def get_performance_metrics(request: Request) -> JSONResponse:
         cache_status = "disabled"
         hit_rate = "N/A"
     
-    return JSONResponse({
+    return {
         "cache_status": cache_status,
         "cache_metrics": actual_metrics,
         "endpoints": {
@@ -423,14 +438,8 @@ async def get_performance_metrics(request: Request) -> JSONResponse:
             "Monitor cache hit rate via /api/performance/metrics endpoint",
             "Expected 30-40% improvement for repeat requests"
         ]
-    })
+    }
 
 
-# Define routes for registration
-task_summary_routes = [
-    Route("/api/tasks/summaries", endpoint=get_task_summaries, methods=["POST"]),
-    Route("/api/tasks/{task_id:str}", endpoint=get_full_task, methods=["GET"]),
-    Route("/api/subtasks/summaries", endpoint=get_subtask_summaries, methods=["POST"]),
-    Route("/api/tasks/{task_id:str}/context/summary", endpoint=get_task_context_summary, methods=["GET"]),
-    Route("/api/performance/metrics", endpoint=get_performance_metrics, methods=["GET"]),
-]
+# Export the FastAPI router for registration
+task_summary_router = router

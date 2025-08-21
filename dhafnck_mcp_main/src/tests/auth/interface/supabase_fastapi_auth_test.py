@@ -8,9 +8,10 @@ from sqlalchemy.orm import Session
 
 from fastmcp.auth.interface.supabase_fastapi_auth import (
     get_current_user_supabase,
-    get_current_user
+    get_current_user,
+    get_supabase_auth
 )
-from fastmcp.auth.domain.entities.user import User
+from fastmcp.auth.domain.entities.user import User, UserStatus, UserRole
 from fastmcp.auth.infrastructure.repositories.user_repository import UserRepository
 
 
@@ -49,9 +50,10 @@ class TestSupabaseFastAPIAuth:
             email="test@example.com",
             username="testuser",
             full_name="Test User",
-            is_active=True,
-            is_superuser=False,
-            hashed_password=""
+            password_hash="",
+            status=UserStatus.ACTIVE,
+            roles=[UserRole.USER],
+            email_verified=True
         )
 
     @pytest.mark.asyncio
@@ -59,13 +61,16 @@ class TestSupabaseFastAPIAuth:
         self, mock_db_session, mock_credentials, mock_supabase_user, mock_local_user
     ):
         """Test successful authentication with valid token and existing user."""
-        # Mock Supabase auth service
-        with patch('fastmcp.auth.interface.supabase_fastapi_auth.supabase_auth') as mock_auth:
+        # Mock get_supabase_auth function
+        with patch('fastmcp.auth.interface.supabase_fastapi_auth.get_supabase_auth') as mock_get_auth:
+            mock_auth_service = MagicMock()
+            mock_get_auth.return_value = mock_auth_service
+            
             # Setup successful token verification
             mock_result = MagicMock()
             mock_result.success = True
             mock_result.user = mock_supabase_user
-            mock_auth.verify_token = AsyncMock(return_value=mock_result)
+            mock_auth_service.verify_token = AsyncMock(return_value=mock_result)
             
             # Mock user repository to return existing user
             with patch('fastmcp.auth.interface.supabase_fastapi_auth.UserRepository') as mock_repo_class:
@@ -81,7 +86,7 @@ class TestSupabaseFastAPIAuth:
                 
                 # Assertions
                 assert result == mock_local_user
-                mock_auth.verify_token.assert_called_once_with("valid-jwt-token")
+                mock_auth_service.verify_token.assert_called_once_with("valid-jwt-token")
                 mock_repo_instance.find_by_id.assert_called_once_with("supabase-user-123")
                 # Should not create new user
                 mock_db_session.add.assert_not_called()
@@ -92,13 +97,16 @@ class TestSupabaseFastAPIAuth:
         self, mock_db_session, mock_credentials, mock_supabase_user
     ):
         """Test successful authentication with valid token for new user."""
-        # Mock Supabase auth service
-        with patch('fastmcp.auth.interface.supabase_fastapi_auth.supabase_auth') as mock_auth:
+        # Mock get_supabase_auth function
+        with patch('fastmcp.auth.interface.supabase_fastapi_auth.get_supabase_auth') as mock_get_auth:
+            mock_auth_service = MagicMock()
+            mock_get_auth.return_value = mock_auth_service
+            
             # Setup successful token verification
             mock_result = MagicMock()
             mock_result.success = True
             mock_result.user = mock_supabase_user
-            mock_auth.verify_token = AsyncMock(return_value=mock_result)
+            mock_auth_service.verify_token = AsyncMock(return_value=mock_result)
             
             # Mock user repository to return None (user not found)
             with patch('fastmcp.auth.interface.supabase_fastapi_auth.UserRepository') as mock_repo_class:
@@ -106,29 +114,44 @@ class TestSupabaseFastAPIAuth:
                 mock_repo_instance.find_by_id.return_value = None
                 mock_repo_class.return_value = mock_repo_instance
                 
-                # Call the function
-                result = await get_current_user_supabase(
-                    credentials=mock_credentials,
-                    db=mock_db_session
-                )
-                
-                # Assertions
-                mock_auth.verify_token.assert_called_once_with("valid-jwt-token")
-                mock_repo_instance.find_by_id.assert_called_once_with("supabase-user-123")
-                # Should create new user
-                mock_db_session.add.assert_called_once()
-                mock_db_session.commit.assert_called_once()
-                mock_db_session.refresh.assert_called_once()
-                
-                # Check created user properties
-                created_user = mock_db_session.add.call_args[0][0]
-                assert created_user.id == "supabase-user-123"
-                assert created_user.email == "test@example.com"
-                assert created_user.username == "testuser"
-                assert created_user.full_name == "Test User"
-                assert created_user.is_active is True
-                assert created_user.is_superuser is False
-                assert created_user.hashed_password == ""
+                # Mock UserModel.from_domain and to_domain
+                with patch('fastmcp.auth.interface.supabase_fastapi_auth.UserModel') as MockUserModel:
+                    mock_db_user = MagicMock()
+                    mock_domain_user = User(
+                        id="supabase-user-123",
+                        email="test@example.com",
+                        username="testuser",
+                        full_name="Test User",
+                        password_hash="",
+                        status=UserStatus.ACTIVE,
+                        roles=[UserRole.USER],
+                        email_verified=True
+                    )
+                    mock_db_user.to_domain.return_value = mock_domain_user
+                    MockUserModel.from_domain.return_value = mock_db_user
+                    
+                    # Call the function
+                    result = await get_current_user_supabase(
+                        credentials=mock_credentials,
+                        db=mock_db_session
+                    )
+                    
+                    # Assertions
+                    mock_auth_service.verify_token.assert_called_once_with("valid-jwt-token")
+                    mock_repo_instance.find_by_id.assert_called_once_with("supabase-user-123")
+                    # Should create new user
+                    mock_db_session.add.assert_called_once()
+                    mock_db_session.commit.assert_called_once()
+                    
+                    # Check that from_domain was called with proper User entity
+                    MockUserModel.from_domain.assert_called_once()
+                    created_user_arg = MockUserModel.from_domain.call_args[0][0]
+                    assert created_user_arg.id == "supabase-user-123"
+                    assert created_user_arg.email == "test@example.com"
+                    assert created_user_arg.username == "testuser"
+                    assert created_user_arg.full_name == "Test User"
+                    assert created_user_arg.status == UserStatus.ACTIVE
+                    assert created_user_arg.email_verified is True
 
     @pytest.mark.asyncio
     async def test_get_current_user_supabase_no_credentials(self, mock_db_session):
@@ -148,14 +171,17 @@ class TestSupabaseFastAPIAuth:
         self, mock_db_session, mock_credentials
     ):
         """Test authentication fails with invalid token."""
-        # Mock Supabase auth service
-        with patch('fastmcp.auth.interface.supabase_fastapi_auth.supabase_auth') as mock_auth:
+        # Mock get_supabase_auth function
+        with patch('fastmcp.auth.interface.supabase_fastapi_auth.get_supabase_auth') as mock_get_auth:
+            mock_auth_service = MagicMock()
+            mock_get_auth.return_value = mock_auth_service
+            
             # Setup failed token verification
             mock_result = MagicMock()
             mock_result.success = False
             mock_result.user = None
             mock_result.error_message = "Token expired"
-            mock_auth.verify_token = AsyncMock(return_value=mock_result)
+            mock_auth_service.verify_token = AsyncMock(return_value=mock_result)
             
             with pytest.raises(HTTPException) as exc_info:
                 await get_current_user_supabase(
@@ -172,8 +198,11 @@ class TestSupabaseFastAPIAuth:
         self, mock_db_session, mock_credentials
     ):
         """Test authentication fails when token has no user ID."""
-        # Mock Supabase auth service
-        with patch('fastmcp.auth.interface.supabase_fastapi_auth.supabase_auth') as mock_auth:
+        # Mock get_supabase_auth function
+        with patch('fastmcp.auth.interface.supabase_fastapi_auth.get_supabase_auth') as mock_get_auth:
+            mock_auth_service = MagicMock()
+            mock_get_auth.return_value = mock_auth_service
+            
             # Setup token verification with user missing ID
             mock_user = MagicMock()
             mock_user.id = None
@@ -182,7 +211,7 @@ class TestSupabaseFastAPIAuth:
             mock_result = MagicMock()
             mock_result.success = True
             mock_result.user = mock_user
-            mock_auth.verify_token = AsyncMock(return_value=mock_result)
+            mock_auth_service.verify_token = AsyncMock(return_value=mock_result)
             
             with pytest.raises(HTTPException) as exc_info:
                 await get_current_user_supabase(
@@ -198,8 +227,11 @@ class TestSupabaseFastAPIAuth:
         self, mock_db_session, mock_credentials
     ):
         """Test authentication handles user data as dictionary."""
-        # Mock Supabase auth service returning dict instead of object
-        with patch('fastmcp.auth.interface.supabase_fastapi_auth.supabase_auth') as mock_auth:
+        # Mock get_supabase_auth function
+        with patch('fastmcp.auth.interface.supabase_fastapi_auth.get_supabase_auth') as mock_get_auth:
+            mock_auth_service = MagicMock()
+            mock_get_auth.return_value = mock_auth_service
+            
             # Setup token verification with dict user data
             mock_user_dict = {
                 'id': 'supabase-user-456',
@@ -213,7 +245,7 @@ class TestSupabaseFastAPIAuth:
             mock_result = MagicMock()
             mock_result.success = True
             mock_result.user = mock_user_dict
-            mock_auth.verify_token = AsyncMock(return_value=mock_result)
+            mock_auth_service.verify_token = AsyncMock(return_value=mock_result)
             
             # Mock user repository to return None (create new user)
             with patch('fastmcp.auth.interface.supabase_fastapi_auth.UserRepository') as mock_repo_class:
@@ -221,26 +253,46 @@ class TestSupabaseFastAPIAuth:
                 mock_repo_instance.find_by_id.return_value = None
                 mock_repo_class.return_value = mock_repo_instance
                 
-                # Call the function
-                result = await get_current_user_supabase(
-                    credentials=mock_credentials,
-                    db=mock_db_session
-                )
-                
-                # Check created user from dict data
-                created_user = mock_db_session.add.call_args[0][0]
-                assert created_user.id == "supabase-user-456"
-                assert created_user.email == "dict@example.com"
-                assert created_user.username == "dictuser"
+                # Mock UserModel.from_domain and to_domain
+                with patch('fastmcp.auth.interface.supabase_fastapi_auth.UserModel') as MockUserModel:
+                    mock_db_user = MagicMock()
+                    mock_domain_user = User(
+                        id="supabase-user-456",
+                        email="dict@example.com",
+                        username="dictuser",
+                        full_name="Dict User",
+                        password_hash="",
+                        status=UserStatus.ACTIVE,
+                        roles=[UserRole.USER],
+                        email_verified=True
+                    )
+                    mock_db_user.to_domain.return_value = mock_domain_user
+                    MockUserModel.from_domain.return_value = mock_db_user
+                    
+                    # Call the function
+                    result = await get_current_user_supabase(
+                        credentials=mock_credentials,
+                        db=mock_db_session
+                    )
+                    
+                    # Check that from_domain was called with proper User entity from dict data
+                    MockUserModel.from_domain.assert_called_once()
+                    created_user_arg = MockUserModel.from_domain.call_args[0][0]
+                    assert created_user_arg.id == "supabase-user-456"
+                    assert created_user_arg.email == "dict@example.com"
+                    assert created_user_arg.username == "dictuser"
+                    assert created_user_arg.full_name == "Dict User"
 
     @pytest.mark.asyncio
     async def test_get_current_user_supabase_generic_exception_handling(
         self, mock_db_session, mock_credentials
     ):
         """Test generic exception handling during authentication."""
-        # Mock Supabase auth service to raise exception
-        with patch('fastmcp.auth.interface.supabase_fastapi_auth.supabase_auth') as mock_auth:
-            mock_auth.verify_token = AsyncMock(side_effect=Exception("Network error"))
+        # Mock get_supabase_auth function to raise exception
+        with patch('fastmcp.auth.interface.supabase_fastapi_auth.get_supabase_auth') as mock_get_auth:
+            mock_auth_service = MagicMock()
+            mock_get_auth.return_value = mock_auth_service
+            mock_auth_service.verify_token = AsyncMock(side_effect=Exception("Network error"))
             
             with pytest.raises(HTTPException) as exc_info:
                 await get_current_user_supabase(
@@ -254,3 +306,119 @@ class TestSupabaseFastAPIAuth:
     def test_get_current_user_alias(self):
         """Test that get_current_user is an alias for get_current_user_supabase."""
         assert get_current_user == get_current_user_supabase
+
+    def test_get_supabase_auth_singleton(self):
+        """Test that get_supabase_auth returns singleton instance."""
+        # Clear any existing singleton
+        import fastmcp.auth.interface.supabase_fastapi_auth as auth_module
+        auth_module.supabase_auth = None
+        
+        with patch('fastmcp.auth.interface.supabase_fastapi_auth.SupabaseAuthService') as MockService:
+            mock_instance = MagicMock()
+            MockService.return_value = mock_instance
+            
+            # First call should create instance
+            result1 = get_supabase_auth()
+            assert result1 == mock_instance
+            MockService.assert_called_once()
+            
+            # Second call should return same instance
+            result2 = get_supabase_auth()
+            assert result2 == mock_instance
+            # Should not create another instance
+            MockService.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_user_creation_with_minimal_metadata(self, mock_db_session, mock_credentials):
+        """Test user creation with minimal Supabase metadata."""
+        with patch('fastmcp.auth.interface.supabase_fastapi_auth.get_supabase_auth') as mock_get_auth:
+            mock_auth_service = MagicMock()
+            mock_get_auth.return_value = mock_auth_service
+            
+            # Setup user with minimal metadata
+            mock_minimal_user = MagicMock()
+            mock_minimal_user.id = "minimal-user-123"
+            mock_minimal_user.email = "minimal@example.com"
+            mock_minimal_user.user_metadata = {}  # Empty metadata
+            
+            mock_result = MagicMock()
+            mock_result.success = True
+            mock_result.user = mock_minimal_user
+            mock_auth_service.verify_token = AsyncMock(return_value=mock_result)
+            
+            with patch('fastmcp.auth.interface.supabase_fastapi_auth.UserRepository') as mock_repo_class:
+                mock_repo_instance = MagicMock()
+                mock_repo_instance.find_by_id.return_value = None
+                mock_repo_class.return_value = mock_repo_instance
+                
+                with patch('fastmcp.auth.interface.supabase_fastapi_auth.UserModel') as MockUserModel:
+                    mock_db_user = MagicMock()
+                    mock_domain_user = User(
+                        id="minimal-user-123",
+                        email="minimal@example.com",
+                        username="minimal",  # Should use email prefix
+                        full_name="",  # Should be empty
+                        password_hash="",
+                        status=UserStatus.ACTIVE,
+                        roles=[UserRole.USER],
+                        email_verified=True
+                    )
+                    mock_db_user.to_domain.return_value = mock_domain_user
+                    MockUserModel.from_domain.return_value = mock_db_user
+                    
+                    result = await get_current_user_supabase(
+                        credentials=mock_credentials,
+                        db=mock_db_session
+                    )
+                    
+                    # Verify user was created with email prefix as username
+                    created_user_arg = MockUserModel.from_domain.call_args[0][0]
+                    assert created_user_arg.username == "minimal"  # email prefix
+                    assert created_user_arg.full_name == ""  # empty when no metadata
+
+    @pytest.mark.asyncio
+    async def test_user_creation_with_email_without_at_symbol(self, mock_db_session, mock_credentials):
+        """Test user creation when email doesn't contain @ symbol."""
+        with patch('fastmcp.auth.interface.supabase_fastapi_auth.get_supabase_auth') as mock_get_auth:
+            mock_auth_service = MagicMock()
+            mock_get_auth.return_value = mock_auth_service
+            
+            # Setup user with no email
+            mock_user_no_email = MagicMock()
+            mock_user_no_email.id = "no-email-user-123"
+            mock_user_no_email.email = None
+            mock_user_no_email.user_metadata = {"username": "customuser"}
+            
+            mock_result = MagicMock()
+            mock_result.success = True
+            mock_result.user = mock_user_no_email
+            mock_auth_service.verify_token = AsyncMock(return_value=mock_result)
+            
+            with patch('fastmcp.auth.interface.supabase_fastapi_auth.UserRepository') as mock_repo_class:
+                mock_repo_instance = MagicMock()
+                mock_repo_instance.find_by_id.return_value = None
+                mock_repo_class.return_value = mock_repo_instance
+                
+                with patch('fastmcp.auth.interface.supabase_fastapi_auth.UserModel') as MockUserModel:
+                    mock_db_user = MagicMock()
+                    mock_domain_user = User(
+                        id="no-email-user-123",
+                        email=None,
+                        username="customuser",
+                        full_name="",
+                        password_hash="",
+                        status=UserStatus.ACTIVE,
+                        roles=[UserRole.USER],
+                        email_verified=True
+                    )
+                    mock_db_user.to_domain.return_value = mock_domain_user
+                    MockUserModel.from_domain.return_value = mock_db_user
+                    
+                    result = await get_current_user_supabase(
+                        credentials=mock_credentials,
+                        db=mock_db_session
+                    )
+                    
+                    # Verify username fallback logic
+                    created_user_arg = MockUserModel.from_domain.call_args[0][0]
+                    assert created_user_arg.username == "customuser"  # from metadata

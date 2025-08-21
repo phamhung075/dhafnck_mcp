@@ -6,6 +6,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Fixed - Invalid Token Error for Task Listing (2025-08-21)
+- **CRITICAL FIX**: Resolved "invalid_token" authentication error when frontend lists tasks
+  - **Root Cause**: Task summary routes used Starlette instead of FastAPI authentication  
+  - **Error**: `{"error": "invalid_token", "error_description": "Authentication required"}`
+  - **Solution**: Converted task summary routes from Starlette to FastAPI with proper JWT authentication:
+    - Migrated from `Request/JSONResponse` to FastAPI dependency injection
+    - Added `current_user: User = Depends(get_current_user)` to all endpoints
+    - Added `db: Session = Depends(get_db)` for database sessions
+    - Updated error handling from `JSONResponse` to `HTTPException`
+    - Replaced manual body parsing with FastAPI parameter binding
+  - **Files modified**:
+    - `dhafnck_mcp_main/src/fastmcp/server/routes/task_summary_routes.py` (complete rewrite from Starlette to FastAPI)
+    - `dhafnck_mcp_main/src/fastmcp/server/http_server.py` (updated route registration to use FastAPI router)
+  - **Testing**: Syntax validation completed, requires Docker rebuild for testing
+  - **Impact**: Frontend task listing now uses proper JWT authentication like project listing
+
 ### Fixed - Frontend Task Loading Authentication Issue (2025-08-21)
 - **CRITICAL FIX**: Resolved frontend task loading failure when clicking on git branches
   - **Root Cause**: `task_summary_routes.py` was using hardcoded "default_user" instead of AuthConfig pattern

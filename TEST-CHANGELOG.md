@@ -6,6 +6,54 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [2025-08-21] - Test Coverage Enhancement and Missing Test Creation
 
+### Added - New Test Files Created
+- **File**: `dhafnck_mcp_main/src/tests/server/routes/task_summary_routes_test.py`
+  - Complete test coverage for task summary routes performance optimization endpoints
+  - Tests for `get_task_summaries`, `get_full_task`, `get_subtask_summaries`, `get_task_context_summary`, and `get_performance_metrics`
+  - Pagination logic testing with `has_more` flag validation
+  - Auth configuration integration testing with fallback user handling
+  - Redis cache integration testing (enabled/disabled scenarios)
+  - Route definition and endpoint mapping verification
+  - Exception handling and error response testing
+  - Mock request/response validation with proper JSON structures
+  - Performance metrics testing for cache hit rates and system status
+  - Total: 35+ test methods across multiple test classes with comprehensive coverage
+
+### Fixed - Updated Stale Test Files
+- **File**: `dhafnck_mcp_main/src/tests/auth/interface/supabase_fastapi_auth_test.py`
+  - Updated imports to include `get_supabase_auth`, `UserStatus`, and `UserRole`
+  - Fixed User entity creation to use new domain model structure with `password_hash`, `status`, `roles`, and `email_verified` fields
+  - Updated all test methods to use proper `get_supabase_auth()` function mocking instead of direct `supabase_auth` module patching
+  - Fixed user creation tests to properly mock `UserModel.from_domain` and `to_domain` methods
+  - Added comprehensive testing for singleton pattern in `get_supabase_auth`
+  - Enhanced user creation tests with minimal metadata and email validation scenarios
+  - Updated authentication flow tests to match current implementation patterns
+
+- **File**: `dhafnck_mcp_main/src/tests/server/routes/user_scoped_task_routes_test.py`
+  - Updated imports to include `AsyncMock`, `UserStatus`, `UserRole`, and `ListTasksRequest`
+  - Fixed User entity creation in fixtures to use new domain model structure
+  - Enhanced test coverage with new `TestAuthenticationIntegration` class including:
+    - Supabase auth fallback handling tests
+    - User ID propagation validation across repository factories
+    - User-scoped access control verification
+    - Audit logging with user context testing
+    - User statistics calculation scoped correctly to individual users
+    - Task completion with proper user context and validation
+  - Updated all mock user fixtures to use proper domain entity structure
+  - Enhanced error handling and HTTP exception testing
+
+## [2025-08-21] - Previous Test Coverage Enhancement
+
+### Added - Missing Test Files Created
+- **File**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/compliance_mcp_controller_test.py`
+  - Comprehensive test suite for ComplianceMCPController
+  - Tests MCP tool registration, compliance validation, dashboard generation, and command execution
+  - Coverage: All action types (validate_compliance, get_compliance_dashboard, execute_with_compliance, get_audit_trail)
+  - Key tests: Authentication handling, error scenarios, parameter validation, metadata generation
+  - Edge cases: Large parameters, unicode content, timeout conversion, command truncation
+  - AAA pattern implementation with extensive mocking of dependencies
+  - Total: 40+ test methods across multiple test classes with comprehensive coverage
+
 ### Added - Missing Test Files Created
 - **File**: `dhafnck_mcp_main/src/tests/task_management/application/services/git_branch_service_test.py`
   - Comprehensive test suite for GitBranchService
