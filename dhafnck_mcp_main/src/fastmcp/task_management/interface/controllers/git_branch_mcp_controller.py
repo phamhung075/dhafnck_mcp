@@ -16,6 +16,7 @@ from .desc import description_loader
 from ...application.factories.git_branch_facade_factory import GitBranchFacadeFactory
 from ...application.facades.git_branch_application_facade import GitBranchApplicationFacade
 from .workflow_guidance.git_branch.git_branch_workflow_factory import GitBranchWorkflowFactory
+from .auth_helper import get_authenticated_user_id, log_authentication_details
 
 logger = logging.getLogger(__name__)
 
@@ -100,18 +101,20 @@ class GitBranchMCPController(ContextPropagationMixin):
                 agent_id=agent_id
             )
     
-    def _get_facade_for_request(self, project_id: str) -> GitBranchApplicationFacade:
+    def _get_facade_for_request(self, project_id: str, user_id: str = None) -> GitBranchApplicationFacade:
         """
         Get a GitBranchApplicationFacade with the appropriate context.
         
         Args:
             project_id: Project identifier
+            user_id: User identifier (optional, will be retrieved from context if not provided)
             
         Returns:
             GitBranchApplicationFacade instance
         """
-        # Extract user_id from authentication context
-        user_id = get_current_user_id()
+        # Get authenticated user ID using helper function (handles compatibility mode)
+        log_authentication_details()  # For debugging
+        user_id = get_authenticated_user_id(user_id, "Git branch facade creation")
         
         # Create facade with user context
         return self._git_branch_facade_factory.create_git_branch_facade(
@@ -131,6 +134,7 @@ class GitBranchMCPController(ContextPropagationMixin):
         """
         Manage git branch operations by routing to appropriate handlers.
         """
+        print(f"DEBUG: manage_git_branch called with action={action}, project_id={project_id}")
         logger.info(f"Managing git branch with action: {action} for project: {project_id}")
         
         # All actions require project_id
@@ -178,7 +182,9 @@ class GitBranchMCPController(ContextPropagationMixin):
         """
         try:
             # Get facade for this request
+            print(f"DEBUG: About to call _get_facade_for_request with project_id={project_id}")
             facade = self._get_facade_for_request(project_id)
+            print(f"DEBUG: Successfully created facade: {facade}")
             
             if action == "create":
                 if not git_branch_name:

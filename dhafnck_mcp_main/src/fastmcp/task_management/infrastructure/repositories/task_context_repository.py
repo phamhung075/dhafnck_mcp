@@ -72,6 +72,7 @@ class TaskContextRepository(BaseORMRepository):
                 delegation_triggers=entity.metadata.get('delegation_triggers', {}),
                 inheritance_disabled=entity.metadata.get('inheritance_disabled', False),
                 force_local_only=entity.metadata.get('force_local_only', False),
+                # user_id=entity.metadata.get('user_id') or 'system',  # Temporarily disabled for DB compatibility
                 version=1
             )
             
@@ -110,6 +111,7 @@ class TaskContextRepository(BaseORMRepository):
             db_model.delegation_triggers = entity.metadata.get('delegation_triggers', {})
             db_model.inheritance_disabled = entity.metadata.get('inheritance_disabled', False)
             db_model.force_local_only = entity.metadata.get('force_local_only', False)
+            # db_model.user_id = entity.metadata.get('user_id') or db_model.user_id or 'system'  # Temporarily disabled for DB compatibility
             db_model.version += 1
             
             session.flush()

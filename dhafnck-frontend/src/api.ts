@@ -163,12 +163,14 @@ export async function listTasks(params: any = {}): Promise<Task[]> {
     body: JSON.stringify(body),
   });
   const data = await res.json();
+  console.log('Raw MCP response for listTasks:', data);
   if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
     try {
       const toolResult = JSON.parse(data.result.content[0].text);
-      console.log('Raw listTasks response:', toolResult);
+      console.log('Parsed listTasks response:', toolResult);
       if (toolResult.success) {
         const data = extractResponseData(toolResult);
+        console.log('Extracted response data:', data);
         if (Array.isArray(data.tasks)) {
           console.log('Tasks before sanitization:', data.tasks);
           // Sanitize each task to remove non-serializable properties
@@ -176,12 +178,18 @@ export async function listTasks(params: any = {}): Promise<Task[]> {
           console.log('Tasks after sanitization:', sanitizedTasks);
           return sanitizedTasks;
         } else if (Array.isArray(toolResult.tasks)) {
+          console.log('Using fallback format - toolResult.tasks:', toolResult.tasks);
           // Fallback for older format
           return toolResult.tasks.map(sanitizeTask);
         }
+      } else {
+        console.log('toolResult.success is false:', toolResult);
       }
-    } catch {}
+    } catch (e) {
+      console.error('Error parsing listTasks response:', e);
+    }
   }
+  console.log('Returning empty array - no valid response');
   return [];
 }
 

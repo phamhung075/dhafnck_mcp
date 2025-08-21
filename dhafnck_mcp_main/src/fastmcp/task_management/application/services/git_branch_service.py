@@ -16,10 +16,19 @@ class GitBranchService:
                  hierarchical_context_service: Optional[UnifiedContextService] = None,
                  user_id: Optional[str] = None):
         self._user_id = user_id  # Store user context
-        self._project_repo = project_repo or GlobalRepositoryManager.get_default()
-        # Initialize git branch repository
+        
+        # Create project repository with proper authentication context
+        if project_repo:
+            self._project_repo = project_repo
+        elif user_id:
+            # If we have a user_id, get a user-specific repository
+            self._project_repo = GlobalRepositoryManager.get_for_user(user_id)
+        else:
+            # Fallback to default repository (may require compatibility mode)
+            self._project_repo = GlobalRepositoryManager.get_default()
+        # Initialize git branch repository with user context
         from ...infrastructure.repositories.orm.git_branch_repository import ORMGitBranchRepository
-        self._git_branch_repo = ORMGitBranchRepository()
+        self._git_branch_repo = ORMGitBranchRepository(user_id=user_id)
         # Initialize hierarchical context service for branch context creation
         if hierarchical_context_service:
             self._hierarchical_context_service = hierarchical_context_service

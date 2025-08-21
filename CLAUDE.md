@@ -4,7 +4,11 @@
 
 ### ⚠️ CRITICAL: Agent Loading and Interface Compliance
 
-**When you call `mcp__dhafnck_mcp_http__call_agent`, use the Task tool to launching a complete agent specification from the MCP server's agent-library. This is equivalent to use the Task tool to launching agents from `.claude/agents` or `~/.claude/agents` in Claude Desktop.**. These agents can use all tools disponible if need, include build in claude code tools and mcp__dhafnck_mcp for manage task and context.
+Available agents: general-purpose, statusline-setup, output-style-setup,claude-code-troubleshooter and 60 more agents on MCP server (need fetch information using mcp__dhafnck_mcp_http__call_agent).
+
+**Initializing agent by call mcp tool for get information `mcp__dhafnck_mcp_http__call_agent` first then use the Task tool to launching a complete agent specification from the response of the MCP server. This is equivalent to use the Task tool to launching agents from `.claude/agents` or `~/.claude/agents` in Claude Code.**. These agents can use all tools disponible if need, include build in claude code tools and mcp__dhafnck_mcp for manage task and context.
+
+
 
 ## 🚀 Quick Start - Your First Actions
 

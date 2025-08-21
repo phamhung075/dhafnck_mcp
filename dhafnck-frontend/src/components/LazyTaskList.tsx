@@ -73,56 +73,29 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
 
   // Memoized filtered and sorted tasks
   const displayTasks = useMemo(() => {
+    // Defensive check to prevent crashes
+    if (!taskSummaries || !Array.isArray(taskSummaries)) {
+      return [];
+    }
     const startIndex = (currentPage - 1) * TASKS_PER_PAGE;
     const endIndex = startIndex + TASKS_PER_PAGE;
     return taskSummaries.slice(0, endIndex);
   }, [taskSummaries, currentPage]);
 
-  // Initial lightweight load - only task summaries
-  const loadTaskSummaries = useCallback(async (page = 1) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // Request lightweight task data
-      const response = await fetch(`/api/tasks/summaries`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          git_branch_id: taskTreeId,
-          page,
-          limit: TASKS_PER_PAGE,
-          include_counts: true
-        })
-      });
-      
-      const data = await response.json();
-      
-      if (page === 1) {
-        setTaskSummaries(data.tasks);
-      } else {
-        setTaskSummaries(prev => [...prev, ...data.tasks]);
-      }
-      
-      setTotalTasks(data.total);
-      setHasMore(data.has_more);
-      
-    } catch (e: any) {
-      // Fallback to full task loading if lightweight endpoint doesn't exist
-      console.warn('Lightweight endpoint not available, falling back to full load');
-      await loadFullTasksFallback();
-    } finally {
-      setLoading(false);
-    }
-  }, [taskTreeId]);
-
   // Fallback to current implementation if lightweight endpoint isn't available
   const loadFullTasksFallback = useCallback(async () => {
     try {
+      console.log('Loading tasks for branch:', taskTreeId);
       const taskList = await listTasks({ git_branch_id: taskTreeId });
       
+      // Log the response to debug
+      console.log('Task list response:', taskList);
+      
+      // Ensure taskList is a valid array
+      const validTaskList = Array.isArray(taskList) ? taskList : [];
+      
       // Convert to task summaries
-      const summaries: TaskSummary[] = taskList.map(task => ({
+      const summaries: TaskSummary[] = validTaskList.map(task => ({
         id: task.id,
         title: task.title,
         status: task.status,
@@ -133,18 +106,32 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
         has_context: Boolean(task.context_id || task.context_data)
       }));
       
+      console.log('Converted summaries:', summaries);
+      
       setTaskSummaries(summaries);
       setTotalTasks(summaries.length);
       
       // Store full tasks for immediate access
       const taskMap = new Map();
-      taskList.forEach(task => taskMap.set(task.id, task));
+      validTaskList.forEach(task => taskMap.set(task.id, task));
       setFullTasks(taskMap);
       
     } catch (e: any) {
+      console.error('Error loading tasks:', e);
       setError(e.message);
     }
   }, [taskTreeId]);
+
+  // Initial lightweight load - only task summaries
+  const loadTaskSummaries = useCallback(async (page = 1) => {
+    setLoading(true);
+    setError(null);
+    
+    // Skip the non-existent summaries endpoint and go directly to fallback
+    // TODO: Implement /api/tasks/summaries endpoint for better performance
+    await loadFullTasksFallback();
+    setLoading(false);
+  }, [taskTreeId, loadFullTasksFallback]);
 
   // Load full task data on demand
   const loadFullTask = useCallback(async (taskId: string): Promise<Task | null> => {

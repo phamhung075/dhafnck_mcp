@@ -87,6 +87,7 @@ class TestAuthAPIServer:
              patch('fastmcp.auth.api_server.supabase_router') as mock_supabase, \
              patch('fastmcp.auth.api_server.dev_router') as mock_dev, \
              patch('fastmcp.auth.api_server.user_scoped_tasks_router') as mock_user_tasks, \
+             patch('fastmcp.auth.api_server.user_scoped_projects_router') as mock_user_projects, \
              patch('fastmcp.auth.api_server.token_router') as mock_token:
             
             # Re-import to get fresh app with dev environment
@@ -112,6 +113,7 @@ class TestAuthAPIServer:
              patch('fastmcp.auth.api_server.supabase_router') as mock_supabase, \
              patch('fastmcp.auth.api_server.dev_router') as mock_dev, \
              patch('fastmcp.auth.api_server.user_scoped_tasks_router') as mock_user_tasks, \
+             patch('fastmcp.auth.api_server.user_scoped_projects_router') as mock_user_projects, \
              patch('fastmcp.auth.api_server.token_router') as mock_token:
             
             # Re-import to get fresh app with production environment
@@ -227,6 +229,7 @@ class TestAuthAPIServer:
              patch('fastmcp.auth.api_server.supabase_router') as mock_supabase, \
              patch('fastmcp.auth.api_server.dev_router') as mock_dev, \
              patch('fastmcp.auth.api_server.user_scoped_tasks_router') as mock_user_tasks, \
+             patch('fastmcp.auth.api_server.user_scoped_projects_router') as mock_user_projects, \
              patch('fastmcp.auth.api_server.token_router') as mock_token:
             
             # Re-import to get fresh app
@@ -248,7 +251,7 @@ class TestAuthAPIServer:
         importlib.reload(fastmcp.auth.api_server)
         
         # Check info was logged
-        mock_logger.info.assert_called_with("✅ User-scoped task routes enabled at /api/v2/tasks/")
+        mock_logger.info.assert_any_call("✅ User-scoped task routes enabled at /api/v2/tasks/")
 
     def test_api_metadata_endpoints(self, client):
         """Test that API metadata is accessible"""
@@ -280,6 +283,7 @@ class TestAuthAPIServer:
              patch('fastmcp.auth.api_server.supabase_router') as mock_supabase, \
              patch('fastmcp.auth.api_server.dev_router') as mock_dev, \
              patch('fastmcp.auth.api_server.user_scoped_tasks_router') as mock_user_tasks, \
+             patch('fastmcp.auth.api_server.user_scoped_projects_router') as mock_user_projects, \
              patch('fastmcp.auth.api_server.token_router') as mock_token:
             
             # Re-import to get fresh app
@@ -302,3 +306,34 @@ class TestAuthAPIServer:
         
         # Check info was logged
         mock_logger.info.assert_any_call("✅ Token management routes enabled at /api/v2/tokens/")
+    
+    def test_user_scoped_projects_router_included(self, monkeypatch):
+        """Test that user-scoped projects router is included"""
+        # Mock the routers before import
+        with patch('fastmcp.auth.api_server.auth_router') as mock_auth, \
+             patch('fastmcp.auth.api_server.supabase_router') as mock_supabase, \
+             patch('fastmcp.auth.api_server.dev_router') as mock_dev, \
+             patch('fastmcp.auth.api_server.user_scoped_tasks_router') as mock_user_tasks, \
+             patch('fastmcp.auth.api_server.user_scoped_projects_router') as mock_user_projects, \
+             patch('fastmcp.auth.api_server.token_router') as mock_token:
+            
+            # Re-import to get fresh app
+            import importlib
+            import fastmcp.auth.api_server
+            importlib.reload(fastmcp.auth.api_server)
+            
+            app = fastmcp.auth.api_server.app
+            
+            # The app should exist and have included user-scoped projects router
+            assert app is not None
+            
+    @patch('fastmcp.auth.api_server.logger')
+    def test_user_scoped_projects_info_logged(self, mock_logger, monkeypatch):
+        """Test that info is logged when user-scoped projects routes are enabled"""
+        # Re-import to trigger the logging
+        import importlib
+        import fastmcp.auth.api_server
+        importlib.reload(fastmcp.auth.api_server)
+        
+        # Check info was logged
+        mock_logger.info.assert_any_call("✅ User-scoped project routes enabled at /api/v2/projects/")

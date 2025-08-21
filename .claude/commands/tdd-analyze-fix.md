@@ -4,6 +4,7 @@
 **Description:** "Deep analysis and remediation of existing tests, code, and documentation to identify and fix root causes"
 
 **Workflow:**
+- Call differents agents to deep analysis and remediation of existing tests, code, and documentation to identify and fix root causes, change agents depend by task.
 
 ### Phase 1: Deep Test Analysis
 - **Read all existing tests first** - understand current test coverage and expectations

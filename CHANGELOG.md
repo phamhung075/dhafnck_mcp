@@ -6,6 +6,83 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Fixed - Task Get Operation TypeError (2025-08-21)
+- **Fixed TypeError in task get operation that prevented task retrieval**:
+  - **Root Cause**: Duplicate `get_task` method definitions in `TaskApplicationFacade` causing method override conflict
+  - **Error**: "The task retrieval could not be completed." with "error_type": "TypeError"
+  - **Issue**: Second `get_task` method (line 945) was overriding the first method (line 295) and calling non-existent `get_task_by_id()` method
+  - **Solution**: 
+    - Removed duplicate `get_task` method definition that was causing the TypeError
+    - Enhanced error handling in dependency relationships processing with `getattr()` for safe attribute access
+    - Added try-catch blocks around dependency processing to prevent future TypeErrors
+  - **Files modified**:
+    - `dhafnck_mcp_main/src/fastmcp/task_management/application/facades/task_application_facade.py`
+  - **Impact**: `mcp__dhafnck_mcp_http__manage_task` action="get" now works correctly for all task IDs
+  - **Testing**: Verified with existing task IDs and error handling for invalid task IDs
+  - **Status**: Fixed and verified - task retrieval operations now work without TypeError
+
+### Fixed - Subtask Creation Authentication Issue (2025-08-21)
+- **Fixed subtask creation authentication requirement that prevented subtask operations**:
+  - Modified `SubtaskApplicationFacade` to use `auth_helper.get_authenticated_user_id()` for context derivation
+  - Replaced `UserAuthenticationRequiredError` exceptions with compatible authentication pattern used by other controllers
+  - Applied same compatibility mode fallback as task and project controllers
+  - Files modified:
+    - `dhafnck_mcp_main/src/fastmcp/task_management/application/facades/subtask_application_facade.py`
+  - **Root Cause**: Subtask facade was checking for user authentication in `_derive_context_from_task()` but throwing errors instead of using auth helpers
+  - **Error Message**: "Subtask context derivation requires user authentication. No user ID was provided."
+  - **Issue**: `mcp__dhafnck_mcp_http__manage_subtask` action="create" was failing despite parent task creation working fine
+  - **Solution**: Applied same authentication pattern as other MCP controllers with compatibility mode for development
+  - **Status**: Fixed and verified - subtask creation now works without explicit user authentication
+  - **Impact**: Enables TDD workflows and subtask management through MCP tools
+
+### Fixed - Git Branch Management Authentication Issue (2025-08-21)
+- **Implemented comprehensive authentication fix for git branch MCP operations**:
+  - Modified `GitBranchMCPController` to use `auth_helper.get_authenticated_user_id()` instead of direct `get_current_user_id()`
+  - Updated `GitBranchService` to pass user_id to project repository creation (`GlobalRepositoryManager.get_for_user()`)
+  - Modified `ORMGitBranchRepository` initialization to accept and use user_id parameter
+  - Added compatibility mode support to `ProjectRepositoryFactory.create()` for development environments
+  - Enhanced `auth_helper.get_authenticated_user_id()` with fallback to compatibility mode for MCP operations
+  - Files modified:
+    - `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/git_branch_mcp_controller.py`
+    - `dhafnck_mcp_main/src/fastmcp/task_management/application/services/git_branch_service.py`
+    - `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/project_repository_factory.py`
+    - `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/auth_helper.py`
+    - `dhafnck_mcp_main/src/fastmcp/config/auth_config.py`
+  - **Root Cause**: Git branch operations were failing with "Project repository creation requires user authentication" 
+  - **Issue**: Unlike project and task operations which use proper authentication helpers, git branch controller directly used `get_current_user_id()` returning `None`
+  - **Solution**: Applied same authentication pattern as project controller, with compatibility mode for development
+  - **Status**: Code changes implemented, environment configuration added (ALLOW_DEFAULT_USER=true in .env)
+  - **Note**: MCP server may need restart to fully pick up environment changes for complete resolution
+
+### Fixed - Frontend LazyTaskList Component Crash (2025-08-21)
+- **Fixed crash when clicking on branch in sidebar (TypeError: Cannot read properties of undefined)**:
+  - Added defensive null/undefined checks in displayTasks useMemo hook
+  - Added validation for API response structure before setting taskSummaries state
+  - Enhanced error handling in loadFullTasksFallback to ensure array validity
+  - Modified file: `dhafnck-frontend/src/components/LazyTaskList.tsx`
+  - Root cause: API endpoint `/api/tasks/summaries` returns undefined or malformed data
+  - Error location: LazyTaskList.tsx line 78 - `taskSummaries.slice(0, endIndex)`
+  - Solution: Added null checks and array validation at multiple points in data flow
+
+### Fixed - Supabase Authentication and User Repository (2025-08-21)
+- **Fixed UserRepository missing find_by_id method causing authentication failures**:
+  - Added synchronous `find_by_id` method to UserRepository for Supabase auth compatibility
+  - File: `dhafnck_mcp_main/src/fastmcp/auth/infrastructure/repositories/user_repository.py`
+  - Method returns domain User entity properly constructed from database model
+  
+- **Fixed incorrect User entity creation in Supabase authentication flow**:
+  - Updated User creation to match domain entity structure with proper attributes
+  - Changed from direct database insertion to proper domain model conversion flow
+  - Fixed attributes: `password_hash` instead of `hashed_password`, `UserStatus.ACTIVE` instead of `is_active`
+  - File: `dhafnck_mcp_main/src/fastmcp/auth/interface/supabase_fastapi_auth.py`
+  
+- **Verified end-to-end Supabase JWT authentication with frontend**:
+  - Frontend successfully authenticates users via Supabase
+  - JWT tokens correctly stored in cookies and sent in Authorization headers
+  - Backend validates Supabase JWTs and creates/retrieves local user records
+  - Projects created via MCP tools are visible to authenticated users
+  - API endpoints return user-scoped data based on JWT authentication
+
 ### Fixed - Project Routes Registration in API Server (2025-08-21)
 - **Fixed missing project routes in API server causing frontend project list to be empty**:
   - Added import and registration of `user_scoped_project_routes` in api_server.py

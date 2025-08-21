@@ -336,69 +336,76 @@ class TaskApplicationFacade:
                 # Use custom to_dict() method instead of asdict() to properly handle context_data
                 task_dict = task_response.to_dict()
                 if dependency_relationships:
-                    task_dict["dependency_relationships"] = {
-                        "task_id": dependency_relationships.task_id,
-                        "depends_on": [
-                            {
-                                "task_id": dep.task_id,
-                                "title": dep.title,
-                                "status": dep.status,
-                                "priority": dep.priority,
-                                "completion_percentage": dep.completion_percentage,
-                                "is_blocking": dep.is_blocking,
-                                "is_blocked": dep.is_blocked,
-                                "estimated_effort": dep.estimated_effort,
-                                "assignees": dep.assignees,
-                                "updated_at": dep.updated_at.isoformat() if dep.updated_at else None
-                            } for dep in dependency_relationships.depends_on
-                        ],
+                    try:
+                        # Safely process dependency relationships with error handling for attribute access
+                        task_dict["dependency_relationships"] = {
+                            "task_id": dependency_relationships.task_id,
+                            "depends_on": [
+                                {
+                                    "task_id": getattr(dep, 'task_id', None),
+                                    "title": getattr(dep, 'title', ''),
+                                    "status": getattr(dep, 'status', ''),
+                                    "priority": getattr(dep, 'priority', ''),
+                                    "completion_percentage": getattr(dep, 'completion_percentage', 0),
+                                    "is_blocking": getattr(dep, 'is_blocking', False),
+                                    "is_blocked": getattr(dep, 'is_blocked', False),
+                                    "estimated_effort": getattr(dep, 'estimated_effort', ''),
+                                    "assignees": getattr(dep, 'assignees', []),
+                                    "updated_at": getattr(dep, 'updated_at', None).isoformat() if getattr(dep, 'updated_at', None) and hasattr(getattr(dep, 'updated_at', None), 'isoformat') else None
+                                } for dep in (dependency_relationships.depends_on or [])
+                            ],
                         "blocks": [
                             {
-                                "task_id": dep.task_id,
-                                "title": dep.title,
-                                "status": dep.status,
-                                "priority": dep.priority,
-                                "completion_percentage": dep.completion_percentage,
-                                "is_blocking": dep.is_blocking,
-                                "is_blocked": dep.is_blocked,
-                                "estimated_effort": dep.estimated_effort,
-                                "assignees": dep.assignees,
-                                "updated_at": dep.updated_at.isoformat() if dep.updated_at else None
-                            } for dep in dependency_relationships.blocks
+                                "task_id": getattr(dep, 'task_id', None),
+                                "title": getattr(dep, 'title', ''),
+                                "status": getattr(dep, 'status', ''),
+                                "priority": getattr(dep, 'priority', ''),
+                                "completion_percentage": getattr(dep, 'completion_percentage', 0),
+                                "is_blocking": getattr(dep, 'is_blocking', False),
+                                "is_blocked": getattr(dep, 'is_blocked', False),
+                                "estimated_effort": getattr(dep, 'estimated_effort', ''),
+                                "assignees": getattr(dep, 'assignees', []),
+                                "updated_at": getattr(dep, 'updated_at', None).isoformat() if getattr(dep, 'updated_at', None) and hasattr(getattr(dep, 'updated_at', None), 'isoformat') else None
+                            } for dep in (dependency_relationships.blocks or [])
                         ],
                         "dependency_chains": [
                             {
-                                "chain_id": chain.chain_id,
-                                "chain_status": chain.chain_status,
-                                "total_tasks": chain.total_tasks,
-                                "completed_tasks": chain.completed_tasks,
-                                "blocked_tasks": chain.blocked_tasks,
-                                "completion_percentage": chain.completion_percentage,
-                                "is_blocked": chain.is_blocked,
+                                "chain_id": getattr(chain, 'chain_id', None),
+                                "chain_status": getattr(chain, 'chain_status', ''),
+                                "total_tasks": getattr(chain, 'total_tasks', 0),
+                                "completed_tasks": getattr(chain, 'completed_tasks', 0),
+                                "blocked_tasks": getattr(chain, 'blocked_tasks', 0),
+                                "completion_percentage": getattr(chain, 'completion_percentage', 0),
+                                "is_blocked": getattr(chain, 'is_blocked', False),
                                 "next_task": {
-                                    "task_id": chain.next_task.task_id,
-                                    "title": chain.next_task.title,
-                                    "status": chain.next_task.status
-                                } if chain.next_task else None
-                            } for chain in dependency_relationships.upstream_chains
+                                    "task_id": getattr(getattr(chain, 'next_task', None), 'task_id', None),
+                                    "title": getattr(getattr(chain, 'next_task', None), 'title', ''),
+                                    "status": getattr(getattr(chain, 'next_task', None), 'status', '')
+                                } if getattr(chain, 'next_task', None) else None
+                            } for chain in (getattr(dependency_relationships, 'upstream_chains', None) or [])
                         ],
                         "summary": {
-                            "total_dependencies": dependency_relationships.total_dependencies,
-                            "completed_dependencies": dependency_relationships.completed_dependencies,
-                            "blocked_dependencies": dependency_relationships.blocked_dependencies,
-                            "can_start": dependency_relationships.can_start,
-                            "is_blocked": dependency_relationships.is_blocked,
-                            "is_blocking_others": dependency_relationships.is_blocking_others,
-                            "dependency_summary": dependency_relationships.dependency_summary,
-                            "dependency_completion_percentage": dependency_relationships.dependency_completion_percentage
+                            "total_dependencies": getattr(dependency_relationships, 'total_dependencies', 0),
+                            "completed_dependencies": getattr(dependency_relationships, 'completed_dependencies', 0),
+                            "blocked_dependencies": getattr(dependency_relationships, 'blocked_dependencies', 0),
+                            "can_start": getattr(dependency_relationships, 'can_start', True),
+                            "is_blocked": getattr(dependency_relationships, 'is_blocked', False),
+                            "is_blocking_others": getattr(dependency_relationships, 'is_blocking_others', False),
+                            "dependency_summary": getattr(dependency_relationships, 'dependency_summary', ''),
+                            "dependency_completion_percentage": getattr(dependency_relationships, 'dependency_completion_percentage', 0)
                         },
                         "workflow": {
-                            "next_actions": dependency_relationships.next_actions,
-                            "blocking_reasons": dependency_relationships.blocking_reasons,
-                            "blocking_info": dependency_relationships.get_blocking_chain_info(),
-                            "workflow_guidance": dependency_relationships.get_workflow_guidance()
+                            "next_actions": getattr(dependency_relationships, 'next_actions', []),
+                            "blocking_reasons": getattr(dependency_relationships, 'blocking_reasons', []),
+                            "blocking_info": getattr(dependency_relationships, 'get_blocking_chain_info', lambda: {})() if hasattr(dependency_relationships, 'get_blocking_chain_info') else {},
+                            "workflow_guidance": getattr(dependency_relationships, 'get_workflow_guidance', lambda: {})() if hasattr(dependency_relationships, 'get_workflow_guidance') else {}
                         }
                     }
+                    except Exception as e:
+                        # If dependency relationship processing fails, log error but continue with basic task data
+                        logger.warning(f"Failed to process dependency relationships for task {task_id}: {e}")
+                        # Add minimal dependency info to indicate processing failed
+                        task_dict["dependency_relationships_error"] = str(e)
                 
                 # Apply unified context format
                 task_dict = ContextResponseFactory.apply_to_task_response(task_dict)
@@ -935,29 +942,6 @@ class TaskApplicationFacade:
             logger.error(f"Error fetching subtask summaries: {e}")
             return {"success": False, "error": str(e), "subtasks": []}
     
-    def get_task(self, task_id: str, include_full_data: bool = False) -> Dict[str, Any]:
-        """
-        Get task by ID with optional full data loading.
-        
-        Args:
-            task_id: The task ID
-            include_full_data: Whether to include all related data (subtasks, context, etc.)
-        """
-        try:
-            # Use existing get_task method
-            result = self.get_task_by_id(task_id, include_context=include_full_data)
-            
-            if result.get("success"):
-                return {
-                    "success": True,
-                    "task": result.get("task")
-                }
-            else:
-                return result
-                
-        except Exception as e:
-            logger.error(f"Error fetching task {task_id}: {e}")
-            return {"success": False, "error": str(e)}
     
     def add_dependency(self, task_id: str, dependency_id: str) -> Dict[str, Any]:
         """Add a dependency to a task"""
