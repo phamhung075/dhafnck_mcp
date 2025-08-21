@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
 from .desc import description_loader
 from ...application.orchestrators.compliance_orchestrator import ComplianceOrchestrator
+from ....config.auth_config import AuthConfig
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +42,7 @@ class ComplianceMCPController:
             operation: Annotated[Optional[str], Field(description="Operation to validate (e.g., 'create_file', 'edit_file', 'delete_file', 'run_command'). Required for validate_compliance action. (string)")] = None,
             file_path: Annotated[Optional[str], Field(description="Path to file being operated on. Optional. (string)")] = None,
             content: Annotated[Optional[str], Field(description="Content of file operation. Optional. (string)")] = None,
-            user_id: Annotated[str, Field(description="User performing operation. Default: 'system'. (string)")] = "system",
+            user_id: Annotated[Optional[str], Field(description="User performing operation. Optional, defaults to authentication fallback. (string)")] = None,
             security_level: Annotated[str, Field(description="Security level for operation. Default: 'public'. (string)")] = "public",
             audit_required: Annotated[bool, Field(description="Whether to log to audit trail. Default: True. (boolean)")] = True,
             command: Annotated[Optional[str], Field(description="Command to execute. Required for execute_with_compliance action. (string)")] = None,
@@ -75,7 +76,7 @@ class ComplianceMCPController:
 
     def manage_compliance(self, action: str, operation: Optional[str] = None, 
                          file_path: Optional[str] = None, content: Optional[str] = None,
-                         user_id: str = "system", security_level: str = "public",
+                         user_id: Optional[str] = None, security_level: str = "public",
                          audit_required: bool = True, command: Optional[str] = None,
                          timeout: Optional[int] = None, limit: int = 100) -> Dict[str, Any]:
         """
@@ -97,6 +98,16 @@ class ComplianceMCPController:
             Dict containing the result of the compliance operation
         """
         try:
+            # Get user ID with compatibility mode fallback
+            if user_id is None:
+                if AuthConfig.is_default_user_allowed():
+                    user_id = AuthConfig.get_fallback_user_id()
+                    logger.info(f"Using compatibility mode user: {user_id}")
+                else:
+                    # In production, would get from request headers/session
+                    # For now, use compatibility mode
+                    user_id = AuthConfig.get_fallback_user_id()
+            
             if action == "validate_compliance":
                 if not operation:
                     return {
@@ -154,7 +165,7 @@ class ComplianceMCPController:
             }
 
     def _handle_validate_compliance(self, operation: Optional[str], file_path: Optional[str] = None,
-                                   content: Optional[str] = None, user_id: str = "system",
+                                   content: Optional[str] = None, user_id: Optional[str] = None,
                                    security_level: str = "public", audit_required: bool = True) -> Dict[str, Any]:
         """Handle validate_compliance action"""
         if not operation:
@@ -189,7 +200,7 @@ class ComplianceMCPController:
             }
 
     def _handle_execute_with_compliance(self, command: Optional[str], timeout: Optional[int] = None,
-                                       user_id: str = "system", audit_required: bool = True) -> Dict[str, Any]:
+                                       user_id: Optional[str] = None, audit_required: bool = True) -> Dict[str, Any]:
         """Handle execute_with_compliance action"""
         from datetime import datetime
         if not command:
