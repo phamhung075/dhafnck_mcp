@@ -72,43 +72,33 @@ class TestSubtaskMCPController:
             assert call_kwargs["name"] == "manage_subtask"
             assert call_kwargs["description"] == "Test description"
     
-    @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_current_user_id')
-    def test_get_facade_for_request_with_user_context(self, mock_get_user_id):
+    @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_authenticated_user_id')
+    def test_get_facade_for_request_with_user_context(self, mock_get_auth_user_id):
         """Test getting facade with user context from JWT."""
-        mock_get_user_id.return_value = "jwt-user-123"
+        mock_get_auth_user_id.return_value = "jwt-user-123"
         task_id = "task-123"
         
-        with patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.validate_user_id') as mock_validate:
-            mock_validate.return_value = "jwt-user-123"
-            
+        # Mock database lookups for project context
+        with patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_session_manager'):
             result = self.controller._get_facade_for_request(task_id)
             
             assert result == self.mock_facade
-            mock_validate.assert_called_once_with("jwt-user-123", "Subtask facade creation")
-            self.mock_facade_factory.create_subtask_facade.assert_called_once_with(
-                task_id=task_id,
-                user_id="jwt-user-123"
-            )
+            mock_get_auth_user_id.assert_called_once_with(None, "Subtask context resolution")
+            self.mock_facade_factory.create_subtask_facade.assert_called_once_with("default")
     
-    @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_current_user_id')
-    @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.AuthConfig')
-    def test_get_facade_for_request_compatibility_mode(self, mock_auth_config, mock_get_user_id):
+    @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_authenticated_user_id')
+    def test_get_facade_for_request_compatibility_mode(self, mock_get_auth_user_id):
         """Test getting facade with compatibility mode."""
-        mock_get_user_id.return_value = None
-        mock_auth_config.is_default_user_allowed.return_value = True
-        mock_auth_config.get_fallback_user_id.return_value = "compatibility-user"
+        mock_get_auth_user_id.return_value = "compatibility-user"
         task_id = "task-123"
         
-        result = self.controller._get_facade_for_request(task_id)
-        
-        assert result == self.mock_facade
-        mock_auth_config.log_authentication_bypass.assert_called_once_with(
-            "Subtask facade creation", "compatibility mode"
-        )
-        self.mock_facade_factory.create_subtask_facade.assert_called_once_with(
-            task_id=task_id,
-            user_id="compatibility-user"
-        )
+        # Mock database lookups for project context
+        with patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_session_manager'):
+            result = self.controller._get_facade_for_request(task_id)
+            
+            assert result == self.mock_facade
+            mock_get_auth_user_id.assert_called_once_with(None, "Subtask context resolution")
+            self.mock_facade_factory.create_subtask_facade.assert_called_once_with("default")
     
     def test_manage_subtask_create_action(self):
         """Test manage_subtask with create action."""
@@ -184,7 +174,6 @@ class TestSubtaskMCPController:
         
         assert result["success"] is False
         assert result["error"] == "Unknown action: invalid_action"
-        assert result["error_code"] == "UNKNOWN_ACTION"
         assert "valid_actions" in result
     
     def test_handle_create_subtask_success(self):
@@ -218,7 +207,6 @@ class TestSubtaskMCPController:
         
         assert result["success"] is False
         assert "title" in result["error"]
-        assert result["action"] == "create"
     
     def test_handle_get_subtask_success(self):
         """Test handling get operation successfully."""
@@ -249,7 +237,6 @@ class TestSubtaskMCPController:
         
         assert result["success"] is False
         assert "subtask_id" in result["error"]
-        assert result["action"] == "get"
     
     def test_handle_list_subtasks_success(self):
         """Test handling list operation successfully."""

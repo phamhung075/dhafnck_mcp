@@ -23,6 +23,64 @@ from fastmcp.task_management.domain.exceptions.authentication_exceptions import 
 class TestGetAuthenticatedUserId:
     """Test cases for get_authenticated_user_id function."""
     
+    @patch('fastmcp.task_management.interface.controllers.auth_helper.get_user_id_from_request_state')
+    def test_request_state_user_id_takes_precedence(self, mock_get_request_state):
+        """Test that user_id from request state (DualAuthMiddleware) takes precedence."""
+        mock_get_request_state.return_value = "request_state_user"
+        
+        with patch('fastmcp.task_management.domain.constants.validate_user_id') as mock_validate:
+            mock_validate.return_value = "request_state_user"
+            
+            result = get_authenticated_user_id(None, "test_op")
+            
+            assert result == "request_state_user"
+            mock_validate.assert_called_once_with("request_state_user", "test_op")
+    
+    @patch('fastmcp.task_management.interface.controllers.auth_helper._current_http_request')
+    def test_get_user_id_from_request_state_success(self, mock_current_request):
+        """Test successful extraction of user_id from request state."""
+        from fastmcp.task_management.interface.controllers.auth_helper import get_user_id_from_request_state
+        
+        # Mock request with state
+        mock_request = Mock()
+        mock_request.state.user_id = "state_user_123"
+        mock_current_request.get.return_value = mock_request
+        
+        result = get_user_id_from_request_state()
+        assert result == "state_user_123"
+    
+    @patch('fastmcp.task_management.interface.controllers.auth_helper._current_http_request')
+    def test_get_user_id_from_request_state_no_request(self, mock_current_request):
+        """Test when no current request is available."""
+        from fastmcp.task_management.interface.controllers.auth_helper import get_user_id_from_request_state
+        
+        mock_current_request.get.return_value = None
+        
+        result = get_user_id_from_request_state()
+        assert result is None
+    
+    @patch('fastmcp.task_management.interface.controllers.auth_helper._current_http_request')
+    def test_get_user_id_from_request_state_no_state(self, mock_current_request):
+        """Test when request has no state attribute."""
+        from fastmcp.task_management.interface.controllers.auth_helper import get_user_id_from_request_state
+        
+        # Mock request without state
+        mock_request = Mock(spec=[])
+        mock_current_request.get.return_value = mock_request
+        
+        result = get_user_id_from_request_state()
+        assert result is None
+    
+    @patch('fastmcp.task_management.interface.controllers.auth_helper._current_http_request')
+    def test_get_user_id_from_request_state_exception(self, mock_current_request):
+        """Test exception handling in get_user_id_from_request_state."""
+        from fastmcp.task_management.interface.controllers.auth_helper import get_user_id_from_request_state
+        
+        mock_current_request.get.side_effect = Exception("Request context error")
+        
+        result = get_user_id_from_request_state()
+        assert result is None
+    
     def test_provided_user_id_takes_precedence(self):
         """Test that provided user_id parameter takes precedence."""
         with patch('fastmcp.task_management.domain.constants.validate_user_id') as mock_validate:

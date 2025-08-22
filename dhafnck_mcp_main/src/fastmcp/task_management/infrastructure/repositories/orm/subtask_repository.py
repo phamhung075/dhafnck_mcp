@@ -150,9 +150,14 @@ class ORMSubtaskRepository(BaseORMRepository[TaskSubtask], BaseUserScopedReposit
         """
         try:
             with self.get_db_session() as session:
-                models = session.query(TaskSubtask).filter(
+                query = session.query(TaskSubtask).filter(
                     TaskSubtask.task_id == parent_task_id.value
-                ).order_by(TaskSubtask.created_at.asc()).all()
+                )
+                
+                # Apply user filter for data isolation
+                query = self.apply_user_filter(query)
+                
+                models = query.order_by(TaskSubtask.created_at.asc()).all()
                 
                 return [self._to_domain_entity(model) for model in models]
                 
@@ -177,9 +182,14 @@ class ORMSubtaskRepository(BaseORMRepository[TaskSubtask], BaseUserScopedReposit
         try:
             with self.get_db_session() as session:
                 # Use JSON operations to search within assignees array
-                models = session.query(TaskSubtask).filter(
+                query = session.query(TaskSubtask).filter(
                     TaskSubtask.assignees.contains([assignee])
-                ).order_by(TaskSubtask.created_at.desc()).all()
+                )
+                
+                # Apply user filter for data isolation
+                query = self.apply_user_filter(query)
+                
+                models = query.order_by(TaskSubtask.created_at.desc()).all()
                 
                 return [self._to_domain_entity(model) for model in models]
                 
@@ -203,9 +213,14 @@ class ORMSubtaskRepository(BaseORMRepository[TaskSubtask], BaseUserScopedReposit
         """
         try:
             with self.get_db_session() as session:
-                models = session.query(TaskSubtask).filter(
+                query = session.query(TaskSubtask).filter(
                     TaskSubtask.status == status
-                ).order_by(TaskSubtask.created_at.desc()).all()
+                )
+                
+                # Apply user filter for data isolation
+                query = self.apply_user_filter(query)
+                
+                models = query.order_by(TaskSubtask.created_at.desc()).all()
                 
                 return [self._to_domain_entity(model) for model in models]
                 
@@ -229,12 +244,17 @@ class ORMSubtaskRepository(BaseORMRepository[TaskSubtask], BaseUserScopedReposit
         """
         try:
             with self.get_db_session() as session:
-                models = session.query(TaskSubtask).filter(
+                query = session.query(TaskSubtask).filter(
                     and_(
                         TaskSubtask.task_id == parent_task_id.value,
                         TaskSubtask.status == 'done'
                     )
-                ).order_by(TaskSubtask.completed_at.desc()).all()
+                )
+                
+                # Apply user filter for data isolation
+                query = self.apply_user_filter(query)
+                
+                models = query.order_by(TaskSubtask.completed_at.desc()).all()
                 
                 return [self._to_domain_entity(model) for model in models]
                 
@@ -258,12 +278,17 @@ class ORMSubtaskRepository(BaseORMRepository[TaskSubtask], BaseUserScopedReposit
         """
         try:
             with self.get_db_session() as session:
-                models = session.query(TaskSubtask).filter(
+                query = session.query(TaskSubtask).filter(
                     and_(
                         TaskSubtask.task_id == parent_task_id.value,
                         TaskSubtask.status.in_(['todo', 'in_progress', 'blocked'])
                     )
-                ).order_by(TaskSubtask.created_at.asc()).all()
+                )
+                
+                # Apply user filter for data isolation
+                query = self.apply_user_filter(query)
+                
+                models = query.order_by(TaskSubtask.created_at.asc()).all()
                 
                 return [self._to_domain_entity(model) for model in models]
                 

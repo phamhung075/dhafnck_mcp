@@ -286,6 +286,65 @@ class TestDualAuthMiddleware:
         assert args[0] == "mcp-token"
     
     @pytest.mark.asyncio
+    async def test_mcp_auth_jwt_token_local(self, app_with_middleware, monkeypatch):
+        """Test MCP authentication with local JWT token."""
+        app, _, token_validator = app_with_middleware
+        
+        # Set JWT secret
+        monkeypatch.setenv("JWT_SECRET_KEY", "test-jwt-secret")
+        
+        # Create a valid JWT token
+        from fastmcp.auth.domain.services.jwt_service import JWTService
+        jwt_service = JWTService(secret_key="test-jwt-secret")
+        token = jwt_service.create_access_token(
+            user_id="jwt-user-123",
+            email="jwt@example.com",
+            token_type="api_token"
+        )
+        
+        client = TestClient(app)
+        response = client.post(
+            "/mcp",
+            json={"jsonrpc": "2.0", "method": "tools/list", "id": 1},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["result"]["user_id"] == "jwt-user-123"
+    
+    @pytest.mark.asyncio
+    async def test_mcp_auth_jwt_token_fallback_access_type(self, app_with_middleware, monkeypatch):
+        """Test MCP authentication with JWT token using 'access' type as fallback."""
+        app, _, token_validator = app_with_middleware
+        
+        # Set JWT secret
+        monkeypatch.setenv("JWT_SECRET_KEY", "test-jwt-secret")
+        
+        # Create a JWT token with 'access' type
+        from fastmcp.auth.domain.services.jwt_service import JWTService
+        jwt_service = JWTService(secret_key="test-jwt-secret")
+        token = jwt_service.create_access_token(
+            user_id="jwt-user-456",
+            email="jwt2@example.com",
+            token_type="access"  # Using 'access' type
+        )
+        
+        # Mock token validator to fail (so it falls back to JWT validation)
+        token_validator.validate_token.side_effect = Exception("Not a Supabase token")
+        
+        client = TestClient(app)
+        response = client.post(
+            "/mcp",
+            json={"jsonrpc": "2.0", "method": "tools/list", "id": 1},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["result"]["user_id"] == "jwt-user-456"
+    
+    @pytest.mark.asyncio
     async def test_mcp_auth_custom_header(self, app_with_middleware, mock_token_info):
         """Test MCP authentication with custom header."""
         app, _, token_validator = app_with_middleware
@@ -482,6 +541,68 @@ class TestDualAuthMiddleware:
         """Test the factory function."""
         middleware_class = create_dual_auth_middleware()
         assert middleware_class == DualAuthMiddleware
+
+
+class TestJWTTokenHandling:
+    """Test cases for JWT token handling in dual auth middleware."""
+    
+    @pytest.mark.asyncio
+    async def test_jwt_token_detection(self, app_with_middleware, monkeypatch):
+        """Test that JWT tokens are detected and handled correctly."""
+        app, _, token_validator = app_with_middleware
+        
+        # Set JWT secret
+        monkeypatch.setenv("JWT_SECRET_KEY", "test-secret")
+        
+        # Create a JWT token (starts with 'eyJ')
+        from fastmcp.auth.domain.services.jwt_service import JWTService
+        jwt_service = JWTService(secret_key="test-secret")
+        jwt_token = jwt_service.create_access_token(
+            user_id="test-user",
+            email="test@example.com",
+            token_type="api_token"
+        )
+        
+        assert jwt_token.startswith("eyJ")  # Verify it's a JWT token
+        
+        client = TestClient(app)
+        response = client.post(
+            "/mcp",
+            json={"jsonrpc": "2.0", "method": "test", "id": 1},
+            headers={"Authorization": f"Bearer {jwt_token}"}
+        )
+        
+        assert response.status_code == 200
+    
+    @pytest.mark.asyncio
+    async def test_jwt_token_invalid_type(self, app_with_middleware, monkeypatch):
+        """Test JWT token with invalid type."""
+        app, _, token_validator = app_with_middleware
+        
+        # Set JWT secret
+        monkeypatch.setenv("JWT_SECRET_KEY", "test-secret")
+        
+        # Create a JWT token with wrong type
+        from fastmcp.auth.domain.services.jwt_service import JWTService
+        jwt_service = JWTService(secret_key="test-secret")
+        jwt_token = jwt_service.create_access_token(
+            user_id="test-user",
+            email="test@example.com",
+            token_type="wrong_type"  # Wrong type
+        )
+        
+        # Mock token validator to fail
+        token_validator.validate_token.side_effect = Exception("Not a Supabase token")
+        
+        client = TestClient(app)
+        response = client.post(
+            "/mcp",
+            json={"jsonrpc": "2.0", "method": "test", "id": 1},
+            headers={"Authorization": f"Bearer {jwt_token}"}
+        )
+        
+        # Should fail as token type is invalid
+        assert response.status_code == 401
 
 
 class TestLogging:

@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from fastmcp.server.server import FastMCP
 
 from .desc import description_loader
+from .auth_helper import get_authenticated_user_id
 from ..utils.error_handler import UserFriendlyErrorHandler
 from ..utils.response_formatter import StandardResponseFormatter, ResponseStatus
 from ..utils.parameter_validation_fix import coerce_parameter_types
@@ -245,9 +246,15 @@ class UnifiedContextMCPController:
                 if action == "delegate" and delegate_data:
                     data = delegate_data
                 
-                # Create appropriate facade
+                # Get authenticated user_id
+                authenticated_user_id = get_authenticated_user_id(
+                    provided_user_id=user_id,
+                    operation_name=f"manage_context.{action}"
+                )
+                
+                # Create appropriate facade with authenticated user
                 facade = self._facade_factory.create_facade(
-                    user_id=user_id,
+                    user_id=authenticated_user_id,
                     project_id=project_id,
                     git_branch_id=git_branch_id
                 )

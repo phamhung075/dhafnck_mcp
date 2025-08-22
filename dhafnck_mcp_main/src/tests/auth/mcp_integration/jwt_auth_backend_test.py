@@ -47,6 +47,70 @@ class TestMCPUserContext:
 class TestJWTAuthBackend:
     """Test suite for JWTAuthBackend"""
     
+    @pytest.mark.asyncio
+    async def test_validate_token_dual_auth_local_success(self, auth_backend, jwt_service):
+        """Test dual auth validation with local JWT success"""
+        payload = {
+            "sub": "user123",
+            "type": "access",
+            "exp": int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
+        }
+        jwt_service.verify_token.return_value = payload
+        
+        result = await auth_backend._validate_token_dual_auth("local.token")
+        
+        assert result == payload
+        assert jwt_service.verify_token.called
+    
+    @pytest.mark.asyncio
+    async def test_validate_token_dual_auth_supabase_success(self, auth_backend, jwt_service, monkeypatch):
+        """Test dual auth validation with Supabase JWT success"""
+        # Local validation fails
+        jwt_service.verify_token.side_effect = Exception("Invalid token")
+        
+        # Set up Supabase secret
+        monkeypatch.setenv("SUPABASE_JWT_SECRET", "supabase-test-secret")
+        
+        # Create a valid Supabase token
+        payload = {
+            "sub": "user123",
+            "email": "test@example.com",
+            "exp": int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
+        }
+        supabase_token = jwt.encode(payload, "supabase-test-secret", algorithm="HS256")
+        
+        result = await auth_backend._validate_token_dual_auth(supabase_token)
+        
+        assert result is not None
+        assert result["sub"] == "user123"
+        assert result["type"] == "supabase_access"  # Added by the method
+    
+    @pytest.mark.asyncio
+    async def test_validate_token_dual_auth_both_fail(self, auth_backend, jwt_service, monkeypatch):
+        """Test dual auth validation when both methods fail"""
+        # Local validation fails
+        jwt_service.verify_token.side_effect = Exception("Invalid token")
+        
+        # Supabase validation also fails (wrong secret)
+        monkeypatch.setenv("SUPABASE_JWT_SECRET", "wrong-secret")
+        
+        result = await auth_backend._validate_token_dual_auth("invalid.token")
+        
+        assert result is None
+    
+    @pytest.mark.asyncio
+    async def test_validate_token_dual_auth_no_supabase_secret(self, auth_backend, jwt_service, monkeypatch):
+        """Test dual auth validation without Supabase secret configured"""
+        # Local validation fails
+        jwt_service.verify_token.return_value = None
+        
+        # Ensure no Supabase secret
+        monkeypatch.delenv("SUPABASE_JWT_SECRET", raising=False)
+        
+        result = await auth_backend._validate_token_dual_auth("some.token")
+        
+        assert result is None
+    
     @pytest.fixture
     def jwt_service(self):
         """Create mock JWT service"""
@@ -113,6 +177,9 @@ class TestJWTAuthBackend:
         }
         jwt_service.verify_token.return_value = payload
         
+        # Mock _validate_token_dual_auth to return the payload
+        auth_backend._validate_token_dual_auth = AsyncMock(return_value=payload)
+        
         result = await auth_backend.load_access_token("valid.token.here")
         
         assert result is not None
@@ -122,8 +189,8 @@ class TestJWTAuthBackend:
         assert "mcp:read" in result.scopes  # Default user scope
         assert result.expires_at == payload["exp"]
         
-        # Verify token validation was called
-        jwt_service.verify_token.assert_called()
+        # Verify dual auth validation was called
+        auth_backend._validate_token_dual_auth.assert_called_once_with("valid.token.here")
     
     @pytest.mark.asyncio
     async def test_load_access_token_api_token_fallback(self, auth_backend, jwt_service):
@@ -136,11 +203,14 @@ class TestJWTAuthBackend:
         }
         jwt_service.verify_token.side_effect = [None, payload]
         
+        # Mock _validate_token_dual_auth to return the payload
+        auth_backend._validate_token_dual_auth = AsyncMock(return_value=payload)
+        
         result = await auth_backend.load_access_token("api.token.here")
         
         assert result is not None
         assert result.client_id == "user123"
-        assert jwt_service.verify_token.call_count == 2
+        auth_backend._validate_token_dual_auth.assert_called_once_with("api.token.here")
     
     @pytest.mark.asyncio
     async def test_load_access_token_user_id_fallback(self, auth_backend, jwt_service):
@@ -151,6 +221,9 @@ class TestJWTAuthBackend:
         }
         jwt_service.verify_token.return_value = payload
         
+        # Mock _validate_token_dual_auth to return the payload
+        auth_backend._validate_token_dual_auth = AsyncMock(return_value=payload)
+        
         result = await auth_backend.load_access_token("valid.token.here")
         
         assert result is not None
@@ -160,6 +233,9 @@ class TestJWTAuthBackend:
     async def test_load_access_token_invalid(self, auth_backend, jwt_service):
         """Test loading invalid token returns None"""
         jwt_service.verify_token.return_value = None
+        
+        # Mock _validate_token_dual_auth to return None (invalid token)
+        auth_backend._validate_token_dual_auth = AsyncMock(return_value=None)
         
         result = await auth_backend.load_access_token("invalid.token")
         
@@ -174,6 +250,9 @@ class TestJWTAuthBackend:
         }
         jwt_service.verify_token.return_value = payload
         
+        # Mock _validate_token_dual_auth to return the payload without user_id
+        auth_backend._validate_token_dual_auth = AsyncMock(return_value=payload)
+        
         result = await auth_backend.load_access_token("token.without.userid")
         
         assert result is None
@@ -187,6 +266,9 @@ class TestJWTAuthBackend:
             "exp": int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
         }
         jwt_service.verify_token.return_value = payload
+        
+        # Mock _validate_token_dual_auth to return the payload with string scopes
+        auth_backend._validate_token_dual_auth = AsyncMock(return_value=payload)
         
         result = await auth_backend.load_access_token("token.with.string.scopes")
         
@@ -408,6 +490,9 @@ class TestCreateJWTAuthBackend:
         }
         jwt_service.verify_token.return_value = payload
         
+        # Mock _validate_token_dual_auth to return the payload
+        auth_backend._validate_token_dual_auth = AsyncMock(return_value=payload)
+        
         # Load access token (this should work with user context middleware)
         result = await auth_backend.load_access_token("valid.token.here")
         
@@ -432,6 +517,9 @@ class TestCreateJWTAuthBackend:
         
         for payload, description in scenarios:
             jwt_service.verify_token.return_value = payload
+            
+            # Mock _validate_token_dual_auth to return the payload
+            auth_backend._validate_token_dual_auth = AsyncMock(return_value=payload)
             
             result = await auth_backend.load_access_token(f"token.for.{description}")
             

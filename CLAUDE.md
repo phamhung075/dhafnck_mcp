@@ -6,8 +6,36 @@
 
 Available agents: general-purpose, statusline-setup, output-style-setup,claude-code-troubleshooter and 60 more agents on MCP server (need fetch information using mcp__dhafnck_mcp_http__call_agent).
 
-**Initializing agent by call mcp tool for get information `mcp__dhafnck_mcp_http__call_agent` first then use the Task tool to launching a complete agent specification from the response of the MCP server. This is equivalent to use the Task tool to launching agents from `.claude/agents` or `~/.claude/agents` in Claude Code.**. These agents can use all tools disponible if need, include build in claude code tools and mcp__dhafnck_mcp for manage task and context.
 
+## **Actual Claude Code Style Agent Display:**
+
+```bash
+[Agent: {agent_name} - Working...]
+[Agent: {agent_name} - Ready]
+[Agent: {agent_name} - Initializing...]
+```
+
+- **Simple bracket notation**: `[Agent: name - status]`
+- **Basic status words**: Working, Ready, Initializing, Error, etc.
+- **Clean terminal output** without fancy graphics
+
+## **Corrected Step-by-Step Process:**
+
+**Step 1: Initialize MCP Agent**
+- Call `mcp__dhafnck_mcp_http__call_agent` to get agent information
+- **Display**: `[Agent: Initializing...]`
+
+**Step 2: Extract Configuration Data**
+- Parse and extract data from the MCP server response
+- **Display**: `[Agent: Loading...]`
+
+**Step 3: Launch Agent with Task Tool**
+- Use the Task tool to launch complete agent specification
+- **Display**: `[Agent: {agent_name} - Working...]`
+
+**Step 4: Agent Operational**
+- Agent equivalent to `.claude/agents` launches
+- **Display**: `[Agent: {agent_name} - Ready]`
 
 
 ## 🚀 Quick Start - Your First Actions

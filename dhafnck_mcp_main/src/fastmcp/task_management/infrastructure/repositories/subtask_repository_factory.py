@@ -115,7 +115,7 @@ class SubtaskRepositoryFactory:
             # Try to get database config to check if it's available
             db_config = get_db_config()
             if db_config and db_config.engine:
-                return ORMSubtaskRepository()
+                return ORMSubtaskRepository(user_id=user_id)
         except Exception as e:
             logger.warning(f"Database not available, using mock repository: {e}")
         
@@ -151,21 +151,26 @@ class SubtaskRepositoryFactory:
             # Try to get database config to check if it's available
             db_config = get_db_config()
             if db_config and db_config.engine:
-                return ORMSubtaskRepository()
+                return ORMSubtaskRepository(user_id=user_id)
         except Exception as e:
             logger.warning(f"Database not available, using mock repository: {e}")
         
         # Fallback to mock repository
         return MockSubtaskRepository()
     
-    def create_orm_subtask_repository(self) -> SubtaskRepository:
+    def create_orm_subtask_repository(self, user_id: Optional[str] = None) -> SubtaskRepository:
         """
         Create an ORM subtask repository
         
+        Args:
+            user_id: User identifier for scoping
+            
         Returns:
             ORMSubtaskRepository instance
         """
-        return ORMSubtaskRepository()
+        if not user_id:
+            user_id = self.default_user_id
+        return ORMSubtaskRepository(user_id=user_id)
     
     def validate_user_project_tree(self, project_id: str, git_branch_name: str, user_id: Optional[str] = None) -> bool:
         """

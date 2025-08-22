@@ -6,6 +6,27 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Fixed - Context System User Authentication (2025-08-22)
+- **ENHANCEMENT**: Fixed UnifiedContextController to properly authenticate user_id
+  - **Problem**: Context management was accepting any user_id without authentication
+  - **Solution**: Added `get_authenticated_user_id` to properly validate and authenticate users
+  - **Implementation**: Modified `manage_context` tool to authenticate user before creating facade
+  - **Files Modified**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/unified_context_controller.py`
+  - **Impact**: Context operations now properly respect user authentication and isolation
+
+### Fixed - Subtask User Isolation Repository Bug (2025-08-22)
+- **CRITICAL FIX**: Fixed SubtaskRepositoryFactory not passing user_id to ORMSubtaskRepository
+  - **Problem**: Subtasks were not being returned when listing, showing "No subtasks" even after creation
+  - **Root Cause**: SubtaskRepositoryFactory was instantiating ORMSubtaskRepository without user_id parameter
+  - **Solution**: Updated SubtaskRepositoryFactory to pass user_id to ORMSubtaskRepository constructor
+  - **Implementation Details**:
+    - Modified `create_subtask_repository()` to pass `user_id=user_id` when creating ORMSubtaskRepository
+    - Modified `create_sqlite_subtask_repository()` similarly for consistency
+    - Updated `create_orm_subtask_repository()` to accept and use user_id parameter
+  - **Files Modified**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/subtask_repository_factory.py`
+  - **Testing**: Verified subtasks now list correctly with Supabase backend after Docker rebuild
+  - **Impact**: Subtasks are now properly filtered by user_id, maintaining data isolation between users
+
 ### Fixed - FastMCP Server Initialization Error (2025-08-22)
 - **CRITICAL FIX**: Resolved FastMCP server startup failure due to incorrect parameter usage
   - **Problem**: Server failed to start with `TypeError: FastMCP.__init__() got an unexpected keyword argument 'additional_http_routes'`

@@ -27,79 +27,21 @@ REQUIRED BEHAVIORS:
 ## Missing Test Files - CREATE IMMEDIATELY:
 
 ## Stale Test Files (Source Newer Than Test)
-- **Source**: `dhafnck-frontend/src/api.ts`
-  - **Test**: `dhafnck-frontend/src/tests/api.test.ts`
-  - **Days stale**: 0
-
-- **Source**: `dhafnck-frontend/src/services/apiV2.ts`
-  - **Test**: `dhafnck-frontend/src/tests/services/apiV2.test.ts`
-  - **Days stale**: 2
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/http_server.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/server/http_server_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/mcp_integration/jwt_auth_backend.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/auth/mcp_integration/jwt_auth_backend_test.py`
   - **Days stale**: 1
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/mcp_entry_point.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/server/mcp_entry_point_test.py`
-  - **Days stale**: 1
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/user_scoped_task_routes.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/server/routes/user_scoped_task_routes_test.py`
-  - **Days stale**: 0
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/database/models.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/database/models_test.py`
-  - **Days stale**: 0
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/project_repository.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/project_repository_test.py`
-  - **Days stale**: 1
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/task_repository.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/task_repository_test.py`
-  - **Days stale**: 1
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/task_mcp_controller.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/task_mcp_controller_test.py`
-  - **Days stale**: 1
-
-
-## Missing Test Files
-- **Source**: `dhafnck-frontend/src/components/MCPTokenManager.tsx`
-  - **Create test at**: `dhafnck-frontend/src/tests/components/MCPTokenManager.test.tsx`
-
-- **Source**: `dhafnck-frontend/src/services/mcpTokenService.ts`
-  - **Create test at**: `dhafnck-frontend/src/tests/services/mcpTokenService.test.ts`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/middleware.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/auth/middleware_test.py`
 
 - **Source**: `dhafnck_mcp_main/src/fastmcp/auth/middleware/dual_auth_middleware.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/auth/middleware/dual_auth_middleware_test.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/auth/middleware/dual_auth_middleware_test.py`
+  - **Days stale**: 0
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/services/mcp_token_service.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/auth/services/mcp_token_service_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/auth_helper.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/auth_helper_test.py`
+  - **Days stale**: 1
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/token_validator.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/auth/token_validator_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/manage_connection_tool.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/server/manage_connection_tool_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/mcp_status_tool.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/server/mcp_status_tool_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/mcp_token_routes.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/server/routes/mcp_token_routes_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/label_repository.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/label_repository_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/subtask_repository.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/subtask_repository_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/utilities/debug_service.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/utilities/debug_service_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/subtask_mcp_controller.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/subtask_mcp_controller_test.py`
+  - **Days stale**: 1
 
 
 ## EXECUTION COMMANDS - DO NOW:
