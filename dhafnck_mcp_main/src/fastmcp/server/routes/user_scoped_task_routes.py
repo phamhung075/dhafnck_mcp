@@ -19,7 +19,7 @@ except ImportError:
     from ...auth.interface.fastapi_auth import get_current_user
 from ...auth.domain.entities.user import User
 from ...task_management.application.facades.task_application_facade import TaskApplicationFacade
-from ...task_management.infrastructure.repositories.orm.task_repository import TaskRepository
+from ...task_management.infrastructure.repositories.orm.task_repository import ORMTaskRepository as TaskRepository
 from ...task_management.infrastructure.repositories.orm.project_repository import ProjectRepository
 from ...task_management.infrastructure.repositories.orm.agent_repository import AgentRepository
 from ...task_management.application.dtos.task.create_task_request import CreateTaskRequest
@@ -141,20 +141,35 @@ async def list_tasks(
         
         # Get user's tasks only
         logger.debug("🔍 Fetching tasks from facade...")
-        tasks = facade.list_tasks(list_request)
-        logger.debug(f"✅ Tasks fetched: {len(tasks)} tasks found")
+        facade_result = facade.list_tasks(list_request)
+        logger.debug(f"✅ Facade result type: {type(facade_result)}")
+        logger.debug(f"✅ Facade result keys: {facade_result.keys() if isinstance(facade_result, dict) else 'Not a dict'}")
+        
+        # Extract the actual tasks array from the facade response
+        if isinstance(facade_result, dict) and facade_result.get("success") and "tasks" in facade_result:
+            tasks = facade_result["tasks"]
+            logger.debug(f"✅ Tasks extracted: {len(tasks)} tasks found")
+        else:
+            logger.error(f"❌ Unexpected facade result structure: {facade_result}")
+            tasks = []
         
         # Log each task for debugging
         if tasks:
             logger.debug("📝 Task details:")
-            for i, task in enumerate(tasks[:5]):  # Log first 5 tasks only
-                logger.debug(f"   Task {i+1}: ID={getattr(task, 'id', 'N/A')}, Title={getattr(task, 'title', 'N/A')}, Status={getattr(task, 'status', 'N/A')}")
-            if len(tasks) > 5:
-                logger.debug(f"   ... and {len(tasks) - 5} more tasks")
+            try:
+                for i, task in enumerate(tasks[:5]):  # Log first 5 tasks only
+                    if isinstance(task, dict):
+                        logger.debug(f"   Task {i+1}: ID={task.get('id', 'N/A')}, Title={task.get('title', 'N/A')}, Status={task.get('status', 'N/A')}")
+                    else:
+                        logger.debug(f"   Task {i+1}: ID={getattr(task, 'id', 'N/A')}, Title={getattr(task, 'title', 'N/A')}, Status={getattr(task, 'status', 'N/A')}")
+                if len(tasks) > 5:
+                    logger.debug(f"   ... and {len(tasks) - 5} more tasks")
+            except Exception as debug_error:
+                logger.debug(f"📝 Debug logging error: {debug_error}, tasks type: {type(tasks)}")
         else:
             logger.debug("📝 No tasks found for user")
         
-        # Prepare response
+        # Prepare response - now using the extracted tasks array
         response_data = {
             "success": True,
             "tasks": tasks,

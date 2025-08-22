@@ -21,6 +21,12 @@ class JWTAuthMiddleware:
     def __init__(self, secret_key: str, algorithm: str = "HS256"):
         self.secret_key = secret_key
         self.algorithm = algorithm
+        
+        # Enhanced debug logging for JWT secret
+        logger.info(f"🔐 JWTAuthMiddleware initialized with secret length: {len(secret_key)} chars")
+        logger.debug(f"🔐 JWTAuthMiddleware secret (first 10 chars): {secret_key[:10]}...")
+        if secret_key == "default-secret-key-change-in-production":
+            logger.warning("⚠️ JWTAuthMiddleware using default fallback secret key!")
     
     def extract_user_from_token(self, token: str) -> Optional[str]:
         """
@@ -37,12 +43,18 @@ class JWTAuthMiddleware:
             if token.startswith("Bearer "):
                 token = token[7:]
             
+            # Enhanced debug logging for token validation
+            logger.debug(f"🔍 JWTAuthMiddleware attempting token decode with secret length: {len(self.secret_key)}")
+            logger.debug(f"🔍 Token length: {len(token)} chars")
+            
             # Decode token
             payload = jwt.decode(
                 token,
                 self.secret_key,
                 algorithms=[self.algorithm]
             )
+            
+            logger.debug(f"✅ JWTAuthMiddleware successfully decoded token")
             
             # Extract user_id from payload
             user_id = payload.get("sub") or payload.get("user_id")
@@ -55,10 +67,12 @@ class JWTAuthMiddleware:
             return user_id
             
         except InvalidTokenError as e:
-            logger.error(f"Invalid JWT token: {e}")
+            logger.error(f"❌ JWTAuthMiddleware - Invalid JWT token: {e}")
+            logger.error(f"❌ Using secret length: {len(self.secret_key)}, algorithm: {self.algorithm}")
+            logger.error(f"❌ Token (first 50 chars): {token[:50]}...")
             return None
         except Exception as e:
-            logger.error(f"Error extracting user from token: {e}")
+            logger.error(f"❌ JWTAuthMiddleware - Error extracting user from token: {e}")
             return None
     
     def create_user_scoped_repository(
