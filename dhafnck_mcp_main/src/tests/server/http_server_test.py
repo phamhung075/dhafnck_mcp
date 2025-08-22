@@ -312,10 +312,51 @@ class TestTokenVerifierAdapter:
         
         assert result is None
 
+    @pytest.mark.asyncio
+    async def test_verify_token_handles_jwt_provider(self):
+        """Test that verify_token handles JWT middleware providers."""
+        mock_provider = Mock()
+        # JWT provider has extract_user_from_token instead of load_access_token
+        mock_provider.extract_user_from_token = Mock(return_value="user-123")
+        
+        adapter = TokenVerifierAdapter(mock_provider)
+        result = await adapter.verify_token("jwt-token")
+        
+        mock_provider.extract_user_from_token.assert_called_once_with("jwt-token")
+        assert result is not None
+        assert result.token == "jwt-token"
+        assert result.client_id == "user-123"
+        assert result.scopes == ['execute:mcp']
+
+    @pytest.mark.asyncio
+    async def test_verify_token_handles_jwt_provider_invalid(self):
+        """Test that verify_token returns None for invalid JWT tokens."""
+        mock_provider = Mock()
+        mock_provider.extract_user_from_token = Mock(return_value=None)
+        
+        adapter = TokenVerifierAdapter(mock_provider)
+        result = await adapter.verify_token("invalid-jwt")
+        
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_verify_token_handles_unknown_provider(self):
+        """Test that verify_token handles unknown provider types."""
+        mock_provider = Mock()
+        # Provider has neither load_access_token nor extract_user_from_token
+        
+        adapter = TokenVerifierAdapter(mock_provider)
+        with patch('fastmcp.server.http_server.logger') as mock_logger:
+            result = await adapter.verify_token("some-token")
+        
+        assert result is None
+        mock_logger.error.assert_called_once()
+
 
 class TestSetupAuthMiddleware:
     """Test the setup_auth_middleware_and_routes function."""
 
+    @patch('fastmcp.server.http_server.USER_CONTEXT_MIDDLEWARE_AVAILABLE', True)
     def test_setup_with_oauth_provider(self):
         """Test setup with an OAuth provider."""
         # Mock OAuth provider
@@ -335,10 +376,11 @@ class TestSetupAuthMiddleware:
             
             middleware, routes, scopes = setup_auth_middleware_and_routes(mock_auth)
         
-        # Verify middleware was created
-        assert len(middleware) == 2
+        # Verify middleware was created (should include UserContextMiddleware when available)
+        assert len(middleware) == 3  # Authentication, AuthContext, UserContext
         assert any(m.cls.__name__ == "AuthenticationMiddleware" for m in middleware)
         assert any(m.cls.__name__ == "AuthContextMiddleware" for m in middleware)
+        assert any(m.cls.__name__ == "UserContextMiddleware" for m in middleware)
         
         # Verify routes were created
         assert len(routes) == 2
@@ -347,6 +389,26 @@ class TestSetupAuthMiddleware:
         
         # Verify scopes
         assert scopes == ["read", "write"]
+
+    @patch('fastmcp.server.http_server.USER_CONTEXT_MIDDLEWARE_AVAILABLE', False)
+    def test_setup_without_user_context_middleware(self):
+        """Test setup when UserContextMiddleware is not available."""
+        # Mock JWT provider
+        mock_auth = Mock()
+        mock_auth.required_scopes = []
+        # No OAuth endpoints - simple JWT auth
+        
+        middleware, routes, scopes = setup_auth_middleware_and_routes(mock_auth)
+        
+        # Verify middleware was created (without UserContextMiddleware)
+        assert len(middleware) == 2  # Only Authentication and AuthContext
+        assert any(m.cls.__name__ == "AuthenticationMiddleware" for m in middleware)
+        assert any(m.cls.__name__ == "AuthContextMiddleware" for m in middleware)
+        assert not any(m.cls.__name__ == "UserContextMiddleware" for m in middleware)
+        
+        # No OAuth routes for JWT-only auth
+        assert len(routes) == 0
+        assert scopes == []
 
     @patch('fastmcp.server.http_server.TokenVerifierAdapter')
     @patch('fastmcp.server.http_server.BearerAuthBackend')
@@ -721,10 +783,6 @@ class TestUserContextMiddlewareIntegration:
     @patch('fastmcp.server.http_server.UserContextMiddleware')
     def test_user_context_middleware_added_when_available(self, mock_middleware_class):
         """Test that UserContextMiddleware is added when available."""
-        mock_server = Mock()
-        mock_server._additional_http_routes = []
-        
-        # Mock JWT auth backend
         mock_auth = Mock()
         mock_auth.required_scopes = ["read"]
         mock_auth.issuer_url = "https://auth.example.com"
@@ -735,20 +793,11 @@ class TestUserContextMiddlewareIntegration:
         mock_middleware = Mock()
         mock_middleware_class.return_value = mock_middleware
         
-        with patch('fastmcp.server.http_server.setup_auth_middleware_and_routes') as mock_setup:
-            mock_setup.return_value = (
-                [Middleware(RequestContextMiddleware)],
-                [],
-                ["read"]
-            )
-            
-            routes, middleware, scopes = create_http_server_factory(
-                server=mock_server,
-                auth=mock_auth,
-            )
+        middleware, routes, scopes = setup_auth_middleware_and_routes(mock_auth)
         
-        # Verify UserContextMiddleware was called with JWT backend
-        mock_middleware_class.assert_called_once_with(jwt_backend=mock_auth)
+        # Verify UserContextMiddleware is in the middleware list
+        assert len(middleware) == 3
+        assert any(m.cls.__name__ == "UserContextMiddleware" for m in middleware)
     
     @patch('fastmcp.server.http_server.USER_CONTEXT_MIDDLEWARE_AVAILABLE', False)
     def test_user_context_middleware_skipped_when_unavailable(self):

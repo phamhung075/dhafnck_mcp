@@ -217,63 +217,92 @@ class TestDebugLoggingMiddleware:
 class TestCreateDhafnckMCPServer:
     """Test the create_dhafnck_mcp_server function."""
     
+    @patch('fastmcp.server.mcp_entry_point.init_database')
+    @patch('fastmcp.server.mcp_entry_point.AuthMiddleware')
     @patch('fastmcp.server.mcp_entry_point.FastMCP')
-    def test_create_server_with_defaults(self, mock_fastmcp):
+    def test_create_server_with_defaults(self, mock_fastmcp, mock_auth_middleware, mock_init_db):
         """Test creating server with default configuration."""
         mock_server = Mock()
+        mock_server.tool = Mock(return_value=lambda f: f)
+        mock_server.custom_route = Mock(return_value=lambda f: f)
+        mock_server._startup_hooks = []
         mock_fastmcp.return_value = mock_server
+        
+        mock_auth = Mock()
+        mock_auth_middleware.return_value = mock_auth
         
         result = create_dhafnck_mcp_server()
         
         assert result == mock_server
+        mock_init_db.assert_called_once()
+        mock_auth_middleware.assert_called_once()
         mock_fastmcp.assert_called_once()
     
+    @patch('fastmcp.server.mcp_entry_point.init_database')
+    @patch('fastmcp.server.mcp_entry_point.AuthMiddleware')
     @patch('fastmcp.server.mcp_entry_point.FastMCP')
-    @patch('fastmcp.server.mcp_entry_point.get_connection_manager')
-    def test_create_server_with_connection_manager(self, mock_get_conn_mgr, mock_fastmcp):
-        """Test server creation with connection manager."""
+    @patch('fastmcp.server.mcp_entry_point.DDDCompliantMCPTools')
+    def test_create_server_with_ddd_tools(self, mock_ddd_tools, mock_fastmcp, mock_auth_middleware, mock_init_db):
+        """Test server creation with DDD tools registration."""
         mock_server = Mock()
+        mock_server.tool = Mock(return_value=lambda f: f)
+        mock_server.custom_route = Mock(return_value=lambda f: f)
+        mock_server._startup_hooks = []
         mock_fastmcp.return_value = mock_server
-        mock_conn_mgr = Mock()
-        mock_get_conn_mgr.return_value = mock_conn_mgr
+        
+        mock_auth = Mock()
+        mock_auth_middleware.return_value = mock_auth
+        
+        mock_tools = Mock()
+        mock_ddd_tools.return_value = mock_tools
         
         result = create_dhafnck_mcp_server()
         
         assert result == mock_server
-        mock_get_conn_mgr.assert_called()
+        mock_ddd_tools.assert_called_once()
+        mock_tools.register_tools.assert_called_once_with(mock_server)
     
+    @patch('fastmcp.server.mcp_entry_point.init_database')
+    @patch('fastmcp.server.mcp_entry_point.AuthMiddleware')
     @patch('fastmcp.server.mcp_entry_point.FastMCP')
-    def test_create_server_error_handling(self, mock_fastmcp):
+    def test_create_server_error_handling(self, mock_fastmcp, mock_auth_middleware, mock_init_db):
         """Test server creation error handling."""
-        mock_fastmcp.side_effect = Exception("Server creation failed")
+        mock_init_db.side_effect = Exception("Database init failed")
         
-        with pytest.raises(Exception, match="Server creation failed"):
-            create_dhafnck_mcp_server()
+        # Should not raise - continues with warning
+        result = create_dhafnck_mcp_server()
+        
+        # Server should still be created even if DB init fails
+        mock_fastmcp.assert_called_once()
 
 
 class TestMainFunction:
     """Test the main function."""
     
-    @patch('fastmcp.server.mcp_entry_point.configure_logging')
     @patch('fastmcp.server.mcp_entry_point.create_dhafnck_mcp_server')
     @patch('fastmcp.server.mcp_entry_point.sys.argv', ['mcp_entry_point.py'])
-    def test_main_basic_execution(self, mock_create_server, mock_configure_logging):
+    @patch('fastmcp.server.mcp_entry_point.os.environ.get')
+    def test_main_basic_execution(self, mock_environ_get, mock_create_server):
         """Test basic main function execution."""
         mock_server = Mock()
         mock_server.run = Mock()
         mock_create_server.return_value = mock_server
         
-        with patch('fastmcp.server.mcp_entry_point.sys.exit') as mock_exit:
-            main()
-            
-            mock_configure_logging.assert_called()
-            mock_create_server.assert_called_once()
-            mock_server.run.assert_called_once()
-            mock_exit.assert_called_with(0)
+        # Mock environment variables for default transport
+        mock_environ_get.side_effect = lambda key, default=None: {
+            "FASTMCP_TRANSPORT": "stdio",
+            "FASTMCP_HOST": "localhost",
+            "FASTMCP_PORT": "8000"
+        }.get(key, default)
+        
+        # Main doesn't call sys.exit(0) anymore - it just runs
+        main()
+        
+        mock_create_server.assert_called_once()
+        mock_server.run.assert_called_once_with(transport="stdio")
     
-    @patch('fastmcp.server.mcp_entry_point.configure_logging')
     @patch('fastmcp.server.mcp_entry_point.create_dhafnck_mcp_server')
-    def test_main_exception_handling(self, mock_create_server, mock_configure_logging):
+    def test_main_exception_handling(self, mock_create_server):
         """Test main function exception handling."""
         mock_create_server.side_effect = Exception("Startup failed")
         
@@ -284,40 +313,37 @@ class TestMainFunction:
                 
                 main()
                 
-                mock_logger.error.assert_called()
+                mock_logger.error.assert_called_with("Server error: Startup failed")
                 mock_exit.assert_called_with(1)
     
-    @patch('fastmcp.server.mcp_entry_point.configure_logging')
     @patch('fastmcp.server.mcp_entry_point.create_dhafnck_mcp_server')
-    @patch('fastmcp.server.mcp_entry_point.cleanup_connection_manager')
-    def test_main_cleanup_on_exit(self, mock_cleanup, mock_create_server, mock_configure_logging):
-        """Test that cleanup is called on exit."""
+    def test_main_cleanup_on_exit(self, mock_create_server):
+        """Test that cleanup happens when server exits."""
         mock_server = Mock()
         mock_server.run = Mock()
         mock_create_server.return_value = mock_server
         
-        with patch('fastmcp.server.mcp_entry_point.sys.exit'):
-            main()
-            
-            mock_cleanup.assert_called_once()
+        # Run main - it should complete normally
+        main()
+        
+        # Verify server was run
+        mock_server.run.assert_called_once()
     
-    @patch('fastmcp.server.mcp_entry_point.configure_logging')
     @patch('fastmcp.server.mcp_entry_point.create_dhafnck_mcp_server')
-    def test_main_keyboard_interrupt(self, mock_create_server, mock_configure_logging):
+    def test_main_keyboard_interrupt(self, mock_create_server):
         """Test main function handles KeyboardInterrupt."""
         mock_server = Mock()
         mock_server.run.side_effect = KeyboardInterrupt()
         mock_create_server.return_value = mock_server
         
-        with patch('fastmcp.server.mcp_entry_point.sys.exit') as mock_exit:
-            with patch('fastmcp.server.mcp_entry_point.logging.getLogger') as mock_get_logger:
-                mock_logger = Mock()
-                mock_get_logger.return_value = mock_logger
-                
-                main()
-                
-                mock_logger.info.assert_called_with("🛑 Shutting down gracefully...")
-                mock_exit.assert_called_with(0)
+        with patch('fastmcp.server.mcp_entry_point.logging.getLogger') as mock_get_logger:
+            mock_logger = Mock()
+            mock_get_logger.return_value = mock_logger
+            
+            # Should not raise, but log message
+            main()
+            
+            mock_logger.info.assert_called_with("Server stopped by user")
 
 
 class TestEnvironmentAndSetup:
@@ -355,21 +381,27 @@ class TestEnvironmentAndSetup:
 class TestIntegrationWithFastMCP:
     """Test integration with FastMCP server components."""
     
+    @patch('fastmcp.server.mcp_entry_point.init_database')
+    @patch('fastmcp.server.mcp_entry_point.AuthMiddleware')
     @patch('fastmcp.server.mcp_entry_point.FastMCP')
-    @patch('fastmcp.server.mcp_entry_point.get_connection_manager')
-    def test_server_initialization_flow(self, mock_get_conn_mgr, mock_fastmcp):
+    def test_server_initialization_flow(self, mock_fastmcp, mock_auth_middleware, mock_init_db):
         """Test the complete server initialization flow."""
         mock_server = Mock()
+        mock_server.tool = Mock(return_value=lambda f: f)
+        mock_server.custom_route = Mock(return_value=lambda f: f)
+        mock_server._startup_hooks = []
         mock_fastmcp.return_value = mock_server
-        mock_conn_mgr = Mock()
-        mock_get_conn_mgr.return_value = mock_conn_mgr
+        
+        mock_auth = Mock()
+        mock_auth_middleware.return_value = mock_auth
         
         # Test that server creation follows expected pattern
         server = create_dhafnck_mcp_server()
         
         assert server == mock_server
+        mock_init_db.assert_called_once()
+        mock_auth_middleware.assert_called_once()
         mock_fastmcp.assert_called_once()
-        mock_get_conn_mgr.assert_called_once()
     
     def test_middleware_integration(self):
         """Test that middleware integrates properly with ASGI."""

@@ -178,12 +178,13 @@ class TestTaskRoutes:
             MockFactory.create_task_repository.return_value = mock_task_repo
             
             mock_facade = Mock()
-            mock_facade.list_tasks.return_value = mock_tasks
+            # Return facade result that matches the expected structure from the route
+            mock_facade.list_tasks.return_value = {"success": True, "tasks": mock_tasks}
             MockFacade.return_value = mock_facade
             
             # Call the function
             result = await list_tasks(
-                status="todo",
+                task_status="todo",
                 priority="high",
                 limit=10,
                 current_user=mock_user,
@@ -637,6 +638,287 @@ class TestAuthenticationIntegration:
             assert stats["pending_tasks"] == 2        # 2 "todo" tasks  
             assert stats["high_priority_tasks"] == 3  # 3 "high" priority tasks
             assert stats["user"] == mock_user.email
+
+
+class TestEnhancedLogging:
+    """Test suite for enhanced logging in user_scoped_task_routes"""
+    
+    @pytest.fixture
+    def mock_user(self):
+        """Create a mock authenticated user"""
+        return User(
+            id="log-user-123",
+            email="logging@example.com",
+            username="loguser",
+            full_name="Logging User",
+            password_hash="",
+            status=UserStatus.ACTIVE,
+            roles=[UserRole.USER],
+            email_verified=True
+        )
+    
+    @pytest.fixture
+    def mock_db_session(self):
+        """Create a mock database session"""
+        return Mock(spec=Session)
+    
+    @pytest.mark.asyncio
+    async def test_list_tasks_debug_logging(self, mock_user, mock_db_session):
+        """Test enhanced debug logging for task listing"""
+        mock_tasks = [
+            {"id": "task-1", "title": "Task 1", "status": "todo"},
+            {"id": "task-2", "title": "Task 2", "status": "done"}
+        ]
+        
+        with patch('fastmcp.server.routes.user_scoped_task_routes.UserScopedRepositoryFactory') as MockFactory, \
+             patch('fastmcp.server.routes.user_scoped_task_routes.TaskApplicationFacade') as MockFacade, \
+             patch('fastmcp.server.routes.user_scoped_task_routes.logger') as mock_logger:
+            
+            # Setup mocks
+            mock_task_repo = Mock()
+            MockFactory.create_task_repository.return_value = mock_task_repo
+            
+            mock_facade = Mock()
+            mock_facade.list_tasks.return_value = {"success": True, "tasks": mock_tasks}
+            MockFacade.return_value = mock_facade
+            
+            # Call the function
+            result = await list_tasks(
+                task_status="todo",
+                priority="high",
+                limit=50,
+                current_user=mock_user,
+                db=mock_db_session
+            )
+            
+            # Verify debug logging calls
+            debug_calls = [call[0][0] for call in mock_logger.debug.call_args_list]
+            
+            # Check that essential debug messages are present
+            assert any("=" * 80 in call for call in debug_calls)
+            assert any("🔍 TASK LISTING REQUEST" in call for call in debug_calls)
+            assert any(f"📧 User: {mock_user.email} (ID: {mock_user.id})" in call for call in debug_calls)
+            assert any("🎯 Filters: status=todo, priority=high, limit=50" in call for call in debug_calls)
+            assert any("💾 Database session:" in call for call in debug_calls)
+            assert any("🏭 Creating user-scoped task repository..." in call for call in debug_calls)
+            assert any("✅ Task repository created:" in call for call in debug_calls)
+            assert any("🏗️ Creating task application facade..." in call for call in debug_calls)
+            assert any("✅ Facade created:" in call for call in debug_calls)
+            assert any("📋 Building list request..." in call for call in debug_calls)
+            assert any("✅ List request built:" in call for call in debug_calls)
+            assert any("🔍 Fetching tasks from facade..." in call for call in debug_calls)
+            assert any("✅ Facade result type:" in call for call in debug_calls)
+            assert any("✅ Tasks extracted: 2 tasks found" in call for call in debug_calls)
+            assert any("📝 Task details:" in call for call in debug_calls)
+            assert any("✅ TASK LISTING COMPLETED - Returning 2 tasks" in call for call in debug_calls)
+            
+            # Verify final info log
+            mock_logger.info.assert_called_with(f"User {mock_user.email} retrieved 2 tasks")
+    
+    @pytest.mark.asyncio
+    async def test_list_tasks_error_logging(self, mock_user, mock_db_session):
+        """Test enhanced error logging for task listing failures"""
+        test_error = RuntimeError("Database connection failed")
+        
+        with patch('fastmcp.server.routes.user_scoped_task_routes.UserScopedRepositoryFactory') as MockFactory, \
+             patch('fastmcp.server.routes.user_scoped_task_routes.logger') as mock_logger:
+            
+            # Setup to raise an error
+            MockFactory.create_task_repository.side_effect = test_error
+            
+            # Call the function and expect an exception
+            with pytest.raises(HTTPException):
+                await list_tasks(
+                    task_status="todo",
+                    current_user=mock_user,
+                    db=mock_db_session
+                )
+            
+            # Verify error logging calls
+            error_calls = [call[0][0] for call in mock_logger.error.call_args_list]
+            
+            # Check that essential error messages are present
+            assert any("=" * 80 in call for call in error_calls)
+            assert any(f"❌ ERROR in task listing for user {mock_user.id}" in call for call in error_calls)
+            assert any(f"❌ User: {mock_user.email}" in call for call in error_calls)
+            assert any("❌ Error type: RuntimeError" in call for call in error_calls)
+            assert any("❌ Error message: Database connection failed" in call for call in error_calls)
+            assert any("❌ Stack trace:" in call for call in error_calls)
+    
+    @pytest.mark.asyncio
+    async def test_list_tasks_empty_result_logging(self, mock_user, mock_db_session):
+        """Test logging when no tasks are found"""
+        with patch('fastmcp.server.routes.user_scoped_task_routes.UserScopedRepositoryFactory') as MockFactory, \
+             patch('fastmcp.server.routes.user_scoped_task_routes.TaskApplicationFacade') as MockFacade, \
+             patch('fastmcp.server.routes.user_scoped_task_routes.logger') as mock_logger:
+            
+            # Setup mocks for empty result
+            mock_task_repo = Mock()
+            MockFactory.create_task_repository.return_value = mock_task_repo
+            
+            mock_facade = Mock()
+            mock_facade.list_tasks.return_value = {"success": True, "tasks": []}
+            MockFacade.return_value = mock_facade
+            
+            # Call the function
+            result = await list_tasks(
+                current_user=mock_user,
+                db=mock_db_session
+            )
+            
+            # Verify empty result logging
+            debug_calls = [call[0][0] for call in mock_logger.debug.call_args_list]
+            assert any("📝 No tasks found for user" in call for call in debug_calls)
+            
+            # Verify info log for empty result
+            mock_logger.info.assert_called_with(f"User {mock_user.email} retrieved 0 tasks")
+            
+            assert result["count"] == 0
+            assert result["tasks"] == []
+    
+    @pytest.mark.asyncio
+    async def test_list_tasks_large_result_logging(self, mock_user, mock_db_session):
+        """Test logging behavior with large task lists"""
+        # Create mock tasks - more than 5 to test truncated logging
+        mock_tasks = [
+            {"id": f"task-{i}", "title": f"Task {i}", "status": "todo"} 
+            for i in range(10)
+        ]
+        
+        with patch('fastmcp.server.routes.user_scoped_task_routes.UserScopedRepositoryFactory') as MockFactory, \
+             patch('fastmcp.server.routes.user_scoped_task_routes.TaskApplicationFacade') as MockFacade, \
+             patch('fastmcp.server.routes.user_scoped_task_routes.logger') as mock_logger:
+            
+            # Setup mocks
+            mock_task_repo = Mock()
+            MockFactory.create_task_repository.return_value = mock_task_repo
+            
+            mock_facade = Mock()
+            mock_facade.list_tasks.return_value = {"success": True, "tasks": mock_tasks}
+            MockFacade.return_value = mock_facade
+            
+            # Call the function
+            result = await list_tasks(
+                current_user=mock_user,
+                db=mock_db_session
+            )
+            
+            # Verify truncated task logging
+            debug_calls = [call[0][0] for call in mock_logger.debug.call_args_list]
+            
+            # Should log first 5 tasks
+            for i in range(5):
+                assert any(f"Task {i+1}: ID=task-{i}" in call for call in debug_calls)
+            
+            # Should indicate more tasks exist
+            assert any("... and 5 more tasks" in call for call in debug_calls)
+            
+            assert result["count"] == 10
+    
+    @pytest.mark.asyncio
+    async def test_list_tasks_malformed_facade_response_logging(self, mock_user, mock_db_session):
+        """Test logging when facade returns unexpected structure"""
+        with patch('fastmcp.server.routes.user_scoped_task_routes.UserScopedRepositoryFactory') as MockFactory, \
+             patch('fastmcp.server.routes.user_scoped_task_routes.TaskApplicationFacade') as MockFacade, \
+             patch('fastmcp.server.routes.user_scoped_task_routes.logger') as mock_logger:
+            
+            # Setup mocks
+            mock_task_repo = Mock()
+            MockFactory.create_task_repository.return_value = mock_task_repo
+            
+            mock_facade = Mock()
+            # Return unexpected structure
+            mock_facade.list_tasks.return_value = "unexpected string response"
+            MockFacade.return_value = mock_facade
+            
+            # Call the function
+            result = await list_tasks(
+                current_user=mock_user,
+                db=mock_db_session
+            )
+            
+            # Verify error handling for malformed response
+            error_calls = [call[0][0] for call in mock_logger.error.call_args_list]
+            assert any("❌ Unexpected facade result structure:" in call for call in error_calls)
+            
+            # Should still return valid response structure
+            assert result["success"] is True
+            assert result["tasks"] == []
+            assert result["count"] == 0
+
+
+class TestORMTaskRepositoryIntegration:
+    """Test integration with ORMTaskRepository"""
+    
+    @pytest.fixture
+    def mock_user(self):
+        """Create a mock authenticated user"""
+        return User(
+            id="orm-user-789",
+            email="orm@example.com",
+            username="ormuser",
+            full_name="ORM User",
+            password_hash="",
+            status=UserStatus.ACTIVE,
+            roles=[UserRole.USER],
+            email_verified=True
+        )
+    
+    @pytest.mark.asyncio
+    async def test_orm_task_repository_usage(self, mock_user):
+        """Test that routes correctly use ORMTaskRepository"""
+        mock_db_session = Mock(spec=Session)
+        
+        with patch('fastmcp.server.routes.user_scoped_task_routes.TaskRepository') as MockTaskRepo, \
+             patch('fastmcp.server.routes.user_scoped_task_routes.TaskApplicationFacade') as MockFacade:
+            
+            # Verify TaskRepository is imported as ORMTaskRepository
+            mock_repo_instance = Mock()
+            mock_repo_instance.with_user.return_value = mock_repo_instance
+            MockTaskRepo.return_value = mock_repo_instance
+            
+            # Create repository through factory
+            repo = UserScopedRepositoryFactory.create_task_repository(mock_db_session, mock_user.id)
+            
+            # Verify ORMTaskRepository usage
+            MockTaskRepo.assert_called_once_with(mock_db_session)
+            mock_repo_instance.with_user.assert_called_once_with(mock_user.id)
+            assert repo == mock_repo_instance
+    
+    @pytest.mark.asyncio
+    async def test_facade_with_orm_repository(self, mock_user):
+        """Test TaskApplicationFacade works correctly with ORMTaskRepository"""
+        mock_db_session = Mock(spec=Session)
+        request = CreateTaskRequest(
+            title="ORM Task",
+            description="Testing ORM integration"
+        )
+        
+        with patch('fastmcp.server.routes.user_scoped_task_routes.UserScopedRepositoryFactory') as MockFactory, \
+             patch('fastmcp.server.routes.user_scoped_task_routes.TaskApplicationFacade') as MockFacade:
+            
+            # Setup ORM repository mock
+            mock_orm_repo = Mock()
+            mock_orm_repo.__class__.__name__ = "ORMTaskRepository"
+            MockFactory.create_task_repository.return_value = mock_orm_repo
+            MockFactory.create_project_repository.return_value = Mock()
+            
+            # Setup facade
+            mock_facade = Mock()
+            mock_task = Mock(id="orm-task-123", title="ORM Task")
+            mock_facade.create_task.return_value = mock_task
+            MockFacade.return_value = mock_facade
+            
+            # Call create_task
+            result = await create_task(request, mock_user, mock_db_session)
+            
+            # Verify facade was created with ORM repository
+            MockFacade.assert_called_once()
+            call_kwargs = MockFacade.call_args[1]
+            assert call_kwargs['task_repository'] == mock_orm_repo
+            
+            assert result["success"] is True
+            assert result["task"] == mock_task
 
     @pytest.mark.asyncio
     async def test_task_completion_with_user_context(self, mock_user):

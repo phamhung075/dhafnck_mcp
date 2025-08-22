@@ -46,6 +46,7 @@ services:
       
       # JWT Authentication
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev_jwt_secret_key_for_development_only_do_not_use_in_production}
+      SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET}
       JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
       JWT_EXPIRATION_MINUTES: ${JWT_EXPIRATION_MINUTES:-1440}
       

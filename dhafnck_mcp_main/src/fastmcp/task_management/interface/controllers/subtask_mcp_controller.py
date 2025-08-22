@@ -25,6 +25,13 @@ from .workflow_guidance.subtask import SubtaskWorkflowFactory
 from ..utils.response_formatter import StandardResponseFormatter, ResponseStatus, ErrorCodes
 from ..utils.parameter_validation_fix import coerce_parameter_types
 from ..utils.schema_monkey_patch import apply_all_schema_patches
+from .auth_helper import get_authenticated_user_id, log_authentication_details
+from ...domain.constants import validate_user_id
+from ...domain.exceptions.authentication_exceptions import (
+    UserAuthenticationRequiredError,
+    DefaultUserProhibitedError
+)
+from ....config.auth_config import AuthConfig
 
 logger = logging.getLogger(__name__)
 
@@ -991,10 +998,48 @@ class SubtaskMCPController(ContextPropagationMixin):
         return {"percentage": 0, "completed": 0, "total": 0, "method": "unknown"}
     
     def _get_facade_for_request(self, task_id: Optional[str] = None) -> SubtaskApplicationFacade:
-        """Get the appropriate facade for the request."""
-        # For now, just return a default facade
-        # In the future, this could use task_id to determine the project
+        """Get the appropriate facade for the request with authenticated user context."""
+        # Get authenticated user ID using the same helper function as task controller
+        log_authentication_details()  # For debugging
+        user_id = get_authenticated_user_id(None, "Subtask context resolution")
+        
+        # Derive project context from task_id if available
         project_id = "default"
+        if task_id:
+            logger.debug(f"Deriving context for subtask operations on task_id {task_id}")
+            try:
+                from ...infrastructure.database.session_manager import get_session_manager
+                from sqlalchemy import text
+                
+                session_manager = get_session_manager()
+                with session_manager.get_session() as session:
+                    # Look up project context from task
+                    result = session.execute(
+                        text('SELECT git_branch_id FROM tasks WHERE id = :task_id'),
+                        {'task_id': task_id}
+                    ).fetchone()
+                    
+                    if result:
+                        git_branch_id = result[0]
+                        logger.debug(f"Found git_branch_id {git_branch_id} for task_id {task_id}")
+                        
+                        # Look up project_id from git_branch_id
+                        branch_result = session.execute(
+                            text('SELECT project_id FROM project_git_branchs WHERE id = :git_branch_id'),
+                            {'git_branch_id': git_branch_id}
+                        ).fetchone()
+                        
+                        if branch_result:
+                            project_id = branch_result[0]
+                            logger.debug(f"Found project_id {project_id} for git_branch_id {git_branch_id}")
+                        else:
+                            logger.warning(f"Project not found for git_branch_id {git_branch_id}, using default")
+                    else:
+                        logger.warning(f"Task {task_id} not found, using default project")
+            except Exception as e:
+                logger.warning(f"Failed to derive project context for task_id {task_id}: {e}")
+                logger.debug(f"Using default project for subtask operations")
+        
         return self._subtask_facade_factory.create_subtask_facade(project_id)
     
     # Workflow hint enhancement methods

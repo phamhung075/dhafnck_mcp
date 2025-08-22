@@ -14,6 +14,7 @@ import jwt
 from datetime import datetime, timedelta
 from unittest.mock import Mock, MagicMock, patch, AsyncMock
 from sqlalchemy.orm import Session
+import logging
 
 from fastmcp.auth.middleware.jwt_auth_middleware import (
     JWTAuthMiddleware,
@@ -396,3 +397,120 @@ class TestCreateAuthMiddleware:
         assert isinstance(middleware, JWTAuthMiddleware)
         assert middleware.secret_key == secret_key
         assert middleware.algorithm == "HS256"
+
+
+class TestJWTAuthMiddlewareLogging:
+    """Test suite for enhanced JWT middleware logging"""
+    
+    @pytest.fixture
+    def secret_key(self):
+        """Test secret key"""
+        return "test-secret-key-12345"
+    
+    @pytest.fixture
+    def middleware(self, secret_key):
+        """Create middleware instance"""
+        return JWTAuthMiddleware(secret_key)
+    
+    def test_initialization_logging(self, caplog):
+        """Test initialization logs secret key info"""
+        secret_key = "my-test-secret-key-for-testing"
+        
+        with caplog.at_level(logging.DEBUG):  # Changed to DEBUG level to capture debug logs
+            middleware = JWTAuthMiddleware(secret_key)
+            
+        # Check that secret length is logged
+        assert "🔐 JWTAuthMiddleware initialized with secret length: 30 chars" in caplog.text
+        assert "🔐 JWTAuthMiddleware secret (first 10 chars): my-test-se..." in caplog.text
+    
+    def test_initialization_warning_for_default_secret(self, caplog):
+        """Test warning logged for default secret key"""
+        default_secret = "default-secret-key-change-in-production"
+        
+        with caplog.at_level(logging.WARNING):
+            middleware = JWTAuthMiddleware(default_secret)
+            
+        assert "⚠️ JWTAuthMiddleware using default fallback secret key!" in caplog.text
+    
+    def test_token_decode_success_logging(self, middleware, secret_key, caplog):
+        """Test successful token decode logging"""
+        payload = {
+            "sub": "test-user-123",
+            "exp": datetime.utcnow() + timedelta(hours=1)
+        }
+        token = jwt.encode(payload, secret_key, algorithm="HS256")
+        
+        with caplog.at_level(logging.DEBUG):
+            user_id = middleware.extract_user_from_token(token)
+            
+        assert "🔍 JWTAuthMiddleware attempting token decode" in caplog.text
+        assert f"🔍 Token length: {len(token)} chars" in caplog.text
+        assert "✅ JWTAuthMiddleware successfully decoded token" in caplog.text
+        assert "Extracted user_id test-user-123 from JWT token" in caplog.text
+    
+    def test_token_decode_failure_logging(self, middleware, caplog):
+        """Test failed token decode logging"""
+        invalid_token = "this-is-not-a-valid-jwt-token"
+        
+        with caplog.at_level(logging.ERROR):
+            user_id = middleware.extract_user_from_token(invalid_token)
+            
+        assert "❌ JWTAuthMiddleware - Invalid JWT token" in caplog.text
+        assert f"❌ Using secret length: {len(middleware.secret_key)}, algorithm: HS256" in caplog.text
+        assert "❌ Token (first 50 chars): this-is-not-a-valid-jwt-token" in caplog.text
+        assert user_id is None
+    
+    def test_bearer_prefix_handling_logging(self, middleware, secret_key, caplog):
+        """Test Bearer prefix removal logging"""
+        payload = {
+            "sub": "test-user-456",
+            "exp": datetime.utcnow() + timedelta(hours=1)
+        }
+        token = jwt.encode(payload, secret_key, algorithm="HS256")
+        bearer_token = f"Bearer {token}"
+        
+        with caplog.at_level(logging.DEBUG):
+            user_id = middleware.extract_user_from_token(bearer_token)
+            
+        # Should see token length after Bearer removal
+        assert f"🔍 Token length: {len(token)} chars" in caplog.text
+        assert user_id == "test-user-456"
+    
+    def test_missing_user_claim_logging(self, middleware, secret_key, caplog):
+        """Test logging when user claim is missing"""
+        payload = {
+            "exp": datetime.utcnow() + timedelta(hours=1),
+            "some_other_claim": "value"
+        }
+        token = jwt.encode(payload, secret_key, algorithm="HS256")
+        
+        with caplog.at_level(logging.WARNING):
+            user_id = middleware.extract_user_from_token(token)
+            
+        assert "JWT token missing user_id/sub claim" in caplog.text
+        assert user_id is None
+    
+    def test_expired_token_logging(self, middleware, secret_key, caplog):
+        """Test logging for expired token"""
+        payload = {
+            "sub": "test-user-789",
+            "exp": datetime.utcnow() - timedelta(hours=1)
+        }
+        token = jwt.encode(payload, secret_key, algorithm="HS256")
+        
+        with caplog.at_level(logging.ERROR):
+            user_id = middleware.extract_user_from_token(token)
+            
+        assert "❌ JWTAuthMiddleware - Invalid JWT token" in caplog.text
+        assert "Signature has expired" in caplog.text
+        assert user_id is None
+    
+    def test_general_exception_logging(self, middleware, caplog):
+        """Test logging for general exceptions"""
+        # Create a mock that raises an exception
+        with patch('jwt.decode', side_effect=Exception("Unexpected error")):
+            with caplog.at_level(logging.ERROR):
+                user_id = middleware.extract_user_from_token("some-token")
+                
+        assert "❌ JWTAuthMiddleware - Error extracting user from token: Unexpected error" in caplog.text
+        assert user_id is None

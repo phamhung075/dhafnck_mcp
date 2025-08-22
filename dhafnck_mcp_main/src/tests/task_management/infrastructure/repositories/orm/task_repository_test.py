@@ -474,3 +474,285 @@ class TestORMTaskRepository:
         assert len(entity.subtasks) == 0
         assert len(entity.dependencies) == 0
         assert entity.overall_progress == 0  # Default value
+    
+    def test_list_tasks_with_user_filter(self, repository, mock_task_model):
+        """Test listing tasks applies user filter"""
+        mock_query = Mock()
+        mock_query.options.return_value = mock_query
+        mock_query.filter.return_value = mock_query
+        mock_query.order_by.return_value = mock_query
+        mock_query.offset.return_value = mock_query
+        mock_query.limit.return_value.all.return_value = [mock_task_model]
+        
+        repository.session.query.return_value = mock_query
+        repository.session.__enter__ = Mock(return_value=repository.session)
+        repository.session.__exit__ = Mock(return_value=None)
+        repository.apply_user_filter = Mock(return_value=mock_query)
+        repository.log_access = Mock()
+        
+        result = repository.list_tasks(status="todo", priority="high")
+        
+        assert len(result) == 1
+        repository.apply_user_filter.assert_called_once()
+        repository.log_access.assert_called_once_with('list', 'task')
+    
+    def test_search_tasks_with_user_filter(self, repository, mock_task_model):
+        """Test searching tasks applies user filter"""
+        mock_query = Mock()
+        mock_query.options.return_value = mock_query
+        mock_query.filter.return_value = mock_query
+        mock_query.order_by.return_value.limit.return_value.all.return_value = [mock_task_model]
+        
+        # Mock label subquery
+        mock_subquery = Mock()
+        mock_query.join.return_value.filter.return_value.subquery.return_value = mock_subquery
+        
+        repository.session.query.return_value = mock_query
+        repository.session.__enter__ = Mock(return_value=repository.session)
+        repository.session.__exit__ = Mock(return_value=None)
+        repository.apply_user_filter = Mock(return_value=mock_query)
+        repository.log_access = Mock()
+        
+        result = repository.search_tasks("test query")
+        
+        assert len(result) == 1
+        repository.apply_user_filter.assert_called_once()
+        repository.log_access.assert_called_once_with('search', 'task')
+    
+    def test_list_tasks_optimized(self, repository, mock_task_model):
+        """Test optimized task listing with user filter"""
+        mock_query = Mock()
+        mock_query.options.return_value = mock_query
+        mock_query.filter.return_value = mock_query
+        mock_query.order_by.return_value = mock_query
+        mock_query.offset.return_value = mock_query
+        mock_query.limit.return_value.all.return_value = [mock_task_model]
+        
+        repository.session.query.return_value = mock_query
+        repository.session.__enter__ = Mock(return_value=repository.session)
+        repository.session.__exit__ = Mock(return_value=None)
+        repository.apply_user_filter = Mock(return_value=mock_query)
+        
+        result = repository.list_tasks_optimized(status="in_progress", limit=10)
+        
+        assert len(result) == 1
+        repository.apply_user_filter.assert_called_once()
+    
+    def test_get_task_count_with_user_filter(self, repository):
+        """Test task count applies user filter"""
+        mock_query = Mock()
+        mock_query.filter.return_value = mock_query
+        mock_query.count.return_value = 5
+        
+        repository.session.query.return_value = mock_query
+        repository.session.__enter__ = Mock(return_value=repository.session)
+        repository.session.__exit__ = Mock(return_value=None)
+        repository.apply_user_filter = Mock(return_value=mock_query)
+        
+        result = repository.get_task_count(status="todo")
+        
+        assert result == 5
+        repository.apply_user_filter.assert_called_once()
+    
+    def test_get_task_count_optimized(self, repository):
+        """Test optimized task count with user filter"""
+        mock_result = Mock()
+        mock_result.scalar.return_value = 10
+        
+        repository.session.execute.return_value = mock_result
+        repository.session.__enter__ = Mock(return_value=repository.session)
+        repository.session.__exit__ = Mock(return_value=None)
+        
+        result = repository.get_task_count_optimized(status="done", priority="high")
+        
+        assert result == 10
+        # Verify SQL includes user_id filter
+        execute_call = repository.session.execute.call_args
+        sql_query = execute_call[0][0].text
+        params = execute_call[0][1]
+        assert "user_id = :user_id" in sql_query
+        assert params["user_id"] == repository.user_id
+    
+    def test_save_task_entity(self, repository):
+        """Test saving a task entity"""
+        from datetime import timezone
+        task_entity = TaskEntity(
+            id=TaskId("12345678-1234-5678-1234-567812345678"),
+            title="Test Task",
+            description="Test Description",
+            git_branch_id="branch-123",
+            status=TaskStatus("todo"),
+            priority=Priority("high"),
+            assignees=["user-111"],
+            labels=["urgent"],
+            details="Details",
+            estimated_effort="3 hours",
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
+        )
+        task_entity.overall_progress = 25
+        
+        # Mock session and query
+        mock_query = Mock()
+        mock_query.filter.return_value.first.return_value = None  # No existing task
+        
+        repository.session.query.return_value = mock_query
+        repository.session.__enter__ = Mock(return_value=repository.session)
+        repository.session.__exit__ = Mock(return_value=None)
+        
+        result = repository.save(task_entity)
+        
+        assert result == task_entity
+        # Verify new task was added
+        repository.session.add.assert_called()
+        repository.session.commit.assert_called_once()
+    
+    def test_save_existing_task_entity(self, repository, mock_task_model):
+        """Test updating an existing task entity"""
+        from datetime import timezone
+        task_entity = TaskEntity(
+            id=TaskId("12345678-1234-5678-1234-567812345678"),
+            title="Updated Task",
+            description="Updated Description",
+            git_branch_id="branch-123",
+            status=TaskStatus("in_progress"),
+            priority=Priority("medium"),
+            assignees=[],
+            labels=[],
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
+        )
+        
+        # Mock existing task
+        mock_query = Mock()
+        mock_query.filter.return_value.first.return_value = mock_task_model
+        
+        repository.session.query.return_value = mock_query
+        repository.session.__enter__ = Mock(return_value=repository.session)
+        repository.session.__exit__ = Mock(return_value=None)
+        
+        result = repository.save(task_entity)
+        
+        assert result == task_entity
+        # Verify existing task was updated
+        assert mock_task_model.title == "Updated Task"
+        assert mock_task_model.status == "in_progress"
+        repository.session.commit.assert_called_once()
+    
+    def test_batch_update_status(self, repository):
+        """Test batch updating task status"""
+        mock_query = Mock()
+        mock_query.filter.return_value.update.return_value = 3  # 3 tasks updated
+        
+        repository.session.query.return_value = mock_query
+        repository.session.__enter__ = Mock(return_value=repository.session)
+        repository.session.__exit__ = Mock(return_value=None)
+        
+        task_ids = ["task-1", "task-2", "task-3"]
+        result = repository.batch_update_status(task_ids, "completed")
+        
+        assert result == 3
+        # Verify update was called with correct parameters
+        update_call = mock_query.filter.return_value.update.call_args
+        assert update_call[0][0]['status'] == 'completed'
+        assert 'updated_at' in update_call[0][0]
+    
+    def test_find_by_criteria(self, repository, mock_task_model):
+        """Test finding tasks by multiple criteria"""
+        mock_query = Mock()
+        mock_query.options.return_value = mock_query
+        mock_query.filter.return_value = mock_query
+        mock_query.join.return_value.filter.return_value = mock_query
+        mock_query.order_by.return_value = mock_query
+        mock_query.limit.return_value.all.return_value = [mock_task_model]
+        
+        repository.session.query.return_value = mock_query
+        repository.session.__enter__ = Mock(return_value=repository.session)
+        repository.session.__exit__ = Mock(return_value=None)
+        
+        # Test with TaskStatus and Priority enums
+        filters = {
+            'status': TaskStatus('in_progress'),
+            'priority': Priority('high'),
+            'assignees': ['user-123', 'user-456']
+        }
+        
+        result = repository.find_by_criteria(filters, limit=10)
+        
+        assert len(result) == 1
+        # Verify filters were applied
+        assert mock_query.filter.called
+        assert mock_query.join.called
+    
+    def test_git_branch_exists(self, repository):
+        """Test checking if git branch exists"""
+        from fastmcp.task_management.infrastructure.database.models import ProjectGitBranch
+        
+        mock_branch = Mock(spec=ProjectGitBranch)
+        mock_query = Mock()
+        mock_query.filter.return_value.first.return_value = mock_branch
+        
+        repository.session.query.return_value = mock_query
+        repository.session.__enter__ = Mock(return_value=repository.session)
+        repository.session.__exit__ = Mock(return_value=None)
+        
+        result = repository.git_branch_exists("branch-123")
+        
+        assert result is True
+        
+        # Test non-existent branch
+        mock_query.filter.return_value.first.return_value = None
+        result = repository.git_branch_exists("nonexistent")
+        
+        assert result is False
+    
+    def test_create_task_with_user_id_in_task_label(self, repository):
+        """Test that user_id is properly set in TaskLabel during task creation"""
+        title = "Task with Labels"
+        description = "Testing user_id in labels"
+        label_names = ["test-label"]
+        
+        mock_created_task = Mock()
+        mock_created_task.id = "new-task-id"
+        repository.create = Mock(return_value=mock_created_task)
+        repository.set_user_id = Mock(side_effect=lambda x: {**x, "user_id": repository.user_id})
+        
+        # Mock query for labels
+        mock_query = Mock()
+        mock_query.filter.return_value.first.return_value = None  # No existing label
+        repository.session.query.return_value = mock_query
+        repository.session.__enter__ = Mock(return_value=repository.session)
+        repository.session.__exit__ = Mock(return_value=None)
+        
+        # Mock reloaded task
+        mock_reloaded_task = Mock(spec=Task)
+        mock_reloaded_task.id = "new-task-id"
+        mock_reloaded_task.assignees = []
+        mock_reloaded_task.labels = []
+        mock_reloaded_task.subtasks = []
+        mock_reloaded_task.dependencies = []
+        from datetime import timezone
+        mock_reloaded_task.created_at = datetime.now(timezone.utc)
+        mock_reloaded_task.updated_at = datetime.now(timezone.utc)
+        
+        mock_query.options.return_value = mock_query
+        mock_query.filter.return_value.first.return_value = mock_reloaded_task
+        
+        with patch('uuid.uuid4', return_value='generated-label-id'):
+            result = repository.create_task(
+                title=title,
+                description=description,
+                label_names=label_names
+            )
+        
+        # Find TaskLabel creation call
+        task_label_calls = [
+            call for call in repository.session.add.call_args_list
+            if call[0][0].__class__.__name__ == 'TaskLabel'
+        ]
+        
+        # Verify user_id was set in TaskLabel
+        assert len(task_label_calls) > 0
+        task_label = task_label_calls[0][0][0]
+        assert hasattr(task_label, 'user_id')
+        assert task_label.user_id == repository.user_id

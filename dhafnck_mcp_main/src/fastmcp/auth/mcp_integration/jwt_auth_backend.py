@@ -105,6 +105,89 @@ mwIDAQAB
         """Get the JWT algorithm from the internal JWT service."""
         return self._jwt_service.ALGORITHM
     
+    async def _validate_token_dual_auth(self, token: str) -> Optional[Dict[str, Any]]:
+        """
+        Try to validate token with both local JWT secret and Supabase JWT secret.
+        
+        Args:
+            token: JWT token string
+            
+        Returns:
+            Decoded token payload if valid with either secret, None otherwise
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Try local JWT service first (for locally generated tokens)
+        logger.debug("🔍 Trying local JWT validation...")
+        for token_type in ["access", "api_token"]:
+            try:
+                payload = self._jwt_service.verify_token(token, expected_type=token_type)
+                if payload:
+                    logger.info(f"✅ Token validated with local JWT secret as '{token_type}' type")
+                    return payload
+                else:
+                    logger.debug(f"❌ Local JWT validation failed for type '{token_type}'")
+            except Exception as e:
+                logger.debug(f"❌ Local JWT validation exception for type '{token_type}': {e}")
+        
+        # Try Supabase JWT secret (for Supabase-generated tokens)
+        logger.debug("🔍 Trying Supabase JWT validation...")
+        supabase_jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
+        
+        if supabase_jwt_secret:
+            logger.info(f"✅ SUPABASE_JWT_SECRET found, length: {len(supabase_jwt_secret)}")
+            try:
+                # Import jwt here to avoid import issues
+                import jwt as pyjwt
+                from jwt.exceptions import InvalidTokenError, ExpiredSignatureError
+                
+                logger.info(f"🔍 Attempting to decode token with Supabase secret...")
+                logger.info(f"🔍 Token header (first 50 chars): {token[:50]}...")
+                
+                # Try to decode with Supabase secret - be very permissive for now
+                payload = pyjwt.decode(
+                    token,
+                    supabase_jwt_secret,
+                    algorithms=["HS256"],
+                    options={
+                        "verify_signature": True,  # This is the most important part
+                        "verify_aud": False,       # Don't verify audience
+                        "verify_iss": False,       # Don't verify issuer
+                        "verify_exp": False,       # Don't verify expiration for now
+                        "verify_iat": False,       # Don't verify issued at
+                        "verify_nbf": False,       # Don't verify not before
+                        "require_exp": False,      # Don't require expiration
+                        "require_iat": False,      # Don't require issued at
+                        "require_nbf": False       # Don't require not before
+                    }
+                )
+                
+                if payload:
+                    logger.info("✅ Token validated with Supabase JWT secret")
+                    logger.debug(f"✅ Supabase payload keys: {list(payload.keys())}")
+                    logger.debug(f"✅ User from Supabase token: {payload.get('sub')} ({payload.get('email')})")
+                    # Add type for compatibility
+                    if "type" not in payload:
+                        payload["type"] = "supabase_access"
+                    return payload
+                    
+            except ExpiredSignatureError:
+                logger.debug("❌ Supabase JWT token expired")
+            except InvalidTokenError as e:
+                logger.debug(f"❌ Supabase JWT validation failed: {e}")
+                logger.debug(f"❌ Token that failed: {token[:100]}...")
+            except Exception as e:
+                logger.debug(f"❌ Supabase JWT validation exception: {e}")
+                import traceback
+                logger.debug(f"❌ Exception traceback: {traceback.format_exc()}")
+        else:
+            logger.debug("❌ SUPABASE_JWT_SECRET not configured, skipping Supabase validation")
+        
+        # Both validation methods failed
+        logger.debug("❌ Token validation failed with both JWT secrets")
+        return None
+
     async def load_access_token(self, token: str) -> Optional[AccessToken]:
         """
         Validate JWT token and return AccessToken for MCP.
@@ -122,22 +205,12 @@ mwIDAQAB
             logger.info(f"🔍 JWT Auth Backend: Validating token for MCP access")
             logger.debug(f"Token (first 20 chars): {token[:20]}...")
             
-            # Validate token using our JWT service
-            # Try both "access" and "api_token" types for compatibility
-            logger.debug("Trying 'access' token type first")
-            payload = self._jwt_service.verify_token(token, expected_type="access")
+            # Try dual JWT validation - first local, then Supabase
+            payload = await self._validate_token_dual_auth(token)
             
             if not payload:
-                logger.debug("'access' type failed, trying 'api_token' type")
-                # Try api_token type for frontend compatibility
-                payload = self._jwt_service.verify_token(token, expected_type="api_token")
-                if not payload:
-                    logger.error("❌ Both 'access' and 'api_token' validation failed")
-                    return None
-                else:
-                    logger.info("✅ Token validated as 'api_token' type")
-            else:
-                logger.info("✅ Token validated as 'access' type")
+                logger.error("❌ Token validation failed with both local and Supabase JWT secrets")
+                return None
             
             logger.debug(f"JWT payload keys: {list(payload.keys())}")
             

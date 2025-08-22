@@ -333,6 +333,15 @@ def create_dhafnck_mcp_server() -> FastMCP:
     auth_middleware = AuthMiddleware(secret_key=jwt_secret_key)
     logger.info("AuthMiddleware initialized - authentication always enabled")
     
+    # Import MCP registration routes for root-level access
+    try:
+        from fastmcp.server.routes.mcp_registration_routes import mcp_registration_routes
+        additional_routes = mcp_registration_routes
+        logger.info("MCP registration routes imported for root-level access")
+    except ImportError as e:
+        logger.warning(f"Could not import MCP registration routes: {e}")
+        additional_routes = []
+
     # Create FastMCP server with task management disabled (we'll register DDD tools manually)
     server = FastMCP(
         name="DhafnckMCP - Task Management & Agent Orchestration",
@@ -350,6 +359,8 @@ def create_dhafnck_mcp_server() -> FastMCP:
         projects_file_path=os.environ.get("PROJECTS_FILE_PATH"),
         # Suppress duplicate tool warnings since task management tools are registered automatically
         on_duplicate_tools="ignore",
+        # Remove additional_http_routes parameter as it's not supported
+        # additional_http_routes=additional_routes,
         
         # --- AUTHENTICATION CONFIGURATION ---
         # Always pass authentication middleware to the server
@@ -365,6 +376,11 @@ def create_dhafnck_mcp_server() -> FastMCP:
         # Enable stateless HTTP mode to bypass session validation issues
         stateless_http=True,
     )
+    
+    # Add additional HTTP routes if available
+    if additional_routes:
+        logger.info(f"Adding {len(additional_routes)} additional HTTP routes to server")
+        server._additional_http_routes.extend(additional_routes)
     
     # Register DDD-compliant task management tools manually
     logger.info("Registering DDD-compliant task management tools...")

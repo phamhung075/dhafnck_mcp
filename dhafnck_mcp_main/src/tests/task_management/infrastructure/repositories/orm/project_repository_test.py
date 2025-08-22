@@ -411,3 +411,151 @@ class TestORMProjectRepository:
                 assert repo.session == mock_session
                 assert repo.user_id is None
                 assert repo._is_system_mode is True
+    
+    @pytest.mark.asyncio
+    async def test_find_by_name_with_user_filter(self, repository, mock_project_model):
+        """Test finding project by name applies user filter"""
+        mock_query = Mock()
+        mock_query.filter.return_value.first.return_value = mock_project_model
+        
+        repository.session.query.return_value = mock_query
+        repository.session.__enter__ = Mock(return_value=repository.session)
+        repository.session.__exit__ = Mock(return_value=None)
+        repository.apply_user_filter = Mock(return_value=mock_query)
+        repository.log_access = Mock()
+        
+        result = await repository.find_by_name("Test Project")
+        
+        assert result is not None
+        repository.apply_user_filter.assert_called_once()
+        repository.log_access.assert_called_once_with('read', 'project', mock_project_model.id)
+    
+    @pytest.mark.asyncio
+    async def test_find_projects_with_agent_user_filter(self, repository, mock_project_model):
+        """Test finding projects with agent applies user filter"""
+        mock_query = Mock()
+        mock_query.join.return_value = mock_query
+        mock_query.filter.return_value = mock_query
+        mock_query.distinct.return_value.all.return_value = [mock_project_model]
+        
+        repository.session.query.return_value = mock_query
+        repository.session.__enter__ = Mock(return_value=repository.session)
+        repository.session.__exit__ = Mock(return_value=None)
+        repository.apply_user_filter = Mock(return_value=mock_query)
+        repository.log_access = Mock()
+        
+        result = await repository.find_projects_with_agent("agent-123")
+        
+        assert len(result) == 1
+        repository.apply_user_filter.assert_called_once()
+        repository.log_access.assert_called_once_with('list', 'project', 'agent=agent-123')
+    
+    @pytest.mark.asyncio
+    async def test_unassign_agent_from_tree(self, repository):
+        """Test unassigning agent from git branch"""
+        mock_branch = Mock()
+        mock_branch.assigned_agent_id = "agent-123"
+        
+        mock_query = Mock()
+        mock_query.filter.return_value.first.return_value = mock_branch
+        
+        repository.session.query.return_value = mock_query
+        repository.session.__enter__ = Mock(return_value=repository.session)
+        repository.session.__exit__ = Mock(return_value=None)
+        repository.transaction = Mock()
+        repository.transaction.__enter__ = Mock(return_value=None)
+        repository.transaction.__exit__ = Mock(return_value=None)
+        
+        result = await repository.unassign_agent_from_tree(
+            project_id="project-123",
+            agent_id="agent-123",
+            git_branch_id="branch-123"
+        )
+        
+        assert result["success"] is True
+        assert result["unassigned_agent_id"] == "agent-123"
+        assert mock_branch.assigned_agent_id is None
+    
+    @pytest.mark.asyncio
+    async def test_unassign_agent_from_tree_not_found(self, repository):
+        """Test unassigning agent from non-existent branch"""
+        mock_query = Mock()
+        mock_query.filter.return_value.first.return_value = None
+        
+        repository.session.query.return_value = mock_query
+        repository.session.__enter__ = Mock(return_value=repository.session)
+        repository.session.__exit__ = Mock(return_value=None)
+        repository.transaction = Mock()
+        repository.transaction.__enter__ = Mock(return_value=None)
+        repository.transaction.__exit__ = Mock(return_value=None)
+        
+        with pytest.raises(ResourceNotFoundException):
+            await repository.unassign_agent_from_tree(
+                project_id="project-123",
+                agent_id="agent-123",
+                git_branch_id="nonexistent"
+            )
+    
+    def test_create_project_with_user_id(self, repository):
+        """Test creating project with user ID"""
+        from uuid import uuid4
+        mock_uuid = str(uuid4())
+        
+        with patch('uuid.uuid4', return_value=mock_uuid):
+            with patch.object(repository, 'create') as mock_create:
+                with patch.object(repository, '_model_to_entity') as mock_to_entity:
+                    mock_create.return_value = Mock()
+                    mock_to_entity.return_value = Mock(id=mock_uuid)
+                    
+                    repository.transaction = Mock()
+                    repository.transaction.__enter__ = Mock(return_value=None)
+                    repository.transaction.__exit__ = Mock(return_value=None)
+                    
+                    result = repository.create_project(
+                        name="New Project",
+                        description="Project description",
+                        user_id="user-123"
+                    )
+                    
+                    mock_create.assert_called_once_with(
+                        id=mock_uuid,
+                        name="New Project",
+                        description="Project description",
+                        user_id="user-123",
+                        status="active",
+                        metadata={}
+                    )
+    
+    def test_create_project_without_user_id_compatibility_mode(self, repository):
+        """Test creating project without user ID in compatibility mode"""
+        from uuid import uuid4
+        mock_uuid = str(uuid4())
+        
+        with patch('uuid.uuid4', return_value=mock_uuid):
+            with patch.object(repository, 'create') as mock_create:
+                with patch.object(repository, '_model_to_entity') as mock_to_entity:
+                    with patch('fastmcp.task_management.infrastructure.repositories.orm.project_repository.AuthConfig') as MockAuthConfig:
+                        MockAuthConfig.is_default_user_allowed.return_value = True
+                        MockAuthConfig.get_fallback_user_id.return_value = "default-user"
+                        
+                        mock_create.return_value = Mock()
+                        mock_to_entity.return_value = Mock(id=mock_uuid)
+                        
+                        repository.transaction = Mock()
+                        repository.transaction.__enter__ = Mock(return_value=None)
+                        repository.transaction.__exit__ = Mock(return_value=None)
+                        
+                        result = repository.create_project(
+                            name="New Project",
+                            description="Project description",
+                            user_id=None
+                        )
+                        
+                        mock_create.assert_called_once_with(
+                            id=mock_uuid,
+                            name="New Project",
+                            description="Project description",
+                            user_id="default-user",
+                            status="active",
+                            metadata={}
+                        )

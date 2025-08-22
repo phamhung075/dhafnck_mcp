@@ -6,6 +6,52 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Fixed - FastMCP Server Initialization Error (2025-08-22)
+- **CRITICAL FIX**: Resolved FastMCP server startup failure due to incorrect parameter usage
+  - **Problem**: Server failed to start with `TypeError: FastMCP.__init__() got an unexpected keyword argument 'additional_http_routes'`
+  - **Root Cause**: Attempted to pass `additional_http_routes` as constructor parameter when FastMCP doesn't accept this parameter
+  - **Solution**: Removed `additional_http_routes` from FastMCP constructor and added routes after server creation using `server._additional_http_routes.extend()`
+  - **Files Modified**: `dhafnck_mcp_main/src/fastmcp/server/mcp_entry_point.py`
+  - **Impact**: MCP server can now start successfully, restoring all MCP functionality
+
+### Added - Comprehensive Test Coverage Enhancement (2025-08-22)
+- **TESTING**: Created 13 new test files with 258 test cases for missing test coverage
+  - **Frontend Tests (2 files, 30 test cases)**:
+    - `dhafnck-frontend/src/tests/components/MCPTokenManager.test.tsx` - React component testing
+    - `dhafnck-frontend/src/tests/services/mcpTokenService.test.ts` - Service layer testing
+  - **Backend Tests (11 files, 228 test cases)**:
+    - Authentication middleware tests (4 files): `middleware_test.py`, `dual_auth_middleware_test.py`, `mcp_token_service_test.py`, `token_validator_test.py`
+    - Server management tests (3 files): `manage_connection_tool_test.py`, `mcp_status_tool_test.py`, `mcp_token_routes_test.py`
+    - Repository tests (2 files): `label_repository_test.py`, `subtask_repository_test.py`
+    - Utility tests (1 file): `debug_service_test.py`
+  - **Testing Patterns Applied**:
+    - Comprehensive mocking of external dependencies
+    - Edge case and error scenario coverage
+    - Integration testing with proper test clients
+    - Authentication and authorization testing
+  - **TEST-CHANGELOG.md**: Updated with detailed test additions and coverage information
+
+### Fixed - JWT Dual Authentication for Subtasks (2025-08-22)
+- **CRITICAL FIX**: Resolved JWT token signature verification issue preventing subtasks from loading
+  - **Problem**: System was trying to validate Supabase JWT tokens using local JWT secret key
+  - **Root Cause**: JWT backend only used `JWT_SECRET_KEY` for all validations, couldn't handle Supabase tokens with `kid` headers
+  - **Solution**: Enhanced `JWTAuthBackend.load_access_token()` with dual JWT validation
+  - **Implementation**: New `_validate_token_dual_auth()` method tries both secrets sequentially:
+    1. **Local JWT validation** using `JWT_SECRET_KEY` for locally generated tokens (types: access, api_token)
+    2. **Supabase JWT validation** using `SUPABASE_JWT_SECRET` for Supabase tokens
+  - **Enhanced Logging**: Added comprehensive debug logs for JWT validation troubleshooting
+  - **Files Modified**: `src/fastmcp/auth/mcp_integration/jwt_auth_backend.py`
+  - **Impact**: Subtasks now load correctly for both local and Supabase authenticated users
+  - **Backward Compatibility**: Maintains support for existing local JWT token workflows
+- **ENHANCEMENT**: Added detailed debug logging middleware for frontend API troubleshooting
+  - **HTTP Request/Response Logging**: Enhanced middleware captures MCP endpoint detection, request body parsing, and response analysis
+  - **Task Listing Debug**: Added comprehensive logging to user-scoped task routes and MCP controller methods
+  - **Files Enhanced**: 
+    - `src/fastmcp/server/mcp_entry_point.py` - Enhanced DebugLoggingMiddleware
+    - `src/fastmcp/server/routes/user_scoped_task_routes.py` - Task listing endpoint logging
+    - `src/fastmcp/task_management/interface/controllers/task_mcp_controller.py` - MCP controller logging
+  - **Benefits**: Faster troubleshooting of frontend-backend communication issues
+
 ### Added - Dual Authentication System with MCP Token Support (2025-08-22)
 - **NEW FEATURE**: Implemented comprehensive dual authentication system supporting both frontend and MCP requests
   - **Frontend Authentication**: Uses Supabase JWT tokens (Bearer headers or cookies) for browser requests

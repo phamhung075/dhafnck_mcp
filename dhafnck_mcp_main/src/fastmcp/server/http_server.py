@@ -360,6 +360,14 @@ def create_sse_app(
     except ImportError as e:
         logger.warning(f"Could not import token management routes: {e}")
     
+    # Add MCP registration routes for Claude and other MCP clients (SSE server)
+    try:
+        from .routes.mcp_registration_routes import mcp_registration_routes
+        server_routes.extend(mcp_registration_routes)
+        logger.info("MCP registration routes registered for SSE server - Claude MCP client compatibility (/register endpoint)")
+    except ImportError as e:
+        logger.warning(f"Could not import MCP registration routes for SSE server: {e}")
+    
     # Add user-scoped V2 routes using the same pattern as Supabase auth
     try:
         from .routes.user_scoped_project_routes import router as project_router

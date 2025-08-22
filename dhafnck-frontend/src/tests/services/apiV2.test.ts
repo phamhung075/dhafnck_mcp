@@ -135,7 +135,22 @@ describe('apiV2.ts', () => {
           json: jest.fn().mockResolvedValue({ detail: 'Token expired' })
         });
 
+        // Mock dynamic import of js-cookie
+        const mockCookiesDefault = {
+          remove: jest.fn()
+        };
+        jest.spyOn(global, 'import' as any).mockResolvedValue({
+          default: mockCookiesDefault
+        });
+
         await expect(taskApiV2.getTasks()).rejects.toThrow('Authentication required. Please log in again.');
+        
+        // Wait for the dynamic import to complete
+        await new Promise(resolve => setTimeout(resolve, 0));
+        
+        // Verify cookies were cleared
+        expect(mockCookiesDefault.remove).toHaveBeenCalledWith('access_token');
+        expect(mockCookiesDefault.remove).toHaveBeenCalledWith('refresh_token');
       });
 
       it('should handle generic errors', async () => {

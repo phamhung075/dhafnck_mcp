@@ -23,6 +23,37 @@ except ImportError:
     get_current_user_id = lambda: None
     USER_CONTEXT_AVAILABLE = False
 
+# Try to import Starlette request context for dual auth
+try:
+    from starlette.requests import Request
+    from starlette.middleware.base import RequestCycle
+    STARLETTE_AVAILABLE = True
+except ImportError:
+    logger.debug("Starlette not available - request state not accessible")
+    STARLETTE_AVAILABLE = False
+
+
+def get_user_id_from_request_state() -> Optional[str]:
+    """
+    Try to get user_id from the current request state (set by DualAuthMiddleware).
+    
+    Returns:
+        User ID from request state or None
+    """
+    try:
+        # Try to get the current request from context
+        from fastmcp.server.http_server import _current_http_request
+        request = _current_http_request.get()
+        
+        if request and hasattr(request, 'state') and hasattr(request.state, 'user_id'):
+            user_id = request.state.user_id
+            logger.debug(f"Got user_id from request state: {user_id}")
+            return user_id
+    except Exception as e:
+        logger.debug(f"Could not get user_id from request state: {e}")
+    
+    return None
+
 
 def get_authenticated_user_id(provided_user_id: Optional[str] = None, operation_name: str = "Operation") -> str:
     """
@@ -57,8 +88,13 @@ def get_authenticated_user_id(provided_user_id: Optional[str] = None, operation_
     if user_id is None:
         logger.info("🔍 No user_id provided, trying authentication context sources...")
         
-        # Try custom user context middleware first
-        if USER_CONTEXT_AVAILABLE:
+        # Try request state first (set by DualAuthMiddleware)
+        user_id = get_user_id_from_request_state()
+        if user_id:
+            logger.info(f"✅ Got user_id from request state (DualAuthMiddleware): {user_id}")
+        
+        # Try custom user context middleware if no user_id yet
+        if user_id is None and USER_CONTEXT_AVAILABLE:
             logger.info("🔧 Trying custom user context middleware...")
             try:
                 context_user_id = get_current_user_id()
