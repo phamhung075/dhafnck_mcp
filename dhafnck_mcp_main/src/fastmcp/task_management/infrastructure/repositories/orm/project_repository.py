@@ -122,20 +122,26 @@ class ORMProjectRepository(BaseORMRepository[Project], BaseUserScopedRepository,
                         ).first()
                         
                         if not existing_branch:
-                            # Create new branch
-                            new_branch = ProjectGitBranch(
-                                id=branch_id,
-                                project_id=project.id,
-                                name=branch.name,
-                                description=branch.description,
-                                created_at=branch.created_at,
-                                updated_at=branch.updated_at,
-                                assigned_agent_id=getattr(branch, 'assigned_agent_id', None),
-                                priority=str(getattr(branch, 'priority', 'medium')),
-                                status=str(getattr(branch, 'status', 'todo')),
-                                task_count=getattr(branch, '_task_count', 0),
-                                completed_task_count=getattr(branch, '_completed_task_count', 0)
-                            )
+                            # Create new branch with user_id for data isolation
+                            branch_data = {
+                                'id': branch_id,
+                                'project_id': project.id,
+                                'name': branch.name,
+                                'description': branch.description,
+                                'created_at': branch.created_at,
+                                'updated_at': branch.updated_at,
+                                'assigned_agent_id': getattr(branch, 'assigned_agent_id', None),
+                                'priority': str(getattr(branch, 'priority', 'medium')),
+                                'status': str(getattr(branch, 'status', 'todo')),
+                                'task_count': getattr(branch, '_task_count', 0),
+                                'completed_task_count': getattr(branch, '_completed_task_count', 0),
+                                'metadata': {}
+                            }
+                            
+                            # Add user_id for data isolation
+                            branch_data = self.set_user_id(branch_data)
+                            
+                            new_branch = ProjectGitBranch(**branch_data)
                             session.add(new_branch)
                 
                 session.commit()

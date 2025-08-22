@@ -1103,8 +1103,19 @@ class TaskMCPController(ContextPropagationMixin):
                           include_context: bool = False) -> Dict[str, Any]:
         """Convert MCP list parameters to DTO and delegate to facade."""
 
+        # Enhanced debug logging for MCP task listing
+        logger.debug("=" * 80)
+        logger.debug(f"🔍 MCP TASK LIST REQUEST")
+        logger.debug(f"🎯 Parameters: status={status}, priority={priority}, limit={limit}")
+        logger.debug(f"🌿 Git branch ID: {git_branch_id}")
+        logger.debug(f"👤 Assignees: {assignees}")
+        logger.debug(f"🏷️ Labels: {labels}")
+        logger.debug(f"📖 Include context: {include_context}")
+        logger.debug(f"🏭 Facade type: {type(facade)}")
+
         # git_branch_id is optional – when omitted we list tasks across all branches for the user/project.
         
+        logger.debug("📋 Building ListTasksRequest...")
         request = ListTasksRequest(
             git_branch_id=git_branch_id,
             status=status,
@@ -1113,19 +1124,47 @@ class TaskMCPController(ContextPropagationMixin):
             labels=labels,
             limit=limit
         )
+        logger.debug(f"✅ ListTasksRequest created: {request}")
         
         # Use minimal=True for optimized performance (only essential fields) unless context is requested
         minimal = not include_context  # If context is requested, don't use minimal mode
+        logger.debug(f"⚡ Performance mode: minimal={minimal} (include_context={include_context})")
+        
+        logger.debug("🔍 Calling facade.list_tasks...")
         result = facade.list_tasks(request, include_dependencies=True, minimal=minimal, include_context=include_context)
+        logger.debug(f"✅ Facade returned: {type(result)}, success={result.get('success') if isinstance(result, dict) else 'N/A'}")
         
         # Ensure result is a dictionary before accessing it
         if not isinstance(result, dict):
-            logger.error(f"list_tasks returned non-dict result: {type(result)}")
+            logger.error("=" * 80)
+            logger.error(f"❌ MCP TASK LIST ERROR: list_tasks returned non-dict result: {type(result)}")
+            logger.error(f"❌ Result value: {result}")
+            logger.error("=" * 80)
             return self._response_formatter.create_error_response(
                 operation="list",
                 error="Internal error: Invalid response format from task listing",
                 error_code=ErrorCodes.INTERNAL_ERROR
             )
+        
+        logger.debug(f"🔍 Result validation passed. Success: {result.get('success')}")
+        if result.get("success") and result.get("tasks"):
+            tasks = result["tasks"]
+            logger.debug(f"📋 Tasks found: {len(tasks)} tasks")
+            
+            # Log first few tasks for debugging
+            if tasks:
+                logger.debug("📝 First task details:")
+                for i, task in enumerate(tasks[:3]):  # Log first 3 tasks
+                    if isinstance(task, dict):
+                        logger.debug(f"   Task {i+1}: ID={task.get('id', 'N/A')}, Title={task.get('title', 'N/A')}, Status={task.get('status', 'N/A')}")
+                    else:
+                        logger.debug(f"   Task {i+1}: {type(task)} - {task}")
+                if len(tasks) > 3:
+                    logger.debug(f"   ... and {len(tasks) - 3} more tasks")
+        else:
+            logger.debug(f"📝 No tasks found or operation failed. Success: {result.get('success')}, Tasks key present: {'tasks' in result}")
+            if result.get("error"):
+                logger.debug(f"🚨 Error in result: {result.get('error')}")
         
         if result.get("success") and result.get("tasks"):
             tasks = result["tasks"]

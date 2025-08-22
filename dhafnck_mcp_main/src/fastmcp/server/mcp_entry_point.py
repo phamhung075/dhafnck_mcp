@@ -140,24 +140,51 @@ class DebugLoggingMiddleware:
         # Log request body if present
         start_time = time.time()
         
+        # Enhanced logging for specific MCP endpoints
+        is_mcp_endpoint = path.startswith('/mcp')
+        is_api_v2_endpoint = path.startswith('/api/v2')
+        
+        if is_mcp_endpoint or is_api_v2_endpoint:
+            self.logger.debug(f"🎯 DETECTED SPECIAL ENDPOINT: {path}")
+            if is_mcp_endpoint:
+                self.logger.debug("🔧 MCP Protocol endpoint detected")
+            if is_api_v2_endpoint:
+                self.logger.debug("🔧 API V2 endpoint detected")
+        
         try:
             await self.app(scope, receive_wrapper, send_wrapper)
         except Exception as e:
-            self.logger.error(f"❌ EXCEPTION in request processing: {e}")
+            self.logger.error(f"❌ EXCEPTION in request processing for {path}: {e}")
+            # Log full stack trace for exceptions
+            import traceback
+            self.logger.error("❌ Full exception traceback:")
+            for line in traceback.format_exc().splitlines():
+                self.logger.error(f"   {line}")
             raise
         finally:
-            # Log request body after processing
+            # Enhanced request body logging
             if body:
                 try:
-                    if headers.get(b'content-type', b'').startswith(b'application/json'):
+                    content_type = headers.get(b'content-type', b'').decode().lower()
+                    if content_type.startswith('application/json'):
                         import json
                         body_json = json.loads(body.decode())
                         self.logger.debug("📦 Request Body (JSON):")
+                        
+                        # Special handling for MCP requests
+                        if is_mcp_endpoint and 'method' in body_json:
+                            self.logger.debug(f"🔧 MCP Method: {body_json.get('method', 'unknown')}")
+                            if 'params' in body_json:
+                                self.logger.debug(f"🔧 MCP Params: {json.dumps(body_json['params'], indent=2)}")
+                        
                         self.logger.debug(json.dumps(body_json, indent=2))
                     else:
-                        self.logger.debug(f"📦 Request Body: {body.decode()[:500]}...")
+                        self.logger.debug(f"📦 Request Body (Content-Type: {content_type}): {body.decode()[:500]}...")
                 except Exception as e:
-                    self.logger.debug(f"📦 Request Body (raw): {body[:200]}...")
+                    self.logger.debug(f"📦 Request Body (raw, decode failed): {body[:200]}...")
+                    self.logger.debug(f"❌ Body decode error: {e}")
+            else:
+                self.logger.debug("📦 No request body")
     
     async def _log_response(self, status_code, response_headers, response_body, url):
         """Log response details."""
@@ -184,24 +211,48 @@ class DebugLoggingMiddleware:
         for header_name, header_value in headers_dict.items():
             self.logger.debug(f"   {header_name}: {header_value}")
         
-        # Log response body for errors or if it's JSON
+        # Enhanced response body logging
         if response_body:
             try:
                 if content_type.startswith('application/json') or status_code >= 400:
                     import json
                     body_json = json.loads(response_body.decode())
                     self.logger.debug("📦 Response Body (JSON):")
+                    
+                    # Enhanced logging for task-related responses
+                    if isinstance(body_json, dict):
+                        if 'tasks' in body_json:
+                            task_count = len(body_json.get('tasks', []))
+                            self.logger.debug(f"📋 Task Response: {task_count} tasks returned")
+                            if task_count > 0:
+                                self.logger.debug("📋 First task summary:")
+                                first_task = body_json['tasks'][0]
+                                if isinstance(first_task, dict):
+                                    self.logger.debug(f"   ID: {first_task.get('id', 'N/A')}")
+                                    self.logger.debug(f"   Title: {first_task.get('title', 'N/A')}")
+                                    self.logger.debug(f"   Status: {first_task.get('status', 'N/A')}")
+                        
+                        if 'error' in body_json:
+                            self.logger.debug(f"🚨 Error in response: {body_json.get('error')}")
+                    
                     self.logger.debug(json.dumps(body_json, indent=2))
                 else:
                     self.logger.debug(f"📦 Response Body: {response_body.decode()[:500]}...")
             except Exception as e:
-                self.logger.debug(f"📦 Response Body (raw): {response_body[:200]}...")
+                self.logger.debug(f"📦 Response Body (raw, decode failed): {response_body[:200]}...")
+                self.logger.debug(f"❌ Response decode error: {e}")
+        else:
+            self.logger.debug("📦 No response body")
         
         if status_code >= 400:
-            self.logger.error(f"❌ ERROR RESPONSE: {status_code}")
+            self.logger.error(f"❌ ERROR RESPONSE: {status_code} for {url}")
             if not response_body:
                 self.logger.error("❌ No response body provided for error")
+            else:
+                self.logger.error("❌ Error response body logged above")
             self.logger.error("❌ Check application logs for error details")
+        else:
+            self.logger.debug(f"✅ SUCCESS RESPONSE: {status_code}")
         
         self.logger.debug("=" * 80)
 
@@ -269,18 +320,18 @@ def create_dhafnck_mcp_server() -> FastMCP:
         # Don't exit - let the server start and handle the error gracefully
         logger.warning("Server will continue with potential database issues")
     
-    # Check if authentication is enabled
-    auth_enabled = os.environ.get("DHAFNCK_AUTH_ENABLED", "true").lower() == "true"
+    # Authentication is always enabled
+    logger.info("Authentication is always enabled in this system")
     
-    # Force disable auth if no Supabase configuration is found
+    # Check Supabase configuration (warn if missing but continue)
     supabase_url = os.environ.get("SUPABASE_URL")
     if not supabase_url:
-        logger.info("No Supabase configuration found - forcing auth_enabled=False")
-        auth_enabled = False
+        logger.warning("No Supabase configuration found - authentication may use fallback methods")
     
-    # Initialize authentication middleware with JWT secret key
+    # Always initialize authentication middleware
     jwt_secret_key = os.getenv("JWT_SECRET_KEY", "default-secret-key-change-in-production")
     auth_middleware = AuthMiddleware(secret_key=jwt_secret_key)
+    logger.info("AuthMiddleware initialized - authentication always enabled")
     
     # Create FastMCP server with task management disabled (we'll register DDD tools manually)
     server = FastMCP(
@@ -301,8 +352,8 @@ def create_dhafnck_mcp_server() -> FastMCP:
         on_duplicate_tools="ignore",
         
         # --- AUTHENTICATION CONFIGURATION ---
-        # Pass authentication middleware to the server
-        auth=auth_middleware if auth_enabled else None,
+        # Always pass authentication middleware to the server
+        auth=auth_middleware,
         
         # --- DEPRECATED SETTINGS (but required for compatibility) ---
         # Enable JSON response for compatibility with JSON-only MCP clients like Cursor
@@ -326,160 +377,149 @@ def create_dhafnck_mcp_server() -> FastMCP:
         logger.error(f"Failed to register DDD task management tools: {e}")
         logger.error("Server will continue without task management tools")
     
-    # Add authentication tools (conditionally registered)
-    logger.info(f"Authentication enabled: {auth_enabled}")
+    # Add authentication tools (always registered)
+    logger.info("Registering authentication tools - authentication always enabled")
     
-    if auth_enabled:
-        @server.tool()
-        async def validate_token(token: str) -> dict:
-            """
-            Validate an authentication token.
+    @server.tool()
+    async def validate_token(token: str) -> dict:
+        """
+        Validate an authentication token.
+        
+        Args:
+            token: The authentication token to validate
             
-            Args:
-                token: The authentication token to validate
-                
-            Returns:
-                Token validation result with user information
-            """
-            try:
-                token_info = await auth_middleware.authenticate_request(token)
-                
-                if not token_info:
-                    return {
-                        "valid": True,
-                        "message": "Authentication disabled or MVP mode",
-                        "user_id": "mvp_user",
-                        "auth_enabled": auth_middleware.enabled
-                    }
-                
-                return {
-                    "valid": True,
-                    "user_id": token_info.user_id,
-                    "created_at": token_info.created_at.isoformat(),
-                    "expires_at": token_info.expires_at.isoformat() if token_info.expires_at else None,
-                    "usage_count": token_info.usage_count,
-                    "last_used": token_info.last_used.isoformat() if token_info.last_used else None,
-                    "auth_enabled": auth_middleware.enabled
-                }
-                
-            except TokenValidationError as e:
+        Returns:
+            Token validation result with user information
+        """
+        try:
+            token_info = await auth_middleware.authenticate_request(token)
+            
+            if not token_info:
                 return {
                     "valid": False,
-                    "error": str(e),
-                    "error_type": "validation_error",
-                    "auth_enabled": auth_middleware.enabled
+                    "message": "Authentication failed - no token info returned",
+                    "auth_enabled": True
                 }
-            except RateLimitError as e:
-                return {
-                    "valid": False,
-                    "error": str(e),
-                    "error_type": "rate_limit_error",
-                    "auth_enabled": auth_middleware.enabled
-                }
-            except Exception as e:
-                logger.error(f"Token validation error: {e}")
-                return {
-                    "valid": False,
-                    "error": "Internal validation error",
-                    "error_type": "internal_error",
-                    "auth_enabled": auth_middleware.enabled
-                }
-        
-        @server.tool()
-        async def get_rate_limit_status(token: str) -> dict:
-            """
-            Get rate limit status for a token.
             
-            Args:
-                token: The authentication token
-                
-            Returns:
-                Current rate limit status
-            """
-            try:
-                status = await auth_middleware.get_rate_limit_status(token)
-                return {
-                    "success": True,
-                    "rate_limits": status
-                }
-            except Exception as e:
-                logger.error(f"Rate limit status error: {e}")
-                return {
-                    "success": False,
-                    "error": str(e)
-                }
-        
-        @server.tool()
-        async def revoke_token(token: str) -> dict:
-            """
-            Revoke an authentication token.
+            return {
+                "valid": True,
+                "user_id": token_info.user_id,
+                "created_at": token_info.created_at.isoformat(),
+                "expires_at": token_info.expires_at.isoformat() if token_info.expires_at else None,
+                "usage_count": token_info.usage_count,
+                "last_used": token_info.last_used.isoformat() if token_info.last_used else None,
+                "auth_enabled": True
+            }
             
-            Args:
-                token: The token to revoke
-                
-            Returns:
-                Revocation result
-            """
-            try:
-                success = await auth_middleware.revoke_token(token)
-                return {
-                    "success": success,
-                    "message": "Token revoked successfully" if success else "Failed to revoke token"
-                }
-            except Exception as e:
-                logger.error(f"Token revocation error: {e}")
-                return {
-                    "success": False,
-                    "error": str(e)
-                }
+        except TokenValidationError as e:
+            return {
+                "valid": False,
+                "error": str(e),
+                "error_type": "validation_error",
+                "auth_enabled": True
+            }
+        except RateLimitError as e:
+            return {
+                "valid": False,
+                "error": str(e),
+                "error_type": "rate_limit_error",
+                "auth_enabled": True
+            }
+        except Exception as e:
+            logger.error(f"Token validation error: {e}")
+            return {
+                "valid": False,
+                "error": "Internal validation error",
+                "error_type": "internal_error",
+                "auth_enabled": True
+            }
+    
+    @server.tool()
+    async def get_rate_limit_status(token: str) -> dict:
+        """
+        Get rate limit status for a token.
         
-        @server.tool()
-        def get_auth_status() -> dict:
-            """
-            Get authentication system status.
+        Args:
+            token: The authentication token
             
-            Returns:
-                Authentication system status and configuration
-            """
-            return auth_middleware.get_auth_status()
+        Returns:
+            Current rate limit status
+        """
+        try:
+            status = await auth_middleware.get_rate_limit_status(token)
+            return {
+                "success": True,
+                "rate_limits": status
+            }
+        except Exception as e:
+            logger.error(f"Rate limit status error: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    @server.tool()
+    async def revoke_token(token: str) -> dict:
+        """
+        Revoke an authentication token.
         
-        @server.tool()
-        def generate_token() -> dict:
-            """
-            Generate a new secure authentication token.
+        Args:
+            token: The token to revoke
             
-            Returns:
-                New token information
-            """
-            try:
-                if not auth_middleware.enabled:
-                    return {
-                        "success": False,
-                        "error": "Authentication is disabled",
-                        "token": None
-                    }
-                
-                # Generate token using Supabase client
-                token = auth_middleware.token_validator.supabase_client.generate_token()
-                
-                return {
-                    "success": True,
-                    "token": token,
-                    "message": "Token generated successfully",
-                    "instructions": (
-                        "Store this token securely. Use it in the 'token' parameter "
-                        "for authenticated MCP operations. Token expires in 30 days by default."
-                    )
-                }
-            except Exception as e:
-                logger.error(f"Token generation error: {e}")
-                return {
-                    "success": False,
-                    "error": str(e),
-                    "token": None
-                }
-    else:
-        logger.info("Authentication disabled - skipping auth tools registration")
+        Returns:
+            Revocation result
+        """
+        try:
+            success = await auth_middleware.revoke_token(token)
+            return {
+                "success": success,
+                "message": "Token revoked successfully" if success else "Failed to revoke token"
+            }
+        except Exception as e:
+            logger.error(f"Token revocation error: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    @server.tool()
+    def get_auth_status() -> dict:
+        """
+        Get authentication system status.
+        
+        Returns:
+            Authentication system status and configuration
+        """
+        return auth_middleware.get_auth_status()
+    
+    @server.tool()
+    def generate_token() -> dict:
+        """
+        Generate a new secure authentication token.
+        
+        Returns:
+            New token information
+        """
+        try:
+            # Generate token using Supabase client
+            token = auth_middleware.token_validator.supabase_client.generate_token()
+            
+            return {
+                "success": True,
+                "token": token,
+                "message": "Token generated successfully",
+                "instructions": (
+                    "Store this token securely. Use it in the 'token' parameter "
+                    "for authenticated MCP operations. Token expires in 30 days by default."
+                )
+            }
+        except Exception as e:
+            logger.error(f"Token generation error: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "token": None
+            }
     
     
     # Add HTTP health endpoint for container health checks
@@ -499,10 +539,10 @@ def create_dhafnck_mcp_server() -> FastMCP:
             "version": "2.1.0"
         }
         
-        # Add authentication status based on environment configuration
-        auth_status = os.environ.get("DHAFNCK_AUTH_ENABLED", "true")
+        # Add authentication status - always enabled now
         supabase_configured = bool(os.environ.get("SUPABASE_URL"))
-        health_data["auth_enabled"] = auth_status.lower() == "true" and supabase_configured
+        health_data["auth_enabled"] = True
+        health_data["supabase_configured"] = supabase_configured
         
         # Add connection manager status if available
         try:
@@ -595,15 +635,11 @@ def main():
         # Tools are registered manually now, not through server.consolidated_tools
         logger.info("DDD-compliant task management tools have been registered")
         
-        # Log authentication status
-        auth_status = os.environ.get("DHAFNCK_AUTH_ENABLED", "true")
+        # Log authentication status - always enabled now
         mvp_mode = os.environ.get("DHAFNCK_MVP_MODE", "false")
         supabase_configured = bool(os.environ.get("SUPABASE_URL"))
         
-        # Convert auth status to boolean
-        auth_enabled = auth_status.lower() in ("true", "1", "yes", "on")
-        
-        logger.info(f"Authentication: {auth_status}, MVP Mode: {mvp_mode}, Supabase: {supabase_configured}")
+        logger.info(f"Authentication: always enabled, MVP Mode: {mvp_mode}, Supabase: {supabase_configured}")
         
         # Determine transport from environment or command line arguments
         transport = os.environ.get("FASTMCP_TRANSPORT", "stdio")
@@ -630,20 +666,26 @@ def main():
             # Build middleware stack
             middleware_stack = []
             
-            # Add MCP auth middleware for user context extraction if auth is enabled
-            if auth_enabled:
+            # Add dual authentication middleware (supports both Supabase cookies and MCP tokens)
+            try:
+                from fastmcp.auth.middleware.dual_auth_middleware import DualAuthMiddleware
+                
+                # Add dual auth middleware first so authentication is handled before other processing
+                middleware_stack.append(Middleware(DualAuthMiddleware))
+                logger.info("DualAuthMiddleware added - supports both Supabase cookies (frontend) and MCP tokens")
+            except Exception as e:
+                logger.error(f"Failed to add DualAuthMiddleware: {e}")
+                
+                # Fallback to the original MCP auth middleware
                 try:
                     from fastmcp.auth.mcp_integration.mcp_auth_middleware import MCPAuthMiddleware
                     from fastmcp.auth.mcp_integration.jwt_auth_backend import create_jwt_auth_backend
                     
-                    # Create JWT backend for the middleware
                     jwt_backend = create_jwt_auth_backend()
-                    
-                    # Add auth middleware first so context is set before other processing
                     middleware_stack.append(Middleware(MCPAuthMiddleware, jwt_backend=jwt_backend))
-                    logger.info("MCPAuthMiddleware added for user context extraction")
-                except Exception as e:
-                    logger.error(f"Failed to add MCPAuthMiddleware: {e}")
+                    logger.info("Fallback: MCPAuthMiddleware added")
+                except Exception as fallback_e:
+                    logger.error(f"Failed to add fallback auth middleware: {fallback_e}")
             
             # Add debug middleware
             middleware_stack.append(Middleware(DebugLoggingMiddleware))

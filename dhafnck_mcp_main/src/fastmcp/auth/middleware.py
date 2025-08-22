@@ -28,24 +28,19 @@ class AuthMiddleware:
         Initialize authentication middleware.
         
         Args:
-            enabled: Whether authentication is enabled. If None, uses environment variable.
+            enabled: Whether authentication is enabled. Always True now.
         """
-        if enabled is None:
-            # Check environment variable
-            enabled = os.environ.get("DHAFNCK_AUTH_ENABLED", "true").lower() == "true"
-        
-        self.enabled = enabled
-        self.token_validator = TokenValidator() if enabled else None
+        # Authentication is always enabled now
+        self.enabled = True
+        self.token_validator = TokenValidator()
         
         # Bypass token for MVP mode
         self.mvp_mode = os.environ.get("DHAFNCK_MVP_MODE", "false").lower() == "true"
         
-        if not enabled:
-            logger.warning("Authentication is DISABLED - all requests will be allowed")
-        elif self.mvp_mode:
-            logger.info("MVP mode enabled - simplified authentication")
+        if self.mvp_mode:
+            logger.info("MVP mode enabled - simplified authentication but auth always enabled")
         else:
-            logger.info("Authentication middleware initialized")
+            logger.info("Authentication middleware initialized - authentication always enabled")
     
     async def authenticate_request(self, token: Optional[str], client_info: Optional[Dict] = None) -> Optional[TokenInfo]:
         """
@@ -62,9 +57,7 @@ class AuthMiddleware:
             TokenValidationError: If authentication fails
             RateLimitError: If rate limit exceeded
         """
-        if not self.enabled:
-            logger.debug("Authentication disabled, allowing request")
-            return None
+        # Authentication is always enabled now - removed disabled check
         
         if self.mvp_mode and not token:
             # MVP mode: allow requests without tokens
@@ -166,8 +159,9 @@ class AuthMiddleware:
         Returns:
             Rate limit status
         """
-        if not self.enabled or not self.token_validator:
-            return {"enabled": False}
+        # Authentication is always enabled now
+        if not self.token_validator:
+            return {"enabled": True, "error": "Token validator not available"}
         
         status = self.token_validator.get_rate_limit_status(token)
         status["enabled"] = True
@@ -183,8 +177,9 @@ class AuthMiddleware:
         Returns:
             True if revoked successfully
         """
-        if not self.enabled or not self.token_validator:
-            logger.warning("Cannot revoke token: authentication disabled")
+        # Authentication is always enabled now
+        if not self.token_validator:
+            logger.error("Cannot revoke token: token validator not available")
             return False
         
         return await self.token_validator.revoke_token(token)

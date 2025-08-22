@@ -7,7 +7,11 @@ import { taskApiV2, projectApiV2, agentApiV2, isAuthenticated } from './services
 const API_BASE = "http://localhost:8000/mcp/";
 
 // Check if user isolation is enabled (user is authenticated)
-const shouldUseV2Api = () => isAuthenticated();
+const shouldUseV2Api = () => {
+  const authenticated = isAuthenticated();
+  console.log('shouldUseV2Api check:', { authenticated, hasToken: !!Cookies.get('access_token') });
+  return authenticated;
+};
 
 // --- Interfaces for Type Safety ---
 export interface Task {
@@ -112,8 +116,16 @@ const MCP_HEADERS = {
   "MCP-Protocol-Version": "2025-06-18",
 };
 
-function withMcpHeaders(extra: Record<string, string> = {}) {
-  return { ...MCP_HEADERS, ...extra };
+function withMcpHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  const headers: Record<string, string> = { ...MCP_HEADERS, ...extra };
+  
+  // Add authentication header if token is available
+  const token = Cookies.get('access_token');
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  return headers;
 }
 
 // Get task count for a branch
@@ -124,22 +136,30 @@ export async function getTaskCount(git_branch_id: string): Promise<number> {
 
 // --- Task Management ---
 export async function listTasks(params: any = {}): Promise<Task[]> {
-  // Use V2 API if authenticated
-  if (shouldUseV2Api()) {
+  // Use V2 API if authenticated (same pattern as listProjects)
+  const useV2 = shouldUseV2Api();
+  if (useV2) {
     try {
+      console.log('Attempting V2 API for listTasks...');
       const response: any = await taskApiV2.getTasks();
+      console.log('V2 API response:', response);
       if (response && Array.isArray(response)) {
+        console.log('V2 API success: returning array response');
         return response;
       }
       if (response && response.tasks && Array.isArray(response.tasks)) {
+        console.log('V2 API success: returning response.tasks');
         return response.tasks;
       }
+      console.log('V2 API success but no valid tasks array, returning empty array');
       return [];
     } catch (error) {
       console.error('V2 API error, falling back to V1:', error);
       // Fall through to V1 API
     }
   }
+  
+  console.log('Using V1 API for listTasks...');
   
   const { git_branch_id, project_id = "default_project", git_branch_name = "main", user_id = "default_id", ...rest } = params;
   const filteredParams = {

@@ -125,8 +125,8 @@ async def _health_check(ctx: Context, **kwargs) -> Dict[str, Any]:
 async def _get_server_capabilities(ctx: Context, **kwargs) -> Dict[str, Any]:
     """Get detailed server capabilities information"""
     try:
-        # Get authentication status
-        auth_enabled = os.environ.get("DHAFNCK_AUTH_ENABLED", "true").lower() == "true"
+        # Authentication is always enabled now
+        auth_enabled = True
         mvp_mode = os.environ.get("DHAFNCK_MVP_MODE", "false").lower() == "true"
         
         capabilities = {
@@ -378,14 +378,14 @@ async def _get_mcp_status(ctx: Context, include_details: bool = True, **kwargs) 
                 "error": str(e)
             }
         
-        # Add authentication status
+        # Add authentication status - always enabled now
         try:
             status["auth_info"] = {
-                "enabled": os.environ.get("DHAFNCK_AUTH_ENABLED", "true").lower() == "true",
+                "enabled": True,
                 "mvp_mode": os.environ.get("DHAFNCK_MVP_MODE", "false").lower() == "true"
             }
         except Exception:
-            status["auth_info"] = {"enabled": False, "mvp_mode": False}
+            status["auth_info"] = {"enabled": True, "mvp_mode": False}
         
         # Add Docker/container information
         try:

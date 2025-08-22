@@ -77,6 +77,7 @@ class ProjectGitBranch(Base):
     model_metadata: Mapped[Dict[str, Any]] = mapped_column("metadata", JSON, default=dict)
     task_count: Mapped[int] = mapped_column(Integer, default=0)
     completed_task_count: Mapped[int] = mapped_column(Integer, default=0)
+    user_id: Mapped[str] = mapped_column(String, nullable=False)  # User isolation field - REQUIRED
     
     # Relationships
     project: Mapped[Project] = relationship("Project", back_populates="git_branchs")
@@ -142,6 +143,7 @@ class TaskSubtask(Base):
     completion_summary: Mapped[str] = mapped_column(Text, default="")
     impact_on_parent: Mapped[str] = mapped_column(Text, default="")
     insights_found: Mapped[List[str]] = mapped_column(JSON, default=list)
+    user_id: Mapped[str] = mapped_column(String, nullable=False)  # User isolation field - REQUIRED
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
@@ -164,6 +166,7 @@ class TaskAssignee(Base):
     task_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
     assignee_id: Mapped[str] = mapped_column(String, nullable=False)
     role: Mapped[str] = mapped_column(String, default="contributor")
+    user_id: Mapped[str] = mapped_column(String, nullable=False)  # User isolation field - REQUIRED
     assigned_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     
     # Relationships
@@ -231,6 +234,7 @@ class Label(Base):
     name: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     color: Mapped[str] = mapped_column(String, default="#0066cc")
     description: Mapped[str] = mapped_column(Text, default="")
+    user_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # Optional for shared labels
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     
     # Relationships
@@ -243,6 +247,7 @@ class TaskLabel(Base):
     
     task_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("tasks.id", ondelete="CASCADE"), primary_key=True)
     label_id: Mapped[str] = mapped_column(String, ForeignKey("labels.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String, nullable=False)  # User isolation field - REQUIRED
     applied_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     
     # Relationships
@@ -266,6 +271,7 @@ class Template(Base):
     category: Mapped[str] = mapped_column(String, default="general")
     tags: Mapped[List[str]] = mapped_column(JSON, default=list)
     usage_count: Mapped[int] = mapped_column(Integer, default=0)
+    user_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # Optional for shared templates
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
     created_by: Mapped[str] = mapped_column(String, default="system")
@@ -291,8 +297,8 @@ class GlobalContext(Base):
     workflow_templates: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     delegation_rules: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     
-    # Note: Global context is organization-wide, not user-specific
-    # No user_id field needed here
+    # User isolation - required by database migration
+    user_id: Mapped[str] = mapped_column(String, nullable=False)  # User isolation field - REQUIRED
     
     # Timestamps and versioning
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
@@ -377,9 +383,8 @@ class BranchContext(Base):
     # Control flags
     inheritance_disabled: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True, default=False)
     
-    # User isolation - temporarily disabled for database compatibility
-    # TODO: Re-enable after database migration adds user_id column
-    # user_id: Mapped[Optional[str]] = mapped_column(String, nullable=True, default="system")  # Default for compatibility
+    # User isolation - required by database migration
+    user_id: Mapped[str] = mapped_column(String, nullable=False)  # User isolation field - REQUIRED
     
     # Timestamps and versioning
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, server_default=func.now())
@@ -434,9 +439,8 @@ class TaskContext(Base):
     inheritance_disabled: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True, default=False)
     force_local_only: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True, default=False)
     
-    # User isolation - temporarily disabled for database compatibility  
-    # TODO: Re-enable after database migration adds user_id column
-    # user_id: Mapped[Optional[str]] = mapped_column(String, nullable=True, default="system")  # Default for compatibility
+    # User isolation - required by database migration
+    user_id: Mapped[str] = mapped_column(String, nullable=False)  # User isolation field - REQUIRED
     
     # Timestamps and versioning
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, server_default=func.now())
@@ -484,6 +488,7 @@ class ContextDelegation(Base):
     approved: Mapped[Optional[bool]] = mapped_column(Boolean)
     processed_by: Mapped[Optional[str]] = mapped_column(String)
     rejected_reason: Mapped[Optional[str]] = mapped_column(String)
+    user_id: Mapped[str] = mapped_column(String, nullable=False)  # User isolation field - REQUIRED
     
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
@@ -521,6 +526,7 @@ class ContextInheritanceCache(Base):
     # Invalidation tracking
     invalidated: Mapped[bool] = mapped_column(Boolean, default=False)
     invalidation_reason: Mapped[Optional[str]] = mapped_column(String)
+    user_id: Mapped[str] = mapped_column(String, nullable=False)  # User isolation field - REQUIRED
     
     __table_args__ = (
         CheckConstraint("context_level IN ('task', 'branch', 'project', 'global')", name='chk_cache_context_level'),

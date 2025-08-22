@@ -28,7 +28,12 @@ const handleResponse = async <T>(response: Response): Promise<T> => {
     const error = await response.json().catch(() => ({ detail: 'Request failed' }));
     
     if (response.status === 401) {
-      // Token expired or invalid - trigger refresh or logout
+      // Token expired or invalid - clear cookies to force fallback to V1 API
+      console.log('V2 API authentication failed, clearing tokens...');
+      import('js-cookie').then(Cookies => {
+        Cookies.default.remove('access_token');
+        Cookies.default.remove('refresh_token');
+      });
       throw new Error('Authentication required. Please log in again.');
     }
     

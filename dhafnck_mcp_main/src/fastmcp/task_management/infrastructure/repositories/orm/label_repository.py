@@ -251,10 +251,11 @@ class ORMLabelRepository:
                 if existing:
                     return False
                 
-                # Create assignment
+                # Create assignment with user_id for data isolation
                 task_label = TaskLabel(
                     task_id=task_id,
-                    label_id=label_id
+                    label_id=label_id,
+                    user_id=self.user_id  # CRITICAL: Add user_id for database constraint
                 )
                 
                 session.add(task_label)

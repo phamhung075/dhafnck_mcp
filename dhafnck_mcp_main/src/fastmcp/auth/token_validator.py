@@ -75,6 +75,8 @@ class TokenValidator:
         """
         Validate a token and check rate limits.
         
+        Supports both Supabase tokens and MCP tokens.
+        
         Args:
             token: The token to validate
             client_info: Optional client information for logging
@@ -100,7 +102,7 @@ class TokenValidator:
             # Check rate limits first
             await self._check_rate_limit(token_hash)
             
-            # Validate token
+            # Validate token (try MCP tokens first, then Supabase)
             token_info = await self._get_token_info(token)
             
             if not token_info:
@@ -135,6 +137,8 @@ class TokenValidator:
         """
         Get token information with caching.
         
+        Supports both Supabase tokens and MCP tokens.
+        
         Args:
             token: The token to validate
             
@@ -153,6 +157,14 @@ class TokenValidator:
             else:
                 # Remove expired cache entry
                 del self._token_cache[token_hash]
+        
+        # Try MCP token first (if it looks like an MCP token)
+        if token.startswith('mcp_'):
+            token_info = await self._validate_mcp_token(token)
+            if token_info:
+                # Cache valid tokens
+                self._token_cache[token_hash] = (token_info, current_time)
+                return token_info
         
         # Validate with Supabase
         token_info = await self.supabase_client.validate_token(token)
@@ -305,4 +317,43 @@ class TokenValidator:
             "cached_tokens": len(self._token_cache),
             "rate_limited_tokens": len(self._rate_limits),
             "failed_attempt_records": len(self._failed_attempts)
-        } 
+        }
+    
+    async def _validate_mcp_token(self, token: str) -> Optional[TokenInfo]:
+        """
+        Validate an MCP token using the MCP token service.
+        
+        Args:
+            token: MCP token to validate
+            
+        Returns:
+            TokenInfo if valid, None otherwise
+        """
+        try:
+            # Import here to avoid circular imports
+            from .services.mcp_token_service import mcp_token_service
+            
+            # Validate the MCP token
+            mcp_token_obj = await mcp_token_service.validate_mcp_token(token)
+            
+            if mcp_token_obj:
+                # Convert MCP token to TokenInfo for compatibility
+                token_hash = self.supabase_client._hash_token(token)
+                token_info = TokenInfo(
+                    token_hash=token_hash,
+                    user_id=mcp_token_obj.user_id,
+                    created_at=mcp_token_obj.created_at,
+                    expires_at=mcp_token_obj.expires_at,
+                    usage_count=0,  # MCP tokens don't track usage count
+                    last_used=None  # Will be updated during usage
+                )
+                
+                logger.debug(f"MCP token validated for user {mcp_token_obj.user_id}")
+                return token_info
+            
+            logger.debug("MCP token validation failed")
+            return None
+            
+        except Exception as e:
+            logger.warning(f"Error validating MCP token: {e}")
+            return None 

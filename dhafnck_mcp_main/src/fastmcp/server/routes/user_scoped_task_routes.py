@@ -7,7 +7,7 @@ in API routes using JWT authentication and user-scoped repositories.
 
 import logging
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 
 from ...auth.interface.fastapi_auth import get_db
@@ -25,6 +25,9 @@ from ...task_management.infrastructure.repositories.orm.agent_repository import 
 from ...task_management.application.dtos.task.create_task_request import CreateTaskRequest
 from ...task_management.application.dtos.task.update_task_request import UpdateTaskRequest
 from ...task_management.application.dtos.task.list_tasks_request import ListTasksRequest
+
+# Import debug service
+from ...utilities.debug_service import debug_service, log_api_v2_request, log_api_v2_response, log_auth_event, log_frontend_issue
 
 logger = logging.getLogger(__name__)
 
@@ -110,33 +113,76 @@ async def list_tasks(
     ensuring data isolation.
     """
     try:
+        # Enhanced debug logging for task listing
+        logger.debug("=" * 80)
+        logger.debug(f"🔍 TASK LISTING REQUEST")
+        logger.debug(f"📧 User: {current_user.email} (ID: {current_user.id})")
+        logger.debug(f"🎯 Filters: status={task_status}, priority={priority}, limit={limit}")
+        logger.debug(f"💾 Database session: {type(db)}")
+        
         # Create user-scoped repository
+        logger.debug("🏭 Creating user-scoped task repository...")
         task_repo = UserScopedRepositoryFactory.create_task_repository(db, current_user.id)
+        logger.debug(f"✅ Task repository created: {type(task_repo)}")
         
         # Create facade with user context
+        logger.debug("🏗️ Creating task application facade...")
         facade = TaskApplicationFacade(task_repository=task_repo)
+        logger.debug(f"✅ Facade created: {type(facade)}")
         
         # Build request
+        logger.debug("📋 Building list request...")
         list_request = ListTasksRequest(
             status=task_status,
             priority=priority,
             limit=limit
         )
+        logger.debug(f"✅ List request built: {list_request}")
         
         # Get user's tasks only
+        logger.debug("🔍 Fetching tasks from facade...")
         tasks = facade.list_tasks(list_request)
+        logger.debug(f"✅ Tasks fetched: {len(tasks)} tasks found")
         
-        logger.info(f"User {current_user.email} retrieved {len(tasks)} tasks")
+        # Log each task for debugging
+        if tasks:
+            logger.debug("📝 Task details:")
+            for i, task in enumerate(tasks[:5]):  # Log first 5 tasks only
+                logger.debug(f"   Task {i+1}: ID={getattr(task, 'id', 'N/A')}, Title={getattr(task, 'title', 'N/A')}, Status={getattr(task, 'status', 'N/A')}")
+            if len(tasks) > 5:
+                logger.debug(f"   ... and {len(tasks) - 5} more tasks")
+        else:
+            logger.debug("📝 No tasks found for user")
         
-        return {
+        # Prepare response
+        response_data = {
             "success": True,
             "tasks": tasks,
             "count": len(tasks),
             "user": current_user.email
         }
         
+        logger.info(f"User {current_user.email} retrieved {len(tasks)} tasks")
+        logger.debug(f"✅ TASK LISTING COMPLETED - Returning {len(tasks)} tasks")
+        logger.debug("=" * 80)
+        
+        return response_data
+        
     except Exception as e:
-        logger.error(f"Error listing tasks for user {current_user.id}: {e}")
+        logger.error("=" * 80)
+        logger.error(f"❌ ERROR in task listing for user {current_user.id}")
+        logger.error(f"❌ User: {current_user.email}")
+        logger.error(f"❌ Error type: {type(e).__name__}")
+        logger.error(f"❌ Error message: {str(e)}")
+        
+        # Log stack trace for debugging
+        import traceback
+        logger.error(f"❌ Stack trace:")
+        for line in traceback.format_exc().splitlines():
+            logger.error(f"   {line}")
+        
+        logger.error("=" * 80)
+        
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to list tasks"

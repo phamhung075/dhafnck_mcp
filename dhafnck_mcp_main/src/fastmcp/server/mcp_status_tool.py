@@ -107,15 +107,15 @@ async def get_mcp_status(ctx: Context, include_details: bool = True) -> Dict[str
                 "broadcasting_active": False
             }
         
-        # Add authentication status
+        # Add authentication status - always enabled now
         try:
             import os
             status["auth_info"] = {
-                "enabled": os.environ.get("DHAFNCK_AUTH_ENABLED", "true").lower() == "true",
+                "enabled": True,
                 "mvp_mode": os.environ.get("DHAFNCK_MVP_MODE", "false").lower() == "true"
             }
         except Exception:
-            status["auth_info"] = {"enabled": False, "mvp_mode": False}
+            status["auth_info"] = {"enabled": True, "mvp_mode": False}
         
         # Add Docker/container information
         try:

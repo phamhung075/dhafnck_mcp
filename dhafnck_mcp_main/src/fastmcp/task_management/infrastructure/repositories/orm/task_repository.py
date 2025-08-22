@@ -170,10 +170,11 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
                                 session.add(label)
                                 session.flush()  # Ensure label is saved before creating relationship
                             
-                            # Create task-label relationship
+                            # Create task-label relationship with user_id for data isolation
                             task_label = TaskLabel(
                                 task_id=task_id,
-                                label_id=label.id
+                                label_id=label.id,
+                                user_id=self.user_id  # CRITICAL: Add user_id for database constraint
                             )
                             session.add(task_label)
                 
@@ -275,10 +276,11 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
                                 session.add(label)
                                 session.flush()  # Ensure label is saved before creating relationship
                             
-                            # Create task-label relationship
+                            # Create task-label relationship with user_id for data isolation
                             task_label = TaskLabel(
                                 task_id=task_id,
-                                label_id=label.id
+                                label_id=label.id,
+                                user_id=self.user_id  # CRITICAL: Add user_id for database constraint
                             )
                             session.add(task_label)
                 
@@ -633,10 +635,11 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
                             session.add(label)
                             session.flush()  # Ensure label is saved before creating relationship
                         
-                        # Create task-label relationship
+                        # Create task-label relationship with user_id for data isolation
                         task_label = TaskLabel(
                             task_id=str(task.id),
-                            label_id=label.id
+                            label_id=label.id,
+                            user_id=self.user_id  # CRITICAL: Add user_id for database constraint
                         )
                         session.add(task_label)
                 else:
@@ -702,10 +705,11 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
                             session.add(label)
                             session.flush()  # Ensure label is saved before creating relationship
                         
-                        # Create task-label relationship
+                        # Create task-label relationship with user_id for data isolation
                         task_label = TaskLabel(
                             task_id=str(task.id),
-                            label_id=label.id
+                            label_id=label.id,
+                            user_id=self.user_id  # CRITICAL: Add user_id for database constraint
                         )
                         session.add(task_label)
                 

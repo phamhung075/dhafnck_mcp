@@ -16,6 +16,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from ...database.models import TaskSubtask
 from ...database.database_config import get_session
 from ..base_orm_repository import BaseORMRepository
+from ..base_user_scoped_repository import BaseUserScopedRepository
 from ....domain.entities.subtask import Subtask
 from ....domain.repositories.subtask_repository import SubtaskRepository
 from ....domain.value_objects.task_id import TaskId
@@ -31,7 +32,7 @@ from ....domain.exceptions.base_exceptions import (
 logger = logging.getLogger(__name__)
 
 
-class ORMSubtaskRepository(BaseORMRepository[TaskSubtask], SubtaskRepository):
+class ORMSubtaskRepository(BaseORMRepository[TaskSubtask], BaseUserScopedRepository, SubtaskRepository):
     """
     ORM implementation of SubtaskRepository using SQLAlchemy.
     
@@ -39,9 +40,10 @@ class ORMSubtaskRepository(BaseORMRepository[TaskSubtask], SubtaskRepository):
     between domain objects and ORM models.
     """
     
-    def __init__(self):
-        """Initialize the ORM subtask repository."""
-        super().__init__(TaskSubtask)
+    def __init__(self, session=None, user_id: Optional[str] = None):
+        """Initialize the ORM subtask repository with user isolation."""
+        BaseORMRepository.__init__(self, TaskSubtask)
+        BaseUserScopedRepository.__init__(self, session or self.get_db_session(), user_id)
     
     def save(self, subtask: Subtask) -> bool:
         """
@@ -689,7 +691,7 @@ class ORMSubtaskRepository(BaseORMRepository[TaskSubtask], SubtaskRepository):
                     # Handle string assignees
                     assignees.append(str(assignee))
         
-        return {
+        model_data = {
             "task_id": subtask.parent_task_id.value,
             "title": subtask.title,
             "description": subtask.description or "",
@@ -700,6 +702,10 @@ class ORMSubtaskRepository(BaseORMRepository[TaskSubtask], SubtaskRepository):
             "created_at": subtask.created_at or datetime.now(timezone.utc),
             "updated_at": subtask.updated_at or datetime.now(timezone.utc)
         }
+        
+        # Add user_id for data isolation
+        model_data = self.set_user_id(model_data)
+        return model_data
     
     def _to_domain_entity(self, model: TaskSubtask) -> Subtask:
         """
