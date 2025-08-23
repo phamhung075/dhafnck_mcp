@@ -50,11 +50,14 @@ class ORMLabelRepository:
                 if existing:
                     raise ValidationError(f"Label with name '{name}' already exists")
                 
-                # Create new label
+                # Create new label with default user_id
+                import uuid
                 label = Label(
+                    id=str(uuid.uuid4()),
                     name=name,
                     color=color,
-                    description=description
+                    description=description,
+                    user_id=getattr(self, 'user_id', None) or 'system'  # Default user_id for shared labels
                 )
                 
                 session.add(label)
@@ -255,7 +258,7 @@ class ORMLabelRepository:
                 task_label = TaskLabel(
                     task_id=task_id,
                     label_id=label_id,
-                    user_id=self.user_id  # CRITICAL: Add user_id for database constraint
+                    user_id=getattr(self, 'user_id', None) or 'system'  # CRITICAL: Add user_id for database constraint
                 )
                 
                 session.add(task_label)

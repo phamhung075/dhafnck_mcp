@@ -148,9 +148,14 @@ class TestORMSubtaskRepository:
             for i in range(3)
         ]
         
-        mock_session.query.return_value.filter.return_value.order_by.return_value.all.return_value = mock_subtasks
+        # Mock the query chain with apply_user_filter
+        mock_query = mock_session.query.return_value
+        mock_query.filter.return_value = mock_query
+        mock_query.order_by.return_value.all.return_value = mock_subtasks
         
-        result = subtask_repository.find_by_parent_task_id(TaskId("task-456"))
+        # Mock apply_user_filter to return the same query
+        with patch.object(subtask_repository, 'apply_user_filter', return_value=mock_query):
+            result = subtask_repository.find_by_parent_task_id(TaskId("task-456"))
         
         assert len(result) == 3
         assert all(isinstance(s, Subtask) for s in result)
@@ -158,9 +163,14 @@ class TestORMSubtaskRepository:
     
     def test_find_by_assignee(self, subtask_repository, mock_session, mock_subtask_model):
         """Test finding subtasks by assignee."""
-        mock_session.query.return_value.filter.return_value.order_by.return_value.all.return_value = [mock_subtask_model]
+        # Mock the query chain with apply_user_filter
+        mock_query = mock_session.query.return_value
+        mock_query.filter.return_value = mock_query
+        mock_query.order_by.return_value.all.return_value = [mock_subtask_model]
         
-        result = subtask_repository.find_by_assignee("@user1")
+        # Mock apply_user_filter to return the same query
+        with patch.object(subtask_repository, 'apply_user_filter', return_value=mock_query):
+            result = subtask_repository.find_by_assignee("@user1")
         
         assert len(result) == 1
         assert result[0].assignees == ["@user1", "@user2"]
@@ -175,9 +185,14 @@ class TestORMSubtaskRepository:
             for i in range(2)
         ]
         
-        mock_session.query.return_value.filter.return_value.order_by.return_value.all.return_value = mock_done_subtasks
+        # Mock the query chain with apply_user_filter
+        mock_query = mock_session.query.return_value
+        mock_query.filter.return_value = mock_query
+        mock_query.order_by.return_value.all.return_value = mock_done_subtasks
         
-        result = subtask_repository.find_by_status("done")
+        # Mock apply_user_filter to return the same query
+        with patch.object(subtask_repository, 'apply_user_filter', return_value=mock_query):
+            result = subtask_repository.find_by_status("done")
         
         assert len(result) == 2
         assert all(s.status.value == "done" for s in result)
@@ -192,9 +207,14 @@ class TestORMSubtaskRepository:
                  updated_at=datetime.now(timezone.utc), completed_at=completed_at)
         ]
         
-        mock_session.query.return_value.filter.return_value.order_by.return_value.all.return_value = mock_completed
+        # Mock the query chain with apply_user_filter
+        mock_query = mock_session.query.return_value
+        mock_query.filter.return_value = mock_query
+        mock_query.order_by.return_value.all.return_value = mock_completed
         
-        result = subtask_repository.find_completed(TaskId("task-456"))
+        # Mock apply_user_filter to return the same query
+        with patch.object(subtask_repository, 'apply_user_filter', return_value=mock_query):
+            result = subtask_repository.find_completed(TaskId("task-456"))
         
         assert len(result) == 1
         assert result[0].status.value == "done"
@@ -216,9 +236,14 @@ class TestORMSubtaskRepository:
                  updated_at=datetime.now(timezone.utc))
         ]
         
-        mock_session.query.return_value.filter.return_value.order_by.return_value.all.return_value = mock_pending
+        # Mock the query chain with apply_user_filter
+        mock_query = mock_session.query.return_value
+        mock_query.filter.return_value = mock_query
+        mock_query.order_by.return_value.all.return_value = mock_pending
         
-        result = subtask_repository.find_pending(TaskId("task-456"))
+        # Mock apply_user_filter to return the same query
+        with patch.object(subtask_repository, 'apply_user_filter', return_value=mock_query):
+            result = subtask_repository.find_pending(TaskId("task-456"))
         
         assert len(result) == 3
         assert all(s.status.value in ["todo", "in_progress", "blocked"] for s in result)

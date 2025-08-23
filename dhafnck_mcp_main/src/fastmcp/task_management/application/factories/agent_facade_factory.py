@@ -40,19 +40,16 @@ class AgentFacadeFactory:
     
     def create_agent_facade(self, 
                            project_id: str,
-                           user_id: str) -> AgentApplicationFacade:
+                           user_id: Optional[str] = None) -> AgentApplicationFacade:
         """
         Create an agent application facade with proper dependency injection.
         
         Args:
             project_id: Project identifier for scoping (required)
-            user_id: User identifier for data isolation (required - authentication is mandatory)
+            user_id: User identifier for data isolation (optional - defaults to 'system')
             
         Returns:
             AgentApplicationFacade instance with injected dependencies
-            
-        Raises:
-            UserAuthenticationRequiredError: If user_id is not provided or invalid
         """
         # Create cache key
         cache_key = f"{project_id}"
@@ -62,13 +59,10 @@ class AgentFacadeFactory:
             logger.debug(f"Returning cached agent facade for {cache_key}")
             return self._facades_cache[cache_key]
         
-        # Import validation and auth config
-        from ...domain.constants import validate_user_id
-        from ...domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
-        from ....config.auth_config import AuthConfig
-        
-        # Validate user authentication is provided
-        user_id = validate_user_id(user_id, "Agent facade creation")
+        # Provide default user_id if not specified
+        if not user_id:
+            user_id = 'system'
+            logger.info(f"Using default user_id 'system' for agent facade creation")
         
         try:
             # Create repository with user_id using the static create method
@@ -126,7 +120,7 @@ class AgentFacadeFactory:
         Returns:
             AgentApplicationFacade instance with injected dependencies
         """
-        return self.create_agent_facade(project_id)
+        return self.create_agent_facade(project_id, user_id=None)
     
     @staticmethod
     def create() -> AgentApplicationFacade:
@@ -137,7 +131,7 @@ class AgentFacadeFactory:
             AgentApplicationFacade instance with default configuration
         """
         factory = AgentFacadeFactory()
-        return factory.create_agent_facade()
+        return factory.create_agent_facade("default_project", user_id=None)
 
 
 class MockAgentApplicationFacade:

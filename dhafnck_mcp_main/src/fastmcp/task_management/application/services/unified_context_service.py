@@ -711,12 +711,16 @@ class UnifiedContextService:
                     "agent_assignments": data.get("agent_assignments", {})
                 }
             
+            # Ensure user_id is in metadata for repository
+            metadata = data.get("metadata", {})
+            metadata["user_id"] = user_id or self._user_id or 'system'
+            
             return BranchContext(
                 id=context_id,
                 project_id=project_id or data.get("project_id"),
                 git_branch_name=data.get("git_branch_name", "main"),
                 branch_settings=branch_settings,
-                metadata=data.get("metadata", {})
+                metadata=metadata
             )
         elif level == ContextLevel.TASK:
             # Support branch_id, parent_branch_id, and git_branch_id for backward compatibility

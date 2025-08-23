@@ -54,12 +54,8 @@ class UpdateSubtaskUseCase:
             if request.assignees is not None:
                 subtask.update_assignees(request.assignees)
             if request.progress_percentage is not None:
-                # Update subtask progress percentage (0-100)
-                if hasattr(subtask, 'progress_percentage'):
-                    subtask.progress_percentage = request.progress_percentage
-                else:
-                    # Add progress_percentage as an attribute if it doesn't exist
-                    setattr(subtask, 'progress_percentage', request.progress_percentage)
+                # Update subtask progress percentage using domain method
+                subtask.update_progress_percentage(request.progress_percentage)
             
             self._subtask_repository.save(subtask)
             updated_subtask = subtask.to_dict()

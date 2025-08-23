@@ -64,25 +64,37 @@ class GitBranchService:
         
         # Create corresponding branch context in hierarchical context system
         try:
+            # Prepare branch context data compatible with UnifiedContextService
             branch_context_data = {
-                "parent_project_id": project_id,
-                "branch_name": branch_name,
-                "branch_description": description,
-                "feature_flags": {},
-                "branch_workflow": {},
-                "testing_strategy": {},
-                "deployment_config": {},
-                "collaboration_settings": {},
-                "branch_standards": {}
+                "project_id": project_id,  # Required for BranchContext
+                "git_branch_name": branch_name,
+                "branch_settings": {
+                    "feature_flags": {},
+                    "branch_workflow": {},
+                    "testing_strategy": {},
+                    "deployment_config": {},
+                    "collaboration_settings": {},
+                    "agent_assignments": {}
+                },
+                "metadata": {
+                    "branch_description": description,
+                    "auto_created": True,
+                    "created_by": "git_branch_service"
+                }
             }
             
-            branch_context = await self._hierarchical_context_service.create_context(
+            # Use synchronous create_context method
+            branch_context_result = self._hierarchical_context_service.create_context(
                 level="branch",
                 context_id=git_branch.id,
-                data=branch_context_data
+                data=branch_context_data,
+                project_id=project_id
             )
             
-            logger.info(f"Created branch context for git branch {git_branch.id} in project {project_id}")
+            if branch_context_result.get("success", False):
+                logger.info(f"Successfully created branch context for git branch {git_branch.id} in project {project_id}")
+            else:
+                logger.warning(f"Branch context creation returned non-success: {branch_context_result.get('error', 'Unknown error')}")
             
         except Exception as context_error:
             # Log the error but don't fail the git branch creation
@@ -143,11 +155,14 @@ class GitBranchService:
             
             # Delete associated branch context
             try:
-                await self._hierarchical_context_service.delete_context(
+                delete_result = self._hierarchical_context_service.delete_context(
                     level="branch",
                     context_id=git_branch_id
                 )
-                logger.info(f"Deleted branch context for git branch {git_branch_id}")
+                if delete_result.get("success", False):
+                    logger.info(f"Successfully deleted branch context for git branch {git_branch_id}")
+                else:
+                    logger.warning(f"Branch context deletion returned non-success: {delete_result.get('error', 'Unknown error')}")
             except Exception as context_error:
                 # Log the error but don't fail the deletion
                 logger.warning(f"Failed to delete branch context for git branch {git_branch_id}: {context_error}")
@@ -190,33 +205,46 @@ class GitBranchService:
             if not description:
                 description = git_branch.description or f"Branch context for {git_branch.name}"
             
-            # Create branch context data
+            # Create branch context data compatible with UnifiedContextService
             branch_context_data = {
-                "parent_project_id": actual_project_id,
-                "branch_name": branch_name,
-                "branch_description": description,
-                "feature_flags": {},
-                "branch_workflow": {},
-                "testing_strategy": {},
-                "deployment_config": {},
-                "collaboration_settings": {},
-                "branch_standards": {}
+                "project_id": actual_project_id,  # Required for BranchContext
+                "git_branch_name": branch_name,
+                "branch_settings": {
+                    "feature_flags": {},
+                    "branch_workflow": {},
+                    "testing_strategy": {},
+                    "deployment_config": {},
+                    "collaboration_settings": {},
+                    "agent_assignments": {}
+                },
+                "metadata": {
+                    "branch_description": description,
+                    "auto_created": True,
+                    "created_by": "git_branch_service_missing_context_fix"
+                }
             }
             
-            # Create the branch context
-            branch_context = self._hierarchical_context_service.create_context(
+            # Create the branch context using synchronous method
+            branch_context_result = self._hierarchical_context_service.create_context(
                 level="branch",
                 context_id=branch_id,
-                data=branch_context_data
+                data=branch_context_data,
+                project_id=actual_project_id
             )
             
-            logger.info(f"Successfully created missing branch context for branch {branch_id}")
-            
-            return {
-                "success": True,
-                "branch_context": branch_context,
-                "message": f"Branch context created for branch {branch_id}"
-            }
+            if branch_context_result.get("success", False):
+                logger.info(f"Successfully created missing branch context for branch {branch_id}")
+                return {
+                    "success": True,
+                    "branch_context": branch_context_result.get("context"),
+                    "message": f"Branch context created for branch {branch_id}"
+                }
+            else:
+                logger.error(f"Failed to create missing branch context for branch {branch_id}: {branch_context_result.get('error', 'Unknown error')}")
+                return {
+                    "success": False,
+                    "error": f"Failed to create branch context: {branch_context_result.get('error', 'Unknown error')}"
+                }
             
         except Exception as e:
             logger.error(f"Failed to create branch context for branch {branch_id}: {e}")

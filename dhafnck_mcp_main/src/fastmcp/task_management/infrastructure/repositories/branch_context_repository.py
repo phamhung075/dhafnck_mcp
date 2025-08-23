@@ -92,8 +92,8 @@ class BranchContextRepository(BaseORMRepository):
                 feature_flags={},  # Using feature_flags instead of branch_standards
                 active_patterns={},  # Using active_patterns instead of agent_assignments
                 local_overrides=entity.metadata.get('local_overrides', {}),
-                delegation_rules=entity.metadata.get('delegation_rules', {})
-                # user_id=entity.metadata.get('user_id') or 'system'  # Temporarily disabled for DB compatibility
+                delegation_rules=entity.metadata.get('delegation_rules', {}),
+                user_id=entity.metadata.get('user_id') or 'system'  # Enable user_id with default
             )
             
             session.add(db_model)

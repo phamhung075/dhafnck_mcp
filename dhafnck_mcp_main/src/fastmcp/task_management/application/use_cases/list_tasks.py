@@ -36,6 +36,10 @@ class ListTasksUseCase:
         if request.labels:
             filters['labels'] = request.labels
         
+        # CRITICAL FIX: Include git_branch_id in filters so repository can filter by branch
+        if request.git_branch_id:
+            filters['git_branch_id'] = request.git_branch_id
+        
         # Get tasks from repository
         tasks = self._task_repository.find_by_criteria(filters, limit=request.limit)
         
@@ -51,6 +55,8 @@ class ListTasksUseCase:
             filters_applied['assignee'] = request.assignee
         if request.labels:
             filters_applied['labels'] = request.labels
+        if request.git_branch_id:
+            filters_applied['git_branch_id'] = request.git_branch_id
         if request.limit:
             filters_applied['limit'] = request.limit
         

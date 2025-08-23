@@ -6,6 +6,122 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Fixed - Missing uuid Module Import in Agent Repository (2025-08-23)
+- **CRITICAL FIX**: Fixed "name 'uuid' is not defined" error in agent assignment operations
+  - **Problem**: `manage_git_branch(action="assign_agent")` was failing with NameError
+  - **Root Cause**: The uuid module was imported conditionally inside methods instead of at module level
+  - **Solution**: Added `import uuid` at module level in `agent_repository.py`
+  - **Files Modified**: 
+    - `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/agent_repository.py`
+  - **Impact**: Agent assignment now works correctly in Docker environment
+  - **Verification**: ✅ CONFIRMED WORKING after Docker rebuild (2025-08-23)
+
+### Fixed - UUID Iteration Error in Agent Assignment (2025-08-22)
+- **CRITICAL FIX**: Fixed "argument of type 'UUID' is not iterable" error when assigning agents to git branches
+  - **Problem**: `manage_git_branch(action="assign_agent")` was failing with "argument of type 'UUID' is not iterable" error
+  - **Root Cause**: The `assigned_trees` field in agent metadata could store UUID objects instead of strings, but the code was attempting to use the `in` operator directly on UUID objects
+  - **Solution**: 
+    - **Added robust UUID type handling**: Created `_normalize_assigned_trees_to_set()` and `_normalize_assigned_trees_to_list()` helper methods in `ORMAgentRepository`
+    - **Handles all UUID storage formats**:
+      - Single UUID string: `"44d015ac-a84c-4702-8bff-254a8e3d0328"`
+      - Single UUID object: `uuid.UUID("44d015ac-a84c-4702-8bff-254a8e3d0328")`
+      - Lists with mixed types: `["string-uuid", uuid.UUID("object-uuid")]`
+      - Proper fallback for empty/invalid data
+    - **Comprehensive type checking**: Added `isinstance(assigned_trees_raw, uuid.UUID)` checks throughout the codebase
+    - **Safe conversion**: Converts all UUID objects to strings before set/list operations
+    - **Error resilience**: Graceful handling of conversion errors with proper logging
+  - **Technical Changes**:
+    - **Helper Methods**: Added type-safe normalization methods that handle all UUID formats
+    - **Consistent Implementation**: Applied the fix to all 8 locations in `ORMAgentRepository` where this pattern was used
+    - **Performance Optimized**: Uses efficient set operations for membership testing and deduplication
+  - **Files Modified**: 
+    - `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/agent_repository.py` (all UUID handling methods)
+  - **Impact**: Agent assignment operations now work reliably regardless of how UUIDs are stored in the database
+  - **Test Created**: `/home/daihungpham/__projects__/agentic-project/simple_uuid_test.py` - demonstrates the fix and verifies all UUID handling scenarios
+
+### Fixed - Automatic Branch Context Creation (2025-08-22)
+- **CRITICAL FIX**: Implemented automatic branch context creation when branches are created
+  - **Problem**: After creating a branch with `manage_git_branch(action="create")`, calling `manage_context(action="get", level="branch", context_id=branch_id)` returned "Context not found" error
+  - **Root Cause**: Branch contexts were not automatically created during branch creation, requiring manual context creation after each branch
+  - **Solution**: 
+    - **Updated `GitBranchService.create_git_branch()`**: Now automatically creates branch context after successful branch creation
+    - **Fixed async/sync mismatch**: Removed incorrect `await` from synchronous `create_context()` call
+    - **Proper data structure**: Updated context data to match `BranchContext` entity requirements with correct field names
+    - **Enhanced error handling**: Branch creation continues even if context creation fails, with proper logging
+  - **Technical Changes**:
+    - **Data Structure**: Uses `project_id`, `git_branch_name`, `branch_settings` structure compatible with `UnifiedContextService`
+    - **Metadata Tracking**: Added `auto_created: true` and `created_by: "git_branch_service"` flags for audit purposes
+    - **Branch Settings**: Includes proper nested structure with `feature_flags`, `branch_workflow`, `testing_strategy`, etc.
+  - **Files Modified**: 
+    - `dhafnck_mcp_main/src/fastmcp/task_management/application/services/git_branch_service.py` (create_git_branch, create_missing_branch_context, delete_git_branch methods)
+  - **Impact**: Branch contexts are now immediately available after branch creation, eliminating "Context not found" errors
+  - **Test Added**: `dhafnck_mcp_main/src/tests/task_management/integration/test_branch_context_creation_fix.py`
+
+### Fixed - Subtask Progress Percentage Not Updating in Responses (2025-08-22)
+- **CRITICAL FIX**: Fixed subtask progress_percentage field not being included in response data
+  - **Problem**: When updating subtasks with `progress_percentage` parameter (e.g., 75%), responses always showed `"percentage": 0` instead of the actual value
+  - **Root Cause**: The `Subtask.to_dict()` domain method was missing the `progress_percentage` field in its response dictionary
+  - **Solution**: 
+    - **Added `progress_percentage` field to `Subtask.to_dict()` method**: Response dictionary now includes the actual progress percentage value
+    - **Added `update_progress_percentage()` domain method**: Proper domain method with validation (0-100), automatic status mapping, and domain events
+    - **Enhanced `UpdateSubtaskUseCase`**: Now uses the proper domain method instead of direct attribute assignment
+    - **Updated `Subtask.from_dict()` and `create()` factory methods**: Added progress_percentage support for complete serialization/deserialization
+  - **Features Added**:
+    - **Automatic Status Mapping**: 0% → todo, 1-99% → in_progress, 100% → done
+    - **Validation**: Progress percentage must be integer between 0-100
+    - **Domain Events**: Progress updates trigger TaskUpdated events for parent task context updates
+  - **Files Modified**: 
+    - `dhafnck_mcp_main/src/fastmcp/task_management/domain/entities/subtask.py` (to_dict, from_dict, create, update_progress_percentage methods)
+    - `dhafnck_mcp_main/src/fastmcp/task_management/application/use_cases/update_subtask.py` (domain method usage)
+  - **Impact**: Subtask progress updates now properly reflect in responses, enabling accurate progress tracking in frontend applications
+  - **Test Added**: `dhafnck_mcp_main/test_subtask_progress_fix.py`
+
+### Fixed - Task List Git Branch Filtering Issue (2025-08-22)
+- **CRITICAL FIX**: Fixed task list filtering to properly filter by git_branch_id parameter
+  - **Problem**: `manage_task(action="list", git_branch_id="specific-branch-id")` was returning tasks from all branches instead of filtering by the specified branch
+  - **Root Cause**: `ListTasksUseCase` was not passing the `git_branch_id` parameter from the request to the repository filter criteria
+  - **Solution**: 
+    - Updated `ListTasksUseCase.execute()` to include `git_branch_id` in the filters dictionary passed to `find_by_criteria`
+    - Enhanced `TaskRepository.find_by_criteria()` to handle `git_branch_id` from filters dictionary (in addition to constructor parameter)
+    - Added missing user data isolation filter (`apply_user_filter`) to `find_by_criteria` method
+    - Updated response to include `git_branch_id` in `filters_applied` for transparency
+  - **Files Modified**: 
+    - `dhafnck_mcp_main/src/fastmcp/task_management/application/use_cases/list_tasks.py`
+    - `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/task_repository.py`
+  - **Impact**: Task list API now correctly returns only tasks from the specified git branch
+  - **Test Added**: `dhafnck_mcp_main/src/tests/integration/test_task_list_git_branch_filtering_fix.py`
+
+### Fixed - Critical User ID Database Constraint Issues (2025-08-22)
+- **CRITICAL FIX**: Fixed four critical user_id-related database constraint violations
+  - **Git Branch Creation**: Added user_id field to GitBranchRepository model data mapping with 'system' default
+    - **Problem**: `null value in column 'user_id' of relation 'project_git_branchs' violates not-null constraint`
+    - **Solution**: Updated `_git_branch_to_model_data()` to include `user_id` field with default 'system' value
+    - **Files Modified**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/git_branch_repository.py`
+  - **Branch Context Creation**: Enabled user_id field in BranchContextRepository with metadata propagation
+    - **Problem**: `null value in column 'user_id' of relation 'branch_contexts' violates not-null constraint`
+    - **Solution**: Uncommented user_id field in BranchContextModel creation and enhanced UnifiedContextService to propagate user_id through metadata
+    - **Files Modified**: 
+      - `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/branch_context_repository.py`
+      - `dhafnck_mcp_main/src/fastmcp/task_management/application/services/unified_context_service.py`
+  - **Agent Assignment**: Made user_id optional in AgentFacadeFactory with 'system' default
+    - **Problem**: `AgentFacadeFactory.create_agent_facade() missing 1 required positional argument: 'user_id'`
+    - **Solution**: Made user_id parameter optional with default 'system' value and updated all backward compatibility methods
+    - **Files Modified**: `dhafnck_mcp_main/src/fastmcp/task_management/application/factories/agent_facade_factory.py`
+  - **Label Creation**: Fixed comprehensive user_id handling in Label and TaskLabel creation
+    - **Problem**: `null value in column 'user_id' of relation 'labels' violates not-null constraint` during task creation with labels parameter
+    - **Root Cause**: Database migration added user_id requirement to labels table, but code still created labels without user_id
+    - **Solution**: 
+      - Updated Label database model to reflect user_id as required (nullable=False) with 'system' default
+      - Fixed Label creation in TaskRepository to include user_id with fallback logic: `getattr(self, 'user_id', None) or "system"`
+      - Fixed TaskLabel creation in ORMLabelRepository to use proper user_id fallback: `getattr(self, 'user_id', None) or 'system'`
+      - Updated test fixtures to include user_id in Label and TaskLabel creation
+    - **Files Modified**: 
+      - `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/database/models.py` (Label model)
+      - `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/task_repository.py` (Label creation in all label handling)
+      - `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/label_repository.py` (Label and TaskLabel creation)
+      - `dhafnck_mcp_main/src/tests/task_management/infrastructure/database/models_test.py` (test fixtures)
+  - **Impact**: All MCP tool operations (git branch, context, agent, task creation) now work without user_id-related database failures
+
 ### Fixed - Context System User Authentication (2025-08-22)
 - **ENHANCEMENT**: Fixed UnifiedContextController to properly authenticate user_id
   - **Problem**: Context management was accepting any user_id without authentication
@@ -26,6 +142,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
   - **Files Modified**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/subtask_repository_factory.py`
   - **Testing**: Verified subtasks now list correctly with Supabase backend after Docker rebuild
   - **Impact**: Subtasks are now properly filtered by user_id, maintaining data isolation between users
+
+### Fixed - Agent Assignment UUID Iteration Error (2025-08-22)
+- **ISSUE INVESTIGATION**: Diagnosed and partially fixed "argument of type 'UUID' is not iterable" error in agent assignment
+  - **Problem**: manage_git_branch action="assign_agent" failing with UUID iteration error
+  - **Root Cause Analysis**: 
+    - Initially suspected assigned_trees field stored as single UUID instead of list
+    - Fixed multiple locations where assigned_trees metadata was improperly handled
+    - Added robust type checking and conversion in ORMAgentRepository methods
+    - Fixed PostgreSQL UUID constraint violation by adding UUID validation in repository initialization
+  - **Files Modified**:
+    - `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/agent_repository.py`
+    - `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/git_branch_mcp_controller.py`
+    - `dhafnck_mcp_main/src/tests/test_uuid_iteration_fix.py` (comprehensive test suite)
+  - **Fixes Applied**:
+    - Added UUID validation and conversion in ORMAgentRepository.__init__()
+    - Fixed all assigned_trees handling to support both string and list formats
+    - Added user_id parameter to repository instantiation in git_branch_controller
+    - Comprehensive test coverage for UUID iteration scenarios
+  - **Status**: Error persists despite fixes - indicates deeper issue requiring further investigation
+  - **Impact**: Partial improvement in agent assignment stability, ongoing debugging needed
 
 ### Fixed - FastMCP Server Initialization Error (2025-08-22)
 - **CRITICAL FIX**: Resolved FastMCP server startup failure due to incorrect parameter usage

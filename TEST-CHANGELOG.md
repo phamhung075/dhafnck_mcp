@@ -4,6 +4,67 @@ All notable changes to test files in the DhafnckMCP AI Agent Orchestration Platf
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [Semantic](https://semver.org/spec/v1.0.0.html)
 
+## [2025-08-23] - Test Creation and Updates for Authentication and Repository Changes
+
+### Added - New Test Files
+
+- **File**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/subtask_repository_factory_test.py`
+  - Created comprehensive test suite for SubtaskRepositoryFactory
+  - Tests for `_find_project_root()` helper function with various path scenarios
+  - Tests for factory initialization with custom and default parameters
+  - Tests for static `create()` method
+  - Tests for ORM repository creation when database is available
+  - Tests for fallback to mock repository when database is unavailable
+  - Tests for parameter validation and default value handling
+  - Tests for legacy method compatibility (`create_sqlite_subtask_repository`)
+  - Tests for database availability detection and error handling
+  - Tests for logging during fallback scenarios
+  - Fixed import paths for database configuration
+
+- **File**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/unified_context_controller_test.py`
+  - Created comprehensive test suite for UnifiedContextMCPController
+  - Tests for controller initialization and MCP tool registration
+  - Tests for all manage_context actions: create, get, update, delete, resolve, delegate, add_insight, add_progress, list
+  - Tests for JSON string data parameter parsing and normalization
+  - Tests for boolean parameter coercion from string values
+  - Tests for authentication error handling with get_authenticated_user_id
+  - Tests for facade error propagation and validation errors
+  - Tests for parameter description loading with fallback handling
+  - Tests for standardizing facade responses
+  - Tests for invalid action and invalid JSON data error handling
+  - Added parameter parsing tests for JSONParameterParser integration
+
+### Updated - Modified Test Files
+
+- **File**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/subtask_repository_test.py`
+  - Updated to properly mock `apply_user_filter` method for user data isolation
+  - Fixed `test_find_by_parent_task_id` to mock the user filter application
+  - Fixed `test_find_by_assignee` to mock the user filter application
+  - Fixed `test_find_by_status` to mock the user filter application
+  - Fixed `test_find_completed` to mock the user filter application
+  - Fixed `test_find_pending` to mock the user filter application
+  - All tests now properly account for the user scoping functionality added to the repository
+
+### Technical Details
+
+- **Test Coverage Summary**:
+  - SubtaskRepositoryFactory: 20 test cases covering all public methods and edge cases
+  - UnifiedContextMCPController: 30 test cases covering all actions and error scenarios
+  - SubtaskRepository: Updated 5 test methods to support user filtering
+
+- **Key Testing Patterns Used**:
+  - Comprehensive mocking of database connections and configurations
+  - Edge case testing for path resolution and fallback scenarios
+  - Error injection testing for robust error handling verification
+  - Parameter validation testing with various input formats
+  - Integration testing with mock MCP server registration
+  - User isolation testing with apply_user_filter mocking
+
+- **Authentication Enhancements Tested**:
+  - UnifiedContextController now properly uses get_authenticated_user_id for user authentication
+  - SubtaskRepositoryFactory correctly passes user_id to ORMSubtaskRepository
+  - All repository methods that retrieve data now apply user filters for data isolation
+
 ## [2025-08-22] - Test Updates for Stale Test Files
 
 ### Updated - Backend Test Files

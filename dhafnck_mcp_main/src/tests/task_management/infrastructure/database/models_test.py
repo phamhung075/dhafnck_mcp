@@ -378,8 +378,8 @@ class TestDatabaseModels:
         )
         
         # Add label
-        label = Label(id="bug", name="Bug", color="#ff0000")
-        task_label = TaskLabel(task_id=task.id, label_id=label.id)
+        label = Label(id="bug", name="Bug", color="#ff0000", user_id="system")
+        task_label = TaskLabel(task_id=task.id, label_id=label.id, user_id="system")
         
         # Add all to session
         session.add_all([project, branch, task, subtask, assignee, label, task_label])

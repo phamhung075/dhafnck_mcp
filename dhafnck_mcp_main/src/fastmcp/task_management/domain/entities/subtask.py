@@ -201,6 +201,32 @@ class Subtask:
             updated_at=self.updated_at
         ))
     
+    def update_progress_percentage(self, progress_percentage: int) -> None:
+        """Update subtask progress percentage"""
+        if not isinstance(progress_percentage, int) or not (0 <= progress_percentage <= 100):
+            raise ValueError(f"Progress percentage must be integer between 0-100, got: {progress_percentage}")
+        
+        old_progress = self.progress_percentage
+        self.progress_percentage = progress_percentage
+        self.updated_at = datetime.now(timezone.utc)
+        
+        # Auto-update status based on progress percentage
+        if progress_percentage == 0:
+            self.status = TaskStatus.todo()
+        elif progress_percentage == 100:
+            self.status = TaskStatus.done()
+        elif 1 <= progress_percentage <= 99:
+            self.status = TaskStatus.in_progress()
+        
+        # Raise domain event
+        self._events.append(TaskUpdated(
+            task_id=self.parent_task_id,
+            field_name="subtask_progress",
+            old_value=f"{self.id}:{old_progress}",
+            new_value=f"{self.id}:{progress_percentage}",
+            updated_at=self.updated_at
+        ))
+    
     def add_assignee(self, assignee: Union[str, AgentRole]) -> None:
         """Add an assignee to the subtask"""
         # Handle both string and AgentRole enum inputs
@@ -326,6 +352,7 @@ class Subtask:
             "status": str(self.status),
             "priority": str(self.priority),
             "assignees": assignees_list,
+            "progress_percentage": self.progress_percentage,  # Include progress percentage
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None
         }
@@ -344,6 +371,8 @@ class Subtask:
         valid_params = {}
         if 'assignees' in kwargs:
             valid_params['assignees'] = kwargs['assignees']
+        if 'progress_percentage' in kwargs:
+            valid_params['progress_percentage'] = kwargs['progress_percentage']
         if 'created_at' in kwargs:
             valid_params['created_at'] = kwargs['created_at']
         if 'updated_at' in kwargs:
@@ -385,6 +414,7 @@ class Subtask:
             status=status,
             priority=priority,
             assignees=data.get('assignees', []),
+            progress_percentage=data.get('progress_percentage', 0),  # Include progress percentage
             created_at=created_at,
             updated_at=updated_at
         )

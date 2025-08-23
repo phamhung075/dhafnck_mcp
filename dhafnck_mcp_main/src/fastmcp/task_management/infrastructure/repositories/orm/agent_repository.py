@@ -6,6 +6,7 @@ supporting both SQLite and PostgreSQL databases.
 """
 
 import logging
+import uuid
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 from sqlalchemy import and_, desc
@@ -43,9 +44,92 @@ class ORMAgentRepository(BaseORMRepository[Agent], BaseUserScopedRepository, Age
         """
         # Initialize BaseORMRepository
         BaseORMRepository.__init__(self, Agent)
+        
+        # Ensure user_id is a valid UUID if provided
+        if user_id is not None and not self._is_valid_uuid(user_id):
+            # Generate a deterministic UUID for non-UUID user_id values
+            user_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, user_id))
+            logger.info(f"Converted non-UUID user_id to UUID: {user_id}")
+        
         # Initialize BaseUserScopedRepository with user isolation
         BaseUserScopedRepository.__init__(self, session or self.get_db_session(), user_id)
         self.project_id = project_id
+    
+    def _is_valid_uuid(self, value: str) -> bool:
+        """Check if a string is a valid UUID."""
+        try:
+            uuid.UUID(value)
+            return True
+        except ValueError:
+            return False
+    
+    def _normalize_assigned_trees_to_set(self, assigned_trees_raw) -> set:
+        """
+        Normalize assigned_trees data to a set of strings.
+        Handles single UUID strings, UUID objects, lists, and mixed types.
+        """
+        logger.debug(f"[NORMALIZE] Input type: {type(assigned_trees_raw)}, value: {assigned_trees_raw}")
+        
+        if isinstance(assigned_trees_raw, str):
+            # Single UUID stored as string
+            logger.debug(f"[NORMALIZE] Detected string type, returning set with single string")
+            return {assigned_trees_raw}
+        elif isinstance(assigned_trees_raw, uuid.UUID):
+            # Single UUID object (convert to string)
+            logger.debug(f"[NORMALIZE] Detected UUID object, converting to string")
+            return {str(assigned_trees_raw)}
+        elif hasattr(assigned_trees_raw, '__iter__') and not isinstance(assigned_trees_raw, str):
+            # List or other iterable (but not string or UUID)
+            try:
+                # Handle mixed types in the iterable (strings and UUID objects)
+                result = set()
+                for item in assigned_trees_raw:
+                    if isinstance(item, uuid.UUID):
+                        result.add(str(item))
+                    elif isinstance(item, str):
+                        result.add(item)
+                    else:
+                        # Convert other types to string
+                        result.add(str(item))
+                return result
+            except Exception as e:
+                logger.error(f"Error converting {assigned_trees_raw} to set: {e}")
+                return set()
+        else:
+            # Fallback to empty set
+            return set()
+    
+    def _normalize_assigned_trees_to_list(self, assigned_trees_raw) -> list:
+        """
+        Normalize assigned_trees data to a list of strings.
+        Handles single UUID strings, UUID objects, lists, and mixed types.
+        """
+        if isinstance(assigned_trees_raw, str):
+            # Single UUID stored as string
+            return [assigned_trees_raw]
+        elif isinstance(assigned_trees_raw, uuid.UUID):
+            # Single UUID object (convert to string)
+            return [str(assigned_trees_raw)]
+        elif hasattr(assigned_trees_raw, '__iter__') and not isinstance(assigned_trees_raw, str):
+            # List or other iterable (but not string or UUID)
+            try:
+                # Handle mixed types in the iterable (strings and UUID objects)
+                result = []
+                for item in assigned_trees_raw:
+                    if isinstance(item, uuid.UUID):
+                        result.append(str(item))
+                    elif isinstance(item, str):
+                        result.append(item)
+                    else:
+                        # Convert other types to string
+                        result.append(str(item))
+                return result
+            except Exception as e:
+                logger.error(f"Error converting {assigned_trees_raw} to list: {e}")
+                return []
+        else:
+            # Fallback to empty list
+            return []
     
     def _model_to_entity(self, agent: Agent) -> AgentEntity:
         """Convert SQLAlchemy model to domain entity"""
@@ -288,6 +372,9 @@ class ORMAgentRepository(BaseORMRepository[Agent], BaseUserScopedRepository, Age
     
     def assign_agent_to_tree(self, project_id: str, agent_id: str, git_branch_id: str) -> Dict[str, Any]:
         """Assign an agent to a task tree, auto-registering the agent if it doesn't exist"""
+        logger.debug(f"[AGENT_REPO] assign_agent_to_tree called with project_id={project_id}, agent_id={agent_id}, git_branch_id={git_branch_id}")
+        logger.debug(f"[AGENT_REPO] Type of git_branch_id: {type(git_branch_id)}, value: {git_branch_id}")
+        
         try:
             # Parse agent_id - it might be in format "uuid:name" for auto-registration
             actual_agent_id = agent_id
@@ -393,9 +480,19 @@ class ORMAgentRepository(BaseORMRepository[Agent], BaseUserScopedRepository, Age
                     )
             
             # Update agent model_metadata to include assignment
+            logger.debug(f"[AGENT_REPO] Checking if agent already assigned...")
             model_metadata = agent.model_metadata or {}
-            assigned_trees = set(model_metadata.get("assigned_trees", []))
+            logger.debug(f"[AGENT_REPO] model_metadata type: {type(model_metadata)}, value: {model_metadata}")
             
+            assigned_trees_raw = model_metadata.get("assigned_trees", [])
+            logger.debug(f"[AGENT_REPO] assigned_trees_raw type: {type(assigned_trees_raw)}, value: {assigned_trees_raw}")
+            
+            # Handle case where assigned_trees might be a single UUID instead of a list
+            logger.debug(f"[AGENT_REPO] Calling _normalize_assigned_trees_to_set...")
+            assigned_trees = self._normalize_assigned_trees_to_set(assigned_trees_raw)
+            logger.debug(f"[AGENT_REPO] assigned_trees after normalization: type={type(assigned_trees)}, value={assigned_trees}")
+            
+            logger.debug(f"[AGENT_REPO] Checking if git_branch_id {git_branch_id} is in assigned_trees...")
             if git_branch_id in assigned_trees:
                 return {
                     "success": True,
@@ -443,7 +540,10 @@ class ORMAgentRepository(BaseORMRepository[Agent], BaseUserScopedRepository, Age
             
             # Update agent metadata to remove assignment
             model_metadata = agent.model_metadata or {}
-            assigned_trees = set(model_metadata.get("assigned_trees", []))
+            assigned_trees_raw = model_metadata.get("assigned_trees", [])
+            
+            # Handle case where assigned_trees might be a single UUID instead of a list
+            assigned_trees = self._normalize_assigned_trees_to_set(assigned_trees_raw)
             
             if git_branch_id:
                 # Remove specific assignment
@@ -493,7 +593,10 @@ class ORMAgentRepository(BaseORMRepository[Agent], BaseUserScopedRepository, Age
             
             # Get assignments from model_metadata
             model_metadata = agent.model_metadata or {}
-            assignments = model_metadata.get("assigned_trees", [])
+            assigned_trees_raw = model_metadata.get("assigned_trees", [])
+            
+            # Handle case where assigned_trees might be a single UUID instead of a list
+            assignments = self._normalize_assigned_trees_to_list(assigned_trees_raw)
             
             agent_data = {
                 "id": agent.id,
@@ -529,7 +632,10 @@ class ORMAgentRepository(BaseORMRepository[Agent], BaseUserScopedRepository, Age
             agent_list = []
             for agent in agents:
                 model_metadata = agent.model_metadata or {}
-                assignments = model_metadata.get("assigned_trees", [])
+                assigned_trees_raw = model_metadata.get("assigned_trees", [])
+                
+                # Handle case where assigned_trees might be a single UUID instead of a list
+                assignments = self._normalize_assigned_trees_to_list(assigned_trees_raw)
                 
                 agent_data = {
                     "id": agent.id,
@@ -589,7 +695,18 @@ class ORMAgentRepository(BaseORMRepository[Agent], BaseUserScopedRepository, Age
             
             # Get assignments from model_metadata
             model_metadata = updated_agent.model_metadata or {}
-            assignments = model_metadata.get("assigned_trees", [])
+            assigned_trees_raw = model_metadata.get("assigned_trees", [])
+            
+            # Handle case where assigned_trees might be a single UUID instead of a list
+            if isinstance(assigned_trees_raw, str):
+                # Single UUID stored as string
+                assignments = [assigned_trees_raw]
+            elif hasattr(assigned_trees_raw, '__iter__') and not isinstance(assigned_trees_raw, str):
+                # List or other iterable (but not string)
+                assignments = list(assigned_trees_raw)
+            else:
+                # Fallback to empty list
+                assignments = []
             
             agent_data = {
                 "id": updated_agent.id,
@@ -636,7 +753,10 @@ class ORMAgentRepository(BaseORMRepository[Agent], BaseUserScopedRepository, Age
             
             for agent in agents:
                 model_metadata = agent.model_metadata or {}
-                assignments = model_metadata.get("assigned_trees", [])
+                assigned_trees_raw = model_metadata.get("assigned_trees", [])
+                
+                # Handle case where assigned_trees might be a single UUID instead of a list
+                assignments = self._normalize_assigned_trees_to_list(assigned_trees_raw)
                 
                 # For now, just log current assignments
                 if assignments:
@@ -668,7 +788,10 @@ class ORMAgentRepository(BaseORMRepository[Agent], BaseUserScopedRepository, Age
             available_agents = []
             for agent in agents:
                 model_metadata = agent.model_metadata or {}
-                assignments = model_metadata.get("assigned_trees", [])
+                assigned_trees_raw = model_metadata.get("assigned_trees", [])
+                
+                # Handle case where assigned_trees might be a single UUID instead of a list
+                assignments = self._normalize_assigned_trees_to_list(assigned_trees_raw)
                 
                 agent_data = {
                     "id": agent.id,
@@ -740,7 +863,10 @@ class ORMAgentRepository(BaseORMRepository[Agent], BaseUserScopedRepository, Age
             search_results = []
             for agent in agents:
                 model_metadata = agent.model_metadata or {}
-                assignments = model_metadata.get("assigned_trees", [])
+                assigned_trees_raw = model_metadata.get("assigned_trees", [])
+                
+                # Handle case where assigned_trees might be a single UUID instead of a list
+                assignments = self._normalize_assigned_trees_to_list(assigned_trees_raw)
                 
                 agent_data = {
                     "id": agent.id,

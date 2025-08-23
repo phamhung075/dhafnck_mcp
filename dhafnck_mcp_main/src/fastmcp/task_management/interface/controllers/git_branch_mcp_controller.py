@@ -378,6 +378,9 @@ class GitBranchMCPController(ContextPropagationMixin):
             logger.info(f"Resolved agent ID: {resolved_agent_id} from input: {agent_id}")
             
             # Use the resolved git_branch_id to assign agent
+            logger.debug(f"[CONTROLLER] About to call agent_facade.assign_agent with project_id={project_id}, agent_id={resolved_agent_id}, git_branch_id={resolved_git_branch_id}")
+            logger.debug(f"[CONTROLLER] Type of resolved_git_branch_id: {type(resolved_git_branch_id)}")
+            
             if resolved_git_branch_id:
                 response = agent_facade.assign_agent(project_id, resolved_agent_id, resolved_git_branch_id)
             else:
@@ -654,7 +657,7 @@ class GitBranchMCPController(ContextPropagationMixin):
             
             # It's a name (with or without @), try to look it up
             from ...infrastructure.repositories.orm.agent_repository import ORMAgentRepository
-            agent_repo = ORMAgentRepository(project_id=project_id)
+            agent_repo = ORMAgentRepository(project_id=project_id, user_id='system')
             
             # Strip @ prefix for name lookup
             agent_name = agent_identifier.lstrip('@')

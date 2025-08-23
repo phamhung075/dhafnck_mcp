@@ -90,6 +90,9 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectGitBranch], GitBranchRepos
         Returns:
             Dictionary with model data
         """
+        # Handle user_id - use instance user_id or default to 'system'
+        user_id = self.user_id or 'system'
+        
         return {
             'id': git_branch.id,
             'project_id': git_branch.project_id,
@@ -102,6 +105,7 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectGitBranch], GitBranchRepos
             'status': str(git_branch.status),
             'task_count': git_branch.get_task_count(),
             'completed_task_count': git_branch.get_completed_task_count(),
+            'user_id': user_id,  # Add required user_id field
             'model_metadata': {}
         }
     

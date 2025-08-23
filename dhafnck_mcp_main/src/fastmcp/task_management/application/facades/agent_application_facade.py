@@ -154,6 +154,9 @@ class AgentApplicationFacade:
     
     def assign_agent(self, project_id: str, agent_id: str, git_branch_id: str) -> Dict[str, Any]:
         """Assign an agent to a task tree"""
+        logger.debug(f"[FACADE] assign_agent called with project_id={project_id}, agent_id={agent_id}, git_branch_id={git_branch_id}")
+        logger.debug(f"[FACADE] Type of git_branch_id: {type(git_branch_id)}")
+        
         try:
             # Create request DTO
             request = AssignAgentRequest(
@@ -161,6 +164,8 @@ class AgentApplicationFacade:
                 agent_id=agent_id,
                 git_branch_id=git_branch_id
             )
+            
+            logger.debug(f"[FACADE] Created AssignAgentRequest, about to execute use case")
             
             # Execute use case
             response = self._assign_agent_use_case.execute(request)

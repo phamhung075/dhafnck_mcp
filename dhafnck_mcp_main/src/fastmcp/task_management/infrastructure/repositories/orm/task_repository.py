@@ -630,7 +630,8 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
                                 id=str(uuid.uuid4()),
                                 name=label_name,
                                 color="#0066cc",
-                                description=""
+                                description="",
+                                user_id=getattr(self, 'user_id', None) or "system"
                             )
                             session.add(label)
                             session.flush()  # Ensure label is saved before creating relationship
@@ -700,7 +701,8 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
                                 id=str(uuid.uuid4()),
                                 name=label_name,
                                 color="#0066cc",
-                                description=""
+                                description="",
+                                user_id=getattr(self, 'user_id', None) or "system"
                             )
                             session.add(label)
                             session.flush()  # Ensure label is saved before creating relationship
@@ -781,9 +783,13 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
                 joinedload(Task.subtasks)
             )
             
-            # Apply git branch filter if set
-            if self.git_branch_id:
-                query = query.filter(Task.git_branch_id == self.git_branch_id)
+            # Apply user filter for data isolation (CRITICAL)
+            query = self.apply_user_filter(query)
+            
+            # Apply git branch filter if set (from constructor or filters)
+            git_branch_filter = self.git_branch_id or filters.get('git_branch_id')
+            if git_branch_filter:
+                query = query.filter(Task.git_branch_id == git_branch_filter)
             
             # Apply filters
             if 'status' in filters:

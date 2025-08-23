@@ -234,7 +234,7 @@ class Label(Base):
     name: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     color: Mapped[str] = mapped_column(String, default="#0066cc")
     description: Mapped[str] = mapped_column(Text, default="")
-    user_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # Optional for shared labels
+    user_id: Mapped[str] = mapped_column(String, nullable=False, default="system")  # Required for data isolation
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     
     # Relationships
