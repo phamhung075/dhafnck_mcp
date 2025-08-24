@@ -58,13 +58,14 @@ class TestTaskApplicationFacade:
         with patch('fastmcp.task_management.application.facades.task_application_facade.UnifiedContextFacadeFactory'):
             with patch('fastmcp.task_management.application.facades.task_application_facade.TaskContextRepository'):
                 with patch('fastmcp.task_management.application.facades.task_application_facade.get_db_config'):
-                    facade = TaskApplicationFacade(
-                        task_repository=mock_task_repository,
-                        subtask_repository=mock_subtask_repository,
-                        context_service=mock_context_service,
-                        git_branch_repository=mock_git_branch_repository
-                    )
-                    return facade
+                    with patch('fastmcp.task_management.application.facades.task_application_facade.print'):  # Mock print statements
+                        facade = TaskApplicationFacade(
+                            task_repository=mock_task_repository,
+                            subtask_repository=mock_subtask_repository,
+                            context_service=mock_context_service,
+                            git_branch_repository=mock_git_branch_repository
+                        )
+                        return facade
     
     @pytest.fixture
     def mock_task_entity(self):
@@ -418,8 +419,9 @@ class TestTaskApplicationFacadeListTasks:
         with patch('fastmcp.task_management.application.facades.task_application_facade.UnifiedContextFacadeFactory'):
             with patch('fastmcp.task_management.application.facades.task_application_facade.TaskContextRepository'):
                 with patch('fastmcp.task_management.application.facades.task_application_facade.get_db_config'):
-                    facade = TaskApplicationFacade(task_repository=mock_task_repository)
-                    return facade
+                    with patch('fastmcp.task_management.application.facades.task_application_facade.DependencyResolverService'):
+                        facade = TaskApplicationFacade(task_repository=mock_task_repository)
+                        return facade
     
     @patch('fastmcp.task_management.application.facades.task_application_facade.PerformanceConfig')
     def test_list_tasks_success(self, mock_perf_config, facade):
@@ -456,6 +458,54 @@ class TestTaskApplicationFacadeListTasks:
         assert result["count"] == 1
     
     @patch('fastmcp.task_management.application.facades.task_application_facade.PerformanceConfig')
+    def test_list_tasks_with_dependencies(self, mock_perf_config, facade):
+        """Test task listing with dependency resolution"""
+        mock_perf_config.is_performance_mode.return_value = False
+        
+        mock_task = Mock()
+        mock_task.id = "task-123"
+        mock_task.title = "Test Task"
+        mock_task.status = "todo"
+        mock_task.priority = "medium"
+        mock_task.created_at = datetime.now()
+        mock_task.updated_at = datetime.now()
+        mock_task.to_dict.return_value = {
+            "id": "task-123",
+            "title": "Test Task",
+            "status": "todo"
+        }
+        mock_task.dependencies = ["dep-1", "dep-2"]
+        
+        mock_response = Mock()
+        mock_response.tasks = [mock_task]
+        mock_response.count = 1
+        mock_response.filters_applied = {"status": "todo"}
+        
+        facade._list_tasks_use_case.execute.return_value = mock_response
+        
+        # Mock dependency resolver
+        mock_dependency_result = Mock()
+        mock_dependency_result.total_dependencies = 2
+        mock_dependency_result.completed_dependencies = 1
+        mock_dependency_result.can_start = False
+        mock_dependency_result.is_blocked = True
+        mock_dependency_result.is_blocking_others = False
+        mock_dependency_result.dependency_completion_percentage = 50.0
+        mock_dependency_result.dependency_summary = "1 of 2 dependencies completed"
+        mock_dependency_result.blocking_reasons = ["Task dep-2 is not completed"]
+        
+        facade._dependency_resolver.resolve_dependencies.return_value = mock_dependency_result
+        
+        request = ListTasksRequest(status="todo", limit=10)
+        result = facade.list_tasks(request, include_dependencies=True, minimal=False)
+        
+        assert result["success"] is True
+        assert len(result["tasks"]) == 1
+        assert "dependency_summary" in result["tasks"][0]
+        assert result["tasks"][0]["dependency_summary"]["is_blocked"] is True
+        assert result["tasks"][0]["dependency_summary"]["total_dependencies"] == 2
+    
+    @patch('fastmcp.task_management.application.facades.task_application_facade.PerformanceConfig')
     @patch('fastmcp.task_management.application.facades.task_application_facade.os')
     def test_list_tasks_performance_mode_supabase(self, mock_os, mock_perf_config, facade):
         """Test task listing in performance mode with Supabase"""
@@ -468,6 +518,60 @@ class TestTaskApplicationFacadeListTasks:
                 {"id": "task-123", "title": "Test Task", "status": "todo"}
             ]
             mock_supabase_repo.return_value = mock_repo_instance
+            
+            request = ListTasksRequest(status="todo", limit=10)
+            result = facade.list_tasks(request, minimal=True)
+            
+            assert result["success"] is True
+            assert result["performance_mode"] is True
+            assert len(result["tasks"]) == 1
+    
+    @patch('fastmcp.task_management.application.facades.task_application_facade.PerformanceConfig')
+    def test_list_tasks_performance_mode_disabled(self, mock_perf_config, facade):
+        """Test task listing when performance mode is disabled"""
+        mock_perf_config.is_performance_mode.return_value = False
+        
+        mock_task = Mock()
+        mock_task.id = "task-123"
+        mock_task.title = "Test Task"
+        mock_task.status = "todo"
+        mock_task.priority = "medium"
+        mock_task.created_at = datetime.now()
+        mock_task.updated_at = datetime.now()
+        mock_task.to_dict.return_value = {
+            "id": "task-123",
+            "title": "Test Task",
+            "status": "todo"
+        }
+        mock_task.dependencies = []
+        
+        mock_response = Mock()
+        mock_response.tasks = [mock_task]
+        mock_response.count = 1
+        mock_response.filters_applied = {"status": "todo"}
+        
+        facade._list_tasks_use_case.execute.return_value = mock_response
+        
+        request = ListTasksRequest(status="todo", limit=10)
+        result = facade.list_tasks(request, minimal=True)
+        
+        assert result["success"] is True
+        assert "performance_mode" not in result
+        assert len(result["tasks"]) == 1
+    
+    @patch('fastmcp.task_management.application.facades.task_application_facade.PerformanceConfig')
+    @patch('fastmcp.task_management.application.facades.task_application_facade.os')
+    def test_list_tasks_performance_mode_other_database(self, mock_os, mock_perf_config, facade):
+        """Test task listing in performance mode with non-Supabase database"""
+        mock_perf_config.is_performance_mode.return_value = True
+        mock_os.getenv.return_value = "postgresql"
+        
+        with patch('fastmcp.task_management.application.facades.task_application_facade.OptimizedTaskRepository') as mock_optimized_repo:
+            mock_repo_instance = Mock()
+            mock_repo_instance.list_tasks_minimal.return_value = [
+                {"id": "task-123", "title": "Test Task", "status": "todo", "is_blocked": False}
+            ]
+            mock_optimized_repo.return_value = mock_repo_instance
             
             request = ListTasksRequest(status="todo", limit=10)
             result = facade.list_tasks(request, minimal=True)
@@ -750,6 +854,34 @@ class TestTaskApplicationFacadeUtilityMethods:
         assert result["success"] is True
         assert result["count"] == 5
     
+    def test_count_tasks_with_git_branch_id(self, facade):
+        """Test count_tasks with git_branch_id filter"""
+        mock_response = Mock()
+        mock_response.count = 3
+        facade._list_tasks_use_case.execute.return_value = mock_response
+        
+        filters = {"status": "todo", "git_branch_id": "branch-123"}
+        result = facade.count_tasks(filters)
+        
+        assert result["success"] is True
+        assert result["count"] == 3
+        
+        # Verify the request was created with git_branch_id
+        call_args = facade._list_tasks_use_case.execute.call_args[0][0]
+        assert hasattr(call_args, 'git_branch_id')
+        assert call_args.git_branch_id == "branch-123"
+    
+    def test_count_tasks_error_handling(self, facade):
+        """Test count_tasks error handling"""
+        facade._list_tasks_use_case.execute.side_effect = Exception("Database error")
+        
+        filters = {"status": "todo"}
+        result = facade.count_tasks(filters)
+        
+        assert result["success"] is False
+        assert "Database error" in result["error"]
+        assert result["count"] == 0
+    
     def test_list_tasks_summary(self, facade):
         """Test list_tasks_summary utility method"""
         mock_task = Mock()
@@ -774,6 +906,76 @@ class TestTaskApplicationFacadeUtilityMethods:
         assert result["success"] is True
         assert len(result["tasks"]) == 1
         assert result["count"] == 1
+        assert result["tasks"][0]["id"] == "task-123"
+        assert result["tasks"][0]["title"] == "Test Task"
+    
+    def test_list_tasks_summary_with_offset(self, facade):
+        """Test list_tasks_summary with offset pagination"""
+        # Create multiple mock tasks
+        mock_tasks = []
+        for i in range(5):
+            task = Mock()
+            task.id = f"task-{i}"
+            task.title = f"Test Task {i}"
+            task.status = "todo"
+            task.priority = "medium"
+            task.created_at = datetime.now()
+            task.updated_at = datetime.now()
+            task.subtasks = []
+            task.assignees = []
+            task.dependencies = []
+            mock_tasks.append(task)
+        
+        mock_response = Mock()
+        mock_response.tasks = mock_tasks
+        mock_response.count = 5
+        facade._list_tasks_use_case.execute.return_value = mock_response
+        
+        # Test with offset=2, limit=2
+        filters = {"status": "todo"}
+        result = facade.list_tasks_summary(filters, offset=2, limit=2)
+        
+        assert result["success"] is True
+        assert len(result["tasks"]) == 2
+        assert result["tasks"][0]["id"] == "task-2"
+        assert result["tasks"][1]["id"] == "task-3"
+        assert result["count"] == 5  # Total count remains the same
+    
+    def test_list_tasks_summary_without_counts(self, facade):
+        """Test list_tasks_summary with include_counts=False"""
+        mock_task = Mock()
+        mock_task.id = "task-123"
+        mock_task.title = "Test Task"
+        mock_task.status = "todo"
+        mock_task.priority = "medium"
+        mock_task.created_at = datetime.now()
+        mock_task.updated_at = datetime.now()
+        
+        mock_response = Mock()
+        mock_response.tasks = [mock_task]
+        mock_response.count = 1
+        facade._list_tasks_use_case.execute.return_value = mock_response
+        
+        filters = {"status": "todo"}
+        result = facade.list_tasks_summary(filters, offset=0, limit=10, include_counts=False)
+        
+        assert result["success"] is True
+        assert len(result["tasks"]) == 1
+        # Should not include subtasks, assignees, dependencies when include_counts=False
+        assert "subtasks" not in result["tasks"][0]
+        assert "assignees" not in result["tasks"][0]
+        assert "dependencies" not in result["tasks"][0]
+    
+    def test_list_tasks_summary_error_handling(self, facade):
+        """Test list_tasks_summary error handling"""
+        facade._list_tasks_use_case.execute.side_effect = Exception("Database error")
+        
+        filters = {"status": "todo"}
+        result = facade.list_tasks_summary(filters)
+        
+        assert result["success"] is False
+        assert "Database error" in result["error"]
+        assert result["tasks"] == []
     
     def test_list_subtasks_summary(self, facade, mock_subtask_repository):
         """Test list_subtasks_summary utility method"""
@@ -794,6 +996,52 @@ class TestTaskApplicationFacadeUtilityMethods:
         assert result["success"] is True
         assert len(result["subtasks"]) == 1
         assert result["subtasks"][0]["id"] == "subtask-123"
+        assert result["subtasks"][0]["progress_percentage"] == 50
+        assert result["subtasks"][0]["assignees"] == ["user-1"]
+    
+    def test_list_subtasks_summary_without_counts(self, facade, mock_subtask_repository):
+        """Test list_subtasks_summary with include_counts=False"""
+        facade._subtask_repository = mock_subtask_repository
+        
+        mock_subtask = Mock()
+        mock_subtask.id = "subtask-123"
+        mock_subtask.title = "Test Subtask"
+        mock_subtask.status = "todo"
+        mock_subtask.priority = "medium"
+        mock_subtask.progress_percentage = 0
+        
+        mock_subtask_repository.find_by_parent_task_id.return_value = [mock_subtask]
+        
+        result = facade.list_subtasks_summary("task-123", include_counts=False)
+        
+        assert result["success"] is True
+        assert len(result["subtasks"]) == 1
+        assert "assignees" not in result["subtasks"][0]
+    
+    def test_list_subtasks_summary_missing_attributes(self, facade, mock_subtask_repository):
+        """Test list_subtasks_summary handling missing attributes"""
+        facade._subtask_repository = mock_subtask_repository
+        
+        # Mock subtask without priority and progress_percentage attributes
+        mock_subtask = Mock()
+        mock_subtask.id = "subtask-123"
+        mock_subtask.title = "Test Subtask"
+        mock_subtask.status = "todo"
+        # Explicitly delete attributes to simulate missing
+        del mock_subtask.priority
+        del mock_subtask.progress_percentage
+        del mock_subtask.assignees
+        
+        mock_subtask_repository.find_by_parent_task_id.return_value = [mock_subtask]
+        
+        result = facade.list_subtasks_summary("task-123")
+        
+        assert result["success"] is True
+        assert len(result["subtasks"]) == 1
+        # Should use defaults for missing attributes
+        assert result["subtasks"][0]["priority"] == "medium"
+        assert result["subtasks"][0]["progress_percentage"] == 0
+        assert result["subtasks"][0]["assignees"] == []
     
     def test_list_subtasks_summary_no_repository(self, facade):
         """Test list_subtasks_summary when no subtask repository available"""
@@ -803,6 +1051,17 @@ class TestTaskApplicationFacadeUtilityMethods:
         
         assert result["success"] is False
         assert "not configured" in result["error"]
+    
+    def test_list_subtasks_summary_error_handling(self, facade, mock_subtask_repository):
+        """Test list_subtasks_summary error handling"""
+        facade._subtask_repository = mock_subtask_repository
+        mock_subtask_repository.find_by_parent_task_id.side_effect = Exception("Repository error")
+        
+        result = facade.list_subtasks_summary("task-123")
+        
+        assert result["success"] is False
+        assert "Repository error" in result["error"]
+        assert result["subtasks"] == []
 
 
 class TestTaskApplicationFacadeValidation:

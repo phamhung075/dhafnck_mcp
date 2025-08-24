@@ -756,3 +756,111 @@ class TestORMTaskRepository:
         task_label = task_label_calls[0][0][0]
         assert hasattr(task_label, 'user_id')
         assert task_label.user_id == repository.user_id
+    
+    def test_count(self, repository):
+        """Test count method"""
+        # Mock get_task_count
+        repository.get_task_count = Mock(return_value=10)
+        
+        # Test count with no filters
+        result = repository.count()
+        assert result == 10
+        repository.get_task_count.assert_called_once_with(status=None)
+        
+        # Test count with status filter
+        repository.get_task_count.reset_mock()
+        result = repository.count(status="todo")
+        assert result == 10
+        repository.get_task_count.assert_called_once_with(status="todo")
+    
+    def test_count_with_multiple_filters(self, repository):
+        """Test count method with multiple filters (only status is used)"""
+        repository.get_task_count = Mock(return_value=5)
+        
+        # Even if other filters are passed, only status is used
+        result = repository.count(status="in_progress", priority="high", assignee="user-123")
+        assert result == 5
+        repository.get_task_count.assert_called_once_with(status="in_progress")
+    
+    def test_get_statistics(self, repository):
+        """Test get_statistics method"""
+        # Mock the count methods
+        repository.get_task_count = Mock()
+        repository.get_task_count.side_effect = [
+            10,  # total_tasks
+            3,   # todo_tasks
+            4,   # in_progress_tasks
+            2,   # done_tasks
+            1    # cancelled_tasks
+        ]
+        
+        result = repository.get_statistics()
+        
+        assert result == {
+            "total_tasks": 10,
+            "todo_tasks": 3,
+            "in_progress_tasks": 4,
+            "done_tasks": 2,
+            "cancelled_tasks": 1
+        }
+        
+        # Verify get_task_count was called with correct parameters
+        assert repository.get_task_count.call_count == 5
+        repository.get_task_count.assert_any_call()
+        repository.get_task_count.assert_any_call(status="todo")
+        repository.get_task_count.assert_any_call(status="in_progress")
+        repository.get_task_count.assert_any_call(status="done")
+        repository.get_task_count.assert_any_call(status="cancelled")
+    
+    def test_find_by_criteria_with_all_filters(self, repository, mock_task_model):
+        """Test find_by_criteria with all possible filters"""
+        mock_query = Mock()
+        repository.session.query.return_value = mock_query
+        mock_query.options.return_value = mock_query
+        mock_query.filter.return_value = mock_query
+        mock_query.join.return_value = mock_query
+        mock_query.order_by.return_value = mock_query
+        mock_query.limit.return_value = mock_query
+        mock_query.all.return_value = [mock_task_model]
+        
+        # Mock apply_user_filter
+        repository.apply_user_filter = Mock(return_value=mock_query)
+        
+        filters = {
+            'git_branch_id': 'branch-123',
+            'status': TaskStatus.IN_PROGRESS,
+            'priority': Priority.HIGH,
+            'assignees': ['user-1', 'user-2'],
+            'labels': ['bug', 'feature']
+        }
+        
+        result = repository.find_by_criteria(filters, limit=10)
+        
+        assert len(result) == 1
+        assert isinstance(result[0], TaskEntity)
+        
+        # Verify filters were applied
+        repository.apply_user_filter.assert_called_once()
+        mock_query.limit.assert_called_once_with(10)
+    
+    def test_find_by_criteria_with_legacy_assignee(self, repository, mock_task_model):
+        """Test find_by_criteria with legacy single assignee filter"""
+        mock_query = Mock()
+        repository.session.query.return_value = mock_query
+        mock_query.options.return_value = mock_query
+        mock_query.filter.return_value = mock_query
+        mock_query.join.return_value = mock_query
+        mock_query.order_by.return_value = mock_query
+        mock_query.all.return_value = [mock_task_model]
+        
+        repository.apply_user_filter = Mock(return_value=mock_query)
+        
+        filters = {
+            'assignee': 'user-123'  # Legacy single assignee
+        }
+        
+        result = repository.find_by_criteria(filters)
+        
+        assert len(result) == 1
+        # Verify join was called for assignee filter
+        mock_query.join.assert_called()

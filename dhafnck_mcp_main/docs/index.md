@@ -18,6 +18,8 @@ Foundational design principles, architectural patterns, and technical decisions 
 - [System Architecture](architecture-design/architecture.md) - Overall system architecture and components
 - [Technical Architecture](architecture-design/Architecture_Technique.md) - Detailed technical architecture with DDD
 - [**Authentication System Architecture**](CORE ARCHITECTURE/authentication-system.md) - JWT-based authentication with MCP integration
+- [**Dual Authentication System**](architecture/dual-authentication-system.md) - **NEW** - Complete dual auth system (Frontend Supabase JWT + MCP Local JWT)
+- [**Dual Authentication Flow Diagrams**](architecture/dual-authentication-flow-diagram.md) - **NEW** - Visual authentication flow diagrams through DDD layers
 - [Domain-Driven Design](architecture-design/domain-driven-design.md) - DDD implementation patterns
 - [AI Context Realistic Approach](architecture-design/AI-CONTEXT-REALISTIC-APPROACH.md) - Practical AI context strategies
 - [**User Isolation Architecture**](architecture/user-isolation-architecture.md) - Multi-tenant data isolation architecture

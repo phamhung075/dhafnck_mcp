@@ -6,6 +6,31 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Added - Dual Authentication System Documentation (2025-08-24)
+- **NEW DOCUMENTATION**: Created comprehensive documentation for the dual authentication system
+  - **Primary Document**: `dhafnck_mcp_main/docs/architecture/dual-authentication-system.md`
+    - Complete overview of frontend (Supabase JWT) vs MCP (Local JWT) authentication modes
+    - Detailed DDD architecture layer breakdown with authentication integration
+    - Request type detection logic and authentication methods
+    - Code examples for both frontend API calls and MCP tool calls
+    - File locations for all authentication components
+    - Configuration settings and troubleshooting guides
+    - Security considerations and performance monitoring
+  - **Visual Flow Diagrams**: `dhafnck_mcp_main/docs/architecture/dual-authentication-flow-diagram.md`
+    - High-level system architecture diagrams
+    - Detailed authentication decision trees
+    - Request type detection logic flows
+    - DDD layer authentication integration visualizations
+    - Error handling flows and security monitoring
+  - **Content Coverage**:
+    - Authentication middleware (DualAuthMiddleware)
+    - Supabase authentication service integration
+    - Local JWT service and token validation
+    - User-scoped repository patterns
+    - Rate limiting and security monitoring
+  - **Impact**: Provides complete technical reference for understanding and maintaining the dual authentication architecture
+  - **Benefits**: Enables developers to understand authentication flows, debug issues, and extend the system
+
 ### Added - V2 API Endpoint for Subtask Summaries (2025-08-24)
 - **NEW FEATURE**: Created v2 API endpoint for subtask summaries following existing v2 patterns
   - **Endpoint**: `/api/v2/tasks/{task_id}/subtasks/summaries`

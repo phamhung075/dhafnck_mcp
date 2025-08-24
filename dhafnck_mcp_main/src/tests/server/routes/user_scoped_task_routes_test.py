@@ -1,10 +1,12 @@
 """
 Tests for User-Scoped Task Routes with Authentication
+Updated to include new subtask summaries endpoint
 """
 
 import pytest
+import json
 from unittest.mock import Mock, patch, MagicMock, AsyncMock
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Request
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
@@ -18,7 +20,8 @@ from fastmcp.server.routes.user_scoped_task_routes import (
     update_task,
     delete_task,
     complete_task,
-    get_user_task_stats
+    get_user_task_stats,
+    get_subtask_summaries
 )
 from fastmcp.task_management.application.dtos.task.create_task_request import CreateTaskRequest
 from fastmcp.task_management.application.dtos.task.update_task_request import UpdateTaskRequest
@@ -422,6 +425,7 @@ class TestRouterIntegration:
         assert "/{task_id}" in route_paths  # GET, PUT, DELETE
         assert "/{task_id}/complete" in route_paths  # POST
         assert "/stats/summary" in route_paths  # GET
+        assert "/{task_id}/subtasks/summaries" in route_paths  # POST
     
     def test_endpoint_methods(self):
         """Test that endpoints have correct HTTP methods"""
@@ -441,6 +445,7 @@ class TestRouterIntegration:
         assert "DELETE" in method_paths.get("/{task_id}", [])
         assert "POST" in method_paths.get("/{task_id}/complete", [])
         assert "GET" in method_paths.get("/stats/summary", [])
+        assert "POST" in method_paths.get("/{task_id}/subtasks/summaries", [])
 
 
 class TestErrorHandling:
@@ -963,3 +968,303 @@ class TestORMTaskRepositoryIntegration:
             
             assert result["success"] is True
             assert result["task"] == completed_task
+
+
+class TestSubtaskSummariesEndpoint:
+    """Test the new subtask summaries endpoint"""
+    
+    @pytest.fixture
+    def mock_user(self):
+        """Create a mock authenticated user"""
+        return User(
+            id="subtask-user-123",
+            email="subtask@example.com",
+            username="subtaskuser",
+            full_name="Subtask User",
+            password_hash="",
+            status=UserStatus.ACTIVE,
+            roles=[UserRole.USER],
+            email_verified=True
+        )
+    
+    @pytest.fixture
+    def mock_request(self):
+        """Create a mock request object"""
+        request = Mock(spec=Request)
+        request.body = AsyncMock()
+        return request
+    
+    @pytest.fixture
+    def mock_db_session(self):
+        """Create a mock database session"""
+        return Mock(spec=Session)
+    
+    @pytest.mark.asyncio
+    async def test_get_subtask_summaries_success(self, mock_user, mock_request, mock_db_session):
+        """Test successful subtask summaries retrieval"""
+        task_id = "parent-task-123"
+        request_body = {"include_counts": True}
+        mock_request.body.return_value = json.dumps(request_body).encode()
+        
+        mock_subtasks_data = [
+            {
+                "id": "sub-1",
+                "title": "Subtask 1",
+                "status": "done",
+                "priority": "high",
+                "assignees": ["user-1"],
+                "progress_percentage": 100
+            },
+            {
+                "id": "sub-2",
+                "title": "Subtask 2",
+                "status": "in_progress",
+                "priority": "medium",
+                "assignees": [],
+                "progress_percentage": 50
+            },
+            {
+                "id": "sub-3",
+                "title": "Subtask 3",
+                "status": "todo",
+                "priority": "low",
+                "assignees": ["user-2"],
+                "progress_percentage": 0
+            }
+        ]
+        
+        with patch('fastmcp.server.routes.user_scoped_task_routes.TaskRepositoryFactory') as MockTaskRepoFactory, \
+             patch('fastmcp.server.routes.user_scoped_task_routes.SubtaskRepositoryFactory') as MockSubtaskRepoFactory, \
+             patch('fastmcp.server.routes.user_scoped_task_routes.TaskFacadeFactory') as MockTaskFacadeFactory:
+            
+            # Setup factories
+            MockTaskRepoFactory.return_value = Mock()
+            MockSubtaskRepoFactory.return_value = Mock()
+            
+            # Setup task facade
+            mock_task_facade = Mock()
+            mock_task_facade.list_subtasks_summary.return_value = {
+                "success": True,
+                "subtasks": mock_subtasks_data
+            }
+            
+            mock_task_facade_factory = Mock()
+            mock_task_facade_factory.create_task_facade.return_value = mock_task_facade
+            MockTaskFacadeFactory.return_value = mock_task_facade_factory
+            
+            # Call the function
+            result = await get_subtask_summaries(task_id, mock_request, mock_user, mock_db_session)
+            
+            # Verify facade was called correctly
+            mock_task_facade.list_subtasks_summary.assert_called_once_with(
+                parent_task_id=task_id,
+                include_counts=True
+            )
+            
+            # Verify response structure
+            assert result["parent_task_id"] == task_id
+            assert result["total_count"] == 3
+            assert len(result["subtasks"]) == 3
+            
+            # Verify first subtask summary
+            first_subtask = result["subtasks"][0]
+            assert first_subtask["id"] == "sub-1"
+            assert first_subtask["title"] == "Subtask 1"
+            assert first_subtask["status"] == "done"
+            assert first_subtask["priority"] == "high"
+            assert first_subtask["assignees_count"] == 1
+            assert first_subtask["progress_percentage"] == 100
+            
+            # Verify progress summary
+            progress = result["progress_summary"]
+            assert progress["total"] == 3
+            assert progress["completed"] == 1
+            assert progress["in_progress"] == 1
+            assert progress["todo"] == 1
+            assert progress["blocked"] == 0
+            assert progress["completion_percentage"] == 33  # 1/3 * 100
+    
+    @pytest.mark.asyncio
+    async def test_get_subtask_summaries_empty_body(self, mock_user, mock_request, mock_db_session):
+        """Test subtask summaries with empty request body"""
+        task_id = "parent-task-456"
+        mock_request.body.return_value = b""
+        
+        with patch('fastmcp.server.routes.user_scoped_task_routes.TaskRepositoryFactory'), \
+             patch('fastmcp.server.routes.user_scoped_task_routes.SubtaskRepositoryFactory'), \
+             patch('fastmcp.server.routes.user_scoped_task_routes.TaskFacadeFactory') as MockTaskFacadeFactory:
+            
+            # Setup task facade
+            mock_task_facade = Mock()
+            mock_task_facade.list_subtasks_summary.return_value = {
+                "success": True,
+                "subtasks": []
+            }
+            
+            mock_task_facade_factory = Mock()
+            mock_task_facade_factory.create_task_facade.return_value = mock_task_facade
+            MockTaskFacadeFactory.return_value = mock_task_facade_factory
+            
+            # Call the function
+            result = await get_subtask_summaries(task_id, mock_request, mock_user, mock_db_session)
+            
+            # Verify include_counts defaults to True
+            mock_task_facade.list_subtasks_summary.assert_called_once_with(
+                parent_task_id=task_id,
+                include_counts=True
+            )
+            
+            # Verify empty response
+            assert result["parent_task_id"] == task_id
+            assert result["total_count"] == 0
+            assert result["subtasks"] == []
+            assert result["progress_summary"]["total"] == 0
+            assert result["progress_summary"]["completion_percentage"] == 0
+    
+    @pytest.mark.asyncio
+    async def test_get_subtask_summaries_facade_error(self, mock_user, mock_request, mock_db_session):
+        """Test subtask summaries when facade returns error"""
+        task_id = "error-task-789"
+        mock_request.body.return_value = json.dumps({"include_counts": False}).encode()
+        
+        with patch('fastmcp.server.routes.user_scoped_task_routes.TaskRepositoryFactory'), \
+             patch('fastmcp.server.routes.user_scoped_task_routes.SubtaskRepositoryFactory'), \
+             patch('fastmcp.server.routes.user_scoped_task_routes.TaskFacadeFactory') as MockTaskFacadeFactory:
+            
+            # Setup task facade to return error
+            mock_task_facade = Mock()
+            mock_task_facade.list_subtasks_summary.return_value = {
+                "success": False,
+                "error": "Failed to fetch subtasks"
+            }
+            
+            mock_task_facade_factory = Mock()
+            mock_task_facade_factory.create_task_facade.return_value = mock_task_facade
+            MockTaskFacadeFactory.return_value = mock_task_facade_factory
+            
+            # Call the function and expect exception
+            with pytest.raises(HTTPException) as exc_info:
+                await get_subtask_summaries(task_id, mock_request, mock_user, mock_db_session)
+            
+            assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+            assert "Failed to fetch subtasks" in str(exc_info.value.detail)
+    
+    @pytest.mark.asyncio
+    async def test_get_subtask_summaries_exception_handling(self, mock_user, mock_request, mock_db_session):
+        """Test subtask summaries exception handling"""
+        task_id = "exception-task-000"
+        mock_request.body.return_value = json.dumps({"include_counts": True}).encode()
+        
+        with patch('fastmcp.server.routes.user_scoped_task_routes.TaskRepositoryFactory') as MockTaskRepoFactory:
+            # Simulate exception
+            MockTaskRepoFactory.side_effect = Exception("Database connection failed")
+            
+            with pytest.raises(HTTPException) as exc_info:
+                await get_subtask_summaries(task_id, mock_request, mock_user, mock_db_session)
+            
+            assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+            assert "Database connection failed" in str(exc_info.value.detail)
+    
+    @pytest.mark.asyncio
+    async def test_get_subtask_summaries_progress_calculation(self, mock_user, mock_request, mock_db_session):
+        """Test correct progress calculation in subtask summaries"""
+        task_id = "progress-task-111"
+        mock_request.body.return_value = json.dumps({"include_counts": True}).encode()
+        
+        # Create subtasks with various statuses
+        mock_subtasks_data = [
+            {"id": "s1", "title": "Done 1", "status": "done", "priority": "high", "assignees": []},
+            {"id": "s2", "title": "Done 2", "status": "done", "priority": "medium", "assignees": []},
+            {"id": "s3", "title": "Done 3", "status": "done", "priority": "low", "assignees": []},
+            {"id": "s4", "title": "In Progress", "status": "in_progress", "priority": "high", "assignees": []},
+            {"id": "s5", "title": "Todo", "status": "todo", "priority": "medium", "assignees": []},
+            {"id": "s6", "title": "Blocked", "status": "blocked", "priority": "high", "assignees": []}
+        ]
+        
+        with patch('fastmcp.server.routes.user_scoped_task_routes.TaskRepositoryFactory'), \
+             patch('fastmcp.server.routes.user_scoped_task_routes.SubtaskRepositoryFactory'), \
+             patch('fastmcp.server.routes.user_scoped_task_routes.TaskFacadeFactory') as MockTaskFacadeFactory:
+            
+            # Setup task facade
+            mock_task_facade = Mock()
+            mock_task_facade.list_subtasks_summary.return_value = {
+                "success": True,
+                "subtasks": mock_subtasks_data
+            }
+            
+            mock_task_facade_factory = Mock()
+            mock_task_facade_factory.create_task_facade.return_value = mock_task_facade
+            MockTaskFacadeFactory.return_value = mock_task_facade_factory
+            
+            # Call the function
+            result = await get_subtask_summaries(task_id, mock_request, mock_user, mock_db_session)
+            
+            # Verify progress summary calculations
+            progress = result["progress_summary"]
+            assert progress["total"] == 6
+            assert progress["completed"] == 3  # 3 done tasks
+            assert progress["in_progress"] == 1
+            assert progress["todo"] == 1
+            assert progress["blocked"] == 1
+            assert progress["completion_percentage"] == 50  # 3/6 * 100
+    
+    @pytest.mark.asyncio
+    async def test_get_subtask_summaries_logging(self, mock_user, mock_request, mock_db_session):
+        """Test logging in subtask summaries endpoint"""
+        task_id = "log-task-222"
+        mock_request.body.return_value = json.dumps({"include_counts": True}).encode()
+        
+        with patch('fastmcp.server.routes.user_scoped_task_routes.TaskRepositoryFactory'), \
+             patch('fastmcp.server.routes.user_scoped_task_routes.SubtaskRepositoryFactory'), \
+             patch('fastmcp.server.routes.user_scoped_task_routes.TaskFacadeFactory') as MockTaskFacadeFactory, \
+             patch('fastmcp.server.routes.user_scoped_task_routes.logger') as mock_logger:
+            
+            # Setup task facade
+            mock_task_facade = Mock()
+            mock_task_facade.list_subtasks_summary.return_value = {
+                "success": True,
+                "subtasks": [{"id": "s1", "title": "Test", "status": "done", "priority": "high", "assignees": []}]
+            }
+            
+            mock_task_facade_factory = Mock()
+            mock_task_facade_factory.create_task_facade.return_value = mock_task_facade
+            MockTaskFacadeFactory.return_value = mock_task_facade_factory
+            
+            # Call the function
+            result = await get_subtask_summaries(task_id, mock_request, mock_user, mock_db_session)
+            
+            # Verify logging
+            mock_logger.info.assert_any_call(f"Loading subtask summaries for task {task_id} by user {mock_user.email}")
+            mock_logger.info.assert_any_call(f"Returned 1 subtask summaries for task {task_id}")
+    
+    @pytest.mark.asyncio
+    async def test_get_subtask_summaries_malformed_json(self, mock_user, mock_request, mock_db_session):
+        """Test subtask summaries with malformed JSON in request body"""
+        task_id = "malformed-task-333"
+        mock_request.body.return_value = b"invalid json {"
+        
+        with patch('fastmcp.server.routes.user_scoped_task_routes.TaskRepositoryFactory'), \
+             patch('fastmcp.server.routes.user_scoped_task_routes.SubtaskRepositoryFactory'), \
+             patch('fastmcp.server.routes.user_scoped_task_routes.TaskFacadeFactory') as MockTaskFacadeFactory:
+            
+            # Setup task facade
+            mock_task_facade = Mock()
+            mock_task_facade.list_subtasks_summary.return_value = {
+                "success": True,
+                "subtasks": []
+            }
+            
+            mock_task_facade_factory = Mock()
+            mock_task_facade_factory.create_task_facade.return_value = mock_task_facade
+            MockTaskFacadeFactory.return_value = mock_task_facade_factory
+            
+            # Call the function - should handle malformed JSON gracefully
+            result = await get_subtask_summaries(task_id, mock_request, mock_user, mock_db_session)
+            
+            # Should default to include_counts=True
+            mock_task_facade.list_subtasks_summary.assert_called_once_with(
+                parent_task_id=task_id,
+                include_counts=True
+            )
+            
+            assert result["parent_task_id"] == task_id
