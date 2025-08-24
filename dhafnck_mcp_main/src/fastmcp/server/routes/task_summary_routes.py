@@ -7,7 +7,9 @@ for improved response times on repeat requests.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
+from starlette.requests import Request
 import logging
 import json
 from typing import Optional
@@ -28,6 +30,9 @@ except ImportError:
     # Fallback to local JWT if Supabase auth not available
     from fastmcp.auth.interface.fastapi_auth import get_current_user
 
+# Import dual authentication for handling both Supabase and local JWT
+from fastmcp.auth.middleware.dual_auth_middleware import DualAuthMiddleware
+
 # Import Redis caching decorator
 try:
     from fastmcp.server.cache.redis_cache_decorator import redis_cache, CacheInvalidator, cache_metrics
@@ -42,6 +47,88 @@ except ImportError:
         return decorator
 
 logger = logging.getLogger(__name__)
+
+# Create dual auth handler
+dual_auth = DualAuthMiddleware(None)
+
+async def get_current_user_dual(
+    request: Request,
+    db: Session = Depends(get_db)
+) -> Optional[User]:
+    """
+    Get current user using dual authentication.
+    Supports both Supabase JWT (frontend) and local JWT (MCP).
+    """
+    try:
+        # First check for Bearer token in Authorization header
+        auth_header = request.headers.get('authorization', '')
+        token = None
+        
+        if auth_header.startswith('Bearer '):
+            token = auth_header[7:].strip()
+            logger.debug("Found Bearer token in Authorization header")
+        
+        # If no Bearer token, check cookies (for frontend requests)
+        if not token:
+            # Check for access_token cookie (Supabase session)
+            access_token = request.cookies.get('access_token')
+            if access_token:
+                token = access_token
+                logger.debug("Found access_token in cookies")
+        
+        if not token:
+            logger.debug("No authentication token found in request")
+            return None
+        
+        # Try Supabase auth first (for frontend tokens)
+        try:
+            from fastmcp.auth.interface.supabase_fastapi_auth import get_current_user as get_supabase_user
+            from fastapi.security import HTTPAuthorizationCredentials
+            
+            # Create credentials for Supabase auth
+            credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
+            
+            # Try Supabase validation
+            user = await get_supabase_user(credentials, db)
+            if user:
+                logger.info(f"✅ Authenticated via Supabase: {user.email}")
+                return user
+        except Exception as e:
+            logger.debug(f"Supabase auth failed: {e}")
+        
+        # Try local JWT auth (for MCP tokens)
+        try:
+            from fastmcp.auth.domain.services.jwt_service import JWTService
+            from fastmcp.auth.infrastructure.repositories.user_repository import UserRepository
+            import os
+            
+            jwt_secret = os.getenv("JWT_SECRET_KEY", "default-secret-key-change-in-production")
+            jwt_service = JWTService(secret_key=jwt_secret)
+            
+            # Try API token validation
+            payload = jwt_service.verify_token(token, expected_type="api_token")
+            if not payload:
+                # Try access token as fallback
+                payload = jwt_service.verify_token(token, expected_type="access")
+            
+            if payload:
+                user_id = payload.get('user_id')
+                if user_id:
+                    # Get user from database
+                    user_repository = UserRepository(db)
+                    user = user_repository.find_by_id(user_id)
+                    if user:
+                        logger.info(f"✅ Authenticated via local JWT: {user.email if hasattr(user, 'email') else user_id}")
+                        return user
+        except Exception as e:
+            logger.debug(f"Local JWT auth failed: {e}")
+        
+        logger.warning("❌ No valid authentication found for request")
+        return None
+        
+    except Exception as e:
+        logger.error(f"Dual auth error: {e}")
+        return None
 
 router = APIRouter(prefix="/api", tags=["Task Summaries"])
 
@@ -246,9 +333,7 @@ async def get_full_task(
 @router.post("/subtasks/summaries")
 @redis_cache(ttl=300, key_prefix="subtask_summaries")
 async def get_subtask_summaries(
-    parent_task_id: str,
-    include_counts: bool = True,
-    current_user: User = Depends(get_current_user),
+    request: Request,
     db: Session = Depends(get_db)
 ):
     """
@@ -260,6 +345,13 @@ async def get_subtask_summaries(
     Cached with 5-minute TTL for improved performance.
     """
     try:
+        # Parse request body
+        body = await request.body()
+        data = json.loads(body) if body else {}
+        
+        parent_task_id = data.get("parent_task_id")
+        include_counts = data.get("include_counts", True)
+        
         if not parent_task_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -272,9 +364,20 @@ async def get_subtask_summaries(
         task_repository_factory = TaskRepositoryFactory()
         subtask_repository_factory = SubtaskRepositoryFactory()
         
-        # Use authenticated user
+        # Use dual authentication to support both Supabase and local JWT
+        current_user = await get_current_user_dual(request, db)
+        
+        if not current_user:
+            # Authentication is required for this endpoint
+            logger.warning("No valid authentication found for subtask request")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
         user_id = current_user.id
-        logger.info(f"Loading subtask summaries for user: {current_user.email}")
+        logger.info(f"Loading subtask summaries for user: {current_user.email if hasattr(current_user, 'email') else user_id}")
         
         task_facade_factory = TaskFacadeFactory(task_repository_factory, subtask_repository_factory)
         task_facade = task_facade_factory.create_task_facade("default_project", None, user_id)

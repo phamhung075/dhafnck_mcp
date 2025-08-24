@@ -29,8 +29,11 @@ class OptimizedTaskRepository(ORMTaskRepository):
         Args:
             git_branch_id: Optional branch ID filter
         """
-        super().__init__(git_branch_id)
+        logger.debug(f"[OPTIMIZED_REPO] Initializing with git_branch_id: {git_branch_id}")
+        # Fix: Pass git_branch_id as keyword argument, not positional
+        super().__init__(session=None, git_branch_id=git_branch_id)
         self.optimizer = get_performance_optimizer()
+        logger.debug(f"[OPTIMIZED_REPO] After init, self.git_branch_id: {self.git_branch_id}")
     
     def list_tasks(self, status: str | None = None, priority: str | None = None,
                   assignee_id: str | None = None, limit: int = 100,
@@ -78,8 +81,12 @@ class OptimizedTaskRepository(ORMTaskRepository):
             
             # Apply filters
             filters = []
+            logger.debug(f"[OPTIMIZED_REPO] list_tasks_minimal - self.git_branch_id: {self.git_branch_id}")
             if self.git_branch_id:
                 filters.append(Task.git_branch_id == self.git_branch_id)
+                logger.debug(f"[OPTIMIZED_REPO] Applied git_branch_id filter: {self.git_branch_id}")
+            else:
+                logger.debug(f"[OPTIMIZED_REPO] NO git_branch_id filter - returning ALL tasks")
             if status:
                 filters.append(Task.status == status)
             if priority:
@@ -163,8 +170,12 @@ class OptimizedTaskRepository(ORMTaskRepository):
             
             # Apply filters
             filters = []
+            logger.debug(f"[OPTIMIZED_REPO] list_tasks_minimal - self.git_branch_id: {self.git_branch_id}")
             if self.git_branch_id:
                 filters.append(Task.git_branch_id == self.git_branch_id)
+                logger.debug(f"[OPTIMIZED_REPO] Applied git_branch_id filter: {self.git_branch_id}")
+            else:
+                logger.debug(f"[OPTIMIZED_REPO] NO git_branch_id filter - returning ALL tasks")
             if status:
                 filters.append(Task.status == status)
             if priority:

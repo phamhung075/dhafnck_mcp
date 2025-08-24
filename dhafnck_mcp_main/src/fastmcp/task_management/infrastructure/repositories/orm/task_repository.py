@@ -776,6 +776,10 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
     
     def find_by_criteria(self, filters: dict[str, Any], limit: int | None = None) -> list[TaskEntity]:
         """Find tasks by multiple criteria"""
+        logger.debug(f"[REPOSITORY] find_by_criteria called with filters: {filters}")
+        logger.debug(f"[REPOSITORY] Repository git_branch_id: {self.git_branch_id}")
+        logger.debug(f"[REPOSITORY] Filters git_branch_id: {filters.get('git_branch_id')}")
+        
         with self.get_db_session() as session:
             query = session.query(Task).options(
                 joinedload(Task.assignees),
@@ -785,11 +789,15 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
             
             # Apply user filter for data isolation (CRITICAL)
             query = self.apply_user_filter(query)
+            logger.debug(f"[REPOSITORY] Applied user filter")
             
             # Apply git branch filter if set (from constructor or filters)
             git_branch_filter = self.git_branch_id or filters.get('git_branch_id')
             if git_branch_filter:
+                logger.debug(f"[REPOSITORY] Applying git_branch_id filter: {git_branch_filter}")
                 query = query.filter(Task.git_branch_id == git_branch_filter)
+            else:
+                logger.debug(f"[REPOSITORY] NO git_branch_id filter applied - will return tasks from ALL branches")
             
             # Apply filters
             if 'status' in filters:
@@ -832,7 +840,13 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
                 query = query.limit(limit)
             
             tasks = query.all()
-            return [self._model_to_entity(task) for task in tasks]
+            logger.debug(f"[REPOSITORY] Query returned {len(tasks)} tasks from database")
+            if tasks:
+                logger.debug(f"[REPOSITORY] Sample task branches: {[task.git_branch_id for task in tasks[:3]]}")
+            
+            result = [self._model_to_entity(task) for task in tasks]
+            logger.debug(f"[REPOSITORY] Returning {len(result)} task entities")
+            return result
     
     def get_statistics(self) -> dict[str, Any]:
         """Get task statistics"""

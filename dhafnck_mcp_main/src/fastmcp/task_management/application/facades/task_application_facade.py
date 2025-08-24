@@ -633,8 +633,18 @@ class TaskApplicationFacade:
                 }
             
             # Fall back to standard implementation
+            logger.debug(f"[FACADE] Using standard list implementation")
+            logger.debug(f"[FACADE] ListTasksRequest details:")
+            logger.debug(f"  - git_branch_id: {request.git_branch_id if hasattr(request, 'git_branch_id') else 'NOT SET'}")
+            logger.debug(f"  - status: {request.status if hasattr(request, 'status') else None}")
+            logger.debug(f"  - priority: {request.priority if hasattr(request, 'priority') else None}")
+            logger.debug(f"  - assignees: {request.assignees if hasattr(request, 'assignees') else None}")
+            logger.debug(f"  - labels: {request.labels if hasattr(request, 'labels') else None}")
+            logger.debug(f"  - limit: {request.limit if hasattr(request, 'limit') else None}")
+            
             # Execute use case
             response = self._list_tasks_use_case.execute(request)
+            logger.debug(f"[FACADE] Use case returned {len(response.tasks) if response.tasks else 0} tasks")
             
             # Convert tasks based on minimal flag
             tasks_list = []

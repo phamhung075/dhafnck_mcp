@@ -1,8 +1,24 @@
 // Enhanced API service with lazy loading support
 // Provides lightweight endpoints for improved performance
 
+import Cookies from 'js-cookie';
+
 const API_BASE = "http://localhost:8000/api";
 const MCP_BASE = "http://localhost:8000/mcp/";
+
+// Helper function to get auth headers
+function getAuthHeaders(): HeadersInit {
+  const token = Cookies.get('access_token');
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json'
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  return headers;
+}
 
 // --- Lazy Loading Interfaces ---
 
@@ -123,7 +139,7 @@ export async function getBranchSummaries(project_id: string): Promise<BranchSumm
   try {
     const response = await fetch(`${API_BASE}/branches/summaries`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ project_id })
     });
 
@@ -265,13 +281,12 @@ export async function getFullTask(taskId: string) {
  */
 export async function getSubtaskSummaries(parentTaskId: string): Promise<SubtaskSummariesResponse> {
   
-  // Try the lightweight endpoint first
+  // Try the v2 endpoint with proper authentication
   try {
-    const response = await fetch(`${API_BASE}/subtasks/summaries`, {
+    const response = await fetch(`${API_BASE}/v2/tasks/${parentTaskId}/subtasks/summaries`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify({
-        parent_task_id: parentTaskId,
         include_counts: true
       })
     });

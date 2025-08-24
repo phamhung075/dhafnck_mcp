@@ -25,8 +25,9 @@ class SupabaseOptimizedRepository(ORMTaskRepository):
     
     def __init__(self, git_branch_id: str = None):
         """Initialize Supabase-optimized repository"""
-        super().__init__(git_branch_id)
-        logger.info("Using Supabase-optimized repository for minimal latency")
+        # Fix: Pass git_branch_id as keyword argument, not positional
+        super().__init__(session=None, git_branch_id=git_branch_id)
+        logger.info(f"Using Supabase-optimized repository for minimal latency, git_branch_id: {self.git_branch_id}")
     
     def list_tasks_minimal(self, status: str = None, priority: str = None,
                           assignee_id: str = None, limit: int = 20, offset: int = 0) -> List[Dict[str, Any]]:

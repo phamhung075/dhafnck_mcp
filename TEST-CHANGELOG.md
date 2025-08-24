@@ -4,6 +4,68 @@ All notable changes to test files in the DhafnckMCP AI Agent Orchestration Platf
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [Semantic](https://semver.org/spec/v1.0.0.html)
 
+## [2025-08-23] - Comprehensive Test Suites for Core Components
+
+### Added - New Test Files
+
+- **File**: `dhafnck_mcp_main/src/tests/task_management/application/facades/test_agent_application_facade_comprehensive.py`
+  - Comprehensive test suite for AgentApplicationFacade with 45+ test methods
+  - Full coverage of all facade methods: register, unregister, assign, unassign, get, list, update, rebalance
+  - Error handling tests for validation errors, not found errors, and unexpected exceptions
+  - Tests for duplicate agent detection with helpful hints and suggested actions
+  - Mock-based testing with proper use case response simulation
+  - Datetime and metadata verification in responses
+  - Legacy field backward compatibility testing
+
+- **File**: `dhafnck_mcp_main/src/tests/task_management/application/services/test_unified_context_service_comprehensive.py`
+  - Complete test suite for UnifiedContextService with 50+ test methods
+  - Full testing of context CRUD operations across all hierarchy levels (global, project, branch, task)
+  - Auto-detection tests for project_id and git_branch_id with repository mocking
+  - Inheritance chain resolution and merging tests with proper hierarchy
+  - Parent context auto-creation tests with atomic operations
+  - Alternative validation approach tests for task contexts
+  - Add insight and progress functionality tests with timestamps
+  - Comprehensive error handling and exception testing
+
+- **File**: `dhafnck_mcp_main/src/tests/task_management/application/use_cases/test_list_tasks_comprehensive.py`
+  - Complete test coverage for ListTasksUseCase with 20+ test methods
+  - Filter building logic tests for all supported filters (status, priority, assignees, labels, git_branch_id)
+  - Critical git_branch_id filtering verification
+  - Legacy assignee field backward compatibility tests
+  - Response DTO conversion and field mapping tests
+  - Comprehensive logging coverage tests with caplog fixture
+  - Empty and None result handling tests
+
+- **File**: `dhafnck_mcp_main/src/tests/task_management/application/use_cases/test_update_subtask_comprehensive.py`
+  - Thorough test suite for UpdateSubtaskUseCase with 25+ test methods
+  - Subtask repository and fallback task entity method tests
+  - Progress percentage updates with automatic status changes
+  - Parent task progress synchronization tests
+  - Context synchronization tests with async event loop handling
+  - Complete workflow integration tests
+  - Error handling for not found scenarios
+
+- **File**: `dhafnck_mcp_main/src/tests/task_management/domain/entities/test_subtask_comprehensive.py`
+  - Complete domain entity test suite for Subtask with 40+ test methods
+  - Full validation and business rule tests
+  - Progress percentage with automatic status update tests
+  - Agent role validation and legacy name resolution tests
+  - Domain event generation and tracking tests
+  - Factory methods (create, from_dict) and dictionary conversion tests
+  - Timezone handling and timestamp tests
+  - Equality and hashing tests
+
+- **File**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/test_git_branch_repository_comprehensive.py`
+  - Extensive test suite for ORMGitBranchRepository with 55+ test methods
+  - Complete repository interface implementation tests
+  - Model to entity and entity to model conversion tests
+  - All CRUD operations with database error handling
+  - Branch statistics and project summary aggregation tests
+  - Agent assignment and unassignment tests
+  - Archive and restore functionality tests
+  - Find methods by various criteria (status, agent, availability)
+  - Interface method tests (create_git_branch, get_git_branch_by_id, etc.)
+
 ## [2025-08-23] - Test Creation and Updates for Authentication and Repository Changes
 
 ### Added - New Test Files

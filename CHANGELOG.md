@@ -6,6 +6,51 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Added - V2 API Endpoint for Subtask Summaries (2025-08-24)
+- **NEW FEATURE**: Created v2 API endpoint for subtask summaries following existing v2 patterns
+  - **Endpoint**: `/api/v2/tasks/{task_id}/subtasks/summaries`
+  - **Method**: POST with `include_counts` parameter
+  - **Authentication**: Uses dual authentication supporting both Supabase JWT and local JWT
+  - **Frontend Integration**: 
+    - Added `getAuthHeaders()` helper function in `api-lazy.ts` to properly send Bearer tokens
+    - Updated `getSubtaskSummaries()` to use v2 endpoint with Authorization header
+    - Modified `LazySubtaskList.tsx` to use Authorization headers instead of relying on cookies
+  - **Files Modified**:
+    - `dhafnck_mcp_main/src/fastmcp/server/routes/user_scoped_task_routes.py` (added v2 endpoint)
+    - `dhafnck-frontend/src/api-lazy.ts` (added auth headers support)
+    - `dhafnck-frontend/src/components/LazySubtaskList.tsx` (updated to use v2 endpoint)
+  - **Impact**: Subtask listing now uses consistent v2 API pattern with proper authentication
+  - **Verification**: ✅ CONFIRMED WORKING - Bearer token authentication tested successfully
+
+### Fixed - Subtask Summaries Endpoint Authentication (2025-08-24)
+- **CRITICAL FIX**: Fixed subtask summaries endpoint (`/api/subtasks/summaries`) failing with authentication errors
+  - **Problem**: Frontend requests were receiving 403 Forbidden errors due to JWT signature verification failures
+  - **Root Cause**: Endpoint was using single authentication method that couldn't handle Supabase JWT tokens from frontend cookies
+  - **Solution**: 
+    - Implemented dual authentication handler (`get_current_user_dual`) that supports both:
+      - Supabase JWT tokens from cookies (frontend requests)
+      - Local JWT tokens from Authorization header (MCP/API requests)
+    - Added cookie extraction logic to check `access_token` cookie when no Bearer token present
+    - Removed problematic "system" user fallback that violated security constraints
+    - Made authentication mandatory (returns 401 if no valid auth found)
+  - **Files Modified**: 
+    - `dhafnck_mcp_main/src/fastmcp/server/routes/task_summary_routes.py`
+  - **Impact**: Subtask listing now works correctly from both frontend (with Supabase auth) and MCP (with local JWT)
+  - **Verification**: ✅ CONFIRMED WORKING - Both cookie and Bearer token authentication tested successfully
+
+### Fixed - Task List Filtering by Branch (2025-08-23)
+- **CRITICAL FIX**: Fixed task list returning all tasks instead of filtering by git_branch_id
+  - **Problem**: `manage_task(action="list", git_branch_id="...")` was returning tasks from all branches
+  - **Root Cause**: OptimizedTaskRepository and SupabaseOptimizedRepository were passing git_branch_id as positional argument instead of keyword argument to parent constructor
+  - **Solution**: 
+    - Fixed `OptimizedTaskRepository.__init__` to use `super().__init__(session=None, git_branch_id=git_branch_id)`
+    - Fixed `SupabaseOptimizedRepository.__init__` similarly
+  - **Files Modified**: 
+    - `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/optimized_task_repository.py`
+    - `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/supabase_optimized_repository.py`
+  - **Impact**: Task list now correctly filters by branch when git_branch_id is provided
+  - **Verification**: Awaiting Docker rebuild to confirm fix
+
 ### Fixed - Missing uuid Module Import in Agent Repository (2025-08-23)
 - **CRITICAL FIX**: Fixed "name 'uuid' is not defined" error in agent assignment operations
   - **Problem**: `manage_git_branch(action="assign_agent")` was failing with NameError

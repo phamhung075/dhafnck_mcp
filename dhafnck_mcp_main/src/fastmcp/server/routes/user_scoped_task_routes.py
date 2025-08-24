@@ -6,6 +6,7 @@ in API routes using JWT authentication and user-scoped repositories.
 """
 
 import logging
+import json
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
@@ -25,6 +26,9 @@ from ...task_management.infrastructure.repositories.orm.agent_repository import 
 from ...task_management.application.dtos.task.create_task_request import CreateTaskRequest
 from ...task_management.application.dtos.task.update_task_request import UpdateTaskRequest
 from ...task_management.application.dtos.task.list_tasks_request import ListTasksRequest
+from ...task_management.infrastructure.repositories.subtask_repository_factory import SubtaskRepositoryFactory
+from ...task_management.application.factories.task_facade_factory import TaskFacadeFactory
+from ...task_management.infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
 
 # Import debug service
 from ...utilities.debug_service import debug_service, log_api_v2_request, log_api_v2_response, log_auth_event, log_frontend_issue
@@ -438,6 +442,104 @@ async def get_user_task_stats(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get task statistics"
+        )
+
+
+@router.post("/{task_id}/subtasks/summaries", response_model=dict)
+async def get_subtask_summaries(
+    task_id: str,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get lightweight subtask summaries for a parent task.
+    
+    This endpoint provides subtask information without loading full details,
+    improving performance when expanding tasks in the UI.
+    """
+    try:
+        # Parse request body if present
+        try:
+            body = await request.body()
+            data = json.loads(body) if body else {}
+            include_counts = data.get("include_counts", True)
+        except:
+            include_counts = True
+        
+        logger.info(f"Loading subtask summaries for task {task_id} by user {current_user.email}")
+        
+        # Initialize repository factories and facade
+        task_repository_factory = TaskRepositoryFactory()
+        subtask_repository_factory = SubtaskRepositoryFactory()
+        
+        # Use authenticated user
+        user_id = current_user.id
+        
+        task_facade_factory = TaskFacadeFactory(task_repository_factory, subtask_repository_factory)
+        task_facade = task_facade_factory.create_task_facade("default_project", None, user_id)
+        
+        # Get subtasks for the parent task
+        result = task_facade.list_subtasks_summary(
+            parent_task_id=task_id,
+            include_counts=include_counts
+        )
+        
+        if not result.get("success"):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=result.get("error", "Failed to fetch subtasks")
+            )
+        
+        subtasks_data = result.get("subtasks", [])
+        
+        # Convert to subtask summaries
+        subtask_summaries = []
+        status_counts = {"todo": 0, "in_progress": 0, "done": 0, "blocked": 0}
+        
+        for subtask_data in subtasks_data:
+            summary = {
+                "id": subtask_data["id"],
+                "title": subtask_data["title"],
+                "status": subtask_data["status"],
+                "priority": subtask_data["priority"],
+                "assignees_count": len(subtask_data.get("assignees", [])),
+                "progress_percentage": subtask_data.get("progress_percentage")
+            }
+            subtask_summaries.append(summary)
+            
+            # Count statuses for progress summary
+            if subtask_data["status"] in status_counts:
+                status_counts[subtask_data["status"]] += 1
+        
+        # Calculate progress summary
+        total_subtasks = len(subtask_summaries)
+        progress_summary = {
+            "total": total_subtasks,
+            "completed": status_counts["done"],
+            "in_progress": status_counts["in_progress"],
+            "todo": status_counts["todo"],
+            "blocked": status_counts["blocked"],
+            "completion_percentage": round((status_counts["done"] / total_subtasks) * 100) if total_subtasks > 0 else 0
+        }
+        
+        response = {
+            "subtasks": subtask_summaries,
+            "parent_task_id": task_id,
+            "total_count": total_subtasks,
+            "progress_summary": progress_summary
+        }
+        
+        logger.info(f"Returned {len(subtask_summaries)} subtask summaries for task {task_id}")
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching subtask summaries for task {task_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
         )
 
 

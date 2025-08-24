@@ -3,6 +3,7 @@ import React, { useEffect, useState, useCallback, useMemo, lazy, Suspense } from
 import { deleteSubtask, listSubtasks, createSubtask as newSubtask, updateSubtask as saveSubtask, Subtask, completeSubtask } from "../api";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
+import Cookies from 'js-cookie';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 
 // Lazy load dialogs
@@ -77,12 +78,20 @@ export default function LazySubtaskList({ projectId, taskTreeId, parentTaskId }:
     setError(null);
     
     try {
-      // Try lightweight endpoint first
-      const response = await fetch(`/api/subtasks/summaries`, {
+      // Try v2 endpoint with proper authentication
+      const token = Cookies.get('access_token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch(`/api/v2/tasks/${parentTaskId}/subtasks/summaries`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
-          parent_task_id: parentTaskId,
           include_counts: true
         })
       });

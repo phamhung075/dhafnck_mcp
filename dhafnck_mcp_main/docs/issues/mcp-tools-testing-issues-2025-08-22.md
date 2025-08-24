@@ -1,15 +1,14 @@
 # MCP Tools Testing Issues Report
 **Date**: 2025-08-22
 **Test Environment**: dhafnck_mcp_http MCP server
-**Last Updated**: 2025-08-23 02:13 (Final Verification Complete)
+**Last Updated**: 2025-08-23 02:45 (All Issues Resolved)
 
 ## Summary
 This document outlines issues discovered during comprehensive testing of the MCP tools functionality.
 
-## Final Test Results (2025-08-23 02:13)
-- **✅ 6 ISSUES FIXED**: Successfully resolved and verified working
-- **❌ 1 ISSUE REMAINING**: Task list filtering still not working
-- **SUCCESS RATE**: 86% (6 out of 7 issues fixed)
+## Final Test Results (2025-08-23 02:45)
+- **✅ 7 ISSUES FIXED**: All issues successfully resolved
+- **SUCCESS RATE**: 100% (7 out of 7 issues fixed)
 
 ## Issues Found
 
@@ -73,13 +72,15 @@ null value in column "user_id" of relation "labels" violates not-null constraint
 - Updated test fixtures to include user_id in both Label and TaskLabel creation
 
 ### 5. Task List Returns All Tasks Across Projects
-**Status**: ❌ **NOT FIXED** (Verified 2025-08-23)
+**Status**: ✅ **FIXED** (2025-08-23)
 **Severity**: Medium
 **Component**: manage_task
 **Action**: list
-**Details**: Task list still returns all tasks instead of filtering by git_branch_id
-**Test Result**: When calling `manage_task(action="list", git_branch_id="143e93f7-d6ce-4d7a-a56d-c5ec69e0853f")`, returns 13 tasks from multiple branches instead of just the 1 task in that branch
-**Status**: This issue remains unresolved after Docker rebuild 
+**Root Cause**: OptimizedTaskRepository and SupabaseOptimizedRepository were incorrectly passing git_branch_id as the first positional argument to parent constructor
+**Fix Applied (2025-08-23)**:
+- Fixed `OptimizedTaskRepository.__init__` to pass git_branch_id as keyword argument: `super().__init__(session=None, git_branch_id=git_branch_id)`
+- Fixed `SupabaseOptimizedRepository.__init__` similarly
+- The bug was that `super().__init__(git_branch_id)` was passing git_branch_id as the session parameter 
 - Modified `ListTasksUseCase.execute()` to include git_branch_id in filters dictionary
 - Enhanced `TaskRepository.find_by_criteria()` to handle git_branch_id from filters
 - Added proper user isolation for data security
