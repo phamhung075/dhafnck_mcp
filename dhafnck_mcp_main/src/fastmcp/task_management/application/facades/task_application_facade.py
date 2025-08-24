@@ -929,11 +929,16 @@ class TaskApplicationFacade:
             # Convert to lightweight summaries
             subtask_summaries = []
             for subtask in subtasks:
+                # Extract primitive values from value objects
+                subtask_id = subtask.id.value if hasattr(subtask.id, 'value') else str(subtask.id)
+                status = subtask.status.value if hasattr(subtask.status, 'value') else str(subtask.status)
+                priority = subtask.priority.value if hasattr(subtask.priority, 'value') else (subtask.priority if hasattr(subtask, 'priority') else "medium")
+                
                 summary = {
-                    "id": subtask.id,
+                    "id": subtask_id,
                     "title": subtask.title,
-                    "status": subtask.status,
-                    "priority": subtask.priority if hasattr(subtask, 'priority') else "medium",
+                    "status": status,
+                    "priority": priority,
                     "progress_percentage": subtask.progress_percentage if hasattr(subtask, 'progress_percentage') else 0
                 }
                 

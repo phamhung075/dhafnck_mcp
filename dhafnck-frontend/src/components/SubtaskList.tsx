@@ -292,15 +292,21 @@ export function SubtaskList({ projectId, taskTreeId, parentTaskId }: SubtaskList
           ) : (
             subtasks.map((subtask) => (
               <TableRow key={subtask.id} className="hover:bg-accent/30 transition-all">
-                <TableCell className="font-medium max-w-xs truncate" title={subtask.title}>{subtask.title}</TableCell>
+                <TableCell className="font-medium max-w-xs truncate" title={subtask.title}>{String(subtask.title)}</TableCell>
                 <TableCell>
-                  <Badge variant={statusColor[subtask.status || "pending"] || "outline"} className="capitalize">
-                    {subtask.status?.replace("_", " ") || "pending"}
+                  <Badge 
+                    variant={statusColor[subtask.status || "pending"] || "outline"} 
+                    className="capitalize"
+                  >
+                    {String(subtask.status?.replace("_", " ") || "pending")}
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={priorityColor[subtask.priority || "medium"] || "outline"} className="capitalize">
-                    {subtask.priority || "medium"}
+                  <Badge 
+                    variant={priorityColor[subtask.priority || "medium"] || "outline"} 
+                    className="capitalize"
+                  >
+                    {String(subtask.priority || "medium")}
                   </Badge>
                 </TableCell>
                 <TableCell className="max-w-xs">
@@ -313,7 +319,7 @@ export function SubtaskList({ projectId, taskTreeId, parentTaskId }: SubtaskList
                 </TableCell>
                 <TableCell>
                   {subtask.due_date ? (
-                    <span className="text-xs">{subtask.due_date}</span>
+                    <span className="text-xs">{String(subtask.due_date)}</span>
                   ) : (
                     <span className="text-muted-foreground text-xs">—</span>
                   )}
@@ -525,14 +531,23 @@ export function SubtaskList({ projectId, taskTreeId, parentTaskId }: SubtaskList
                 <p className="text-sm text-muted-foreground mt-2">{showDetails.description}</p>
               )}
               <div className="flex gap-2 mt-3 flex-wrap">
-                <Badge variant={statusColor[showDetails?.status || "pending"] || "outline"} className="capitalize px-3 py-1">
-                  Status: {showDetails?.status?.replace("_", " ") || "pending"}
+                <Badge 
+                  variant={statusColor[showDetails?.status || "pending"] || "outline"} 
+                  className="capitalize px-3 py-1"
+                >
+                  Status: {String(showDetails?.status?.replace("_", " ") || "pending")}
                 </Badge>
-                <Badge variant={priorityColor[showDetails?.priority || "medium"] || "outline"} className="capitalize px-3 py-1">
-                  Priority: {showDetails?.priority || "medium"}
+                <Badge 
+                  variant={priorityColor[showDetails?.priority || "medium"] || "outline"} 
+                  className="capitalize px-3 py-1"
+                >
+                  Priority: {String(showDetails?.priority || "medium")}
                 </Badge>
                 {showDetails?.completed !== undefined && (
-                  <Badge variant={showDetails.completed ? "default" : "secondary"} className="px-3 py-1">
+                  <Badge 
+                    variant={showDetails.completed ? "default" : "secondary"} 
+                    className="px-3 py-1"
+                  >
                     {showDetails.completed ? "Completed" : "Not Completed"}
                   </Badge>
                 )}

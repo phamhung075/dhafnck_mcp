@@ -475,7 +475,39 @@ export async function completeTask(task_id: string, completion_summary: string, 
 // Helper function to sanitize subtask data by removing non-serializable properties
 function sanitizeSubtask(subtask: any): Subtask {
   const { _events, _eventsCount, _maxListeners, ...cleanSubtask } = subtask;
-  return cleanSubtask;
+  
+  // Ensure all string fields are actually strings and not objects
+  const sanitized = { ...cleanSubtask };
+  
+  // Fields that should be strings
+  const stringFields = ['id', 'title', 'description', 'status', 'priority', 'due_date', 'parent_task_id'];
+  for (const field of stringFields) {
+    if (sanitized[field] !== undefined && sanitized[field] !== null) {
+      // If it's an object with a 'value' property, extract the value
+      if (typeof sanitized[field] === 'object' && 'value' in sanitized[field]) {
+        sanitized[field] = String(sanitized[field].value);
+      } else if (typeof sanitized[field] !== 'string') {
+        // Convert to string if it's not already
+        sanitized[field] = String(sanitized[field]);
+      }
+    }
+  }
+  
+  // Ensure assignees is an array of strings
+  if (sanitized.assignees) {
+    if (!Array.isArray(sanitized.assignees)) {
+      sanitized.assignees = [String(sanitized.assignees)];
+    } else {
+      sanitized.assignees = sanitized.assignees.map((a: any) => {
+        if (typeof a === 'object' && 'value' in a) {
+          return String(a.value);
+        }
+        return String(a);
+      });
+    }
+  }
+  
+  return sanitized;
 }
 
 // Helper function to extract data from nested response structure
@@ -490,6 +522,20 @@ function extractResponseData(toolResult: any): any {
 // Helper function to sanitize task data by removing non-serializable properties
 function sanitizeTask(task: any): Task {
   const { _events, _eventsCount, _maxListeners, ...cleanTask } = task;
+  
+  // Ensure string fields are actually strings and not objects
+  const stringFields = ['id', 'title', 'description', 'status', 'priority', 'due_date', 'details', 'estimated_effort'];
+  for (const field of stringFields) {
+    if (cleanTask[field] !== undefined && cleanTask[field] !== null) {
+      // If it's an object with a 'value' property, extract the value
+      if (typeof cleanTask[field] === 'object' && 'value' in cleanTask[field]) {
+        cleanTask[field] = String(cleanTask[field].value);
+      } else if (typeof cleanTask[field] === 'object') {
+        // Convert object to string if needed
+        cleanTask[field] = JSON.stringify(cleanTask[field]);
+      }
+    }
+  }
   
   // Debug logging for assignees
   if (cleanTask.assignees !== undefined) {
@@ -512,8 +558,11 @@ function sanitizeTask(task: any): Task {
           if (typeof assignee === 'string' && assignee.trim().length > 0) {
             return assignee.trim();
           }
-          // If it's an object with 'id' or 'name', extract it
+          // If it's an object with 'id', 'name', or 'value', extract it
           if (assignee && typeof assignee === 'object') {
+            if (assignee.value && typeof assignee.value === 'string') {
+              return assignee.value;
+            }
             if (assignee.id && typeof assignee.id === 'string') {
               return assignee.id;
             }

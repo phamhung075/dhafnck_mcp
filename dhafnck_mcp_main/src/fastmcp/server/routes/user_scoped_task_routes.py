@@ -508,19 +508,38 @@ async def get_subtask_summaries(
         status_counts = {"todo": 0, "in_progress": 0, "done": 0, "blocked": 0}
         
         for subtask_data in subtasks_data:
+            # Extract values from value objects if needed
+            subtask_id = subtask_data["id"]
+            if isinstance(subtask_id, dict) and "value" in subtask_id:
+                subtask_id = subtask_id["value"]
+            elif hasattr(subtask_id, "value"):
+                subtask_id = subtask_id.value
+                
+            status = subtask_data["status"]
+            if isinstance(status, dict) and "value" in status:
+                status = status["value"]
+            elif hasattr(status, "value"):
+                status = status.value
+                
+            priority = subtask_data["priority"]
+            if isinstance(priority, dict) and "value" in priority:
+                priority = priority["value"]
+            elif hasattr(priority, "value"):
+                priority = priority.value
+            
             summary = {
-                "id": subtask_data["id"],
+                "id": str(subtask_id),
                 "title": subtask_data["title"],
-                "status": subtask_data["status"],
-                "priority": subtask_data["priority"],
+                "status": str(status),
+                "priority": str(priority),
                 "assignees_count": len(subtask_data.get("assignees", [])),
-                "progress_percentage": subtask_data.get("progress_percentage")
+                "progress_percentage": subtask_data.get("progress_percentage", 0)
             }
             subtask_summaries.append(summary)
             
             # Count statuses for progress summary
-            if subtask_data["status"] in status_counts:
-                status_counts[subtask_data["status"]] += 1
+            if status in status_counts:
+                status_counts[status] += 1
         
         # Calculate progress summary
         total_subtasks = len(subtask_summaries)

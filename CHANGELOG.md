@@ -6,6 +6,35 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Fixed - React Error #31 When Listing Subtasks (2025-08-24)
+- **CRITICAL FIX**: Frontend crash when clicking on task to list subtasks due to objects being rendered as React children
+  
+  **ROOT CAUSE**: Backend API returning value objects with `{value: "..."}` structure instead of primitive values
+  
+  **BACKEND FIXES**:
+  1. `/dhafnck_mcp_main/src/fastmcp/server/routes/user_scoped_task_routes.py:510-542`
+     - Added value extraction logic to handle both dict and object value objects
+     - Properly converts id, status, and priority to primitive strings
+     - Fixed status counting to use extracted values
+  
+  2. `/dhafnck_mcp_main/src/fastmcp/task_management/application/facades/task_application_facade.py:932-943`
+     - Fixed source of the issue in TaskApplicationFacade
+     - Extracts primitive values from DDD value objects before returning
+  
+  **FRONTEND FIXES**:
+  1. `/dhafnck-frontend/src/components/ui/badge.tsx`
+     - Added type validation for variant prop
+     - Fallback to default variant if invalid type received
+  
+  2. `/dhafnck-frontend/src/components/SubtaskList.tsx`
+     - Wrapped all rendered text with String() to ensure primitive values
+     - Added safety checks for Badge variant props
+  
+  3. `/dhafnck-frontend/src/api.ts`
+     - Enhanced sanitizeSubtask and sanitizeTask functions
+     - Handles objects with 'value' properties
+     - Ensures all string fields are properly converted
+
 ### Fixed - V2 API Git Branch Filtering Complete Fix (2025-08-24)
 - **CRITICAL FIX**: Frontend branch filtering completely broken for authenticated users - Complete frontend+backend fix
   

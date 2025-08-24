@@ -13,16 +13,23 @@ const badgeVariants = {
 };
 
 export const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
-  ({ className, variant = "default", ...props }, ref) => (
-    <span
-      ref={ref}
-      className={cn(
-        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-        badgeVariants[variant],
-        className
-      )}
-      {...props}
-    />
-  )
+  ({ className, variant = "default", ...props }, ref) => {
+    // Ensure variant is a valid string value
+    const safeVariant = (typeof variant === 'string' && variant in badgeVariants) 
+      ? variant 
+      : "default";
+    
+    return (
+      <span
+        ref={ref}
+        className={cn(
+          "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+          badgeVariants[safeVariant],
+          className
+        )}
+        {...props}
+      />
+    );
+  }
 );
 Badge.displayName = "Badge"; 
