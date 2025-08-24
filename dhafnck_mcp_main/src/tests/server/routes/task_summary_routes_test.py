@@ -114,7 +114,7 @@ class TestTaskSummaryRoutes:
             mock_task_facade.list_tasks_summary.return_value = mock_task_facade_result
             
             mock_task_factory_instance = Mock()
-            mock_task_factory_instance.create_task_facade.return_value = mock_task_facade
+            mock_task_factory_instance.create_task_facade_with_git_branch_id.return_value = mock_task_facade
             MockTaskFactory.return_value = mock_task_factory_instance
 
             # Setup context facade
@@ -162,6 +162,57 @@ class TestTaskSummaryRoutes:
             assert first_task["has_context"] is True
 
     @pytest.mark.asyncio
+    async def test_get_task_summaries_uses_correct_facade_method(self, mock_user, mock_db_session):
+        """Test that get_task_summaries uses create_task_facade_with_git_branch_id method."""
+        with patch('fastmcp.server.routes.task_summary_routes.TaskRepositoryFactory'), \
+             patch('fastmcp.server.routes.task_summary_routes.SubtaskRepositoryFactory'), \
+             patch('fastmcp.server.routes.task_summary_routes.TaskFacadeFactory') as MockTaskFactory, \
+             patch('fastmcp.server.routes.task_summary_routes.UnifiedContextFacadeFactory'):
+
+            # Setup task facade
+            mock_task_facade = Mock()
+            mock_task_facade.count_tasks.return_value = {"success": True, "count": 1}
+            mock_task_facade.list_tasks_summary.return_value = {
+                "success": True,
+                "tasks": [{
+                    "id": "task-123",
+                    "title": "Test Task",
+                    "status": "todo",
+                    "priority": "high",
+                    "subtasks": [],
+                    "assignees": [],
+                    "dependencies": None,
+                    "created_at": "2024-01-01T00:00:00Z",
+                    "updated_at": "2024-01-02T00:00:00Z"
+                }]
+            }
+            
+            mock_task_factory_instance = Mock()
+            mock_task_factory_instance.create_task_facade_with_git_branch_id.return_value = mock_task_facade
+            MockTaskFactory.return_value = mock_task_factory_instance
+
+            # Call the function
+            response = await get_task_summaries(
+                git_branch_id="branch-456",
+                page=1,
+                limit=20,
+                include_counts=True,
+                status_filter=None,
+                priority_filter=None,
+                current_user=mock_user,
+                db=mock_db_session
+            )
+
+            # Verify the correct method was called with git_branch_id
+            mock_task_factory_instance.create_task_facade_with_git_branch_id.assert_called_once_with(
+                "default_project", "main", mock_user.id, "branch-456"
+            )
+
+            # Verify response
+            assert len(response["tasks"]) == 1
+            assert response["total"] == 1
+
+    @pytest.mark.asyncio
     async def test_get_task_summaries_missing_git_branch_id(self, mock_user, mock_db_session):
         """Test task summaries with missing git_branch_id."""
         # The function signature now requires git_branch_id as a parameter,
@@ -185,7 +236,7 @@ class TestTaskSummaryRoutes:
             }
             
             mock_task_factory_instance = Mock()
-            mock_task_factory_instance.create_task_facade.return_value = mock_task_facade
+            mock_task_factory_instance.create_task_facade_with_git_branch_id.return_value = mock_task_facade
             MockTaskFactory.return_value = mock_task_factory_instance
 
             response = await get_task_summaries(
@@ -551,7 +602,7 @@ class TestPaginationLogic:
             }
             
             mock_task_factory_instance = Mock()
-            mock_task_factory_instance.create_task_facade.return_value = mock_task_facade
+            mock_task_factory_instance.create_task_facade_with_git_branch_id.return_value = mock_task_facade
             MockTaskFactory.return_value = mock_task_factory_instance
 
             response = await get_task_summaries(
@@ -591,7 +642,7 @@ class TestPaginationLogic:
             }
             
             mock_task_factory_instance = Mock()
-            mock_task_factory_instance.create_task_facade.return_value = mock_task_facade
+            mock_task_factory_instance.create_task_facade_with_git_branch_id.return_value = mock_task_facade
             MockTaskFactory.return_value = mock_task_factory_instance
 
             response = await get_task_summaries(

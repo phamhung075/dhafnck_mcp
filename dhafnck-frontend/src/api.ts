@@ -140,9 +140,16 @@ export async function listTasks(params: any = {}): Promise<Task[]> {
   const useV2 = shouldUseV2Api();
   if (useV2) {
     try {
-      console.log('Attempting V2 API for listTasks...');
-      const response: any = await taskApiV2.getTasks();
+      console.log('Attempting V2 API for listTasks with params:', params);
+      
+      // Extract git_branch_id from params for V2 API
+      const { git_branch_id } = params;
+      const v2Params = git_branch_id ? { git_branch_id } : undefined;
+      
+      console.log('V2 API params:', v2Params);
+      const response: any = await taskApiV2.getTasks(v2Params);
       console.log('V2 API response:', response);
+      
       if (response && Array.isArray(response)) {
         console.log('V2 API success: returning array response');
         return response;

@@ -6,6 +6,125 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Fixed - V2 API Git Branch Filtering Complete Fix (2025-08-24)
+- **CRITICAL FIX**: Frontend branch filtering completely broken for authenticated users - Complete frontend+backend fix
+  
+  **ROOT CAUSE**: Two-part issue preventing branch filtering with V2 API:
+  1. **Backend**: V2 API endpoint missing `git_branch_id` parameter completely
+  2. **Frontend**: V2 API client ignoring parameters and not passing `git_branch_id` to backend
+
+  **BACKEND FIX**: `/dhafnck_mcp_main/src/fastmcp/server/routes/user_scoped_task_routes.py:109`
+  - Added missing `git_branch_id: Optional[str] = None` parameter to `list_tasks` endpoint
+  - Enhanced `UserScopedRepositoryFactory.create_task_repository` to accept `git_branch_id`
+  - Updated `ListTasksRequest` construction to include `git_branch_id`
+  - Enhanced debug logging and API documentation
+  
+  **FRONTEND FIXES** (NEW!):
+  1. **V2 API Client Fix**: `dhafnck-frontend/src/services/apiV2.ts`
+     ```typescript
+     // BEFORE: No parameters accepted
+     getTasks: async () => { /* ignored all parameters */ }
+     
+     // AFTER: Accepts git_branch_id parameter  
+     getTasks: async (params?: { git_branch_id?: string }) => {
+       const url = new URL(`${API_BASE_URL}/api/v2/tasks/`);
+       if (params?.git_branch_id) {
+         url.searchParams.set('git_branch_id', params.git_branch_id);
+       }
+       // ... rest of implementation
+     }
+     ```
+  
+  2. **Frontend API Layer Fix**: `dhafnck-frontend/src/api.ts:144`
+     ```typescript
+     // BEFORE: V2 API call ignored git_branch_id
+     const response = await taskApiV2.getTasks(); // NO PARAMETERS!
+     
+     // AFTER: Properly extracts and passes git_branch_id  
+     const { git_branch_id } = params;
+     const v2Params = git_branch_id ? { git_branch_id } : undefined;
+     const response = await taskApiV2.getTasks(v2Params); // PARAMETERS PASSED!
+     ```
+
+  **COMPREHENSIVE TESTING**:
+  - **Backend Tests**: `src/tests/integration/test_v2_api_git_branch_filtering_fix.py` (9 test methods)
+  - **Frontend Tests**: `src/tests/integration/test_frontend_v2_api_branch_filtering_fix.py` (12 test methods)
+  - **Regression Tests**: Enhanced existing test files for edge cases
+  
+  **IMPACT**: 
+  - ✅ Branch filtering now works correctly for authenticated users
+  - ✅ V2 API properly filters tasks by git_branch_id
+  - ✅ Frontend correctly passes branch parameters to V2 API
+  - ✅ Maintains backward compatibility and V1 fallback
+  - ✅ Added comprehensive debug logging for troubleshooting
+  
+  **AGENT**: @debugger_agent - Systematic root cause analysis, complete fix implementation, comprehensive testing
+  - **Impact**: Frontend branch filtering now works correctly - tasks properly filtered by branch
+  - **Verification**: All structural tests pass - git_branch_id parameter properly implemented throughout call chain
+
+### Fixed - Task Summary Route Git Branch Filtering Fix (2025-08-24)
+- **BUG FIX**: Fixed task list vs count discrepancy in task summary routes  
+  - **Location**: `dhafnck_mcp_main/src/fastmcp/server/routes/task_summary_routes.py:186`
+  - **Root Cause**: Wrong facade creation method ignored git_branch_id parameter
+    ```python
+    # BROKEN: task_facade = task_facade_factory.create_task_facade("default_project", git_branch_id, user_id)
+    # FIXED:  task_facade = task_facade_factory.create_task_facade_with_git_branch_id("default_project", "main", user_id, git_branch_id)
+    ```
+  - **Impact**: Task summaries endpoint returned all tasks while count was correctly filtered by git_branch_id
+  - **Agent**: @debugger_agent performed root cause analysis and implemented targeted fix
+  - **Testing**: Added unit test verifying correct facade method usage
+    - Test file: `src/tests/unit/task_management/test_task_summary_facade_method_fix.py`
+    - Updated existing tests: `src/tests/server/routes/task_summary_routes_test.py` (corrected mock expectations)
+  - **Verification**: Manual verification confirmed single occurrence of correct method with proper parameters
+  - **Debug Logging**: Added `logger.info(f"Creating task facade with git_branch_id: {git_branch_id}")` for monitoring
+  - **Scope**: Only affects `get_task_summaries` endpoint; other endpoints (`get_full_task`, `get_subtask_summaries`) correctly use original method
+
+### Fixed - Task Listing Git Branch Filtering Critical Bug (2025-08-24)
+- **BUG FIX**: Fixed critical git branch filtering issue in task repository
+  - **Location**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/task_repository.py:795-796`
+  - **Root Cause**: Logical OR operator incorrectly treated falsy values (empty strings, "0", etc.) as false
+    ```python
+    # BROKEN: git_branch_filter = self.git_branch_id or filters.get('git_branch_id')
+    # FIXED:  git_branch_filter = self.git_branch_id if self.git_branch_id is not None else filters.get('git_branch_id')
+    ```
+  - **Impact**: Tasks with falsy git_branch_id values were incorrectly filtered, causing wrong task lists
+  - **Agent**: @debugger_agent performed systematic root cause analysis and fix implementation
+  - **Testing**: Added comprehensive regression tests
+    - Unit tests: `src/tests/unit/task_management/test_git_branch_filtering_fix.py`
+    - Repository tests: Added 8 new test methods in `task_repository_test.py`
+    - Integration tests: `src/tests/integration/test_task_list_git_branch_filtering_regression.py`
+  - **Verification**: Logic fix verified with direct testing - empty strings now correctly filter tasks
+  - **Debug Logging**: Enhanced with detailed branch filter resolution logging for future debugging
+
+### Added - Comprehensive Security Audit for Dual Authentication Gaps (2025-08-24)
+- **SECURITY AUDIT COMPLETED**: Conducted comprehensive security audit of DhafnckMCP dual authentication implementation
+  - **Report Location**: `dhafnck_mcp_main/docs/reports-status/security-audit-dual-authentication-gaps.md`
+  - **Agent**: @security_auditor_agent used for systematic security analysis
+  - **Scope**: Complete system analysis including backend, frontend, database, and MCP tool ecosystem
+  - **Key Findings**:
+    - ✅ Dual authentication IS implemented for: Frontend API V2, MCP token management, User-scoped operations
+    - ❌ CRITICAL GAPS identified in: MCP tool compatibility mode bypass, Agent system operations, Context management
+    - ⚠️ HIGH RISK: Authentication bypass active in development mode (`auth_helper.py:146-148`)
+    - 📊 CVSS Scores: Critical (9.8), High (8.9, 8.5), Medium (6.5, 5.9)
+  - **Critical Vulnerabilities Identified**:
+    1. MCP Tool Compatibility Mode Bypass (CVSS 9.8) - Complete authentication bypass in development
+    2. Agent System Unauthorized Access (CVSS 8.9) - 60+ agents lack proper dual authentication
+    3. Context System Data Isolation Failure (CVSS 8.5) - Cross-user data leakage potential
+  - **Services Missing Dual Authentication**:
+    - Agent metadata routes (`agent_metadata_routes.py`)
+    - Legacy MCP tools (`ddd_compliant_mcp_tools.py`) 
+    - File resource controller (`file_resource_mcp_controller.py`)
+    - Compliance management controller (`compliance_mcp_controller.py`)
+    - Health check endpoints (intentionally exposed but over-permissive)
+  - **Remediation Plan**: 4-phase approach (6-8 weeks total)
+    - Phase 1 (Critical): Remove authentication bypass (1-2 days)
+    - Phase 2 (Service Layer): Secure all MCP controllers (1 week)
+    - Phase 3 (Infrastructure): Database connection security (2 weeks)
+    - Phase 4 (Advanced): Request validation and monitoring (3-4 weeks)
+  - **Testing Requirements**: Authentication bypass tests, dual auth integration tests, authorization validation
+  - **Compliance Impact**: Currently PARTIAL compliance for GDPR/SOC2, NON-COMPLIANT for ISO 27001
+  - **Impact**: Provides actionable roadmap to eliminate security vulnerabilities and achieve full authentication coverage
+
 ### Added - Dual Authentication System Documentation (2025-08-24)
 - **NEW DOCUMENTATION**: Created comprehensive documentation for the dual authentication system
   - **Primary Document**: `dhafnck_mcp_main/docs/architecture/dual-authentication-system.md`

@@ -864,3 +864,270 @@ class TestORMTaskRepository:
         assert len(result) == 1
         # Verify join was called for assignee filter
         mock_query.join.assert_called()
+    
+    # REGRESSION TESTS FOR GIT BRANCH FILTERING FIX
+    # Issue: Logical OR operator in git_branch_filter caused falsy values to be ignored
+    
+    def test_git_branch_filtering_with_constructor_value(self, mock_session, mock_task_model):
+        """Test that constructor git_branch_id is used correctly for filtering"""
+        # Test various git_branch_id values that might be falsy
+        test_cases = [
+            "normal-branch-id",      # Normal string
+            "",                      # Empty string (falsy)
+            "0",                     # String zero (falsy in some contexts)
+            "false",                 # String false
+            "null"                   # String null
+        ]
+        
+        for git_branch_id in test_cases:
+            # Create repository with mocked session
+            repository = ORMTaskRepository(
+                session=mock_session,
+                git_branch_id=git_branch_id,
+                user_id="test-user"
+            )
+            
+            # Mock the database session context manager
+            mock_context_session = Mock()
+            mock_context_session.__enter__ = Mock(return_value=mock_session)
+            mock_context_session.__exit__ = Mock(return_value=None)
+            
+            with patch.object(repository, 'get_db_session', return_value=mock_context_session):
+                mock_query = Mock()
+                mock_session.query.return_value = mock_query
+                mock_query.options.return_value = mock_query
+                mock_query.filter.return_value = mock_query
+                mock_query.order_by.return_value = mock_query
+                mock_query.all.return_value = [mock_task_model]
+                
+                repository.apply_user_filter = Mock(return_value=mock_query)
+                
+                # Call find_by_criteria without git_branch_id in filters
+                result = repository.find_by_criteria({})
+                
+                # Verify the constructor git_branch_id was used for filtering
+                # The filter should be applied regardless of whether git_branch_id is falsy
+                mock_query.filter.assert_called()
+                filter_calls = mock_query.filter.call_args_list
+                
+                # Find the call that filters by git_branch_id
+                git_branch_filter_applied = False
+                for call in filter_calls:
+                    call_str = str(call)
+                    if 'git_branch_id' in call_str and git_branch_id in call_str:
+                        git_branch_filter_applied = True
+                        break
+                
+                assert git_branch_filter_applied, f"Git branch filter not applied for value: {git_branch_id}"
+                assert len(result) == 1
+    
+    def test_git_branch_filtering_precedence(self, mock_session, mock_task_model):
+        """Test that constructor git_branch_id takes precedence over filters git_branch_id"""
+        constructor_branch_id = "constructor-branch"
+        filter_branch_id = "filter-branch"
+        
+        with patch.object(ORMTaskRepository, 'get_db_session', return_value=mock_session):
+            repository = ORMTaskRepository(
+                session=mock_session,
+                git_branch_id=constructor_branch_id,
+                user_id="test-user"
+            )
+            
+            mock_query = Mock()
+            repository.session.query.return_value = mock_query
+            mock_query.options.return_value = mock_query
+            mock_query.filter.return_value = mock_query
+            mock_query.order_by.return_value = mock_query
+            mock_query.all.return_value = [mock_task_model]
+            
+            repository.apply_user_filter = Mock(return_value=mock_query)
+            
+            # Call with git_branch_id in filters - constructor should take precedence
+            filters = {'git_branch_id': filter_branch_id}
+            result = repository.find_by_criteria(filters)
+            
+            # Verify constructor value was used, not filter value
+            filter_calls = mock_query.filter.call_args_list
+            constructor_used = any(
+                constructor_branch_id in str(call) 
+                for call in filter_calls
+            )
+            filter_used = any(
+                filter_branch_id in str(call) and constructor_branch_id not in str(call)
+                for call in filter_calls
+            )
+            
+            assert constructor_used, "Constructor git_branch_id should take precedence"
+            assert not filter_used, "Filter git_branch_id should not be used when constructor is set"
+            assert len(result) == 1
+    
+    def test_git_branch_filtering_fallback_to_filters(self, mock_session, mock_task_model):
+        """Test that filters git_branch_id is used when constructor git_branch_id is None"""
+        filter_branch_id = "filter-branch"
+        
+        with patch.object(ORMTaskRepository, 'get_db_session', return_value=mock_session):
+            repository = ORMTaskRepository(
+                session=mock_session,
+                git_branch_id=None,  # Constructor has None
+                user_id="test-user"
+            )
+            
+            mock_query = Mock()
+            repository.session.query.return_value = mock_query
+            mock_query.options.return_value = mock_query
+            mock_query.filter.return_value = mock_query
+            mock_query.order_by.return_value = mock_query
+            mock_query.all.return_value = [mock_task_model]
+            
+            repository.apply_user_filter = Mock(return_value=mock_query)
+            
+            # Call with git_branch_id in filters
+            filters = {'git_branch_id': filter_branch_id}
+            result = repository.find_by_criteria(filters)
+            
+            # Verify filter value was used
+            filter_calls = mock_query.filter.call_args_list
+            filter_used = any(
+                filter_branch_id in str(call) 
+                for call in filter_calls
+            )
+            
+            assert filter_used, "Filter git_branch_id should be used when constructor is None"
+            assert len(result) == 1
+    
+    def test_git_branch_filtering_no_filter_when_both_none(self, mock_session, mock_task_model):
+        """Test that no git_branch_id filter is applied when both constructor and filters are None"""
+        with patch.object(ORMTaskRepository, 'get_db_session', return_value=mock_session):
+            repository = ORMTaskRepository(
+                session=mock_session,
+                git_branch_id=None,
+                user_id="test-user"
+            )
+            
+            mock_query = Mock()
+            repository.session.query.return_value = mock_query
+            mock_query.options.return_value = mock_query
+            mock_query.filter.return_value = mock_query
+            mock_query.order_by.return_value = mock_query
+            mock_query.all.return_value = [mock_task_model]
+            
+            repository.apply_user_filter = Mock(return_value=mock_query)
+            
+            # Call without git_branch_id in filters
+            filters = {}
+            result = repository.find_by_criteria(filters)
+            
+            # Verify no git_branch_id filter was applied
+            filter_calls = mock_query.filter.call_args_list
+            git_branch_filter_applied = any(
+                'git_branch_id' in str(call) 
+                for call in filter_calls
+            )
+            
+            assert not git_branch_filter_applied, "No git_branch_id filter should be applied when both are None"
+            assert len(result) == 1
+    
+    def test_git_branch_filtering_debug_logging(self, mock_session, mock_task_model):
+        """Test that proper debug logging is generated for git branch filtering"""
+        git_branch_id = "test-branch"
+        
+        with patch.object(ORMTaskRepository, 'get_db_session', return_value=mock_session):
+            repository = ORMTaskRepository(
+                session=mock_session,
+                git_branch_id=git_branch_id,
+                user_id="test-user"
+            )
+            
+            mock_query = Mock()
+            repository.session.query.return_value = mock_query
+            mock_query.options.return_value = mock_query
+            mock_query.filter.return_value = mock_query
+            mock_query.order_by.return_value = mock_query
+            mock_query.all.return_value = [mock_task_model]
+            
+            repository.apply_user_filter = Mock(return_value=mock_query)
+            
+            # Mock logger to capture debug messages
+            with patch('fastmcp.task_management.infrastructure.repositories.orm.task_repository.logger') as mock_logger:
+                filters = {}
+                result = repository.find_by_criteria(filters)
+                
+                # Verify debug logging was called with proper messages
+                debug_calls = mock_logger.debug.call_args_list
+                
+                # Check for branch filter resolution log
+                resolution_logged = any(
+                    'Branch filter resolution:' in str(call) and git_branch_id in str(call)
+                    for call in debug_calls
+                )
+                
+                # Check for branch filter application log
+                application_logged = any(
+                    'Applying git_branch_id filter:' in str(call) and git_branch_id in str(call)
+                    for call in debug_calls
+                )
+                
+                assert resolution_logged, "Branch filter resolution should be logged"
+                assert application_logged, "Branch filter application should be logged"
+                assert len(result) == 1
+    
+    def test_git_branch_filtering_edge_cases(self, mock_session, mock_task_model):
+        """Test git branch filtering with various edge case values"""
+        edge_cases = [
+            (0, "numeric zero"),
+            (False, "boolean false"),
+            ([], "empty list"),
+            ({}, "empty dict"),
+            ("   ", "whitespace string"),
+        ]
+        
+        for edge_value, description in edge_cases:
+            with patch.object(ORMTaskRepository, 'get_db_session', return_value=mock_session):
+                repository = ORMTaskRepository(
+                    session=mock_session,
+                    git_branch_id=edge_value,
+                    user_id="test-user"
+                )
+                
+                mock_query = Mock()
+                repository.session.query.return_value = mock_query
+                mock_query.options.return_value = mock_query
+                mock_query.filter.return_value = mock_query
+                mock_query.order_by.return_value = mock_query
+                mock_query.all.return_value = [mock_task_model]
+                
+                repository.apply_user_filter = Mock(return_value=mock_query)
+                
+                # Should not raise exception and should handle edge case gracefully
+                try:
+                    result = repository.find_by_criteria({})
+                    # If the edge value is truthy and not None, it should be used for filtering
+                    if edge_value is not None and edge_value not in (False, 0, [], {}, ""):
+                        # Filter should be applied for non-falsy values
+                        mock_query.filter.assert_called()
+                    assert len(result) == 1
+                except Exception as e:
+                    pytest.fail(f"Edge case {description} ({edge_value}) caused exception: {e}")
+    
+    def test_git_branch_constructor_storage(self, mock_session):
+        """Test that constructor properly stores git_branch_id"""
+        test_branch_id = "stored-branch-id"
+        
+        with patch.object(ORMTaskRepository, 'get_db_session', return_value=mock_session):
+            repository = ORMTaskRepository(
+                session=mock_session,
+                git_branch_id=test_branch_id,
+                user_id="test-user"
+            )
+            
+            # Verify the git_branch_id was stored correctly
+            assert repository.git_branch_id == test_branch_id
+            
+            # Test with None
+            repository_none = ORMTaskRepository(
+                session=mock_session,
+                git_branch_id=None,
+                user_id="test-user"
+            )
+            
+            assert repository_none.git_branch_id is None

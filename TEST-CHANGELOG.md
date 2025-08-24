@@ -4,6 +4,76 @@ All notable changes to test files in the DhafnckMCP AI Agent Orchestration Platf
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [Semantic](https://semver.org/spec/v1.0.0.html)
 
+## [2025-08-24] - Test Updates for V2 API Git Branch Filtering Fix and Task Summary Route Facade Method Fix
+
+### Added - New Test Files for V2 API Git Branch Filtering Fix
+
+- **File**: `dhafnck_mcp_main/src/tests/integration/test_v2_api_git_branch_filtering_fix.py`
+  - New comprehensive integration tests for V2 API git branch filtering fix
+  - Tests that `/api/v2/tasks/` endpoint accepts `git_branch_id` parameter
+  - Verifies `UserScopedRepositoryFactory.create_task_repository` accepts `git_branch_id` parameter
+  - Validates `ListTasksRequest` construction with `git_branch_id`
+  - Tests `TaskRepository` constructor properly handles `git_branch_id` parameter
+  - Verifies API endpoint debug logging includes `git_branch_id` parameter
+  - Includes mock integration test for endpoint function call chain
+  - Tests optional parameter behavior (works with and without `git_branch_id`)
+  - Validates API documentation mentions `git_branch_id` parameter
+  - 9 test methods covering all aspects of the V2 API fix
+  - Comprehensive structural validation for frontend-backend compatibility
+
+### Added - New Test Files for Task Summary Route Fix
+
+- **File**: `dhafnck_mcp_main/src/tests/unit/task_management/test_task_summary_facade_method_fix.py`
+  - New comprehensive unit tests for task summary facade method fix
+  - Tests that `get_task_summaries` now uses `create_task_facade_with_git_branch_id` method
+  - Verifies logging was added for debugging git_branch_id parameter
+  - Confirms other endpoints (`get_full_task`, `get_subtask_summaries`) still use original method
+  - Includes method signature comparison and behavioral difference documentation
+  - 6 test methods covering all aspects of the facade method fix
+  - Comprehensive fix verification checklist for future reference
+
+### Updated - Existing Test Files for Task Summary Route Fix  
+
+- **File**: `dhafnck_mcp_main/src/tests/server/routes/task_summary_routes_test.py`
+  - Updated mock expectations for `get_task_summaries` tests to use `create_task_facade_with_git_branch_id`
+  - Fixed tests that were incorrectly changed to use new method (reverted `get_full_task` and `get_subtask_summaries` tests)
+  - Added specific test case `test_get_task_summaries_uses_correct_facade_method` to verify git_branch_id parameter passing
+  - Corrected 3 test methods to use correct facade creation method based on endpoint type
+  - Ensured test coverage matches actual implementation behavior
+
+## [2025-08-24] - Test Updates for Git Branch Filtering Fix and Performance Optimization
+
+### Added - New Test Files for Git Branch Filtering Regression Fix
+
+- **File**: `dhafnck_mcp_main/src/tests/unit/task_management/test_git_branch_filtering_fix.py`
+  - New comprehensive unit tests for git branch filtering logic fix
+  - Tests original broken OR logic vs fixed None-check logic
+  - Covers edge cases: empty strings, falsy values, None handling, precedence rules
+  - Includes realistic git branch scenarios and regression test cases
+  - 6 test methods covering all aspects of the filtering logic fix
+  - Validates that empty string git_branch_id now works correctly
+
+- **File**: `dhafnck_mcp_main/src/tests/integration/test_task_list_git_branch_filtering_regression.py`
+  - Integration tests for the git branch filtering regression fix
+  - Creates sample tasks with various git_branch_id values (including falsy ones)
+  - Tests constructor precedence over filters
+  - Tests fallback behavior when constructor is None
+  - Includes parametrized tests for all falsy string values that were problematic
+  - Validates that the fix resolves the exact regression issue
+
+### Updated - Existing Test Files for Git Branch Filtering Fix
+
+- **File**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/task_repository_test.py`
+  - Added 8 new test methods for git branch filtering regression prevention
+  - `test_git_branch_filtering_with_constructor_value` - Tests various falsy values
+  - `test_git_branch_filtering_precedence` - Tests constructor precedence over filters  
+  - `test_git_branch_filtering_fallback_to_filters` - Tests None fallback behavior
+  - `test_git_branch_filtering_no_filter_when_both_none` - Tests no filtering case
+  - `test_git_branch_filtering_debug_logging` - Tests enhanced debug logging
+  - `test_git_branch_filtering_edge_cases` - Tests edge case values
+  - `test_git_branch_constructor_storage` - Tests proper constructor storage
+  - All tests use proper mocking for database session context managers
+
 ## [2025-08-24] - Test Updates for Performance Optimization Features
 
 ### Updated - Existing Test Files

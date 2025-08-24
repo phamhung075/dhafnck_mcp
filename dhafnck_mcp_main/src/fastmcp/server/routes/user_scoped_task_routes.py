@@ -42,10 +42,10 @@ class UserScopedRepositoryFactory:
     """Factory for creating user-scoped repository instances"""
     
     @staticmethod
-    def create_task_repository(session: Session, user_id: str) -> TaskRepository:
-        """Create a user-scoped task repository"""
-        # Assuming TaskRepository has been updated to inherit from BaseUserScopedRepository
-        return TaskRepository(session).with_user(user_id)
+    def create_task_repository(session: Session, user_id: str, git_branch_id: str = None) -> TaskRepository:
+        """Create a user-scoped task repository with optional git_branch_id filtering"""
+        # Create repository with git_branch_id for filtering
+        return TaskRepository(session, git_branch_id=git_branch_id).with_user(user_id)
     
     @staticmethod
     def create_project_repository(session: Session, user_id: str) -> ProjectRepository:
@@ -106,6 +106,7 @@ async def create_task(
 async def list_tasks(
     task_status: Optional[str] = None,
     priority: Optional[str] = None,
+    git_branch_id: Optional[str] = None,  # Add git_branch_id parameter for branch filtering
     limit: int = 50,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -114,19 +115,27 @@ async def list_tasks(
     List all tasks for the authenticated user.
     
     Only returns tasks that belong to the current user,
-    ensuring data isolation.
+    ensuring data isolation. Can be filtered by git_branch_id
+    to show tasks from a specific branch only.
+    
+    Args:
+        task_status: Optional task status filter (todo, in_progress, done, etc.)
+        priority: Optional priority filter (low, medium, high, urgent, critical)
+        git_branch_id: Optional git branch UUID to filter tasks by specific branch
+        limit: Maximum number of tasks to return (default 50)
     """
     try:
         # Enhanced debug logging for task listing
         logger.debug("=" * 80)
         logger.debug(f"🔍 TASK LISTING REQUEST")
         logger.debug(f"📧 User: {current_user.email} (ID: {current_user.id})")
-        logger.debug(f"🎯 Filters: status={task_status}, priority={priority}, limit={limit}")
+        logger.debug(f"🎯 Filters: status={task_status}, priority={priority}, git_branch_id={git_branch_id}, limit={limit}")
         logger.debug(f"💾 Database session: {type(db)}")
         
-        # Create user-scoped repository
+        # Create user-scoped repository with git_branch_id filtering
         logger.debug("🏭 Creating user-scoped task repository...")
-        task_repo = UserScopedRepositoryFactory.create_task_repository(db, current_user.id)
+        logger.debug(f"🌿 Git branch ID for filtering: {git_branch_id}")
+        task_repo = UserScopedRepositoryFactory.create_task_repository(db, current_user.id, git_branch_id)
         logger.debug(f"✅ Task repository created: {type(task_repo)}")
         
         # Create facade with user context
@@ -137,6 +146,7 @@ async def list_tasks(
         # Build request
         logger.debug("📋 Building list request...")
         list_request = ListTasksRequest(
+            git_branch_id=git_branch_id,  # Add git_branch_id to the request
             status=task_status,
             priority=priority,
             limit=limit

@@ -792,8 +792,12 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
             logger.debug(f"[REPOSITORY] Applied user filter")
             
             # Apply git branch filter if set (from constructor or filters)
-            git_branch_filter = self.git_branch_id or filters.get('git_branch_id')
-            if git_branch_filter:
+            # Fix: Use proper None checking instead of falsy OR operator
+            git_branch_filter = self.git_branch_id if self.git_branch_id is not None else filters.get('git_branch_id')
+            
+            logger.debug(f"[REPOSITORY] Branch filter resolution: constructor={self.git_branch_id}, filters={filters.get('git_branch_id')}, resolved={git_branch_filter}")
+            
+            if git_branch_filter is not None:
                 logger.debug(f"[REPOSITORY] Applying git_branch_id filter: {git_branch_filter}")
                 query = query.filter(Task.git_branch_id == git_branch_filter)
             else:

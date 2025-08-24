@@ -181,9 +181,10 @@ async def get_task_summaries(
         user_id = current_user.id
         logger.info(f"Loading data for user: {current_user.email}")
         
-        # Initialize facades using proper factory pattern
+        # Initialize facades using proper factory pattern with git_branch_id
+        logger.info(f"Creating task facade with git_branch_id: {git_branch_id}")
         task_facade_factory = TaskFacadeFactory(task_repository_factory, subtask_repository_factory)
-        task_facade = task_facade_factory.create_task_facade("default_project", git_branch_id, user_id)
+        task_facade = task_facade_factory.create_task_facade_with_git_branch_id("default_project", "main", user_id, git_branch_id)
         
         context_factory = UnifiedContextFacadeFactory()
         context_facade = context_factory.create_facade()

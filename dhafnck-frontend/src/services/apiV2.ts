@@ -45,9 +45,16 @@ const handleResponse = async <T>(response: Response): Promise<T> => {
 
 // Task API V2 - User-isolated endpoints
 export const taskApiV2 = {
-  // Get all tasks for current user
-  getTasks: async () => {
-    const response = await fetch(`${API_BASE_URL}/api/v2/tasks/`, {
+  // Get all tasks for current user, optionally filtered by git_branch_id
+  getTasks: async (params?: { git_branch_id?: string }) => {
+    const url = new URL(`${API_BASE_URL}/api/v2/tasks/`);
+    
+    // Add git_branch_id as query parameter if provided
+    if (params?.git_branch_id) {
+      url.searchParams.set('git_branch_id', params.git_branch_id);
+    }
+    
+    const response = await fetch(url.toString(), {
       method: 'GET',
       headers: getAuthHeaders(),
     });
