@@ -256,5 +256,4 @@ volumes:
 
 networks:
   dhafnck-network:
-    external: true
     name: dhafnck-network

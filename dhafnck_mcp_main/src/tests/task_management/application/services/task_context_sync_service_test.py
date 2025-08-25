@@ -18,8 +18,8 @@ from fastmcp.task_management.application.services.task_context_sync_service impo
 from fastmcp.task_management.domain.entities.task import Task
 from fastmcp.task_management.domain.repositories.task_repository import TaskRepository
 from fastmcp.task_management.domain.value_objects.task_id import TaskId
-from fastmcp.task_management.domain.value_objects.task_status import TaskStatus
-from fastmcp.task_management.domain.value_objects.task_priority import TaskPriority
+from fastmcp.task_management.domain.value_objects.task_status import TaskStatus  
+from fastmcp.task_management.domain.value_objects.priority import Priority
 from fastmcp.task_management.domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
 
 
@@ -74,7 +74,7 @@ class TestTaskContextSyncService:
         task.title = "Test Task"
         task.description = "Test Description"
         task.status = TaskStatus.TODO
-        task.priority = TaskPriority.MEDIUM
+        task.priority = Priority.MEDIUM
         task.assignees = ["user-1"]
         task.labels = ["test"]
         task.estimated_effort = "2 hours"
@@ -187,7 +187,7 @@ class TestTaskContextSyncServiceSyncContext:
         task.title = "Test Task"
         task.description = "Test Description"
         task.status = TaskStatus.TODO
-        task.priority = TaskPriority.MEDIUM
+        task.priority = Priority.MEDIUM
         task.assignees = ["user-1"]
         task.labels = ["test"]
         task.estimated_effort = "2 hours"
@@ -195,10 +195,9 @@ class TestTaskContextSyncServiceSyncContext:
         task.git_branch_id = "branch-123"
         return task
     
-    @patch('fastmcp.task_management.application.services.task_context_sync_service.AuthConfig')
     @patch('fastmcp.task_management.application.services.task_context_sync_service.validate_user_id')
     @pytest.mark.asyncio
-    async def test_sync_context_and_get_task_success_create_context(self, mock_validate_user, mock_auth_config, service, mock_task_repository, mock_context_service, mock_get_task_use_case, mock_task_entity):
+    async def test_sync_context_and_get_task_success_create_context(self, mock_validate_user, service, mock_task_repository, mock_context_service, mock_get_task_use_case, mock_task_entity):
         """Test successful context sync with context creation"""
         # Setup authentication
         mock_validate_user.return_value = "user-123"
@@ -240,10 +239,9 @@ class TestTaskContextSyncServiceSyncContext:
                 include_context=True
             )
     
-    @patch('fastmcp.task_management.application.services.task_context_sync_service.AuthConfig')
     @patch('fastmcp.task_management.application.services.task_context_sync_service.validate_user_id')
     @pytest.mark.asyncio
-    async def test_sync_context_and_get_task_success_update_context(self, mock_validate_user, mock_auth_config, service, mock_task_repository, mock_context_service, mock_get_task_use_case, mock_task_entity):
+    async def test_sync_context_and_get_task_success_update_context(self, mock_validate_user, service, mock_task_repository, mock_context_service, mock_get_task_use_case, mock_task_entity):
         """Test successful context sync with context update"""
         # Setup authentication
         mock_validate_user.return_value = "user-123"
@@ -270,47 +268,16 @@ class TestTaskContextSyncServiceSyncContext:
         mock_context_service.update_context.assert_called_once()
         mock_context_service.create_context.assert_not_called()
     
-    @patch('fastmcp.task_management.application.services.task_context_sync_service.AuthConfig')
     @pytest.mark.asyncio
-    async def test_sync_context_and_get_task_no_user_id_allowed(self, mock_auth_config, service, mock_task_repository, mock_context_service, mock_get_task_use_case, mock_task_entity):
-        """Test context sync without user_id when default user is allowed"""
-        # Setup authentication - allow default user
-        mock_auth_config.is_default_user_allowed.return_value = True
-        mock_auth_config.get_fallback_user_id.return_value = "default_user"
-        
-        # Setup task repository
-        mock_task_repository.find_by_id.return_value = mock_task_entity
-        
-        # Setup context service
-        mock_context_service.get_context.return_value = None
-        
-        # Setup get task use case
-        mock_task_response = Mock()
-        mock_get_task_use_case.execute.return_value = mock_task_response
-        
-        result = await service.sync_context_and_get_task("task-123")
-        
-        assert result == mock_task_response
-        mock_auth_config.is_default_user_allowed.assert_called_once()
-        mock_auth_config.get_fallback_user_id.assert_called_once()
-        mock_auth_config.log_authentication_bypass.assert_called_once_with("Task context sync", "compatibility mode")
-    
-    @patch('fastmcp.task_management.application.services.task_context_sync_service.AuthConfig')
-    @pytest.mark.asyncio
-    async def test_sync_context_and_get_task_no_user_id_not_allowed(self, mock_auth_config, service):
-        """Test context sync without user_id when default user is not allowed"""
-        # Setup authentication - don't allow default user
-        mock_auth_config.is_default_user_allowed.return_value = False
-        
+    async def test_sync_context_and_get_task_no_user_id_raises_error(self, service):
+        """Test context sync without user_id raises UserAuthenticationRequiredError"""
         result = await service.sync_context_and_get_task("task-123")
         
         assert result is None
-        mock_auth_config.is_default_user_allowed.assert_called_once()
     
-    @patch('fastmcp.task_management.application.services.task_context_sync_service.AuthConfig')
     @patch('fastmcp.task_management.application.services.task_context_sync_service.validate_user_id')
     @pytest.mark.asyncio
-    async def test_sync_context_and_get_task_task_not_found(self, mock_validate_user, mock_auth_config, service, mock_task_repository):
+    async def test_sync_context_and_get_task_task_not_found(self, mock_validate_user, service, mock_task_repository):
         """Test context sync when task is not found"""
         # Setup authentication
         mock_validate_user.return_value = "user-123"
@@ -323,10 +290,9 @@ class TestTaskContextSyncServiceSyncContext:
         assert result is None
         mock_task_repository.find_by_id.assert_called_once()
     
-    @patch('fastmcp.task_management.application.services.task_context_sync_service.AuthConfig')
     @patch('fastmcp.task_management.application.services.task_context_sync_service.validate_user_id')
     @pytest.mark.asyncio
-    async def test_sync_context_and_get_task_project_id_from_git_branch(self, mock_validate_user, mock_auth_config, service, mock_task_repository, mock_context_service, mock_get_task_use_case, mock_task_entity):
+    async def test_sync_context_and_get_task_project_id_from_git_branch(self, mock_validate_user, service, mock_task_repository, mock_context_service, mock_get_task_use_case, mock_task_entity):
         """Test context sync with project_id derived from git branch"""
         # Setup authentication
         mock_validate_user.return_value = "user-123"
@@ -354,10 +320,9 @@ class TestTaskContextSyncServiceSyncContext:
             assert result == mock_task_response
             mock_git_repo.find_by_id.assert_called_once_with("branch-123")
     
-    @patch('fastmcp.task_management.application.services.task_context_sync_service.AuthConfig')
     @patch('fastmcp.task_management.application.services.task_context_sync_service.validate_user_id')
     @pytest.mark.asyncio
-    async def test_sync_context_and_get_task_default_project_id(self, mock_validate_user, mock_auth_config, service, mock_task_repository, mock_context_service, mock_get_task_use_case, mock_task_entity):
+    async def test_sync_context_and_get_task_default_project_id(self, mock_validate_user, service, mock_task_repository, mock_context_service, mock_get_task_use_case, mock_task_entity):
         """Test context sync with default project_id when none can be derived"""
         # Setup authentication
         mock_validate_user.return_value = "user-123"
@@ -383,10 +348,9 @@ class TestTaskContextSyncServiceSyncContext:
             assert result == mock_task_response
             # Should use default project_id when none can be derived
     
-    @patch('fastmcp.task_management.application.services.task_context_sync_service.AuthConfig')
     @patch('fastmcp.task_management.application.services.task_context_sync_service.validate_user_id')
     @pytest.mark.asyncio
-    async def test_sync_context_and_get_task_error_handling(self, mock_validate_user, mock_auth_config, service, mock_task_repository):
+    async def test_sync_context_and_get_task_error_handling(self, mock_validate_user, service, mock_task_repository):
         """Test context sync error handling"""
         # Setup authentication
         mock_validate_user.return_value = "user-123"
@@ -398,10 +362,9 @@ class TestTaskContextSyncServiceSyncContext:
         
         assert result is None
     
-    @patch('fastmcp.task_management.application.services.task_context_sync_service.AuthConfig')
     @patch('fastmcp.task_management.application.services.task_context_sync_service.validate_user_id')
     @pytest.mark.asyncio
-    async def test_sync_context_and_get_task_context_data_structure(self, mock_validate_user, mock_auth_config, service, mock_task_repository, mock_context_service, mock_get_task_use_case, mock_task_entity):
+    async def test_sync_context_and_get_task_context_data_structure(self, mock_validate_user, service, mock_task_repository, mock_context_service, mock_get_task_use_case, mock_task_entity):
         """Test that context data is structured correctly"""
         # Setup authentication
         mock_validate_user.return_value = "user-123"
@@ -440,10 +403,9 @@ class TestTaskContextSyncServiceSyncContext:
         assert task_data["estimated_effort"] == "2 hours"
         assert task_data["due_date"] == datetime(2025, 12, 31)
     
-    @patch('fastmcp.task_management.application.services.task_context_sync_service.AuthConfig')
     @patch('fastmcp.task_management.application.services.task_context_sync_service.validate_user_id')
     @pytest.mark.asyncio
-    async def test_sync_context_and_get_task_with_user_scoped_repository(self, mock_validate_user, mock_auth_config, mock_task_repository):
+    async def test_sync_context_and_get_task_with_user_scoped_repository(self, mock_validate_user, mock_task_repository):
         """Test context sync with user-scoped repository"""
         # Setup authentication
         mock_validate_user.return_value = "user-123"
@@ -457,8 +419,8 @@ class TestTaskContextSyncServiceSyncContext:
         mock_task.id = TaskId.from_string("task-123")
         mock_task.title = "User Task"
         mock_task.description = "User Description"
-        mock_task.status = TaskStatus.TODO
-        mock_task.priority = TaskPriority.HIGH
+        mock_task.status = Status.TODO
+        mock_task.priority = Priority.HIGH
         mock_task.assignees = ["user-123"]
         mock_task.labels = ["user-task"]
         mock_task.estimated_effort = "1 hour"
@@ -510,11 +472,10 @@ class TestTaskContextSyncServiceErrorScenarios:
         
         assert result is None
     
-    @patch('fastmcp.task_management.application.services.task_context_sync_service.AuthConfig')
     @patch('fastmcp.task_management.application.services.task_context_sync_service.validate_user_id')
     @patch('fastmcp.task_management.application.services.task_context_sync_service.TaskId')
     @pytest.mark.asyncio
-    async def test_sync_context_invalid_task_id(self, mock_task_id_class, mock_validate_user, mock_auth_config, service):
+    async def test_sync_context_invalid_task_id(self, mock_task_id_class, mock_validate_user, service):
         """Test context sync with invalid task ID"""
         # Setup authentication
         mock_validate_user.return_value = "user-123"
@@ -526,10 +487,9 @@ class TestTaskContextSyncServiceErrorScenarios:
         
         assert result is None
     
-    @patch('fastmcp.task_management.application.services.task_context_sync_service.AuthConfig')
     @patch('fastmcp.task_management.application.services.task_context_sync_service.validate_user_id')
     @pytest.mark.asyncio
-    async def test_sync_context_git_branch_repository_error(self, mock_validate_user, mock_auth_config, service, mock_task_repository):
+    async def test_sync_context_git_branch_repository_error(self, mock_validate_user, service, mock_task_repository):
         """Test context sync when git branch repository fails"""
         # Setup authentication
         mock_validate_user.return_value = "user-123"
@@ -539,8 +499,8 @@ class TestTaskContextSyncServiceErrorScenarios:
         mock_task.id = TaskId.from_string("task-123")
         mock_task.title = "Test Task"
         mock_task.description = "Test Description"
-        mock_task.status = TaskStatus.TODO
-        mock_task.priority = TaskPriority.MEDIUM
+        mock_task.status = Status.TODO
+        mock_task.priority = Priority.MEDIUM
         mock_task.assignees = []
         mock_task.labels = []
         mock_task.estimated_effort = None

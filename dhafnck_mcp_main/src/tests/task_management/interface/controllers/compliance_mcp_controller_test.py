@@ -4,11 +4,13 @@ Tests the compliance MCP controller including:
 - Tool registration and MCP integration
 - Compliance validation operations
 - Compliance dashboard generation
-- Compliant command execution
-- Audit trail retrieval
+- Compliant command execution with timeout handling
+- Audit trail retrieval with limit controls
+- Security level validation and enforcement
 - Authentication and user context handling
 - Error handling and validation
 - Edge cases and boundary conditions
+- Boolean parameter conversion and handling
 """
 
 import pytest
@@ -125,14 +127,8 @@ class TestComplianceMCPController:
             
             assert descriptions == {}
     
-    @patch('fastmcp.task_management.interface.controllers.compliance_mcp_controller.AuthConfig.is_default_user_allowed')
-    @patch('fastmcp.task_management.interface.controllers.compliance_mcp_controller.AuthConfig.get_fallback_user_id')
-    def test_validate_compliance_action(self, mock_get_fallback_user_id, mock_is_default_user_allowed):
-        """Test validate_compliance action."""
-        # Setup mocks
-        mock_is_default_user_allowed.return_value = True
-        mock_get_fallback_user_id.return_value = "compatibility-default-user"
-        
+    def test_validate_compliance_action_with_user_id(self):
+        """Test validate_compliance action with explicit user_id."""
         expected_result = {
             "success": True,
             "compliance_score": 0.95,
@@ -140,12 +136,13 @@ class TestComplianceMCPController:
         }
         self.mock_orchestrator.validate_operation.return_value = expected_result
         
-        # Test successful validation
+        # Test successful validation with explicit user_id
         result = self.controller.manage_compliance(
             action="validate_compliance",
             operation="create_file",
             file_path="/test/file.txt",
             content="test content",
+            user_id="explicit-user-123",
             security_level="public",
             audit_required=True
         )
@@ -155,14 +152,17 @@ class TestComplianceMCPController:
             operation="create_file",
             file_path="/test/file.txt",
             content="test content",
-            user_id="compatibility-default-user",
+            user_id="explicit-user-123",
             security_level="public",
             audit_required=True
         )
     
     def test_validate_compliance_missing_operation(self):
         """Test validate_compliance action with missing operation parameter."""
-        result = self.controller.manage_compliance(action="validate_compliance")
+        result = self.controller.manage_compliance(
+            action="validate_compliance",
+            user_id="test-user"  # Provide user_id to bypass auth check
+        )
         
         assert result["success"] is False
         assert result["error"] == "Missing required field: operation"
@@ -173,6 +173,18 @@ class TestComplianceMCPController:
         
         # Ensure orchestrator was not called
         self.mock_orchestrator.validate_operation.assert_not_called()
+    
+    def test_validate_compliance_no_user_authentication_returns_error(self):
+        """Test validate_compliance action without user authentication returns error response."""
+        result = self.controller.manage_compliance(
+            action="validate_compliance",
+            operation="create_file",
+            user_id=None  # No authentication
+        )
+        
+        assert result["success"] is False
+        assert "Compliance operation requires user authentication" in result["error"]
+        assert result["error_code"] == "INTERNAL_ERROR"
     
     def test_get_compliance_dashboard_action(self):
         """Test get_compliance_dashboard action."""
@@ -189,14 +201,8 @@ class TestComplianceMCPController:
         assert result == expected_result
         self.mock_orchestrator.get_compliance_dashboard.assert_called_once()
     
-    @patch('fastmcp.task_management.interface.controllers.compliance_mcp_controller.AuthConfig.is_default_user_allowed')
-    @patch('fastmcp.task_management.interface.controllers.compliance_mcp_controller.AuthConfig.get_fallback_user_id')
-    def test_execute_with_compliance_action(self, mock_get_fallback_user_id, mock_is_default_user_allowed):
-        """Test execute_with_compliance action."""
-        # Setup mocks
-        mock_is_default_user_allowed.return_value = True
-        mock_get_fallback_user_id.return_value = "compatibility-default-user"
-        
+    def test_execute_with_compliance_action_with_user_id(self):
+        """Test execute_with_compliance action with explicit user_id."""
         expected_result = {
             "success": True,
             "output": "Command executed successfully",
@@ -209,6 +215,7 @@ class TestComplianceMCPController:
             action="execute_with_compliance",
             command="ls -la",
             timeout="30",
+            user_id="explicit-user-123",
             audit_required=True
         )
         
@@ -223,13 +230,16 @@ class TestComplianceMCPController:
         self.mock_orchestrator.execute_with_compliance.assert_called_once_with(
             command="ls -la",
             timeout=30,
-            user_id="compatibility-default-user",
+            user_id="explicit-user-123",
             audit_required=True
         )
     
     def test_execute_with_compliance_missing_command(self):
         """Test execute_with_compliance action with missing command parameter."""
-        result = self.controller.manage_compliance(action="execute_with_compliance")
+        result = self.controller.manage_compliance(
+            action="execute_with_compliance",
+            user_id="test-user"  # Provide user_id to bypass auth check
+        )
         
         assert result["success"] is False
         assert result["error"] == "Missing required field: command"
@@ -240,6 +250,18 @@ class TestComplianceMCPController:
         
         # Ensure orchestrator was not called
         self.mock_orchestrator.execute_with_compliance.assert_not_called()
+    
+    def test_execute_with_compliance_no_user_authentication_returns_error(self):
+        """Test execute_with_compliance action without user authentication returns error response."""
+        result = self.controller.manage_compliance(
+            action="execute_with_compliance",
+            command="ls -la",
+            user_id=None  # No authentication
+        )
+        
+        assert result["success"] is False
+        assert "Compliance operation requires user authentication" in result["error"]
+        assert result["error_code"] == "INTERNAL_ERROR"
     
     def test_execute_with_compliance_long_command_truncation(self):
         """Test command truncation in metadata for long commands."""

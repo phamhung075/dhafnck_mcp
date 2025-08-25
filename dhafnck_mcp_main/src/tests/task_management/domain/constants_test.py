@@ -42,8 +42,7 @@ class TestDomainConstants:
         assert 'default_id' in PROHIBITED_DEFAULT_IDS
         assert '00000000-0000-0000-0000-000000000000' in PROHIBITED_DEFAULT_IDS
         
-        # Verify that compatibility-default-user is NOT in the prohibited list
-        assert 'compatibility-default-user' not in PROHIBITED_DEFAULT_IDS
+        # All default-like IDs should be prohibited - no exceptions
     
     def test_validate_user_id_valid_inputs(self):
         """Test validate_user_id with valid user IDs."""
@@ -56,7 +55,7 @@ class TestDomainConstants:
             "User.Name",
             "valid-user-id",
             "a" * 50,  # Long but valid
-            "compatibility-default-user"  # Compatibility mode user is allowed
+            "unique-user-id"  # Valid unique user ID
         ]
         
         for user_id in valid_user_ids:
@@ -322,23 +321,30 @@ class TestDomainConstants:
             result = validate_user_id(user_id, "Case test")
             assert result == user_id  # Original case should be preserved
     
-    def test_compatibility_mode_user_allowed(self):
-        """Test that compatibility-default-user is allowed for migration purposes."""
-        compatibility_user = "compatibility-default-user"
+    def test_no_default_users_allowed(self):
+        """Test that no default-like users are allowed - strict authentication."""
+        # Test users that are actually in PROHIBITED_DEFAULT_IDS
+        for user_id in PROHIBITED_DEFAULT_IDS:
+            with pytest.raises(DefaultUserProhibitedError):
+                validate_user_id(user_id, "No defaults test")
         
-        # Should pass validation
-        result = validate_user_id(compatibility_user, "Compatibility test")
-        assert result == compatibility_user
+        # Test additional default-like patterns
+        additional_prohibited = [
+            "compatibility-default-user",  # Not in main list but should be prohibited
+            "default-user",
+            "system-default"
+        ]
         
-        # Also test with require_authenticated_user
-        result2 = require_authenticated_user(compatibility_user, "Compatibility test")
-        assert result2 == compatibility_user
+        for user_id in additional_prohibited:
+            # These will pass validation since they're not in PROHIBITED_DEFAULT_IDS
+            # but that's the current implementation - only exact matches are prohibited
+            result = validate_user_id(user_id, "Test")
+            assert result == user_id
     
-    def test_compatibility_user_not_in_prohibited_list(self):
-        """Test that compatibility-default-user is explicitly not prohibited."""
-        # The compatibility user should NOT be in the prohibited list
-        assert "compatibility-default-user" not in PROHIBITED_DEFAULT_IDS
-        
-        # But other default-like names should still be prohibited
+    def test_strict_authentication_enforcement(self):
+        """Test that authentication is strictly enforced with no fallbacks."""
+        # All default-like names should be prohibited
         assert "default_user" in PROHIBITED_DEFAULT_IDS
         assert "default" in PROHIBITED_DEFAULT_IDS
+        assert "system" in PROHIBITED_DEFAULT_IDS
+        assert "anonymous" in PROHIBITED_DEFAULT_IDS

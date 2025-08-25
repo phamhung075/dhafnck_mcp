@@ -91,31 +91,9 @@ class TestAgentMCPController:
             )
     
     @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.AuthConfig')
-    def test_get_facade_for_request_compatibility_mode(self, mock_auth_config, mock_get_user_id):
-        """Test getting facade with compatibility mode."""
-        mock_get_user_id.return_value = None
-        mock_auth_config.is_default_user_allowed.return_value = True
-        mock_auth_config.get_fallback_user_id.return_value = "compatibility-user"
-        project_id = "test-project"
-        
-        result = self.controller._get_facade_for_request(project_id)
-        
-        assert result == self.mock_facade
-        mock_auth_config.log_authentication_bypass.assert_called_once_with(
-            "Agent facade creation", "compatibility mode"
-        )
-        self.mock_facade_factory.create_agent_facade.assert_called_once_with(
-            project_id=project_id,
-            user_id="compatibility-user"
-        )
-    
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.AuthConfig')
-    def test_get_facade_for_request_no_auth(self, mock_auth_config, mock_get_user_id):
+    def test_get_facade_for_request_no_auth_raises_error(self, mock_get_user_id):
         """Test getting facade without authentication raises error."""
         mock_get_user_id.return_value = None
-        mock_auth_config.is_default_user_allowed.return_value = False
         
         with pytest.raises(UserAuthenticationRequiredError) as exc_info:
             self.controller._get_facade_for_request("test-project")
