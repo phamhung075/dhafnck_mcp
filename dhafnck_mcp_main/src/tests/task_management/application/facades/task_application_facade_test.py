@@ -177,27 +177,20 @@ class TestTaskApplicationFacadeCreateTask:
         assert "cannot exceed 200 characters" in result["error"]
     
     @patch('fastmcp.task_management.application.facades.task_application_facade.get_current_user_id')
-    @patch('fastmcp.task_management.application.facades.task_application_facade.AuthConfig')
-    def test_create_task_compatibility_mode(self, mock_auth_config, mock_get_user_id, facade):
-        """Test task creation in compatibility mode"""
-        # Mock authentication failure with compatibility mode fallback
+    def test_create_task_authentication_required(self, mock_get_user_id, facade):
+        """Test task creation fails when no authentication is available"""
+        # No authentication available
+        mock_get_user_id.return_value = None
+        
+        request = CreateTaskRequest(
+            title="Test Task",
+            description="Test Description", 
+            git_branch_id="branch-123"
+        )
+        
         from fastmcp.task_management.domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
-        mock_get_user_id.side_effect = UserAuthenticationRequiredError("Authentication required")
-        mock_auth_config.is_default_user_allowed.return_value = True
-        mock_auth_config.get_fallback_user_id.return_value = "compatibility-default-user"
-        
-        # Mock use case response
-        mock_response = Mock()
-        mock_response.success = True
-        mock_response.task = Mock()
-        mock_response.task.id = "task-123"
-        mock_response.message = "Task created successfully"
-        
-        facade._create_task_use_case.execute.return_value = mock_response
-        
-        # Mock context sync service
-        mock_sync_response = Mock()
-        facade._task_context_sync_service.sync_context_and_get_task = AsyncMock(return_value=mock_sync_response)
+        with pytest.raises(UserAuthenticationRequiredError):
+            facade.create_task(request)
         
         request = CreateTaskRequest(
             title="Test Task",

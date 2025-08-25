@@ -18,8 +18,8 @@ from uuid import uuid4
 from fastmcp.task_management.application.use_cases.create_project import CreateProjectUseCase
 from fastmcp.task_management.domain.entities.project import Project
 from fastmcp.task_management.domain.repositories.project_repository import ProjectRepository
-from fastmcp.shared.infrastructure.auth.auth_config import AuthConfig
-from fastmcp.shared.infrastructure.auth.exceptions import UserAuthenticationRequiredError
+from fastmcp.config.auth_config import AuthConfig
+from fastmcp.task_management.domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
 
 
 class TestCreateProjectUseCase:
@@ -116,8 +116,10 @@ class TestCreateProjectUseCase:
         
         # Verify project entity has main branch
         saved_project = self.mock_repository.save.call_args[0][0]
-        assert "main" in saved_project.git_branchs
-        main_branch = saved_project.git_branchs["main"]
+        assert len(saved_project.git_branchs) == 1
+        # Get the first (and only) branch
+        branch_id = list(saved_project.git_branchs.keys())[0]
+        main_branch = saved_project.git_branchs[branch_id]
         assert main_branch.name == "main"
         assert main_branch.description == "Main task tree for the project"
     
@@ -142,8 +144,8 @@ class TestCreateProjectUseCase:
         assert "Unexpected error" in result["error"]
     
     @pytest.mark.asyncio
-    @patch('fastmcp.task_management.application.use_cases.create_project.UnifiedContextFacadeFactory')
-    @patch('fastmcp.task_management.application.use_cases.create_project.AuthConfig')
+    @patch('fastmcp.task_management.application.factories.unified_context_facade_factory.UnifiedContextFacadeFactory')
+    @patch('fastmcp.config.auth_config.AuthConfig')
     async def test_create_project_context_creation_success(self, mock_auth_config, mock_context_factory):
         """Test successful project context creation."""
         # Setup authentication
@@ -177,8 +179,8 @@ class TestCreateProjectUseCase:
         assert context_call[1]["data"]["name"] == "Test Project"
     
     @pytest.mark.asyncio
-    @patch('fastmcp.task_management.application.use_cases.create_project.UnifiedContextFacadeFactory')
-    @patch('fastmcp.task_management.application.use_cases.create_project.AuthConfig')
+    @patch('fastmcp.task_management.application.factories.unified_context_facade_factory.UnifiedContextFacadeFactory')
+    @patch('fastmcp.config.auth_config.AuthConfig')
     async def test_create_project_context_creation_failure(self, mock_auth_config, mock_context_factory):
         """Test project creation continues even if context creation fails."""
         # Setup authentication
@@ -200,8 +202,8 @@ class TestCreateProjectUseCase:
         assert result["project"]["name"] == "Test Project"
     
     @pytest.mark.asyncio
-    @patch('fastmcp.task_management.application.use_cases.create_project.UnifiedContextFacadeFactory')
-    @patch('fastmcp.task_management.application.use_cases.create_project.AuthConfig')
+    @patch('fastmcp.task_management.application.factories.unified_context_facade_factory.UnifiedContextFacadeFactory')
+    @patch('fastmcp.config.auth_config.AuthConfig')
     async def test_create_project_context_creation_exception(self, mock_auth_config, mock_context_factory):
         """Test project creation continues even if context creation throws exception."""
         # Setup authentication
@@ -219,8 +221,8 @@ class TestCreateProjectUseCase:
         assert result["project"]["name"] == "Test Project"
     
     @pytest.mark.asyncio
-    @patch('fastmcp.task_management.application.use_cases.create_project.request')
-    @patch('fastmcp.task_management.application.use_cases.create_project.UnifiedContextFacadeFactory')
+    @patch('builtins.request')
+    @patch('fastmcp.task_management.application.factories.unified_context_facade_factory.UnifiedContextFacadeFactory')
     async def test_create_project_context_with_request_user(self, mock_context_factory, mock_request):
         """Test context creation uses user ID from request."""
         # Setup request with user_id
@@ -311,10 +313,10 @@ class TestCreateProjectUseCase:
         
         use_case = CreateProjectUseCase(self.mock_repository)
         
-        with patch("fastmcp.shared.infrastructure.auth.auth_validation.validate_user_id") as mock_validate:
+        with patch("fastmcp.task_management.domain.constants.validate_user_id") as mock_validate:
             mock_validate.return_value = None  # Valid user_id
             
-            with patch("fastmcp.shared.interfaces.context.unified_context_facade_factory.UnifiedContextFacadeFactory") as mock_factory:
+            with patch("fastmcp.task_management.application.factories.unified_context_facade_factory.UnifiedContextFacadeFactory") as mock_factory:
                 mock_facade = AsyncMock()
                 mock_facade.create_context = AsyncMock(return_value={"success": True})
                 mock_factory.return_value.create_facade = MagicMock(return_value=mock_facade)
@@ -343,10 +345,10 @@ class TestCreateProjectUseCase:
         
         use_case = CreateProjectUseCase(self.mock_repository)
         
-        with patch("fastmcp.shared.infrastructure.auth.auth_config.AuthConfig.is_default_user_allowed") as mock_auth:
+        with patch("fastmcp.config.auth_config.AuthConfig.is_default_user_allowed") as mock_auth:
             mock_auth.return_value = True  # Compatibility mode
             
-            with patch("fastmcp.shared.infrastructure.auth.auth_config.AuthConfig.log_authentication_bypass") as mock_log:
+            with patch("fastmcp.config.auth_config.AuthConfig.log_authentication_bypass") as mock_log:
                 result = await use_case.execute(
                     name="Test Project",
                     description="Test Description"
@@ -367,7 +369,7 @@ class TestCreateProjectUseCase:
         
         use_case = CreateProjectUseCase(self.mock_repository)
         
-        with patch("fastmcp.shared.infrastructure.auth.auth_config.AuthConfig.is_default_user_allowed") as mock_auth:
+        with patch("fastmcp.config.auth_config.AuthConfig.is_default_user_allowed") as mock_auth:
             mock_auth.return_value = False  # Strict mode
             
             # Should still succeed but without context creation
@@ -386,7 +388,7 @@ class TestCreateProjectUseCase:
         
         use_case = CreateProjectUseCase(self.mock_repository)
         
-        with patch("fastmcp.shared.infrastructure.auth.auth_validation.validate_user_id") as mock_validate:
+        with patch("fastmcp.task_management.domain.constants.validate_user_id") as mock_validate:
             mock_validate.side_effect = ValueError("Invalid user ID format")
             
             # Should still create project but without context
@@ -405,10 +407,10 @@ class TestCreateProjectUseCase:
         
         use_case = CreateProjectUseCase(self.mock_repository)
         
-        with patch("fastmcp.shared.infrastructure.auth.auth_validation.validate_user_id") as mock_validate:
+        with patch("fastmcp.task_management.domain.constants.validate_user_id") as mock_validate:
             mock_validate.return_value = None
             
-            with patch("fastmcp.shared.interfaces.context.unified_context_facade_factory.UnifiedContextFacadeFactory") as mock_factory:
+            with patch("fastmcp.task_management.application.factories.unified_context_facade_factory.UnifiedContextFacadeFactory") as mock_factory:
                 mock_factory.side_effect = Exception("Factory creation failed")
                 
                 # Should still create project
@@ -428,11 +430,11 @@ class TestCreateProjectUseCase:
         
         use_case = CreateProjectUseCase(self.mock_repository)
         
-        with patch("fastmcp.shared.infrastructure.auth.auth_config.AuthConfig.is_default_user_allowed") as mock_auth:
+        with patch("fastmcp.config.auth_config.AuthConfig.is_default_user_allowed") as mock_auth:
             mock_auth.return_value = True
             
-            with patch("fastmcp.shared.infrastructure.auth.auth_config.AuthConfig.log_authentication_bypass") as mock_log:
-                with patch("fastmcp.shared.infrastructure.auth.auth_config.AuthConfig.get_default_user_id") as mock_default:
+            with patch("fastmcp.config.auth_config.AuthConfig.log_authentication_bypass") as mock_log:
+                with patch("fastmcp.config.auth_config.AuthConfig.get_default_user_id") as mock_default:
                     mock_default.return_value = "default_user"
                     
                     result = await use_case.execute(

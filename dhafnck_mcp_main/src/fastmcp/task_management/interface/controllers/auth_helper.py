@@ -19,7 +19,7 @@ try:
     from fastmcp.auth.mcp_integration.user_context_middleware import get_current_user_id
     USER_CONTEXT_AVAILABLE = True
 except ImportError:
-    logger.warning("User context middleware not available - using fallback user ID extraction")
+    logger.warning("User context middleware not available")
     get_current_user_id = lambda: None
     USER_CONTEXT_AVAILABLE = False
 
@@ -69,7 +69,6 @@ def get_authenticated_user_id(provided_user_id: Optional[str] = None, operation_
     1. Provided user_id parameter
     2. Custom user context middleware 
     3. MCP authentication context
-    4. Compatibility mode (if enabled)
     
     Args:
         provided_user_id: User ID provided explicitly (takes precedence)

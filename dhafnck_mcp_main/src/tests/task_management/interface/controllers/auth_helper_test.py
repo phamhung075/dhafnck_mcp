@@ -97,38 +97,31 @@ class TestGetAuthenticatedUserId:
             assert result == "context_user"
             mock_validate.assert_called_once_with("context_user", "test_op")
     
+    @patch('fastmcp.task_management.interface.controllers.auth_helper.get_user_id_from_request_state')
     @patch('fastmcp.task_management.interface.controllers.auth_helper.get_current_user_id')
-    def test_custom_context_middleware_returns_none(self, mock_get_current_user_id):
-        """Test when custom context middleware returns None."""
+    def test_custom_context_middleware_returns_none(self, mock_get_current_user_id, mock_get_request_state):
+        """Test when custom context middleware returns None and authentication fails."""
         mock_get_current_user_id.return_value = None
+        mock_get_request_state.return_value = None
         
-        with patch('fastmcp.task_management.interface.controllers.auth_helper.AuthConfig') as mock_config:
-            mock_config.is_default_user_allowed.return_value = True
-            mock_config.get_fallback_user_id.return_value = "fallback_user"
+        with patch('mcp.server.auth.context.auth_context') as mock_context:
+            mock_context.get.return_value = None
             
-            with patch('fastmcp.task_management.domain.constants.validate_user_id') as mock_validate:
-                mock_validate.return_value = "fallback_user"
-                
-                result = get_authenticated_user_id(None, "test_op")
-                
-                assert result == "fallback_user"
-                mock_config.log_authentication_bypass.assert_called_once_with("test_op", "compatibility mode")
+            with pytest.raises(UserAuthenticationRequiredError):
+                get_authenticated_user_id(None, "test_op")
     
+    @patch('fastmcp.task_management.interface.controllers.auth_helper.get_user_id_from_request_state')
     @patch('fastmcp.task_management.interface.controllers.auth_helper.get_current_user_id')
-    def test_custom_context_middleware_exception(self, mock_get_current_user_id):
-        """Test when custom context middleware raises exception."""
+    def test_custom_context_middleware_exception(self, mock_get_current_user_id, mock_get_request_state):
+        """Test when custom context middleware raises exception and authentication fails."""
         mock_get_current_user_id.side_effect = Exception("Context error")
+        mock_get_request_state.return_value = None
         
-        with patch('fastmcp.task_management.interface.controllers.auth_helper.AuthConfig') as mock_config:
-            mock_config.is_default_user_allowed.return_value = True
-            mock_config.get_fallback_user_id.return_value = "fallback_user"
+        with patch('mcp.server.auth.context.auth_context') as mock_context:
+            mock_context.get.return_value = None
             
-            with patch('fastmcp.task_management.domain.constants.validate_user_id') as mock_validate:
-                mock_validate.return_value = "fallback_user"
-                
-                result = get_authenticated_user_id(None, "test_op")
-                
-                assert result == "fallback_user"
+            with pytest.raises(UserAuthenticationRequiredError):
+                get_authenticated_user_id(None, "test_op")
     
     @patch('fastmcp.task_management.interface.controllers.auth_helper.get_current_user_id')
     def test_mcp_auth_context_with_user_id(self, mock_get_current_user_id):
@@ -148,10 +141,12 @@ class TestGetAuthenticatedUserId:
                 
                 assert result == "mcp_user"
     
+    @patch('fastmcp.task_management.interface.controllers.auth_helper.get_user_id_from_request_state')
     @patch('fastmcp.task_management.interface.controllers.auth_helper.get_current_user_id')
-    def test_mcp_auth_context_with_client_id(self, mock_get_current_user_id):
+    def test_mcp_auth_context_with_client_id(self, mock_get_current_user_id, mock_get_request_state):
         """Test MCP auth context with client_id attribute."""
         mock_get_current_user_id.return_value = None
+        mock_get_request_state.return_value = None
         
         mock_auth_context = Mock()
         mock_auth_context.client_id = "mcp_client"
@@ -168,158 +163,132 @@ class TestGetAuthenticatedUserId:
                 
                 assert result == "mcp_client"
     
+    @patch('fastmcp.task_management.interface.controllers.auth_helper.get_user_id_from_request_state')
     @patch('fastmcp.task_management.interface.controllers.auth_helper.get_current_user_id')
-    def test_mcp_auth_context_unavailable(self, mock_get_current_user_id):
-        """Test when MCP auth context is unavailable."""
+    def test_mcp_auth_context_unavailable(self, mock_get_current_user_id, mock_get_request_state):
+        """Test when MCP auth context is unavailable and authentication fails."""
         mock_get_current_user_id.return_value = None
+        mock_get_request_state.return_value = None
         
         with patch('mcp.server.auth.context.auth_context') as mock_context:
             mock_context.get.side_effect = ImportError("MCP not available")
             
-            with patch('fastmcp.task_management.interface.controllers.auth_helper.AuthConfig') as mock_config:
-                mock_config.is_default_user_allowed.return_value = True
-                mock_config.get_fallback_user_id.return_value = "fallback_user"
-                
-                with patch('fastmcp.task_management.domain.constants.validate_user_id') as mock_validate:
-                    mock_validate.return_value = "fallback_user"
-                    
-                    result = get_authenticated_user_id(None, "test_op")
-                    
-                    assert result == "fallback_user"
+            with pytest.raises(UserAuthenticationRequiredError):
+                get_authenticated_user_id(None, "test_op")
     
-    @patch('os.getenv')
+    @patch('fastmcp.task_management.interface.controllers.auth_helper.get_user_id_from_request_state')
     @patch('fastmcp.task_management.interface.controllers.auth_helper.get_current_user_id')
-    def test_compatibility_mode_disabled_raises_error(self, mock_get_current_user_id, mock_getenv):
-        """Test that error is raised when compatibility mode is disabled."""
+    def test_strict_authentication_no_fallback(self, mock_get_current_user_id, mock_get_request_state):
+        """Test that error is raised when no authentication sources are available."""
         mock_get_current_user_id.return_value = None
-        mock_getenv.return_value = 'production'  # Not in development
+        mock_get_request_state.return_value = None
         
         with patch('mcp.server.auth.context.auth_context') as mock_context:
             mock_context.get.return_value = None
             
-            with patch('fastmcp.task_management.interface.controllers.auth_helper.AuthConfig') as mock_config:
-                mock_config.is_default_user_allowed.return_value = False
-                
-                with pytest.raises(UserAuthenticationRequiredError):
-                    get_authenticated_user_id(None, "test_op")
+            with pytest.raises(UserAuthenticationRequiredError):
+                get_authenticated_user_id(None, "test_op")
     
-    @patch('fastmcp.task_management.interface.controllers.auth_helper.get_current_user_id')
-    def test_compatibility_mode_enabled_uses_fallback(self, mock_get_current_user_id):
-        """Test compatibility mode uses fallback user ID."""
+    @patch('fastmcp.task_management.interface.controllers.auth_helper.get_user_id_from_request_state')
+    @patch('fastmcp.task_management.interface.controllers.auth_helper.get_current_user_id')  
+    def test_mcp_authenticated_user_with_access_token(self, mock_get_current_user_id, mock_get_request_state):
+        """Test MCP AuthenticatedUser with access token client_id."""
         mock_get_current_user_id.return_value = None
+        mock_get_request_state.return_value = None
+        
+        # Mock AuthenticatedUser with access_token
+        from unittest.mock import Mock
+        mock_auth_user = Mock()
+        mock_auth_user.access_token = Mock()
+        mock_auth_user.access_token.client_id = "mcp_client_123"
         
         with patch('mcp.server.auth.context.auth_context') as mock_context:
-            mock_context.get.return_value = None
-            
-            with patch('fastmcp.task_management.interface.controllers.auth_helper.AuthConfig') as mock_config:
-                mock_config.is_default_user_allowed.return_value = True
-                mock_config.get_fallback_user_id.return_value = "fallback_user"
+            with patch('mcp.server.auth.middleware.bearer_auth.AuthenticatedUser') as mock_authenticated_user:
+                mock_context.get.return_value = mock_auth_user
                 
-                with patch('fastmcp.task_management.domain.constants.validate_user_id') as mock_validate:
-                    mock_validate.return_value = "fallback_user"
-                    
-                    result = get_authenticated_user_id(None, "test_op")
-                    
-                    assert result == "fallback_user"
-                    mock_config.log_authentication_bypass.assert_called_once_with("test_op", "compatibility mode")
-    
-    @patch('os.getenv')
-    @patch('fastmcp.task_management.interface.controllers.auth_helper.get_current_user_id')
-    def test_dev_environment_temporary_fix(self, mock_get_current_user_id, mock_getenv):
-        """Test temporary development environment fix for git branch authentication."""
-        mock_get_current_user_id.return_value = None
-        
-        # Test with different development environment values
-        dev_environments = ['development', 'dev', '']  # Empty string for local dev
-        
-        for env_value in dev_environments:
-            mock_getenv.return_value = env_value
-            
-            with patch('mcp.server.auth.context.auth_context') as mock_context:
-                mock_context.get.return_value = None
-                
-                with patch('fastmcp.task_management.interface.controllers.auth_helper.AuthConfig') as mock_config:
-                    mock_config.is_default_user_allowed.return_value = False
-                    mock_config.log_authentication_bypass = Mock()
+                # Make isinstance check return True for our mock
+                with patch('builtins.isinstance') as mock_isinstance:
+                    mock_isinstance.return_value = True
                     
                     with patch('fastmcp.task_management.domain.constants.validate_user_id') as mock_validate:
-                        mock_validate.return_value = "00000000-0000-0000-0000-000000000001"
+                        mock_validate.return_value = "mcp_client_123"
                         
                         result = get_authenticated_user_id(None, "test_op")
                         
-                        assert result == "00000000-0000-0000-0000-000000000001"
-                        mock_config.log_authentication_bypass.assert_called_with(
-                            "test_op", 
-                            "forced compatibility mode - development environment"
-                        )
+                        assert result == "mcp_client_123"
     
-    @patch('os.getenv')
+    @patch('fastmcp.task_management.interface.controllers.auth_helper.get_user_id_from_request_state')
     @patch('fastmcp.task_management.interface.controllers.auth_helper.get_current_user_id')
-    def test_non_dev_environment_no_temporary_fix(self, mock_get_current_user_id, mock_getenv):
-        """Test that temporary fix is not applied in non-development environments for non-context operations."""
-        mock_get_current_user_id.return_value = None
-        mock_getenv.return_value = 'production'
+    def test_multiple_auth_sources_precedence(self, mock_get_current_user_id, mock_get_request_state):
+        """Test precedence of different authentication sources."""
+        # Request state should take precedence over context middleware
+        mock_get_request_state.return_value = "request_user"
+        mock_get_current_user_id.return_value = "context_user"
         
+        with patch('fastmcp.task_management.domain.constants.validate_user_id') as mock_validate:
+            mock_validate.return_value = "request_user"
+            
+            result = get_authenticated_user_id(None, "test_op")
+            
+            assert result == "request_user"
+            mock_validate.assert_called_once_with("request_user", "test_op")
+    
+    def test_user_id_validation_error_propagation(self):
+        """Test that user ID validation errors are properly propagated."""
+        from fastmcp.task_management.domain.exceptions.authentication_exceptions import InvalidUserIdError
+        
+        # Provide an invalid user ID
+        with patch('fastmcp.task_management.domain.constants.validate_user_id') as mock_validate:
+            mock_validate.side_effect = InvalidUserIdError("Invalid format")
+            
+            with pytest.raises(InvalidUserIdError):
+                get_authenticated_user_id("invalid_format", "test_op")
+    
+    @patch('fastmcp.task_management.interface.controllers.auth_helper.get_user_id_from_request_state')
+    @patch('fastmcp.task_management.interface.controllers.auth_helper.get_current_user_id')
+    def test_comprehensive_auth_flow_all_sources_fail(self, mock_get_current_user_id, mock_get_request_state):
+        """Test comprehensive authentication flow when all sources fail."""
+        # All authentication sources return None
+        mock_get_request_state.return_value = None
+        mock_get_current_user_id.return_value = None
+        
+        # MCP context also returns None
         with patch('mcp.server.auth.context.auth_context') as mock_context:
             mock_context.get.return_value = None
             
-            with patch('fastmcp.task_management.interface.controllers.auth_helper.AuthConfig') as mock_config:
-                mock_config.is_default_user_allowed.return_value = False
-                
-                # Should raise error in production when no auth available for non-context operations
-                with pytest.raises(UserAuthenticationRequiredError):
-                    get_authenticated_user_id(None, "test_op")
-    
-    @patch('os.getenv')
-    @patch('fastmcp.task_management.interface.controllers.auth_helper.get_current_user_id')
-    def test_context_operation_fallback_in_production(self, mock_get_current_user_id, mock_getenv):
-        """Test that context operations get fallback even in production."""
-        mock_get_current_user_id.return_value = None
-        mock_getenv.return_value = 'production'
-        
-        with patch('mcp.server.auth.context.auth_context') as mock_context:
-            mock_context.get.return_value = None
+            # Should raise authentication required error
+            with pytest.raises(UserAuthenticationRequiredError) as exc_info:
+                get_authenticated_user_id(None, "comprehensive_test")
             
-            with patch('fastmcp.task_management.interface.controllers.auth_helper.AuthConfig') as mock_config:
-                mock_config.is_default_user_allowed.return_value = False
-                mock_config.log_authentication_bypass = Mock()
-                
-                with patch('fastmcp.task_management.domain.constants.validate_user_id') as mock_validate:
-                    mock_validate.return_value = "00000000-0000-0000-0000-000000000001"
-                    
-                    # Context operations should get fallback
-                    result = get_authenticated_user_id(None, "context_operation")
-                    
-                    assert result == "00000000-0000-0000-0000-000000000001"
-                    mock_config.log_authentication_bypass.assert_called_with(
-                        "context_operation", 
-                        "forced compatibility mode - context operation fallback"
-                    )
+            assert "comprehensive_test" in str(exc_info.value)
     
     def test_user_context_not_available_fallback(self):
         """Test behavior when USER_CONTEXT_AVAILABLE is False."""
-        # This test verifies the import fallback mechanism
+        # When user context is not available, should still try other sources
         with patch('fastmcp.task_management.interface.controllers.auth_helper.USER_CONTEXT_AVAILABLE', False):
-            with patch('fastmcp.task_management.interface.controllers.auth_helper.AuthConfig') as mock_config:
-                mock_config.is_default_user_allowed.return_value = True
-                mock_config.get_fallback_user_id.return_value = "fallback_user"
+            with patch('fastmcp.task_management.interface.controllers.auth_helper.get_user_id_from_request_state') as mock_request_state:
+                mock_request_state.return_value = None
                 
-                with patch('fastmcp.task_management.domain.constants.validate_user_id') as mock_validate:
-                    mock_validate.return_value = "fallback_user"
+                with patch('mcp.server.auth.context.auth_context') as mock_context:
+                    mock_context.get.return_value = None
                     
-                    result = get_authenticated_user_id(None, "test_op")
-                    
-                    assert result == "fallback_user"
+                    # Should fail since no authentication sources work
+                    with pytest.raises(UserAuthenticationRequiredError):
+                        get_authenticated_user_id(None, "test_op")
     
-    def test_validation_error_propagated(self):
-        """Test that validation errors are properly propagated."""
-        from fastmcp.task_management.domain.exceptions.authentication_exceptions import InvalidUserIdError
-        
-        with patch('fastmcp.task_management.domain.constants.validate_user_id') as mock_validate:
-            mock_validate.side_effect = InvalidUserIdError("Invalid user ID format")
-            
-            with pytest.raises(InvalidUserIdError):
-                get_authenticated_user_id("invalid_user", "test_op")
+    def test_logging_and_debugging_functionality(self):
+        """Test that proper logging occurs during authentication process."""
+        with patch('fastmcp.task_management.interface.controllers.auth_helper.logger') as mock_logger:
+            with patch('fastmcp.task_management.domain.constants.validate_user_id') as mock_validate:
+                mock_validate.return_value = "provided_user"
+                
+                result = get_authenticated_user_id("provided_user", "test_op")
+                
+                assert result == "provided_user"
+                # Verify logging calls were made
+                mock_logger.info.assert_called()
+                logging_calls = [call.args[0] for call in mock_logger.info.call_args_list]
+                assert any("get_authenticated_user_id called" in call for call in logging_calls)
 
 
 class TestLogAuthenticationDetails:
@@ -380,17 +349,14 @@ class TestLogAuthenticationDetails:
                 mock_logger.debug.assert_any_call("Error accessing MCP auth context: MCP not available")
     
     @patch('fastmcp.task_management.interface.controllers.auth_helper.get_current_user_id')
-    def test_log_compatibility_mode(self, mock_get_current_user_id):
-        """Test logging compatibility mode status."""
+    def test_log_strict_authentication_mode(self, mock_get_current_user_id):
+        """Test logging strict authentication mode status."""
         mock_get_current_user_id.return_value = None
         
-        with patch('fastmcp.task_management.interface.controllers.auth_helper.AuthConfig') as mock_config:
-            mock_config.is_default_user_allowed.return_value = True
+        with patch('fastmcp.task_management.interface.controllers.auth_helper.logger') as mock_logger:
+            log_authentication_details()
             
-            with patch('fastmcp.task_management.interface.controllers.auth_helper.logger') as mock_logger:
-                log_authentication_details()
-                
-                mock_logger.debug.assert_any_call("Compatibility mode enabled: True")
+            mock_logger.debug.assert_any_call("Authentication is always strictly enforced")
     
     @patch('fastmcp.task_management.interface.controllers.auth_helper.get_current_user_id')
     def test_log_general_exception_handling(self, mock_get_current_user_id):
@@ -409,7 +375,7 @@ class TestLogAuthenticationDetails:
                 log_authentication_details()
                 
                 # Should skip custom context logging when not available
-                debug_calls = [call.args[0] for call in mock_logger.debug.call_args_list]
+                debug_calls = [call.args[0] for call in mock_logger.debug.call_args_list if mock_logger.debug.call_args_list]
                 custom_context_calls = [call for call in debug_calls if "Custom context user_id" in call]
                 assert len(custom_context_calls) == 0
 

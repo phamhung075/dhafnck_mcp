@@ -60,13 +60,10 @@ class TaskContextSyncService:
         try:
             # Validate user authentication
             if user_id is None:
-                if AuthConfig.is_default_user_allowed():
-                    user_id = AuthConfig.get_fallback_user_id()
-                    AuthConfig.log_authentication_bypass("Task context sync", "compatibility mode")
-                else:
-                    raise UserAuthenticationRequiredError("Task context sync")
-            else:
-                user_id = validate_user_id(user_id, "Task context sync")
+                # NO FALLBACKS ALLOWED - user authentication is required
+                raise UserAuthenticationRequiredError("Task context sync")
+            
+            user_id = validate_user_id(user_id, "Task context sync")
             
             # ------------------------------------------------------------------
             # 1. Reload domain task and create/update its context

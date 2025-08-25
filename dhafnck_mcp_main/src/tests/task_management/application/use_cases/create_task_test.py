@@ -40,7 +40,8 @@ class TestCreateTaskUseCase:
         self.mock_repository = Mock(spec=TaskRepository)
         self.mock_repository.get_next_id.return_value = TaskId(str(uuid4()))
         self.mock_repository.save.return_value = True
-        self.mock_repository.git_branch_exists.return_value = True
+        # Add git_branch_exists method to mock
+        self.mock_repository.git_branch_exists = Mock(return_value=True)
         
         self.use_case = CreateTaskUseCase(self.mock_repository)
         
@@ -259,8 +260,8 @@ class TestCreateTaskUseCase:
         assert response.success is True
         mock_warning.assert_called_with("Failed to update branch task count: Database error")
     
-    @patch('fastmcp.task_management.application.use_cases.create_task.UnifiedContextFacadeFactory')
-    @patch('fastmcp.task_management.application.use_cases.create_task.AuthConfig')
+    @patch('fastmcp.task_management.application.factories.unified_context_facade_factory.UnifiedContextFacadeFactory')
+    @patch('fastmcp.config.auth_config.AuthConfig')
     def test_create_task_context_creation_success(self, mock_auth_config, mock_context_factory):
         """Test successful task context creation."""
         # Setup authentication
@@ -294,8 +295,8 @@ class TestCreateTaskUseCase:
         # Verify task was saved twice (once for creation, once for context_id update)
         assert self.mock_repository.save.call_count == 2
     
-    @patch('fastmcp.task_management.application.use_cases.create_task.UnifiedContextFacadeFactory')
-    @patch('fastmcp.task_management.application.use_cases.create_task.AuthConfig')
+    @patch('fastmcp.task_management.application.factories.unified_context_facade_factory.UnifiedContextFacadeFactory')
+    @patch('fastmcp.config.auth_config.AuthConfig')
     def test_create_task_context_creation_failure(self, mock_auth_config, mock_context_factory):
         """Test task creation continues even if context creation fails."""
         # Setup authentication
@@ -316,8 +317,8 @@ class TestCreateTaskUseCase:
         assert mock_warning.called
         assert "Failed to create task context" in mock_warning.call_args[0][0]
     
-    @patch('fastmcp.task_management.application.use_cases.create_task.UnifiedContextFacadeFactory')
-    @patch('fastmcp.task_management.application.use_cases.create_task.AuthConfig')
+    @patch('fastmcp.task_management.application.factories.unified_context_facade_factory.UnifiedContextFacadeFactory')
+    @patch('fastmcp.config.auth_config.AuthConfig')
     def test_create_task_context_compatibility_mode(self, mock_auth_config, mock_context_factory):
         """Test context creation in compatibility mode."""
         # Remove user_id from request
@@ -354,8 +355,8 @@ class TestCreateTaskUseCase:
             git_branch_id=request.git_branch_id
         )
     
-    @patch('fastmcp.task_management.application.use_cases.create_task.UnifiedContextFacadeFactory')
-    @patch('fastmcp.task_management.application.use_cases.create_task.AuthConfig')
+    @patch('fastmcp.task_management.application.factories.unified_context_facade_factory.UnifiedContextFacadeFactory')
+    @patch('fastmcp.config.auth_config.AuthConfig')
     def test_create_task_context_no_auth_no_compatibility(self, mock_auth_config, mock_context_factory):
         """Test context creation fails without auth when compatibility mode is disabled."""
         # Remove user_id from request

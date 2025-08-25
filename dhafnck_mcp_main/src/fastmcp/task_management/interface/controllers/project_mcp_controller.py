@@ -155,15 +155,8 @@ class ProjectMCPController(ContextPropagationMixin):
                 user_id = context_user_id
                 logger.info(f"✅ Project Controller: Using context user_id: {user_id}")
             else:
-                logger.warning(f"⚠️ Project Controller: No user_id from context, checking compatibility mode...")
-                # Check if compatibility mode is enabled
-                if AuthConfig.is_default_user_allowed():
-                    user_id = AuthConfig.get_fallback_user_id()
-                    logger.info(f"✅ Project Controller: Using compatibility mode user_id: {user_id}")
-                    AuthConfig.log_authentication_bypass(f"Project {action}", "compatibility mode")
-                else:
-                    logger.error(f"❌ Project Controller: No authentication found and compatibility mode disabled")
-                    raise UserAuthenticationRequiredError(f"Project {action}")
+                logger.error(f"❌ Project Controller: No authentication found - user authentication is required")
+                raise UserAuthenticationRequiredError(f"Project {action}")
         
         # Validate the user ID (will throw if invalid)
         user_id = validate_user_id(user_id, f"Project {action}")

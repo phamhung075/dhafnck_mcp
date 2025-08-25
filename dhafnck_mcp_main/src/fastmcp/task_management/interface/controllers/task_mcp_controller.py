@@ -1621,13 +1621,10 @@ class TaskMCPController(ContextPropagationMixin):
                     # Validate user_id before creating context facade
                     validated_user_id = user_id
                     if not validated_user_id:
-                        if AuthConfig.is_default_user_allowed():
-                            validated_user_id = AuthConfig.get_fallback_user_id()
-                            AuthConfig.log_authentication_bypass("Task context facade creation", "compatibility mode")
-                        else:
-                            raise UserAuthenticationRequiredError("Task context facade creation")
-                    else:
-                        validated_user_id = validate_user_id(validated_user_id, "Task context facade creation")
+                        # NO FALLBACKS ALLOWED - user authentication is required
+                        raise UserAuthenticationRequiredError("Task context facade creation")
+                    
+                    validated_user_id = validate_user_id(validated_user_id, "Task context facade creation")
                     
                     context_facade = self._context_facade_factory.create_facade(
                         user_id=validated_user_id,
@@ -1656,13 +1653,10 @@ class TaskMCPController(ContextPropagationMixin):
                         # Validate user_id for context update
                         validated_user_id = user_id
                         if not validated_user_id:
-                            if AuthConfig.is_default_user_allowed():
-                                validated_user_id = AuthConfig.get_fallback_user_id()
-                                AuthConfig.log_authentication_bypass("Task context update", "compatibility mode")
-                            else:
-                                raise UserAuthenticationRequiredError("Task context update")
-                        else:
-                            validated_user_id = validate_user_id(validated_user_id, "Task context update")
+                            # NO FALLBACKS ALLOWED - user authentication is required
+                            raise UserAuthenticationRequiredError("Task context update")
+                        
+                        validated_user_id = validate_user_id(validated_user_id, "Task context update")
                         
                         return await context_facade.update_context(
                             task_id, 

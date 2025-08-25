@@ -1,7 +1,7 @@
 """Authentication configuration for DhafnckMCP.
 
-This module provides configuration options for authentication behavior,
-including a temporary compatibility mode for migration from default_id.
+This module provides configuration options for authentication behavior.
+All operations require proper user authentication - no fallbacks allowed.
 """
 
 import os

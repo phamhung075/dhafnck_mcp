@@ -23,8 +23,6 @@ PROHIBITED_DEFAULT_IDS = {
     'system',
     'anonymous',
     'unauthenticated'
-    # Note: 'compatibility-default-user' is intentionally NOT in this list
-    # as it's used as a temporary fallback during authentication migration
 }
 
 def validate_user_id(user_id: Optional[str], operation: str = "This operation") -> str:

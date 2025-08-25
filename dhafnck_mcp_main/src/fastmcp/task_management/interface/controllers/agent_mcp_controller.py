@@ -92,12 +92,8 @@ class AgentMCPController:
         if current_user_id:
             user_id = validate_user_id(current_user_id, "Agent facade creation")
         else:
-            # Check if compatibility mode is enabled
-            if AuthConfig.is_default_user_allowed():
-                user_id = AuthConfig.get_fallback_user_id()
-                AuthConfig.log_authentication_bypass("Agent facade creation", "compatibility mode")
-            else:
-                raise UserAuthenticationRequiredError("Agent facade creation")
+            # NO FALLBACKS ALLOWED - user authentication is required
+            raise UserAuthenticationRequiredError("Agent facade creation")
         
         # Pass user_id to facade factory for proper data isolation
         return self._agent_facade_factory.create_agent_facade(project_id=project_id, user_id=user_id)

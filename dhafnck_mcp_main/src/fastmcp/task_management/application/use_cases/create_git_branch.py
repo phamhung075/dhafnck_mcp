@@ -41,8 +41,15 @@ class CreateGitBranchUseCase:
                 from ...domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
                 from ....config.auth_config import AuthConfig
                 
-                # Get user_id from request or handle authentication
-                user_id = getattr(request, 'user_id', None)
+                # Get user_id from request context or handle authentication
+                user_id = None
+                try:
+                    from flask import request as flask_request
+                    user_id = getattr(flask_request, 'user_id', None)
+                except (ImportError, RuntimeError):
+                    # No Flask context or request not available
+                    user_id = None
+                
                 if user_id is None:
                     # NO FALLBACKS ALLOWED - user authentication is required
                     raise UserAuthenticationRequiredError("Branch context creation")

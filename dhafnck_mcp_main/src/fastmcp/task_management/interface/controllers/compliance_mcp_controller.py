@@ -98,15 +98,11 @@ class ComplianceMCPController:
             Dict containing the result of the compliance operation
         """
         try:
-            # Get user ID with compatibility mode fallback
+            # Get user ID - NO FALLBACKS ALLOWED
             if user_id is None:
-                if AuthConfig.is_default_user_allowed():
-                    user_id = AuthConfig.get_fallback_user_id()
-                    logger.info(f"Using compatibility mode user: {user_id}")
-                else:
-                    # In production, would get from request headers/session
-                    # For now, use compatibility mode
-                    user_id = AuthConfig.get_fallback_user_id()
+                # NO FALLBACKS ALLOWED - user authentication is required
+                from ...domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
+                raise UserAuthenticationRequiredError("Compliance operation")
             
             if action == "validate_compliance":
                 if not operation:
