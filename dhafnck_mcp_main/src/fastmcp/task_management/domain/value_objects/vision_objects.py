@@ -133,7 +133,7 @@ class VisionObjective:
             "priority": self.priority,
             "status": self.status,
             "created_at": self.created_at.isoformat(),
-            "due_date": self.due_date.isoformat() if self.due_date else None,
+            "due_date": self.due_date if self.due_date else None,
             "metrics": [metric.to_dict() for metric in self.metrics],
             "tags": self.tags,
             "overall_progress": self.overall_progress,

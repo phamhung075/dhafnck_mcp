@@ -88,7 +88,7 @@ class TaskApplicationService:
                         "assignees": task.assignees,
                         "labels": task.labels,
                         "estimated_effort": task.estimated_effort,
-                        "due_date": task.due_date.isoformat() if task.due_date else None
+                        "due_date": task.due_date if task.due_date else None
                     }
                 }
             )
@@ -124,7 +124,7 @@ class TaskApplicationService:
                         "assignees": task.assignees,
                         "labels": task.labels,
                         "estimated_effort": task.estimated_effort,
-                        "due_date": task.due_date.isoformat() if task.due_date else None
+                        "due_date": task.due_date if task.due_date else None
                     }
                 }
             )

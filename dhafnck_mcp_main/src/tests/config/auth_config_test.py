@@ -77,7 +77,7 @@ class TestAuthConfig:
         
         user_id = AuthConfig.get_fallback_user_id()
         
-        assert user_id == "compatibility-default-user"
+        assert user_id == "00000000-0000-0000-0000-000000000001"
     
     def test_get_fallback_user_id_not_allowed(self):
         """Test getting fallback user ID when not allowed raises exception."""
@@ -97,8 +97,8 @@ class TestAuthConfig:
         with caplog.at_level(logging.WARNING):
             user_id = AuthConfig.get_fallback_user_id()
         
-        assert user_id == "compatibility-default-user"
-        assert "Using fallback user ID 'compatibility-default-user'" in caplog.text
+        assert user_id == "00000000-0000-0000-0000-000000000001"
+        assert "Using fallback user ID '00000000-0000-0000-0000-000000000001'" in caplog.text
         assert "this is temporary and will be removed in future versions" in caplog.text
     
     def test_should_enforce_authentication_default(self):
@@ -182,7 +182,7 @@ class TestAuthConfig:
         
         # Should be able to get fallback user
         user_id = AuthConfig.get_fallback_user_id()
-        assert user_id == "compatibility-default-user"
+        assert user_id == "00000000-0000-0000-0000-000000000001"
         
         # Migration not ready
         readiness = AuthConfig.validate_migration_readiness()

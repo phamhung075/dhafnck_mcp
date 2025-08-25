@@ -11,13 +11,17 @@ readonly LIB_DIR="${SCRIPT_DIR}/lib"
 readonly ENV_DIR="${SCRIPT_DIR}/environments"
 readonly DEFAULT_ENV="${ENV:-dev}"
 
+# Export for child scripts
+export PROJECT_ROOT
+export SCRIPT_DIR
+
 # Source common functions
 source "${LIB_DIR}/common.sh"
 
-# Load default environment if exists
-if [[ -f "${SCRIPT_DIR}/.env" ]]; then
+# Load default environment from project root
+if [[ -f "${PROJECT_ROOT}/.env" ]]; then
     set -a
-    source "${SCRIPT_DIR}/.env"
+    source "${PROJECT_ROOT}/.env"
     set +a
 fi
 
@@ -108,23 +112,7 @@ For detailed help on a specific command:
 EOF
 }
 
-# Load environment
-load_environment() {
-    local env="${1:-$DEFAULT_ENV}"
-    local env_file="${ENV_DIR}/${env}.env"
-    
-    if [[ -f "$env_file" ]]; then
-        info "Loading environment: $env"
-        # Source the environment file properly
-        set -a  # automatically export all variables
-        source "$env_file"
-        set +a  # turn off automatic export
-        export ENV="$env"
-    else
-        error "Environment file not found: $env_file"
-        exit 1
-    fi
-}
+# Environment loading is handled by common.sh
 
 # Command routing
 case "$COMMAND" in

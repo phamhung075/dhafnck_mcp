@@ -75,9 +75,9 @@ This script will:
    ANTHROPIC_API_KEY=sk-ant-your-actual-anthropic-key-here
    
    # Basic server settings
-   MCP_ENVIRONMENT=development
-   MCP_DEBUG=true
-   MCP_LOG_LEVEL=INFO
+   APP_ENV=development
+   APP_DEBUG=true
+   APP_LOG_LEVEL=INFO
    ```
 
 ## 🔧 Key Configuration Sections
@@ -136,9 +136,9 @@ PERPLEXITY_API_KEY=pplx-your-key     # Perplexity AI
 ```bash
 MCP_HOST=localhost                    # Server host
 MCP_PORT=8000                        # Server port
-MCP_ENVIRONMENT=development          # Environment mode
-MCP_DEBUG=true                       # Debug logging
-MCP_LOG_LEVEL=INFO                   # Log level
+APP_ENV=development          # Environment mode
+APP_DEBUG=true                       # Debug logging
+APP_LOG_LEVEL=INFO                   # Log level
 PERFORMANCE_TARGET_RPS=15000         # Target requests per second
 ```
 
@@ -160,8 +160,8 @@ After setting up your `.env` file, update your `.cursor/mcp.json`:
         "ANTHROPIC_API_KEY": "your-actual-api-key-here",
         "CONTEXT_AUTO_CREATE": "true",
         "VISION_SYSTEM_ENABLED": "true",
-        "MCP_DEBUG": "true",
-        "MCP_LOG_LEVEL": "INFO",
+        "APP_DEBUG": "true",
+        "APP_LOG_LEVEL": "INFO",
         "SESSION_TTL": "3600",
         "MAX_EVENTS_PER_SESSION": "1000"
       }
@@ -230,8 +230,8 @@ manage_connection action="health_check"
 DATABASE_URL=postgresql://postgres:password@localhost:5432/dhafnck_mcp_dev
 DATABASE_MODE=local
 OPENAI_API_KEY=sk-your-key-here
-MCP_DEBUG=true
-MCP_ENVIRONMENT=development
+APP_DEBUG=true
+APP_ENV=development
 ```
 
 ### Full Development Setup
@@ -242,8 +242,8 @@ DATABASE_MODE=local
 REDIS_URL=redis://localhost:6379/0
 OPENAI_API_KEY=sk-your-key-here
 ANTHROPIC_API_KEY=sk-ant-your-key-here
-MCP_ENVIRONMENT=development
-MCP_DEBUG=true
+APP_ENV=development
+APP_DEBUG=true
 DEV_MODE=true
 HOT_RELOAD=true
 CONTEXT_AUTO_CREATE=true
@@ -259,9 +259,9 @@ DATABASE_MODE=container
 REDIS_URL=redis://prod-redis.example.com:6379/0
 OPENAI_API_KEY=sk-your-production-key
 ANTHROPIC_API_KEY=sk-ant-your-production-key
-MCP_ENVIRONMENT=production
-MCP_DEBUG=false
-MCP_LOG_LEVEL=WARNING
+APP_ENV=production
+APP_DEBUG=false
+APP_LOG_LEVEL=WARNING
 HTTPS_ENABLED=true
 RATE_LIMIT_ENABLED=true
 DB_POOL_SIZE=50
@@ -279,7 +279,7 @@ REDIS_URL=redis://redis:6379/0
 # Mount secrets as files in Docker
 OPENAI_API_KEY_FILE=/run/secrets/openai_key
 ANTHROPIC_API_KEY_FILE=/run/secrets/anthropic_key
-MCP_ENVIRONMENT=production
+APP_ENV=production
 MCP_HOST=0.0.0.0  # Listen on all interfaces in container
 ```
 

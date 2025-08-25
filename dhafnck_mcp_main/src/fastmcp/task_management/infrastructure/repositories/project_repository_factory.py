@@ -70,7 +70,7 @@ class ProjectRepositoryFactory:
                 env_name = os.getenv('ENVIRONMENT', '').lower()
                 if env_name in ('development', 'dev', ''):  # Include empty string for local dev
                     logger.warning(f"🔧 TEMPORARY FIX: Forcing compatibility mode for Project repository creation in development")
-                    user_id = "compatibility-default-user"
+                    user_id = "00000000-0000-0000-0000-000000000001"
                     AuthConfig.log_authentication_bypass("Project repository creation", "forced compatibility mode for git branch fix")
                 else:
                     logger.error(f"❌ Project Repository Factory: No user_id and compatibility mode disabled")

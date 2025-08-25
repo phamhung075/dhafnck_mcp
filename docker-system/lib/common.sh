@@ -7,6 +7,12 @@ if [[ -n "${_COMMON_SH_LOADED:-}" ]]; then
 fi
 _COMMON_SH_LOADED=1
 
+# Set PROJECT_ROOT if not already set
+if [[ -z "${PROJECT_ROOT:-}" ]]; then
+    SCRIPT_DIR="${SCRIPT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+    PROJECT_ROOT="${PROJECT_ROOT:-$(dirname "$SCRIPT_DIR")}"
+fi
+
 # Color codes for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -144,13 +150,15 @@ get_version() {
 # Environment helpers
 load_environment() {
     local env="${ENV:-dev}"
-    local env_file="${SCRIPT_DIR}/environments/${env}.env"
+    # Use root .env file for all environments
+    local env_file="${PROJECT_ROOT}/.env"
     
     if [[ -f "$env_file" ]]; then
-        info "Loading environment: $env"
+        info "Loading environment from: $env_file"
         export $(grep -v '^#' "$env_file" | xargs) 2>/dev/null || true
     else
-        warning "Environment file not found: $env_file"
+        error "Environment file not found: $env_file"
+        return 1
     fi
 }
 
@@ -190,15 +198,23 @@ compose_file_args() {
         return
     fi
     
-    # Use the new docker-system compose files
-    local args="-f ${SCRIPT_DIR}/docker/docker-compose.yml"
+    # Use the unified docker-compose.yml
+    local args="-f ${SCRIPT_DIR}/docker-compose.yml"
     
-    # Add environment-specific overrides
-    if [[ -f "${SCRIPT_DIR}/docker/docker-compose.${ENV:-dev}.yml" ]]; then
-        args="$args -f ${SCRIPT_DIR}/docker/docker-compose.${ENV:-dev}.yml"
+    # Set up profiles based on configuration
+    local profiles=""
+    
+    # Add PostgreSQL profile only if using local database (not Supabase)
+    if [[ "${DATABASE_TYPE:-postgresql}" == "postgresql" ]]; then
+        profiles="${profiles} --profile postgresql"
     fi
     
-    echo "$args"
+    # Add Redis profile if enabled
+    if [[ "${ENABLE_REDIS:-false}" == "true" ]]; then
+        profiles="${profiles} --profile redis"
+    fi
+    
+    echo "$args $profiles"
 }
 
 # Validation helpers

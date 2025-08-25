@@ -1,0 +1,138 @@
+# Unified Backend Dockerfile for DhafnckMCP
+# Supports both standard and optimized modes via build arg
+
+# Use slim by default, alpine for optimization
+FROM python:3.11-slim AS builder
+
+# Install system dependencies
+RUN if [ -f /etc/alpine-release ]; then \
+        # Alpine (optimized)
+        apk add --no-cache --virtual .build-deps \
+            gcc musl-dev libffi-dev postgresql-dev git && \
+        apk add --no-cache libpq; \
+    else \
+        # Debian (standard)
+        apt-get update && apt-get install -y \
+            build-essential git libpq-dev \
+            && rm -rf /var/lib/apt/lists/*; \
+    fi
+
+WORKDIR /build
+
+# Copy dependency files
+COPY dhafnck_mcp_main/pyproject.toml dhafnck_mcp_main/uv.lock* ./
+
+# Install Python dependencies
+RUN pip install --no-cache-dir uv && \
+    uv venv .venv && \
+    . .venv/bin/activate && \
+    uv pip install --no-cache-dir \
+        sqlalchemy==2.0.35 \
+        psycopg2-binary==2.9.10 \
+        pydantic==2.10.3 \
+        pydantic-settings==2.7.0 \
+        fastapi \
+        uvicorn[standard] \
+        redis \
+        httpx \
+        alembic \
+        python-jose[cryptography] \
+        passlib[bcrypt] \
+        python-multipart \
+        email-validator \
+        supabase \
+        rich \
+        fastmcp \
+        && \
+    # Clean up cache
+    find .venv -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true && \
+    find .venv -type f -name "*.pyc" -delete && \
+    find .venv -type f -name "*.pyo" -delete
+
+# Copy source code
+COPY dhafnck_mcp_main/src/ src/
+COPY dhafnck_mcp_main/pyproject.toml dhafnck_mcp_main/README.md ./
+COPY dhafnck_mcp_main/scripts/ scripts/
+COPY dhafnck_mcp_main/database/ database/
+
+# Install the package
+RUN . .venv/bin/activate && \
+    pip install --no-deps -e . && \
+    python -m compileall -x 'tests/*' src/ || true
+
+# ============================================
+# Stage 3: Runtime
+# ============================================
+FROM python:3.11-slim AS runtime
+
+# Install runtime dependencies only
+RUN if [ -f /etc/alpine-release ]; then \
+        # Alpine (optimized)
+        apk add --no-cache libpq curl && \
+        rm -rf /var/cache/apk/*; \
+    else \
+        # Debian (standard)
+        apt-get update && apt-get install -y \
+            libpq5 curl wget \
+            && rm -rf /var/lib/apt/lists/*; \
+    fi
+
+# Create non-root user
+RUN if [ -f /etc/alpine-release ]; then \
+        addgroup -g 1000 -S dhafnck && \
+        adduser -u 1000 -S dhafnck -G dhafnck; \
+    else \
+        groupadd -r dhafnck && \
+        useradd -r -g dhafnck -s /bin/false dhafnck; \
+    fi
+
+WORKDIR /app
+
+# Create necessary directories
+RUN mkdir -p /data /data/logs && \
+    chown -R dhafnck:dhafnck /app /data
+
+# Copy virtual environment and source from builder
+COPY --from=builder --chown=dhafnck:dhafnck /build/.venv /app/.venv
+COPY --from=builder --chown=dhafnck:dhafnck /build/src /app/src
+COPY --from=builder --chown=dhafnck:dhafnck /build/scripts /app/scripts
+COPY --from=builder --chown=dhafnck:dhafnck /build/database /app/database
+COPY --from=builder --chown=dhafnck:dhafnck /build/pyproject.toml /app/
+
+# Set environment
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH=/app/src:$PYTHONPATH \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Create entrypoint script
+RUN echo '#!/bin/sh\n\
+set -e\n\
+\n\
+# Database initialization/migration\n\
+if [ "${AUTO_MIGRATE:-false}" = "true" ]; then\n\
+    echo "Running database migrations..."\n\
+    cd /app && /app/.venv/bin/python scripts/init_database.py || true\n\
+fi\n\
+\n\
+# Seed data (development only)\n\
+if [ "${SEED_DATA:-false}" = "true" ] && [ "${APP_ENV}" = "development" ]; then\n\
+    echo "Seeding development data..."\n\
+    cd /app && /app/.venv/bin/python scripts/seed_data.py || true\n\
+fi\n\
+\n\
+# Start the application\n\
+echo "Starting DhafnckMCP server on port 8000..."\n\
+cd /app && exec /app/.venv/bin/python -m fastmcp.server.mcp_entry_point\n\
+' > /app/docker-entrypoint.sh && \
+    chmod +x /app/docker-entrypoint.sh
+
+# Switch to non-root user
+USER dhafnck
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

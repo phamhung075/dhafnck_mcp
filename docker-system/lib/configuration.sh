@@ -212,42 +212,19 @@ env_command() {
         # Show current environment
         echo "Current environment: ${ENV:-dev}"
         echo ""
-        echo "Available environments:"
-        for env_file in "${ENV_DIR}"/*.env; do
-            if [[ -f "$env_file" ]]; then
-                local env_name=$(basename "$env_file" .env)
-                if [[ "$env_name" == "${ENV:-dev}" ]]; then
-                    echo "  * $env_name (active)"
-                else
-                    echo "    $env_name"
-                fi
-            fi
-        done
+        echo "Using single .env file at project root: ${PROJECT_ROOT}/.env"
         return 0
     fi
     
-    # Switch environment
-    local env_file="${ENV_DIR}/${new_env}.env"
+    # Note: Environment switching is now handled via ENV variable in .env file
+    info "Environment switching is now controlled via ENV variable in .env file"
+    info "Edit ${PROJECT_ROOT}/.env and set ENV=${new_env}"
     
-    if [[ ! -f "$env_file" ]]; then
-        error "Environment not found: $new_env"
-        return 1
-    fi
-    
-    info "Switching to environment: $new_env"
-    
-    # Backup current env
+    # Update ENV variable in .env file
     if [[ -f "${PROJECT_ROOT}/.env" ]]; then
-        cp "${PROJECT_ROOT}/.env" "${PROJECT_ROOT}/.env.bak"
+        sed -i.tmp "s|^ENV=.*|ENV=$new_env|" "${PROJECT_ROOT}/.env"
+        rm -f "${PROJECT_ROOT}/.env.tmp"
+        success "Updated ENV to $new_env in .env file"
+        warning "Restart services to apply new environment"
     fi
-    
-    # Copy new environment
-    cp "$env_file" "${PROJECT_ROOT}/.env"
-    
-    # Update ENV variable
-    sed -i.tmp "s|^ENV=.*|ENV=$new_env|" "${PROJECT_ROOT}/.env"
-    rm -f "${PROJECT_ROOT}/.env.tmp"
-    
-    success "Switched to $new_env environment"
-    warning "Restart services to apply new environment"
 }

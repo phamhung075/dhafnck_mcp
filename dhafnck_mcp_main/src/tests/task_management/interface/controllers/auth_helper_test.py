@@ -243,11 +243,11 @@ class TestGetAuthenticatedUserId:
                     mock_config.log_authentication_bypass = Mock()
                     
                     with patch('fastmcp.task_management.domain.constants.validate_user_id') as mock_validate:
-                        mock_validate.return_value = "compatibility-default-user"
+                        mock_validate.return_value = "00000000-0000-0000-0000-000000000001"
                         
                         result = get_authenticated_user_id(None, "test_op")
                         
-                        assert result == "compatibility-default-user"
+                        assert result == "00000000-0000-0000-0000-000000000001"
                         mock_config.log_authentication_bypass.assert_called_with(
                             "test_op", 
                             "forced compatibility mode - development environment"
@@ -285,12 +285,12 @@ class TestGetAuthenticatedUserId:
                 mock_config.log_authentication_bypass = Mock()
                 
                 with patch('fastmcp.task_management.domain.constants.validate_user_id') as mock_validate:
-                    mock_validate.return_value = "compatibility-default-user"
+                    mock_validate.return_value = "00000000-0000-0000-0000-000000000001"
                     
                     # Context operations should get fallback
                     result = get_authenticated_user_id(None, "context_operation")
                     
-                    assert result == "compatibility-default-user"
+                    assert result == "00000000-0000-0000-0000-000000000001"
                     mock_config.log_authentication_bypass.assert_called_with(
                         "context_operation", 
                         "forced compatibility mode - context operation fallback"

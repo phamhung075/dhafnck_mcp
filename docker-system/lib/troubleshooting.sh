@@ -211,7 +211,6 @@ fix_permissions_command() {
     # Environment file permissions
     echo "  Setting environment file permissions..."
     chmod 600 "${PROJECT_ROOT}/.env" 2>/dev/null || true
-    chmod 600 "${ENV_DIR}"/*.env 2>/dev/null || true
     
     # Docker socket permissions (if needed)
     if [[ -S /var/run/docker.sock ]]; then
@@ -269,7 +268,6 @@ emergency_backup_command() {
     # Backup configs
     echo "  Backing up configurations..."
     cp -r "${PROJECT_ROOT}/.env"* "$backup_dir/" 2>/dev/null || true
-    cp -r "${ENV_DIR}" "$backup_dir/" 2>/dev/null || true
     
     # Compress
     cd "${BACKUP_DIR}"

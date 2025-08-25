@@ -79,8 +79,7 @@ backup_configs() {
     mkdir -p "$BACKUP_DIR/$backup_name/configs"
     
     # Backup environment files
-    cp -r .env* "$BACKUP_DIR/$backup_name/configs/" 2>/dev/null || true
-    cp -r "${ENV_DIR}"/*.env "$BACKUP_DIR/$backup_name/configs/" 2>/dev/null || true
+    cp -r "${PROJECT_ROOT}"/.env* "$BACKUP_DIR/$backup_name/configs/" 2>/dev/null || true
     
     # Backup docker configs
     cp -r "${SCRIPT_DIR}/docker"/*.yml "$BACKUP_DIR/$backup_name/configs/" 2>/dev/null || true

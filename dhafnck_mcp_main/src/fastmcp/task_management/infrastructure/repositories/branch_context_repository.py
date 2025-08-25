@@ -51,8 +51,14 @@ class BranchContextRepository(BaseORMRepository):
     def create(self, entity: BranchContext) -> BranchContext:
         """Create a new branch context."""
         with self.get_db_session() as session:
-            # Check if branch context already exists
-            existing = session.get(BranchContextModel, entity.id)
+            # Check if branch context already exists with user filtering
+            query = session.query(BranchContextModel).filter(BranchContextModel.id == entity.id)
+            
+            # Add user filter if user_id is set (consistent with get method)
+            if self.user_id:
+                query = query.filter(BranchContextModel.user_id == self.user_id)
+            
+            existing = query.first()
             if existing:
                 raise ValueError(f"Branch context already exists: {entity.id}")
             

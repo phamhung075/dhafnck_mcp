@@ -29,7 +29,7 @@ REDIS_PASSWORD=your_redis_password_here        # Change this!
 
 ### Security Keys
 ```bash
-SECRET_KEY=generate_32_char_random_string      # Change this!
+JWT_SECRET_KEY=generate_32_char_random_string      # Change this!
 JWT_SECRET=generate_32_char_random_string      # Change this!
 DHAFNCK_TOKEN=generate_your_token_here         # Change this!
 ```
@@ -104,7 +104,7 @@ BACKUP_ENABLED=true
 - `REDIS_PASSWORD`: Redis password
 
 ### Security
-- `SECRET_KEY`: Application secret key
+- `JWT_SECRET_KEY`: Application secret key
 - `JWT_SECRET`: JWT signing secret
 - `DHAFNCK_TOKEN`: Application token
 

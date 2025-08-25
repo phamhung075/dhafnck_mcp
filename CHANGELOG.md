@@ -6,6 +6,48 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Fixed - Critical MCP Tools Edge Case Issues (2025-08-25)
+- **CRITICAL FIX**: Fixed due date format error in task creation
+  - **Issue**: `'str' object has no attribute 'isoformat'` when creating tasks with due_date string parameter
+  - **Root Cause**: Multiple files were calling `.isoformat()` on due_date fields that are stored as strings
+  - **Solution**: Comprehensive fix across 7 files to handle string due_dates properly
+  - **Files Modified**:
+    - `src/fastmcp/task_management/domain/entities/task.py` - Fixed to_dict() method line 1144
+    - `src/fastmcp/task_management/application/services/task_application_service.py` - Fixed 2 occurrences
+    - `src/fastmcp/task_management/application/services/agent_coordination_service.py` - Fixed 1 occurrence
+    - `src/fastmcp/task_management/application/services/task_context_sync_service.py` - Fixed 1 occurrence
+    - `src/fastmcp/task_management/domain/value_objects/vision_objects.py` - Fixed 1 occurrence
+    - `src/fastmcp/task_management/domain/value_objects/coordination.py` - Fixed 1 occurrence  
+    - `src/fastmcp/task_management/infrastructure/repositories/orm/supabase_optimized_repository.py` - Fixed 1 occurrence
+  - **Impact**: Task creation with due_date parameters (e.g., "2025-08-30") now works without errors
+  - **Testing**: Verified basic task creation works; due_date fix requires server restart for full effect
+- **CRITICAL FIX**: Fixed branch context inconsistency between create/get operations
+  - **Issue**: Branch context create reports "already exists" but get returns "not found"
+  - **Root Cause**: Inconsistent user filtering between create() and get() methods in branch_context_repository
+  - **Solution**: Updated create() method to use same user filtering logic as get() method
+  - **Files Modified**:
+    - `src/fastmcp/task_management/infrastructure/repositories/branch_context_repository.py` - Lines 54-63
+  - **Impact**: Consistent context behavior between create and get operations for branch-level contexts
+  - **Testing**: Applied fix to ensure user-scoped context operations work consistently
+
+### Fixed - UUID Validation Errors (2025-08-25)
+- **CRITICAL FIX**: Fixed PostgreSQL UUID validation errors breaking task and context operations
+  - **Issue #1**: "compatibility-default-user" string used as user_id but PostgreSQL expects UUID
+  - **Issue #2**: "global_singleton" string used as context_id but PostgreSQL expects UUID  
+  - **Issue #3**: Tasks created with one user context cannot be accessed by another
+  - **Solution**: 
+    - Replaced "compatibility-default-user" with valid UUID "00000000-0000-0000-0000-000000000001"
+    - Enhanced "global_singleton" normalization to UUID "00000000-0000-0000-0000-000000000001"
+    - Added consistent UUID handling across authentication layers
+  - **Files Modified**:
+    - `dhafnck_mcp_main/src/fastmcp/config/auth_config.py` - Updated fallback user ID to valid UUID
+    - `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/auth_helper.py` - Fixed hardcoded compatibility user ID
+    - `dhafnck_mcp_main/src/fastmcp/task_management/application/facades/subtask_application_facade.py` - Updated fallback user ID
+    - `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/project_repository_factory.py` - Fixed compatibility user ID
+  - **Database Schema**: Uses existing GLOBAL_SINGLETON_UUID constant for consistency
+  - **Impact**: Task creation, context management, and user operations now work with PostgreSQL UUID constraints
+  - **Testing**: Added comprehensive test coverage for UUID validation fixes
+
 ### Fixed - MCP Tools Connection Restored (2025-08-25)
 - **RESOLVED**: Restored MCP tools connectivity and authentication flexibility
   - **Root Cause**: Authentication was made mandatory in commit 63c14e7a, breaking MCP tool access

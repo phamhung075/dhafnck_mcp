@@ -113,16 +113,16 @@ current_redis=$(get_current_value "REDIS_URL")
 prompt_with_default "Redis URL (leave empty for memory-only mode)" "$current_redis" "REDIS_URL"
 
 # Environment
-current_env=$(get_current_value "MCP_ENVIRONMENT")
-prompt_with_default "Environment (development/staging/production)" "${current_env:-development}" "MCP_ENVIRONMENT"
+current_env=$(get_current_value "APP_ENV")
+prompt_with_default "Environment (development/staging/production)" "${current_env:-development}" "APP_ENV"
 
 # Debug mode
-current_debug=$(get_current_value "MCP_DEBUG")
-prompt_with_default "Enable debug mode? (true/false)" "${current_debug:-true}" "MCP_DEBUG"
+current_debug=$(get_current_value "APP_DEBUG")
+prompt_with_default "Enable debug mode? (true/false)" "${current_debug:-true}" "APP_DEBUG"
 
 # Log level
-current_log=$(get_current_value "MCP_LOG_LEVEL")
-prompt_with_default "Log level (DEBUG/INFO/WARNING/ERROR)" "${current_log:-INFO}" "MCP_LOG_LEVEL"
+current_log=$(get_current_value "APP_LOG_LEVEL")
+prompt_with_default "Log level (DEBUG/INFO/WARNING/ERROR)" "${current_log:-INFO}" "APP_LOG_LEVEL"
 
 print_step "Step 3: AI Provider Configuration"
 
@@ -214,8 +214,8 @@ cat << 'EOF'
         "REDIS_URL": "redis://localhost:6379/0",
         "OPENAI_API_KEY": "your-actual-api-key-here",
         "ANTHROPIC_API_KEY": "your-actual-api-key-here",
-        "MCP_DEBUG": "true",
-        "MCP_LOG_LEVEL": "INFO"
+        "APP_DEBUG": "true",
+        "APP_LOG_LEVEL": "INFO"
       }
     }
   }

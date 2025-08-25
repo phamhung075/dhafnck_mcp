@@ -1,52 +1,8 @@
-# Optimized Docker Compose for better performance on lower-spec PCs
-# Reduces memory usage by ~60% and CPU usage by ~40%
+# Docker Compose for Supabase Cloud Database
+# This configuration uses Supabase cloud database instead of local PostgreSQL
 
 services:
-  # PostgreSQL with memory optimization
-  postgres:
-    image: postgres:15-alpine
-    container_name: dhafnck-postgres
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_ROOT_PASSWORD:-postgres}
-      POSTGRES_DB: postgres
-      # PostgreSQL memory tuning
-      POSTGRES_SHARED_BUFFERS: 128MB
-      POSTGRES_WORK_MEM: 4MB
-      POSTGRES_MAINTENANCE_WORK_MEM: 64MB
-      POSTGRES_EFFECTIVE_CACHE_SIZE: 256MB
-      POSTGRES_MAX_CONNECTIONS: 50
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-      - ./init-scripts:/docker-entrypoint-initdb.d:ro
-    ports:
-      - "${DATABASE_PORT:-5432}:5432"
-    networks:
-      - dhafnck-network
-    # Resource limits
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
-        reservations:
-          cpus: '0.1'
-          memory: 128M
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-    restart: unless-stopped
-    # Reduce logging
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  # Redis with memory optimization
+  # Redis for caching (still local)
   redis:
     image: redis:7-alpine
     container_name: dhafnck-redis
@@ -88,7 +44,7 @@ services:
         max-size: "5m"
         max-file: "2"
 
-  # Backend with optimizations
+  # Backend connected to Supabase
   backend:
     build:
       context: ../..
@@ -99,15 +55,30 @@ services:
         - dhafnck-backend:cache
     container_name: dhafnck-backend
     environment:
-      - DATABASE_TYPE=postgresql
-      - DATABASE_URL=postgresql://dhafnck_user:dev_password@postgres:5432/dhafnck_mcp
-      - REDIS_URL=${REDIS_URL}
+      # Supabase Database Configuration
+      - DATABASE_TYPE=${DATABASE_TYPE:-supabase}
+      - DATABASE_URL=${DATABASE_URL}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
+      - SUPABASE_DB_PASSWORD=${SUPABASE_DB_PASSWORD}
+      - SUPABASE_PROJECT_REF=${SUPABASE_PROJECT_REF}
+      - SUPABASE_REGION=${SUPABASE_REGION}
+      # Redis Configuration
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      # Security Configuration
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-      - JWT_SECRET=${JWT_SECRET}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_ALGORITHM=${JWT_ALGORITHM}
+      - JWT_EXPIRATION_MINUTES=${JWT_EXPIRATION_MINUTES}
+      # Application Configuration
       - APP_ENV=${APP_ENV:-production}
-      - APP_DEBUG=false
-      - APP_LOG_LEVEL=WARNING
+      - APP_DEBUG=${APP_DEBUG:-false}
+      - APP_LOG_LEVEL=${APP_LOG_LEVEL:-INFO}
       - CORS_ORIGINS=${CORS_ORIGINS}
+      # FastMCP Configuration
       - FASTMCP_TRANSPORT=streamable-http
       - FASTMCP_HOST=0.0.0.0
       - FASTMCP_PORT=8000
@@ -126,8 +97,6 @@ services:
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     networks:
@@ -154,7 +123,7 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Frontend with optimizations
+  # Frontend
   frontend:
     build:
       context: ../..
@@ -165,9 +134,12 @@ services:
         - dhafnck-frontend:cache
     container_name: dhafnck-frontend
     environment:
-      - VITE_API_URL=${BACKEND_URL}
+      - VITE_API_URL=${BACKEND_URL:-http://localhost:8000}
       - VITE_WS_URL=${WS_URL:-ws://localhost:8000}
       - NODE_ENV=production
+      # Supabase configuration for frontend
+      - REACT_APP_SUPABASE_URL=${REACT_APP_SUPABASE_URL}
+      - REACT_APP_SUPABASE_ANON_KEY=${REACT_APP_SUPABASE_ANON_KEY}
     volumes:
       - frontend-static:/usr/share/nginx/html:ro
       - type: tmpfs
@@ -206,13 +178,6 @@ services:
         max-file: "2"
 
 volumes:
-  postgres-data:
-    name: dhafnck-postgres-data
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ${DATA_PATH:-./data}/postgres
   redis-data:
     name: dhafnck-redis-data
     driver: local

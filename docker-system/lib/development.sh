@@ -71,10 +71,10 @@ dev_setup() {
     mkdir -p "${PROJECT_ROOT}/backups"
     mkdir -p "${PROJECT_ROOT}/logs"
     
-    # Copy dev environment if not exists
+    # Check if .env exists
     if [[ ! -f "${PROJECT_ROOT}/.env" ]]; then
-        cp "${ENV_DIR}/dev.env" "${PROJECT_ROOT}/.env"
-        info "Created .env file from dev template"
+        error ".env file not found in project root. Please create it from .env.example"
+        return 1
     fi
     
     # Load development environment

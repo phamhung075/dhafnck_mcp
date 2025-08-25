@@ -102,7 +102,7 @@ class SubtaskApplicationFacade:
                 env_name = os.getenv('ENVIRONMENT', '').lower()
                 if env_name in ('development', 'dev', ''):
                     logger.warning("TEMPORARY FIX: Forcing compatibility mode for subtask context derivation in development")
-                    user_id = "compatibility-default-user"
+                    user_id = "00000000-0000-0000-0000-000000000001"
                     AuthConfig.log_authentication_bypass("Subtask context derivation", "forced compatibility mode")
                 else:
                     raise e
@@ -176,7 +176,7 @@ class SubtaskApplicationFacade:
                 env_name = os.getenv('ENVIRONMENT', '').lower()
                 if env_name in ('development', 'dev', ''):
                     logger.warning("TEMPORARY FIX: Forcing compatibility mode for subtask context derivation in development")
-                    user_id = "compatibility-default-user"
+                    user_id = "00000000-0000-0000-0000-000000000001"
                     AuthConfig.log_authentication_bypass("Subtask context derivation", "forced compatibility mode")
                 else:
                     raise e

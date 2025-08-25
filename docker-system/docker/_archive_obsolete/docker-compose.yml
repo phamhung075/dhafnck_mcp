@@ -51,7 +51,7 @@ services:
       - DATABASE_TYPE=postgresql
       - DATABASE_URL=postgresql://dhafnck_user:dev_password@postgres:5432/dhafnck_mcp
       - REDIS_URL=${REDIS_URL}
-      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - JWT_SECRET=${JWT_SECRET}
       - APP_ENV=${APP_ENV}
       - APP_DEBUG=${APP_DEBUG}

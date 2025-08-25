@@ -136,7 +136,7 @@ class WorkAssignment:
                 "responsibilities": self.responsibilities,
                 "deliverables": self.deliverables,
                 "collaborators": self.collaborating_agents,
-                "due_date": self.due_date.isoformat() if self.due_date else None
+                "due_date": self.due_date if self.due_date else None
             }
         }
 

@@ -110,7 +110,7 @@ class TaskContextSyncService:
                     "assignees": domain_task.assignees,
                     "labels": domain_task.labels,
                     "estimated_effort": domain_task.estimated_effort,
-                    "due_date": domain_task.due_date.isoformat() if domain_task.due_date else None
+                    "due_date": domain_task.due_date if domain_task.due_date else None
                 },
                 # Add parent references for proper 4-tier hierarchy
                 # Tasks belong to branches in the 4-tier system

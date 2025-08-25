@@ -217,18 +217,22 @@ class TestDebugLoggingMiddleware:
 class TestCreateDhafnckMCPServer:
     """Test the create_dhafnck_mcp_server function."""
     
-    @patch('fastmcp.server.mcp_entry_point.init_database')
+    @patch('fastmcp.server.mcp_entry_point.configure_logging')
+    @patch('fastmcp.task_management.infrastructure.database.init_database.init_database')
     @patch('fastmcp.server.mcp_entry_point.AuthMiddleware')
     @patch('fastmcp.server.mcp_entry_point.FastMCP')
-    def test_create_server_with_defaults(self, mock_fastmcp, mock_auth_middleware, mock_init_db):
+    @patch.dict(os.environ, {'DHAFNCK_AUTH_ENABLED': 'true', 'SUPABASE_URL': 'http://test'})
+    def test_create_server_with_defaults(self, mock_fastmcp, mock_auth_middleware, mock_init_db, mock_configure_logging):
         """Test creating server with default configuration."""
         mock_server = Mock()
+        mock_server.name = 'TestServer'
         mock_server.tool = Mock(return_value=lambda f: f)
         mock_server.custom_route = Mock(return_value=lambda f: f)
         mock_server._startup_hooks = []
         mock_fastmcp.return_value = mock_server
         
         mock_auth = Mock()
+        mock_auth.enabled = True
         mock_auth_middleware.return_value = mock_auth
         
         result = create_dhafnck_mcp_server()
@@ -237,20 +241,25 @@ class TestCreateDhafnckMCPServer:
         mock_init_db.assert_called_once()
         mock_auth_middleware.assert_called_once()
         mock_fastmcp.assert_called_once()
+        mock_configure_logging.assert_called_once()
     
-    @patch('fastmcp.server.mcp_entry_point.init_database')
+    @patch('fastmcp.server.mcp_entry_point.configure_logging')
+    @patch('fastmcp.task_management.infrastructure.database.init_database.init_database')
     @patch('fastmcp.server.mcp_entry_point.AuthMiddleware')
     @patch('fastmcp.server.mcp_entry_point.FastMCP')
     @patch('fastmcp.server.mcp_entry_point.DDDCompliantMCPTools')
-    def test_create_server_with_ddd_tools(self, mock_ddd_tools, mock_fastmcp, mock_auth_middleware, mock_init_db):
+    @patch.dict(os.environ, {'DHAFNCK_AUTH_ENABLED': 'true', 'SUPABASE_URL': 'http://test'})
+    def test_create_server_with_ddd_tools(self, mock_ddd_tools, mock_fastmcp, mock_auth_middleware, mock_init_db, mock_configure_logging):
         """Test server creation with DDD tools registration."""
         mock_server = Mock()
+        mock_server.name = 'TestServer' 
         mock_server.tool = Mock(return_value=lambda f: f)
         mock_server.custom_route = Mock(return_value=lambda f: f)
         mock_server._startup_hooks = []
         mock_fastmcp.return_value = mock_server
         
         mock_auth = Mock()
+        mock_auth.enabled = True
         mock_auth_middleware.return_value = mock_auth
         
         mock_tools = Mock()
@@ -262,17 +271,31 @@ class TestCreateDhafnckMCPServer:
         mock_ddd_tools.assert_called_once()
         mock_tools.register_tools.assert_called_once_with(mock_server)
     
-    @patch('fastmcp.server.mcp_entry_point.init_database')
+    @patch('fastmcp.server.mcp_entry_point.configure_logging')
+    @patch('fastmcp.task_management.infrastructure.database.init_database.init_database')
     @patch('fastmcp.server.mcp_entry_point.AuthMiddleware')
     @patch('fastmcp.server.mcp_entry_point.FastMCP')
-    def test_create_server_error_handling(self, mock_fastmcp, mock_auth_middleware, mock_init_db):
+    @patch.dict(os.environ, {'DHAFNCK_AUTH_ENABLED': 'false'})
+    def test_create_server_error_handling(self, mock_fastmcp, mock_auth_middleware, mock_init_db, mock_configure_logging):
         """Test server creation error handling."""
         mock_init_db.side_effect = Exception("Database init failed")
+        
+        mock_server = Mock()
+        mock_server.name = 'TestServer'
+        mock_server.tool = Mock(return_value=lambda f: f)
+        mock_server.custom_route = Mock(return_value=lambda f: f)
+        mock_server._startup_hooks = []
+        mock_fastmcp.return_value = mock_server
+        
+        mock_auth = Mock()
+        mock_auth.enabled = False
+        mock_auth_middleware.return_value = mock_auth
         
         # Should not raise - continues with warning
         result = create_dhafnck_mcp_server()
         
         # Server should still be created even if DB init fails
+        assert result == mock_server
         mock_fastmcp.assert_called_once()
 
 
@@ -281,19 +304,12 @@ class TestMainFunction:
     
     @patch('fastmcp.server.mcp_entry_point.create_dhafnck_mcp_server')
     @patch('fastmcp.server.mcp_entry_point.sys.argv', ['mcp_entry_point.py'])
-    @patch('fastmcp.server.mcp_entry_point.os.environ.get')
-    def test_main_basic_execution(self, mock_environ_get, mock_create_server):
+    @patch.dict(os.environ, {'FASTMCP_TRANSPORT': 'stdio', 'DHAFNCK_AUTH_ENABLED': 'false', 'DHAFNCK_MVP_MODE': 'false'})
+    def test_main_basic_execution(self, mock_create_server):
         """Test basic main function execution."""
         mock_server = Mock()
         mock_server.run = Mock()
         mock_create_server.return_value = mock_server
-        
-        # Mock environment variables for default transport
-        mock_environ_get.side_effect = lambda key, default=None: {
-            "FASTMCP_TRANSPORT": "stdio",
-            "FASTMCP_HOST": "localhost",
-            "FASTMCP_PORT": "8000"
-        }.get(key, default)
         
         # Main doesn't call sys.exit(0) anymore - it just runs
         main()
@@ -317,6 +333,7 @@ class TestMainFunction:
                 mock_exit.assert_called_with(1)
     
     @patch('fastmcp.server.mcp_entry_point.create_dhafnck_mcp_server')
+    @patch.dict(os.environ, {'FASTMCP_TRANSPORT': 'stdio', 'DHAFNCK_AUTH_ENABLED': 'false'})
     def test_main_cleanup_on_exit(self, mock_create_server):
         """Test that cleanup happens when server exits."""
         mock_server = Mock()
@@ -330,6 +347,7 @@ class TestMainFunction:
         mock_server.run.assert_called_once()
     
     @patch('fastmcp.server.mcp_entry_point.create_dhafnck_mcp_server')
+    @patch.dict(os.environ, {'FASTMCP_TRANSPORT': 'stdio', 'DHAFNCK_AUTH_ENABLED': 'false'})
     def test_main_keyboard_interrupt(self, mock_create_server):
         """Test main function handles KeyboardInterrupt."""
         mock_server = Mock()
@@ -381,18 +399,22 @@ class TestEnvironmentAndSetup:
 class TestIntegrationWithFastMCP:
     """Test integration with FastMCP server components."""
     
-    @patch('fastmcp.server.mcp_entry_point.init_database')
+    @patch('fastmcp.server.mcp_entry_point.configure_logging')
+    @patch('fastmcp.task_management.infrastructure.database.init_database.init_database')
     @patch('fastmcp.server.mcp_entry_point.AuthMiddleware')
     @patch('fastmcp.server.mcp_entry_point.FastMCP')
-    def test_server_initialization_flow(self, mock_fastmcp, mock_auth_middleware, mock_init_db):
+    @patch.dict(os.environ, {'DHAFNCK_AUTH_ENABLED': 'true', 'SUPABASE_URL': 'http://test'})
+    def test_server_initialization_flow(self, mock_fastmcp, mock_auth_middleware, mock_init_db, mock_configure_logging):
         """Test the complete server initialization flow."""
         mock_server = Mock()
+        mock_server.name = 'TestServer'
         mock_server.tool = Mock(return_value=lambda f: f)
         mock_server.custom_route = Mock(return_value=lambda f: f)
         mock_server._startup_hooks = []
         mock_fastmcp.return_value = mock_server
         
         mock_auth = Mock()
+        mock_auth.enabled = True
         mock_auth_middleware.return_value = mock_auth
         
         # Test that server creation follows expected pattern
@@ -402,6 +424,7 @@ class TestIntegrationWithFastMCP:
         mock_init_db.assert_called_once()
         mock_auth_middleware.assert_called_once()
         mock_fastmcp.assert_called_once()
+        mock_configure_logging.assert_called_once()
     
     def test_middleware_integration(self):
         """Test that middleware integrates properly with ASGI."""

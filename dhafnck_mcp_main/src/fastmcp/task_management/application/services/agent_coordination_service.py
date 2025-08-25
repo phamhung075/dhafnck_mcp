@@ -473,7 +473,7 @@ class AgentCoordinationService:
                     "task_id": a.task_id,
                     "role": a.role,
                     "assigned_at": a.assigned_at.isoformat(),
-                    "due_date": a.due_date.isoformat() if a.due_date else None
+                    "due_date": a.due_date if a.due_date else None
                 }
                 for a in active_assignments
             ],

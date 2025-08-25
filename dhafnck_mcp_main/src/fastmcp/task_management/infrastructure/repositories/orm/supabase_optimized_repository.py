@@ -234,5 +234,5 @@ class SupabaseOptimizedRepository(ORMTaskRepository):
                 "context_id": result.context_id,
                 "details": result.details,
                 "estimated_effort": result.estimated_effort,
-                "due_date": result.due_date.isoformat() if result.due_date else None
+                "due_date": result.due_date if result.due_date else None
             }

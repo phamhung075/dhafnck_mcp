@@ -264,7 +264,7 @@ Enable debug logging to troubleshoot authentication:
 
 ```bash
 # Server side
-export MCP_DEBUG=true
+export APP_DEBUG=true
 export LOG_LEVEL=DEBUG
 
 # Check logs
