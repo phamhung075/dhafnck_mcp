@@ -148,29 +148,10 @@ def get_authenticated_user_id(provided_user_id: Optional[str] = None, operation_
             except Exception as e:
                 logger.info(f"⚠️ Could not access MCP auth context: {e}")
         
-        # If still no user ID, check compatibility mode
+        # If still no user ID, throw authentication error
         if user_id is None:
-            logger.info("🔧 Checking compatibility mode...")
-            if AuthConfig.is_default_user_allowed():
-                user_id = AuthConfig.get_fallback_user_id()
-                logger.info(f"✅ Using compatibility mode user_id: {user_id}")
-                AuthConfig.log_authentication_bypass(operation_name, "compatibility mode")
-            else:
-                # ENHANCED FIX: Force enable compatibility mode for development and context operations
-                # This addresses dual authentication issues where request context isn't available
-                env_name = os.getenv('ENVIRONMENT', '').lower()
-                is_context_operation = "context" in operation_name.lower()
-                is_development = env_name in ('development', 'dev', '')
-                
-                if is_development or is_context_operation:
-                    fallback_reason = "development environment" if is_development else "context operation fallback"
-                    logger.warning(f"🔧 ENHANCED FIX: Forcing compatibility mode for {operation_name} ({fallback_reason})")
-                    user_id = "00000000-0000-0000-0000-000000000001"
-                    logger.error(f"🚨 USER_ID_DEBUG: Using fallback user_id '{user_id}' for {operation_name} - THIS SHOULD NOT HAPPEN IN PRODUCTION")
-                    AuthConfig.log_authentication_bypass(operation_name, f"forced compatibility mode - {fallback_reason}")
-                else:
-                    logger.error(f"❌ No authentication found and compatibility mode disabled for {operation_name}")
-                    raise UserAuthenticationRequiredError(operation_name)
+            logger.error(f"❌ No authentication found for {operation_name}")
+            raise UserAuthenticationRequiredError(operation_name)
     else:
         logger.info(f"✅ Using provided user_id: {user_id}")
     
@@ -208,8 +189,8 @@ def log_authentication_details():
         except Exception as e:
             logger.debug(f"Error accessing MCP auth context: {e}")
         
-        # Check compatibility mode
-        logger.debug(f"Compatibility mode enabled: {AuthConfig.is_default_user_allowed()}")
+        # Authentication is always required
+        logger.debug("Authentication is always strictly enforced")
         
     except Exception as e:
         logger.error(f"Error logging authentication details: {e}")

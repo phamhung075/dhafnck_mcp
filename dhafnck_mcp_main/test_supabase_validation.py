@@ -10,14 +10,14 @@ sys.path.append('/home/daihungpham/__projects__/agentic-project/dhafnck_mcp_main
 import jwt
 from datetime import datetime, timedelta
 
-# Test token from our generation script
-test_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzU1OTcwODQ3LCJpYXQiOjE3NTU4ODQ0NDcsImlzcyI6Imh0dHBzOi8vcG1zd212eGh6ZGZ4ZXFzZmRnaWYuc3VwYWJhc2UuY28vYXV0aC92MSIsInN1YiI6IjY1ZDczM2U5LTA0ZDYtNGRkYS05NTM2LTY4OGMzYTU5NDQ4ZSIsImVtYWlsIjoidGVzdHVzZXJAZXhhbXBsZS5jb20iLCJwaG9uZSI6IiIsImFwcF9tZXRhZGF0YSI6eyJwcm92aWRlciI6ImVtYWlsIiwicHJvdmlkZXJzIjpbImVtYWlsIl19LCJ1c2VyX21ldGFkYXRhIjp7InVzZXJuYW1lIjoidGVzdHVzZXIiLCJlbWFpbCI6InRlc3R1c2VyQGV4YW1wbGUuY29tIn0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoicGFzc3dvcmQiLCJ0aW1lc3RhbXAiOjE3NTU4ODQ0NDd9XSwic2Vzc2lvbl9pZCI6IjEyMzQ1Njc4LTEyMzQtMTIzNC0xMjM0LTEyMzQ1Njc4OTAxMiJ9.NRTRq3d4uVM9PHrqvwkvCA9QXdyHtaXWvx_hcH-dai8"
+# Test token from environment variable
+test_token = os.getenv("TEST_JWT_TOKEN", "")
 
 # Supabase JWT secret from .env
-supabase_jwt_secret = "xQVwQQIPe9X00jzJT64CkDnt2/IDmst4TjzNDIVfg0T8ADxlsUZDK+SOtaBs6lYuEttroRNHIOGMPYmoyHHs7A=="
+supabase_jwt_secret = os.getenv("SUPABASE_JWT_SECRET", "")
 
 # Local JWT secret from .env  
-local_jwt_secret = "dGhpcyBpcyBhIGR1bW15IGp3dCBzZWNyZXQgZm9yIGRldmVsb3BtZW50"
+local_jwt_secret = os.getenv("JWT_SECRET_KEY", "")
 
 def test_validation():
     print("🔍 Testing JWT Validation")

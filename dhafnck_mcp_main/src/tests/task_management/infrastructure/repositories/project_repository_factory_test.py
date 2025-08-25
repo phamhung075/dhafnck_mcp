@@ -56,16 +56,16 @@ class TestProjectRepositoryFactory:
         types = list(RepositoryType)
         assert len(types) >= 3
     
-    @patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.validate_user_id')
-    @patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.AuthConfig')
+    @patch('fastmcp.task_management.domain.constants.validate_user_id')
+    @patch('fastmcp.config.auth_config.AuthConfig')
     def test_create_repository_success(self, mock_auth_config, mock_validate):
         """Test successful repository creation with valid user."""
         mock_validate.return_value = "test-user-123"
         mock_auth_config.is_default_user_allowed.return_value = False
         
-        with patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.ORMProjectRepository') as mock_orm:
+        with patch.object(ProjectRepositoryFactory, '_create_instance') as mock_create_instance:
             mock_instance = Mock(spec=ProjectRepository)
-            mock_orm.return_value = mock_instance
+            mock_create_instance.return_value = mock_instance
             
             result = ProjectRepositoryFactory.create(
                 repository_type=RepositoryType.ORM,
@@ -74,17 +74,17 @@ class TestProjectRepositoryFactory:
             
             assert result == mock_instance
             mock_validate.assert_called_once_with("test-user-123", "Project repository creation")
-            mock_orm.assert_called_once()
+            mock_create_instance.assert_called_once_with(RepositoryType.ORM, "test-user-123", None)
     
-    @patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.AuthConfig')
+    @patch('fastmcp.config.auth_config.AuthConfig')
     def test_create_repository_compatibility_mode(self, mock_auth_config):
         """Test repository creation in compatibility mode."""
         mock_auth_config.is_default_user_allowed.return_value = True
         mock_auth_config.get_fallback_user_id.return_value = "fallback-user"
         
-        with patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.ORMProjectRepository') as mock_orm:
+        with patch.object(ProjectRepositoryFactory, '_create_instance') as mock_create_instance:
             mock_instance = Mock(spec=ProjectRepository)
-            mock_orm.return_value = mock_instance
+            mock_create_instance.return_value = mock_instance
             
             result = ProjectRepositoryFactory.create(user_id=None)
             
@@ -95,7 +95,7 @@ class TestProjectRepositoryFactory:
                 "Project repository creation", "compatibility mode"
             )
     
-    @patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.AuthConfig')
+    @patch('fastmcp.config.auth_config.AuthConfig')
     @patch('os.getenv')
     def test_create_repository_no_user_id_no_compatibility(self, mock_getenv, mock_auth_config):
         """Test repository creation without user ID when compatibility is disabled."""
@@ -107,10 +107,13 @@ class TestProjectRepositoryFactory:
         
         assert "Project repository creation" in str(exc_info.value)
     
-    @patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.AuthConfig')
+    @patch('fastmcp.config.auth_config.AuthConfig')
     @patch('os.getenv')
     def test_create_repository_dev_environment_temporary_fix(self, mock_getenv, mock_auth_config):
         """Test temporary development environment fix for git branch authentication."""
+        # Clear cache before each iteration
+        ProjectRepositoryFactory.clear_cache()
+        
         mock_auth_config.is_default_user_allowed.return_value = False
         mock_auth_config.log_authentication_bypass = Mock()
         
@@ -120,9 +123,9 @@ class TestProjectRepositoryFactory:
         for env_value in dev_environments:
             mock_getenv.return_value = env_value
             
-            with patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.ORMProjectRepository') as mock_orm:
+            with patch.object(ProjectRepositoryFactory, '_create_instance') as mock_create_instance:
                 mock_instance = Mock(spec=ProjectRepository)
-                mock_orm.return_value = mock_instance
+                mock_create_instance.return_value = mock_instance
                 
                 # Should use compatibility-default-user even when compatibility mode is disabled
                 result = ProjectRepositoryFactory.create(user_id=None)
@@ -132,9 +135,19 @@ class TestProjectRepositoryFactory:
                     "Project repository creation", 
                     "forced compatibility mode for git branch fix"
                 )
+                
+                # Verify it used the correct user ID
+                mock_create_instance.assert_called_once()
+                call_args = mock_create_instance.call_args
+                assert call_args[0][1] == "00000000-0000-0000-0000-000000000001"  # user_id
+                
+                # Clear cache for next iteration
+                ProjectRepositoryFactory.clear_cache()
+                mock_auth_config.log_authentication_bypass.reset_mock()
+                mock_create_instance.reset_mock()
     
     @patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.logger')
-    @patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.AuthConfig')
+    @patch('fastmcp.config.auth_config.AuthConfig')
     @patch('os.getenv')
     def test_create_repository_dev_environment_logs_warning(self, mock_getenv, mock_auth_config, mock_logger):
         """Test that temporary dev fix logs appropriate warning."""
@@ -149,7 +162,7 @@ class TestProjectRepositoryFactory:
                            if "TEMPORARY FIX" in str(call)]
             assert len(warning_calls) > 0
     
-    @patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.validate_user_id')
+    @patch('fastmcp.task_management.domain.constants.validate_user_id')
     def test_create_repository_prohibited_user_id(self, mock_validate):
         """Test repository creation with prohibited user ID."""
         mock_validate.side_effect = DefaultUserProhibitedError()
@@ -157,13 +170,15 @@ class TestProjectRepositoryFactory:
         with pytest.raises(DefaultUserProhibitedError):
             ProjectRepositoryFactory.create(user_id="default_id")
     
-    def test_create_repository_caching(self):
+    @patch('fastmcp.config.auth_config.AuthConfig')
+    def test_create_repository_caching(self, mock_auth_config):
         """Test that repositories are cached properly."""
         user_id = "test-user-123"
+        mock_auth_config.is_default_user_allowed.return_value = False
         
-        with patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.ORMProjectRepository') as mock_orm:
+        with patch.object(ProjectRepositoryFactory, '_create_instance') as mock_create_instance:
             mock_instance = Mock(spec=ProjectRepository)
-            mock_orm.return_value = mock_instance
+            mock_create_instance.return_value = mock_instance
             
             # Create repository twice
             result1 = ProjectRepositoryFactory.create(
@@ -178,12 +193,15 @@ class TestProjectRepositoryFactory:
             # Should return same instance
             assert result1 is result2
             # Should only create once
-            mock_orm.assert_called_once()
+            mock_create_instance.assert_called_once()
     
-    def test_create_repository_different_users(self):
+    @patch('fastmcp.config.auth_config.AuthConfig')
+    def test_create_repository_different_users(self, mock_auth_config):
         """Test that different users get different repository instances."""
-        with patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.ORMProjectRepository') as mock_orm:
-            mock_orm.side_effect = lambda **kwargs: Mock(spec=ProjectRepository)
+        mock_auth_config.is_default_user_allowed.return_value = False
+        
+        with patch.object(ProjectRepositoryFactory, '_create_instance') as mock_create_instance:
+            mock_create_instance.side_effect = lambda *args, **kwargs: Mock(spec=ProjectRepository)
             
             # Create with different user IDs
             result1 = ProjectRepositoryFactory.create(user_id="user1")
@@ -192,27 +210,35 @@ class TestProjectRepositoryFactory:
             # Should be different instances
             assert result1 is not result2
             # Should create twice
-            assert mock_orm.call_count == 2
+            assert mock_create_instance.call_count == 2
     
-    def test_create_repository_fallback_to_mock(self):
+    @patch('fastmcp.config.auth_config.AuthConfig')
+    def test_create_repository_fallback_to_mock(self, mock_auth_config):
         """Test fallback to mock repository when ORM creation fails."""
-        with patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.ORMProjectRepository') as mock_orm:
-            mock_orm.side_effect = Exception("Database connection failed")
+        mock_auth_config.is_default_user_allowed.return_value = False
+        
+        with patch.object(ProjectRepositoryFactory, '_create_instance') as mock_create_instance:
+            # First call fails, second call (fallback) succeeds
+            mock_instance = Mock(spec=ProjectRepository)
+            mock_create_instance.side_effect = [
+                Exception("Database connection failed"),
+                mock_instance
+            ]
             
-            with patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.MockProjectRepository') as mock_mock:
-                mock_instance = Mock(spec=ProjectRepository)
-                mock_mock.return_value = mock_instance
-                
-                result = ProjectRepositoryFactory.create(
-                    repository_type=RepositoryType.ORM,
-                    user_id="user-123"
-                )
-                
-                # Should fallback to mock
-                assert result == mock_instance
-                mock_mock.assert_called_once()
+            result = ProjectRepositoryFactory.create(
+                repository_type=RepositoryType.ORM,
+                user_id="user-123"
+            )
+            
+            # Should fallback to mock
+            assert result == mock_instance
+            # Should be called twice (first fails, second succeeds)
+            assert mock_create_instance.call_count == 2
+            # Second call should be with MOCK type
+            second_call = mock_create_instance.call_args_list[1]
+            assert second_call[0][0] == RepositoryType.MOCK
     
-    @patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.get_db_config')
+    @patch('fastmcp.task_management.infrastructure.database.database_config.get_db_config')
     def test_get_default_type_database_available(self, mock_get_db_config):
         """Test default type selection when database is available."""
         mock_db_config = Mock()
@@ -223,7 +249,7 @@ class TestProjectRepositoryFactory:
         
         assert default_type == RepositoryType.ORM
     
-    @patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.get_db_config')
+    @patch('fastmcp.task_management.infrastructure.database.database_config.get_db_config')
     def test_get_default_type_database_unavailable(self, mock_get_db_config):
         """Test default type selection when database is unavailable."""
         mock_get_db_config.side_effect = Exception("Database not available")
@@ -232,7 +258,7 @@ class TestProjectRepositoryFactory:
         
         assert default_type == RepositoryType.MOCK
     
-    @patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.get_db_config')
+    @patch('fastmcp.task_management.infrastructure.database.database_config.get_db_config')
     def test_get_default_type_no_engine(self, mock_get_db_config):
         """Test default type selection when database config has no engine."""
         mock_db_config = Mock()
@@ -289,10 +315,18 @@ class TestProjectRepositoryFactory:
     
     def test_create_instance_orm_type(self):
         """Test creating ORM repository instance."""
-        with patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.ORMProjectRepository') as mock_orm:
-            mock_instance = Mock(spec=ProjectRepository)
-            mock_orm.return_value = mock_instance
-            
+        # Save original repository class
+        original_orm_class = ProjectRepositoryFactory._repository_types[RepositoryType.ORM]
+        
+        # Create mock class
+        mock_orm_class = Mock()
+        mock_instance = Mock(spec=ProjectRepository)
+        mock_orm_class.return_value = mock_instance
+        
+        # Temporarily replace the class in the dictionary
+        ProjectRepositoryFactory._repository_types[RepositoryType.ORM] = mock_orm_class
+        
+        try:
             result = ProjectRepositoryFactory._create_instance(
                 RepositoryType.ORM,
                 "user-123",
@@ -300,18 +334,29 @@ class TestProjectRepositoryFactory:
             )
             
             assert result == mock_instance
-            mock_orm.assert_called_once()
+            mock_orm_class.assert_called_once()
+        finally:
+            # Restore original class
+            ProjectRepositoryFactory._repository_types[RepositoryType.ORM] = original_orm_class
     
     def test_create_instance_orm_with_db_path(self):
         """Test creating ORM repository with custom database path."""
         custom_db_path = "/custom/db/path"
         
-        with patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.ORMProjectRepository') as mock_orm:
-            with patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.close_db') as mock_close_db:
+        # Save original repository class
+        original_orm_class = ProjectRepositoryFactory._repository_types[RepositoryType.ORM]
+        
+        # Create mock class
+        mock_orm_class = Mock()
+        mock_instance = Mock(spec=ProjectRepository)
+        mock_orm_class.return_value = mock_instance
+        
+        # Temporarily replace the class in the dictionary
+        ProjectRepositoryFactory._repository_types[RepositoryType.ORM] = mock_orm_class
+        
+        try:
+            with patch('fastmcp.task_management.infrastructure.database.database_config.close_db') as mock_close_db:
                 with patch.dict(os.environ, {}, clear=True):
-                    mock_instance = Mock(spec=ProjectRepository)
-                    mock_orm.return_value = mock_instance
-                    
                     result = ProjectRepositoryFactory._create_instance(
                         RepositoryType.ORM,
                         "user-123",
@@ -321,13 +366,24 @@ class TestProjectRepositoryFactory:
                     assert result == mock_instance
                     assert os.environ.get('MCP_DB_PATH') != custom_db_path  # Should be restored
                     mock_close_db.assert_called_once()
+        finally:
+            # Restore original class
+            ProjectRepositoryFactory._repository_types[RepositoryType.ORM] = original_orm_class
     
     def test_create_instance_mock_type(self):
         """Test creating mock repository instance."""
-        with patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.MockProjectRepository') as mock_mock:
-            mock_instance = Mock(spec=ProjectRepository)
-            mock_mock.return_value = mock_instance
-            
+        # Save original repository class
+        original_mock_class = ProjectRepositoryFactory._repository_types[RepositoryType.MOCK]
+        
+        # Create mock class
+        mock_mock_class = Mock()
+        mock_instance = Mock(spec=ProjectRepository)
+        mock_mock_class.return_value = mock_instance
+        
+        # Temporarily replace the class in the dictionary
+        ProjectRepositoryFactory._repository_types[RepositoryType.MOCK] = mock_mock_class
+        
+        try:
             result = ProjectRepositoryFactory._create_instance(
                 RepositoryType.MOCK,
                 "user-123",
@@ -335,7 +391,10 @@ class TestProjectRepositoryFactory:
             )
             
             assert result == mock_instance
-            mock_mock.assert_called_once()
+            mock_mock_class.assert_called_once()
+        finally:
+            # Restore original class
+            ProjectRepositoryFactory._repository_types[RepositoryType.MOCK] = original_mock_class
     
     def test_create_instance_unsupported_type(self):
         """Test creating instance with unsupported repository type."""
@@ -353,11 +412,21 @@ class TestProjectRepositoryFactory:
     
     def test_create_instance_orm_fallback_to_mock(self):
         """Test fallback to mock when ORM creation fails."""
-        with patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.ORMProjectRepository') as mock_orm:
-            mock_orm.side_effect = Exception("ORM creation failed")
-            
+        # Save original repository classes
+        original_orm_class = ProjectRepositoryFactory._repository_types[RepositoryType.ORM]
+        
+        # Create mock classes
+        mock_orm_class = Mock()
+        mock_orm_class.side_effect = Exception("ORM creation failed")
+        
+        mock_instance = Mock(spec=ProjectRepository)
+        
+        # Temporarily replace the classes
+        ProjectRepositoryFactory._repository_types[RepositoryType.ORM] = mock_orm_class
+        
+        try:
+            # Also patch the direct MockProjectRepository import for fallback
             with patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.MockProjectRepository') as mock_mock:
-                mock_instance = Mock(spec=ProjectRepository)
                 mock_mock.return_value = mock_instance
                 
                 result = ProjectRepositoryFactory._create_instance(
@@ -368,6 +437,9 @@ class TestProjectRepositoryFactory:
                 
                 assert result == mock_instance
                 mock_mock.assert_called_once()
+        finally:
+            # Restore original classes
+            ProjectRepositoryFactory._repository_types[RepositoryType.ORM] = original_orm_class
     
     def test_register_type(self):
         """Test registering new repository type."""
@@ -377,10 +449,13 @@ class TestProjectRepositoryFactory:
         
         assert ProjectRepositoryFactory._repository_types[RepositoryType.IN_MEMORY] == mock_repo_class
     
-    def test_clear_cache(self):
+    @patch('fastmcp.config.auth_config.AuthConfig')
+    def test_clear_cache(self, mock_auth_config):
         """Test clearing repository cache."""
+        mock_auth_config.is_default_user_allowed.return_value = False
+        
         # Create some cached repositories
-        with patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.MockProjectRepository'):
+        with patch.object(ProjectRepositoryFactory, '_create_instance'):
             ProjectRepositoryFactory.create(user_id="user1")
             ProjectRepositoryFactory.create(user_id="user2")
             
@@ -492,7 +567,7 @@ class TestGlobalRepositoryManager:
             result = GlobalRepositoryManager.get_default()
             
             assert result == mock_repository
-            mock_create.assert_called_once_with()
+            mock_create.assert_called_once_with(user_id=None)
     
     def test_get_default_cached(self):
         """Test that default repository is cached."""

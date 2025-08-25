@@ -10,8 +10,8 @@ import jwt
 # Set up environment for the JWT service
 os.environ.setdefault("JWT_SECRET_KEY", "default-secret-key-change-in-production")
 
-# The JWT token from the user
-JWT_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl9pZCI6InRva18wZWI4MTMyZmUxMzZiNzgyIiwidXNlcl9pZCI6IjY1ZDczM2U5LTA0ZDYtNGRkYS05NTM2LTY4OGMzYTU5NDQ4ZSIsInNjb3BlcyI6WyJyZWFkOnRhc2tzIiwicmVhZDpjb250ZXh0Iiwid3JpdGU6Y29udGV4dCIsIndyaXRlOnRhc2tzIiwicmVhZDphZ2VudHMiLCJ3cml0ZTphZ2VudHMiLCJleGVjdXRlOm1jcCJdLCJleHAiOjE3NTgyOTQ5ODAsImlhdCI6MTc1NTcwMjk4MSwidHlwZSI6ImFwaV90b2tlbiJ9.CBDY79GJDoIiftIL0IJmjxxvuo75gaxNwShrHhaGec8"
+# The JWT token from the user (should be passed via environment variable)
+JWT_TOKEN = os.getenv("DEBUG_JWT_TOKEN", "")
 
 def debug_jwt_service():
     """Test the JWTService directly."""

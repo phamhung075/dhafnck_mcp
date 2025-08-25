@@ -716,12 +716,8 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
                     if hasattr(self, 'user_id') and self.user_id:
                         task_user_id = validate_user_id(self.user_id, "Task creation")
                     else:
-                        # Check if compatibility mode is enabled
-                        if AuthConfig.is_default_user_allowed():
-                            task_user_id = AuthConfig.get_fallback_user_id()
-                            AuthConfig.log_authentication_bypass("Task creation in repository", "compatibility mode")
-                        else:
-                            raise UserAuthenticationRequiredError("Task creation")
+                        # NO FALLBACKS ALLOWED - user authentication is required
+                        raise UserAuthenticationRequiredError("Task creation")
                     
                     # Create new task
                     new_task = Task(

@@ -58,23 +58,8 @@ class ProjectRepositoryFactory:
         print(f"DEBUG: ProjectRepositoryFactory.create called with user_id={user_id}")
         
         if user_id is None:
-            logger.warning(f"⚠️ Project Repository Factory: No user_id provided, checking compatibility mode...")
-            # Check if compatibility mode is enabled
-            if AuthConfig.is_default_user_allowed():
-                user_id = AuthConfig.get_fallback_user_id()
-                logger.info(f"✅ Project Repository Factory: Using compatibility mode user_id: {user_id}")
-                AuthConfig.log_authentication_bypass("Project repository creation", "compatibility mode")
-            else:
-                # TEMPORARY FIX: Force enable compatibility mode for development
-                # This addresses the git branch authentication issue during MCP operations
-                env_name = os.getenv('ENVIRONMENT', '').lower()
-                if env_name in ('development', 'dev', ''):  # Include empty string for local dev
-                    logger.warning(f"🔧 TEMPORARY FIX: Forcing compatibility mode for Project repository creation in development")
-                    user_id = "00000000-0000-0000-0000-000000000001"
-                    AuthConfig.log_authentication_bypass("Project repository creation", "forced compatibility mode for git branch fix")
-                else:
-                    logger.error(f"❌ Project Repository Factory: No user_id and compatibility mode disabled")
-                    raise UserAuthenticationRequiredError("Project repository creation")
+            logger.error(f"❌ Project Repository Factory: No user_id provided - authentication is required")
+            raise UserAuthenticationRequiredError("Project repository creation")
         else:
             logger.info(f"✅ Project Repository Factory: Using provided user_id: {user_id}")
             user_id = validate_user_id(user_id, "Project repository creation")

@@ -6,6 +6,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Fixed - CRITICAL SECURITY: Authentication Bypass Vulnerability (2025-08-25)
+- **SECURITY CRITICAL**: Removed ALL fallback authentication logic that bypassed user authentication
+  - **Security Risk**: Multiple files contained hardcoded fallback user ID `00000000-0000-0000-0000-000000000001`
+  - **Vulnerability**: System would bypass authentication for development environments and context operations
+  - **Impact**: Unauthenticated users could access secured resources using fallback mechanisms
+  - **Solution**: Complete removal of all compatibility mode and fallback logic
+  - **Files Fixed**:
+    - `src/fastmcp/task_management/interface/controllers/auth_helper.py` - Removed lines 159-173 forced fallback logic
+    - `src/fastmcp/config/auth_config.py` - Complete rewrite to remove all compatibility mode methods
+    - `src/fastmcp/task_management/application/facades/subtask_application_facade.py` - Removed fallback logic in 2 locations
+    - `src/fastmcp/task_management/infrastructure/repositories/project_repository_factory.py` - Removed development environment bypass
+  - **Authentication**: Now properly throws `UserAuthenticationRequiredError` when no valid user context exists
+  - **Breaking Change**: Applications must now provide valid authentication - no fallbacks allowed
+  - **Security Status**: Authentication is now strictly enforced in all environments
+
 ### Fixed - Critical MCP Tools Edge Case Issues (2025-08-25)
 - **CRITICAL FIX**: Fixed due date format error in task creation
   - **Issue**: `'str' object has no attribute 'isoformat'` when creating tasks with due_date string parameter

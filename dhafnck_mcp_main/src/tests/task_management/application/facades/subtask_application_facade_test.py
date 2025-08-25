@@ -103,6 +103,22 @@ class TestSubtaskApplicationFacadeStaticRepositories:
         return Mock()
     
     @pytest.fixture
+    def mock_add_subtask_response(self):
+        """Create a mock add subtask response"""
+        response = Mock()
+        response.subtask = {"id": "subtask-123", "title": "Test Subtask"}
+        response.task_id = "task-123"
+        response.progress = {"completed": 0, "total": 1}
+        return response
+    
+    @pytest.fixture
+    def mock_update_subtask_response(self):
+        """Create a mock update subtask response"""
+        response = Mock()
+        response.to_dict.return_value = {"id": "subtask-123", "title": "Updated Subtask"}
+        return response
+    
+    @pytest.fixture
     def facade(self, mock_task_repository, mock_subtask_repository):
         return SubtaskApplicationFacade(
             task_repository=mock_task_repository,
@@ -528,7 +544,7 @@ class TestSubtaskApplicationFacadeContextDerivation:
                     
                     result = facade._derive_context_from_task("task-123")
                     
-                    assert result["user_id"] == "compatibility-default-user"
+                    assert result["user_id"] == "00000000-0000-0000-0000-000000000001"
                     mock_auth_config.log_authentication_bypass.assert_called_with(
                         "Subtask context derivation", "forced compatibility mode"
                     )

@@ -165,14 +165,8 @@ class TaskApplicationFacade:
                 logger.info(f"🔄 TaskApplicationFacade: Fallback to request.user_id: {derived_user_id}")
             
             if derived_user_id is None:
-                logger.warning(f"⚠️ TaskApplicationFacade: No user_id from context or request, checking compatibility mode...")
-                if AuthConfig.is_default_user_allowed():
-                    derived_user_id = AuthConfig.get_fallback_user_id()
-                    logger.info(f"✅ TaskApplicationFacade: Using compatibility mode user_id: {derived_user_id}")
-                    AuthConfig.log_authentication_bypass("Task creation", "compatibility mode")
-                else:
-                    logger.error(f"❌ TaskApplicationFacade: No authentication found and compatibility mode disabled")
-                    raise UserAuthenticationRequiredError("Task creation")
+                logger.error(f"❌ TaskApplicationFacade: No authentication found - user authentication is required")
+                raise UserAuthenticationRequiredError("Task creation")
             else:
                 logger.info(f"✅ TaskApplicationFacade: Using authenticated user_id: {derived_user_id}")
                 derived_user_id = validate_user_id(derived_user_id, "Task creation")

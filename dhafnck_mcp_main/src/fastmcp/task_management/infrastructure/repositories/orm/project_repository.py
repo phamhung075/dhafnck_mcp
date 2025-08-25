@@ -373,16 +373,11 @@ class ORMProjectRepository(BaseORMRepository[Project], BaseUserScopedRepository,
                 
                 project_id = str(uuid.uuid4())
                 
-                # Validate user authentication is provided
+                # Validate user authentication is provided - NO FALLBACKS ALLOWED
                 if user_id is None:
-                    # Check if compatibility mode is enabled
-                    if AuthConfig.is_default_user_allowed():
-                        user_id = AuthConfig.get_fallback_user_id()
-                        AuthConfig.log_authentication_bypass("Project creation in repository", "compatibility mode")
-                    else:
-                        raise UserAuthenticationRequiredError("Project creation")
-                else:
-                    user_id = validate_user_id(user_id, "Project creation")
+                    raise UserAuthenticationRequiredError("Project creation")
+                
+                user_id = validate_user_id(user_id, "Project creation")
                 
                 project = self.create(
                     id=project_id,

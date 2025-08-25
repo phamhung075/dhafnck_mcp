@@ -51,16 +51,11 @@ class AgentRepositoryFactory:
         from ...domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
         from ....config.auth_config import AuthConfig
         
-        # Validate user authentication is provided
+        # Validate user authentication is provided - NO FALLBACKS ALLOWED
         if user_id is None:
-            # Check if compatibility mode is enabled
-            if AuthConfig.is_default_user_allowed():
-                user_id = AuthConfig.get_fallback_user_id()
-                AuthConfig.log_authentication_bypass("Agent repository creation", "compatibility mode")
-            else:
-                raise UserAuthenticationRequiredError("Agent repository creation")
-        else:
-            user_id = validate_user_id(user_id, "Agent repository creation")
+            raise UserAuthenticationRequiredError("Agent repository creation")
+        
+        user_id = validate_user_id(user_id, "Agent repository creation")
         
         # Use default repository type if not specified
         if repository_type is None:

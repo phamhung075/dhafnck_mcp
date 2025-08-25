@@ -27,8 +27,8 @@ API_BASE_URL = "http://localhost:8000"
 MCP_BASE_URL = f"{API_BASE_URL}/mcp/"
 API_V2_BASE_URL = f"{API_BASE_URL}/api/v2"
 
-# Test tokens (replace with actual tokens if available)
-TEST_JWT_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItaWQiLCJlbWFpbCI6InRlc3RAdGVzdC5jb20iLCJpYXQiOjE2MDk0NTkwMDAsImV4cCI6OTk5OTk5OTk5OX0.placeholder"
+# Test tokens from environment variables
+TEST_JWT_TOKEN = os.getenv("TEST_JWT_TOKEN", "")
 
 def log_separator(title: str):
     """Print a separator for test sections."""

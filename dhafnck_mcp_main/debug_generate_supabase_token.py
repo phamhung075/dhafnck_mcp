@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 import base64
 
 # Supabase JWT secret from environment
-SUPABASE_JWT_SECRET = "xQVwQQIPe9X00jzJT64CkDnt2/IDmst4TjzNDIVfg0T8ADxlsUZDK+SOtaBs6lYuEttroRNHIOGMPYmoyHHs7A=="
+SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "")
 
 # Test user information
 TEST_USER_ID = "65d733e9-04d6-4dda-9536-688c3a59448e"

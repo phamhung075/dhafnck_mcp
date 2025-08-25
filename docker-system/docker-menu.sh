@@ -129,17 +129,17 @@ start_postgresql_local() {
     clean_existing_builds
     
     echo "Building with --no-cache..."
-    docker-compose -f ../../dhafnck_mcp_main/docker/docker-compose.postgresql.yml build --no-cache
+    DATABASE_TYPE=postgresql docker-compose --env-file ../../.env -f ../docker-compose.yml --profile postgresql build --no-cache
     
     echo "Starting services..."
-    docker-compose -f ../../dhafnck_mcp_main/docker/docker-compose.postgresql.yml up -d
+    DATABASE_TYPE=postgresql docker-compose --env-file ../../.env -f ../docker-compose.yml --profile postgresql up -d
     
     echo -e "${GREEN}✅ Services started!${RESET}"
     echo "Backend: http://localhost:8000"
-    echo "Frontend: http://localhost:3800"
+    echo "Frontend: http://localhost:3000"
     echo "PostgreSQL: localhost:5432"
     
-    show_service_status "../../dhafnck_mcp_main/docker/docker-compose.postgresql.yml"
+    show_service_status "../docker-compose.yml"
 }
 
 # Build and start Supabase Cloud configuration
@@ -193,10 +193,10 @@ start_supabase_cloud() {
     clean_existing_builds
     
     echo -e "${CYAN}🔨 Building with --no-cache (this ensures latest code changes)...${RESET}"
-    docker-compose --env-file ../../.env -f ../../dhafnck_mcp_main/docker/docker-compose.supabase.yml build --no-cache
+    DATABASE_TYPE=supabase docker-compose --env-file ../../.env -f ../docker-compose.yml build --no-cache
     
     echo -e "${CYAN}🚀 Starting services...${RESET}"
-    docker-compose --env-file ../../.env -f ../../dhafnck_mcp_main/docker/docker-compose.supabase.yml up -d
+    DATABASE_TYPE=supabase docker-compose --env-file ../../.env -f ../docker-compose.yml up -d
     
     # Wait for services to be ready
     echo -e "${YELLOW}⏳ Waiting for services to start (10 seconds)...${RESET}"
@@ -220,7 +220,7 @@ start_supabase_cloud() {
     echo "  - Check logs: docker logs dhafnck-backend --tail 50"
     echo "  - Verify connection: docker exec dhafnck-backend env | grep SUPABASE"
     
-    show_service_status "../../dhafnck_mcp_main/docker/docker-compose.supabase.yml"
+    show_service_status "../docker-compose.yml"
 }
 
 
@@ -233,10 +233,10 @@ start_redis_supabase() {
     clean_existing_builds
     
     echo "Building with --no-cache..."
-    docker-compose --env-file ../../.env -f ../../dhafnck_mcp_main/docker/docker-compose.supabase.yml -f ../../dhafnck_mcp_main/docker/docker-compose.redis.yml build --no-cache
+    DATABASE_TYPE=supabase ENABLE_REDIS=true docker-compose --env-file ../../.env -f ../docker-compose.yml --profile redis build --no-cache
     
     echo "Starting services..."
-    docker-compose --env-file ../../.env -f ../../dhafnck_mcp_main/docker/docker-compose.supabase.yml -f ../../dhafnck_mcp_main/docker/docker-compose.redis.yml up -d
+    DATABASE_TYPE=supabase ENABLE_REDIS=true docker-compose --env-file ../../.env -f ../docker-compose.yml --profile redis up -d
     
     echo -e "${GREEN}✅ Services started!${RESET}"
     echo "Backend: http://localhost:8000"
@@ -244,7 +244,7 @@ start_redis_supabase() {
     echo "Database: Supabase Cloud"
     echo "Redis: localhost:6379"
     
-    show_service_status "../../dhafnck_mcp_main/docker/docker-compose.supabase.yml"
+    show_service_status "../docker-compose.yml"
 }
 
 # Show service status
@@ -264,13 +264,9 @@ stop_all_services() {
     echo -e "${YELLOW}🛑 Stopping all services...${RESET}"
     cd "$DOCKER_DIR"
     
-    # Stop all possible compositions in the correct directory
-    for compose_file in ../../dhafnck_mcp_main/docker/docker-compose.*.yml; do
-        if [[ -f "$compose_file" ]]; then
-            echo "Stopping services from $(basename $compose_file)"
-            docker-compose --env-file ../../.env -f "$compose_file" down 2>/dev/null || true
-        fi
-    done
+    # Stop all services using the unified docker-compose
+    echo "Stopping services..."
+    docker-compose --env-file ../../.env -f ../docker-compose.yml down 2>/dev/null || true
     
     echo -e "${GREEN}✅ All services stopped${RESET}"
 }

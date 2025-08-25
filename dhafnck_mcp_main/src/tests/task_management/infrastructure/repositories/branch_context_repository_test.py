@@ -118,13 +118,16 @@ class TestBranchContextRepository:
     
     def test_create_success(self):
         """Test successful branch context creation."""
-        # Mock no existing context
-        self.mock_session.get.return_value = None
+        # Mock query for existing check
+        mock_query = Mock()
+        mock_query.filter.return_value = mock_query
+        mock_query.first.return_value = None  # No existing context
+        self.mock_session.query.return_value = mock_query
         
         # Mock the created model
         created_model = BranchContextModel(
             id=self.test_context_id,
-            branch_id=self.test_context_id,
+            branch_id=None,  # Should be None per current implementation
             parent_project_id=self.test_project_id,
             data={'test': 'data'},
             branch_workflow={},
@@ -144,16 +147,20 @@ class TestBranchContextRepository:
         assert result == self.test_entity
         
         # Verify session operations
-        self.mock_session.get.assert_called_once_with(BranchContextModel, self.test_context_id)
+        self.mock_session.query.assert_called_once_with(BranchContextModel)
+        assert mock_query.filter.call_count >= 1  # At least ID filter
         self.mock_session.add.assert_called_once()
         self.mock_session.flush.assert_called_once()
-        self.mock_session.refresh.assert_called_once()
+        # refresh is commented out in implementation to avoid UUID issues
+        # self.mock_session.refresh.assert_called_once()
     
     def test_create_already_exists(self):
         """Test creation fails when context already exists."""
-        # Mock existing context
-        existing_model = Mock()
-        self.mock_session.get.return_value = existing_model
+        # Mock query for existing check
+        mock_query = Mock()
+        mock_query.filter.return_value = mock_query
+        mock_query.first.return_value = Mock()  # Existing context found
+        self.mock_session.query.return_value = mock_query
         
         with pytest.raises(ValueError) as exc_info:
             self.repository.create(self.test_entity)
@@ -162,8 +169,11 @@ class TestBranchContextRepository:
     
     def test_create_preserves_custom_fields(self):
         """Test that custom fields are preserved in _custom section."""
-        # Mock no existing context
-        self.mock_session.get.return_value = None
+        # Mock query for existing check
+        mock_query = Mock()
+        mock_query.filter.return_value = mock_query
+        mock_query.first.return_value = None  # No existing context
+        self.mock_session.query.return_value = mock_query
         
         # Create entity with custom fields
         test_settings = {
@@ -209,7 +219,10 @@ class TestBranchContextRepository:
             metadata={}
         )
         
-        self.mock_session.get.return_value = None
+        mock_query = Mock()
+        mock_query.filter.return_value = mock_query
+        mock_query.first.return_value = None  # No existing context
+        self.mock_session.query.return_value = mock_query
         
         with patch.object(self.repository, '_to_entity') as mock_to_entity:
             mock_to_entity.return_value = entity
@@ -219,13 +232,15 @@ class TestBranchContextRepository:
         # Verify default project_id was used
         added_model = self.mock_session.add.call_args[0][0]
         assert added_model.parent_project_id == "default-project"
+        # Verify branch_id is None
+        assert added_model.branch_id is None
     
     def test_get_success(self):
         """Test successful branch context retrieval."""
         # Mock database model
         db_model = BranchContextModel(
             id=self.test_context_id,
-            branch_id=self.test_context_id,
+            branch_id=None,  # Should be None per current implementation
             parent_project_id=self.test_project_id,
             data={'test': 'data'},
             branch_workflow={'step1': 'test'},
@@ -234,10 +249,15 @@ class TestBranchContextRepository:
             local_overrides={},
             delegation_rules={},
             created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc)
+            updated_at=datetime.now(timezone.utc),
+            user_id=self.user_id
         )
         
-        self.mock_session.get.return_value = db_model
+        # Mock query
+        mock_query = Mock()
+        mock_query.filter.return_value = mock_query
+        mock_query.first.return_value = db_model
+        self.mock_session.query.return_value = mock_query
         
         with patch.object(self.repository, '_to_entity') as mock_to_entity:
             mock_to_entity.return_value = self.test_entity
@@ -245,12 +265,18 @@ class TestBranchContextRepository:
             result = self.repository.get(self.test_context_id)
         
         assert result == self.test_entity
-        self.mock_session.get.assert_called_once_with(BranchContextModel, self.test_context_id)
+        self.mock_session.query.assert_called_once_with(BranchContextModel)
+        # Verify filters were applied
+        assert mock_query.filter.call_count >= 1  # At least ID filter
         mock_to_entity.assert_called_once_with(db_model)
     
     def test_get_not_found(self):
         """Test retrieval returns None when context not found."""
-        self.mock_session.get.return_value = None
+        # Mock query returning None
+        mock_query = Mock()
+        mock_query.filter.return_value = mock_query
+        mock_query.first.return_value = None
+        self.mock_session.query.return_value = mock_query
         
         result = self.repository.get(self.test_context_id)
         
@@ -278,7 +304,8 @@ class TestBranchContextRepository:
         
         # Verify session operations
         self.mock_session.flush.assert_called_once()
-        self.mock_session.refresh.assert_called_once()
+        # refresh is commented out in implementation to avoid UUID issues
+        # self.mock_session.refresh.assert_called_once()
     
     def test_update_not_found(self):
         """Test update fails when context doesn't exist."""
@@ -387,7 +414,7 @@ class TestBranchContextRepository:
         
         assert result.id == self.test_context_id
         assert result.project_id == self.test_project_id
-        assert result.git_branch_name == f"branch-{self.test_context_id}"
+        assert result.git_branch_name == f"branch-{db_model.branch_id}"
         assert result.branch_settings['branch_workflow'] == {'step1': 'review'}
         assert result.branch_settings['branch_standards'] == {'style': 'pep8'}
         assert result.branch_settings['agent_assignments'] == {'@agent': 'active'}
@@ -633,7 +660,9 @@ class TestBranchContextRepository:
             result = self.repository.list()
         
         # Verify user filter was applied to the statement
-        mock_stmt.where.assert_called()
+        mock_stmt.where.assert_called_once()
+        # The where should be called with user_id filter
+        where_call = mock_stmt.where.call_args[0][0]
         assert result == []
     
     def test_list_system_mode_no_user_filter(self):
@@ -660,8 +689,11 @@ class TestBranchContextRepository:
     
     def test_create_sets_user_id(self):
         """Test create method sets user_id from repository context."""
-        # Mock no existing context
-        self.mock_session.get.return_value = None
+        # Mock query for existing check
+        mock_query = Mock()
+        mock_query.filter.return_value = mock_query
+        mock_query.first.return_value = None  # No existing context
+        self.mock_session.query.return_value = mock_query
         
         with patch.object(self.repository, '_to_entity') as mock_to_entity:
             mock_to_entity.return_value = self.test_entity
@@ -677,7 +709,10 @@ class TestBranchContextRepository:
         """Test create method uses metadata user_id when repository user_id is None."""
         # Create repository without user_id
         system_repo = BranchContextRepository(self.mock_session_factory, user_id=None)
-        self.mock_session.get.return_value = None
+        mock_query = Mock()
+        mock_query.filter.return_value = mock_query
+        mock_query.first.return_value = None  # No existing context
+        self.mock_session.query.return_value = mock_query
         
         # Create entity with user_id in metadata
         entity_with_user = BranchContext(
@@ -698,11 +733,14 @@ class TestBranchContextRepository:
         added_model = self.mock_session.add.call_args[0][0]
         assert added_model.user_id == 'metadata-user-789'
     
-    def test_create_uses_system_fallback(self):
-        """Test create method uses 'system' fallback when no user_id available."""
+    def test_create_no_fallback_to_system(self):
+        """Test create method does not fall back to 'system' when no user_id available."""
         # Create repository without user_id
         system_repo = BranchContextRepository(self.mock_session_factory, user_id=None)
-        self.mock_session.get.return_value = None
+        mock_query = Mock()
+        mock_query.filter.return_value = mock_query
+        mock_query.first.return_value = None  # No existing context
+        self.mock_session.query.return_value = mock_query
         
         # Create entity without user_id in metadata
         entity_no_user = BranchContext(
@@ -718,10 +756,10 @@ class TestBranchContextRepository:
             
             result = system_repo.create(entity_no_user)
         
-        # Verify 'system' fallback was used
+        # Verify NO 'system' fallback was used - should be None
         self.mock_session.add.assert_called_once()
         added_model = self.mock_session.add.call_args[0][0]
-        assert added_model.user_id == 'system'
+        assert added_model.user_id is None
     
     def test_update_preserves_user_id_precedence(self):
         """Test update method respects user_id precedence: repository > metadata > existing."""

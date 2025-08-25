@@ -74,16 +74,8 @@ class TaskRepositoryFactory:
         self.project_root = project_root or _find_project_root()
         self.base_path = base_path or str(self.project_root / ".cursor" / "rules" / "tasks")
         
-        # Handle default_user_id for compatibility
-        if default_user_id is None:
-            # Check if compatibility mode is enabled
-            if AuthConfig.is_default_user_allowed():
-                default_user_id = AuthConfig.get_fallback_user_id()
-                AuthConfig.log_authentication_bypass("Task repository factory initialization", "compatibility mode")
-            else:
-                # For factory initialization, we'll allow None and validate later when creating repositories
-                default_user_id = None
-        elif default_user_id:
+        # Handle default_user_id - NO FALLBACKS ALLOWED
+        if default_user_id is not None:
             # Validate if a user_id was provided
             default_user_id = validate_user_id(default_user_id, "Task repository factory initialization")
         

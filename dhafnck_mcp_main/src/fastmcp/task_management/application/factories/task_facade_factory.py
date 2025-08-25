@@ -106,16 +106,11 @@ class TaskFacadeFactory:
         from ...domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
         from ....config.auth_config import AuthConfig
         
-        # Validate user authentication is provided
+        # Validate user authentication is provided - NO FALLBACKS ALLOWED
         if user_id is None:
-            # Check if compatibility mode is enabled
-            if AuthConfig.is_default_user_allowed():
-                user_id = AuthConfig.get_fallback_user_id()
-                AuthConfig.log_authentication_bypass("Task facade creation", "compatibility mode")
-            else:
-                raise UserAuthenticationRequiredError("Task facade creation")
-        else:
-            user_id = validate_user_id(user_id, "Task facade creation")
+            raise UserAuthenticationRequiredError("Task facade creation")
+        
+        user_id = validate_user_id(user_id, "Task facade creation")
         
         # Create task repository for facade construction
         # For now, use "main" as branch name since we're transitioning to UUIDs
@@ -161,16 +156,11 @@ class TaskFacadeFactory:
         from ...domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
         from ....config.auth_config import AuthConfig
         
-        # Validate user authentication is provided
+        # Validate user authentication is provided - NO FALLBACKS ALLOWED
         if user_id is None:
-            # Check if compatibility mode is enabled
-            if AuthConfig.is_default_user_allowed():
-                user_id = AuthConfig.get_fallback_user_id()
-                AuthConfig.log_authentication_bypass("Task facade with git_branch_id creation", "compatibility mode")
-            else:
-                raise UserAuthenticationRequiredError("Task facade with git_branch_id creation")
-        else:
-            user_id = validate_user_id(user_id, "Task facade with git_branch_id creation")
+            raise UserAuthenticationRequiredError("Task facade with git_branch_id creation")
+        
+        user_id = validate_user_id(user_id, "Task facade with git_branch_id creation")
         
         # Create task repository with git_branch_id directly
         task_repository = self._repository_factory.create_repository_with_git_branch_id(project_id, git_branch_name, user_id, git_branch_id)

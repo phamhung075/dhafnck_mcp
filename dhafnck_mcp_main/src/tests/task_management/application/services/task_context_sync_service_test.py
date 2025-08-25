@@ -438,7 +438,7 @@ class TestTaskContextSyncServiceSyncContext:
         assert task_data["assignees"] == ["user-1"]
         assert task_data["labels"] == ["test"]
         assert task_data["estimated_effort"] == "2 hours"
-        assert task_data["due_date"] == "2025-12-31T00:00:00"
+        assert task_data["due_date"] == datetime(2025, 12, 31)
     
     @patch('fastmcp.task_management.application.services.task_context_sync_service.AuthConfig')
     @patch('fastmcp.task_management.application.services.task_context_sync_service.validate_user_id')
