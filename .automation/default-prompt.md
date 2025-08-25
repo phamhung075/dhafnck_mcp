@@ -27,25 +27,29 @@ REQUIRED BEHAVIORS:
 ## Missing Test Files - CREATE IMMEDIATELY:
 
 ## Stale Test Files (Source Newer Than Test)
-- **Source**: `dhafnck-frontend/src/api.ts`
-  - **Test**: `dhafnck-frontend/src/tests/api.test.ts`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/api_server.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/auth/api_server_test.py`
   - **Days stale**: 3
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/user_scoped_task_routes.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/server/routes/user_scoped_task_routes_test.py`
-  - **Days stale**: 0
+- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/middleware/dual_auth_middleware.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/auth/middleware/dual_auth_middleware_test.py`
+  - **Days stale**: 2
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/facades/task_application_facade.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/application/facades/task_application_facade_test.py`
-  - **Days stale**: 0
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/http_server.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/server/http_server_test.py`
+  - **Days stale**: 2
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/auth_helper.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/auth_helper_test.py`
+  - **Days stale**: 2
 
 
 ## Missing Test Files
-- **Source**: `dhafnck-frontend/src/components/SubtaskList.tsx`
-  - **Create test at**: `dhafnck-frontend/src/tests/components/SubtaskList.test.tsx`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/mcp_integration/server_config.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/auth/mcp_integration/server_config_test.py`
 
-- **Source**: `dhafnck-frontend/src/components/ui/badge.tsx`
-  - **Create test at**: `dhafnck-frontend/src/tests/components/ui/badge.test.tsx`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/user_scoped_context_routes.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/server/routes/user_scoped_context_routes_test.py`
 
 
 ## EXECUTION COMMANDS - DO NOW:

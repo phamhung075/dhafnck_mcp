@@ -62,11 +62,16 @@ class JWTBearerAuthProvider(BearerAuthProvider):
         )
         
         self.check_database = check_database
-        self.jwt_backend = JWTAuthBackend()
         
-    async def load_access_token(self, token: str) -> AccessToken | None:
+        # Create properly configured JWT backend using factory
+        from fastmcp.auth.mcp_integration.jwt_auth_backend import create_jwt_auth_backend
+        self.jwt_backend = create_jwt_auth_backend(
+            required_scopes=required_scopes or ["mcp:access"]
+        )
+        
+    async def verify_token(self, token: str) -> AccessToken | None:
         """
-        Validate the provided JWT bearer token.
+        Verify the provided JWT bearer token (MCP TokenVerifier protocol).
         
         Args:
             token: The JWT token string to validate
@@ -74,60 +79,22 @@ class JWTBearerAuthProvider(BearerAuthProvider):
         Returns:
             AccessToken object if valid, None if invalid
         """
-        try:
-            # Decode and validate the JWT
-            payload = jwt.decode(
-                token,
-                self.secret_key,
-                algorithms=["HS256"],
-                options={"verify_exp": True}
-            )
+        # Delegate to the properly configured JWT backend
+        # This will handle both Supabase and local JWT tokens
+        return await self.jwt_backend.verify_token(token)
+    
+    async def load_access_token(self, token: str) -> AccessToken | None:
+        """
+        Validate the provided JWT bearer token (FastMCP OAuthProvider protocol).
+        
+        Args:
+            token: The JWT token string to validate
             
-            # Check token type
-            token_type = payload.get("type")
-            if token_type != "api_token":
-                # Not an API token, might be a regular user token
-                # Try to validate as user token
-                return await self._validate_user_token(token, payload)
-            
-            # Validate API token
-            token_id = payload.get("token_id")
-            user_id = payload.get("user_id")
-            scopes = payload.get("scopes", [])
-            
-            if not token_id or not user_id:
-                return None
-            
-            # Check database if enabled
-            if self.check_database:
-                if not await self._validate_token_in_database(token_id):
-                    return None
-            
-            # Map scopes to MCP permissions
-            mcp_scopes = self._map_scopes_to_mcp(scopes)
-            
-            # Add base MCP access scope
-            if "mcp:access" not in mcp_scopes:
-                mcp_scopes.append("mcp:access")
-            
-            # Create and return AccessToken
-            return AccessToken(
-                client_id=user_id,
-                scopes=mcp_scopes,
-                expires_at=payload.get("exp"),
-                metadata={
-                    "token_id": token_id,
-                    "token_type": "api_token",
-                    "original_scopes": scopes
-                }
-            )
-            
-        except jwt.ExpiredSignatureError:
-            return None
-        except jwt.InvalidTokenError:
-            return None
-        except Exception:
-            return None
+        Returns:
+            AccessToken object if valid, None if invalid
+        """
+        # Delegate to verify_token for consistency
+        return await self.verify_token(token)
     
     async def _validate_user_token(self, token: str, payload: dict) -> AccessToken | None:
         """

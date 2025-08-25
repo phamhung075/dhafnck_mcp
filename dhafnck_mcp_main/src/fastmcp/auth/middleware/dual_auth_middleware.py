@@ -303,6 +303,25 @@ class DualAuthMiddleware(BaseHTTPMiddleware):
                     # Try multiple token types for compatibility
                     payload = None
                     for token_type in ["api_token", "access"]:
+                        # For Supabase tokens, try with "authenticated" audience
+                        if secret_name == "SUPABASE_JWT_SECRET":
+                            try:
+                                # Try decoding directly with PyJWT for Supabase tokens
+                                import jwt as pyjwt
+                                payload = pyjwt.decode(
+                                    token,
+                                    secret_value,
+                                    algorithms=["HS256"],
+                                    audience="authenticated",  # Supabase uses this audience
+                                    options={"verify_iss": False}  # Skip issuer check for Supabase
+                                )
+                                if payload:
+                                    logger.info(f"✅ MCP AUTH: Supabase JWT token validated with audience 'authenticated'")
+                                    break
+                            except Exception as supabase_error:
+                                logger.debug(f"🔍 MCP AUTH: Supabase token validation failed: {supabase_error}")
+                        
+                        # Try standard validation for local tokens
                         try:
                             payload = jwt_service.verify_token(token, expected_type=token_type)
                             if payload:

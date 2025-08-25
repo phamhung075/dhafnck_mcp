@@ -603,6 +603,78 @@ class TestJWTTokenHandling:
         
         # Should fail as token type is invalid
         assert response.status_code == 401
+    
+    @pytest.mark.asyncio
+    async def test_jwt_dual_secret_validation(self, app_with_middleware, monkeypatch):
+        """Test JWT token validation with dual secret support."""
+        app, _, token_validator = app_with_middleware
+        
+        # Set both JWT secrets
+        monkeypatch.setenv("JWT_SECRET_KEY", "backend-secret")
+        monkeypatch.setenv("SUPABASE_JWT_SECRET", "supabase-secret")
+        
+        # Create a JWT token with Supabase secret (frontend uses this)
+        from fastmcp.auth.domain.services.jwt_service import JWTService
+        jwt_service = JWTService(secret_key="supabase-secret")
+        jwt_token = jwt_service.create_access_token(
+            user_id="dual-secret-user",
+            email="dual@example.com",
+            token_type="api_token"
+        )
+        
+        # Mock token validator to fail (forcing JWT validation)
+        token_validator.validate_token.side_effect = Exception("Not a Supabase token")
+        
+        client = TestClient(app)
+        response = client.post(
+            "/mcp",
+            json={"jsonrpc": "2.0", "method": "test", "id": 1},
+            headers={"Authorization": f"Bearer {jwt_token}"}
+        )
+        
+        # Should succeed with dual secret validation
+        assert response.status_code == 200
+        data = response.json()
+        assert data["result"]["user_id"] == "dual-secret-user"
+    
+    @pytest.mark.asyncio
+    async def test_jwt_token_with_sub_field(self, app_with_middleware, monkeypatch):
+        """Test JWT token that uses 'sub' field instead of 'user_id'."""
+        app, _, token_validator = app_with_middleware
+        
+        # Set JWT secret
+        monkeypatch.setenv("JWT_SECRET_KEY", "test-secret")
+        
+        # Create a JWT token with custom payload using 'sub' field
+        from fastmcp.auth.domain.services.jwt_service import JWTService
+        jwt_service = JWTService(secret_key="test-secret")
+        
+        # Create token manually to control payload structure
+        import jwt
+        import datetime
+        payload = {
+            "sub": "sub-field-user",  # Using 'sub' instead of 'user_id'
+            "email": "sub@example.com",
+            "type": "api_token",
+            "iat": datetime.datetime.utcnow(),
+            "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+        }
+        jwt_token = jwt.encode(payload, "test-secret", algorithm="HS256")
+        
+        # Mock token validator to fail
+        token_validator.validate_token.side_effect = Exception("Not a Supabase token")
+        
+        client = TestClient(app)
+        response = client.post(
+            "/mcp",
+            json={"jsonrpc": "2.0", "method": "test", "id": 1},
+            headers={"Authorization": f"Bearer {jwt_token}"}
+        )
+        
+        # Should succeed and extract user_id from 'sub' field
+        assert response.status_code == 200
+        data = response.json()
+        assert data["result"]["user_id"] == "sub-field-user"
 
 
 class TestLogging:

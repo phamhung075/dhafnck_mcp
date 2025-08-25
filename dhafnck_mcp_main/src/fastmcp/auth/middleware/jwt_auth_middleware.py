@@ -47,12 +47,37 @@ class JWTAuthMiddleware:
             logger.debug(f"🔍 JWTAuthMiddleware attempting token decode with secret length: {len(self.secret_key)}")
             logger.debug(f"🔍 Token length: {len(token)} chars")
             
-            # Decode token
-            payload = jwt.decode(
-                token,
-                self.secret_key,
-                algorithms=[self.algorithm]
-            )
+            # Try to decode token with audience validation for Supabase tokens
+            payload = None
+            
+            # First try with "authenticated" audience (Supabase tokens)
+            try:
+                payload = jwt.decode(
+                    token,
+                    self.secret_key,
+                    algorithms=[self.algorithm],
+                    audience="authenticated",
+                    options={"verify_iss": False}  # Don't verify issuer for Supabase
+                )
+                logger.debug("✅ Token validated with audience='authenticated' (Supabase)")
+            except jwt.InvalidAudienceError:
+                logger.debug("Token doesn't have 'authenticated' audience, trying without audience")
+            except Exception as e:
+                logger.debug(f"Failed with audience='authenticated': {e}")
+            
+            # If that fails, try without audience validation (local tokens)
+            if not payload:
+                try:
+                    payload = jwt.decode(
+                        token,
+                        self.secret_key,
+                        algorithms=[self.algorithm],
+                        options={"verify_aud": False}  # Skip audience check
+                    )
+                    logger.debug("✅ Token validated without audience check (local token)")
+                except Exception as e:
+                    logger.error(f"Failed without audience check: {e}")
+                    raise
             
             logger.debug(f"✅ JWTAuthMiddleware successfully decoded token")
             

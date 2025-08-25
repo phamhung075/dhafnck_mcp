@@ -122,9 +122,20 @@ def get_authenticated_user_id(provided_user_id: Optional[str] = None, operation_
             logger.info("🔧 Trying MCP authentication context...")
             try:
                 from mcp.server.auth.context import auth_context
+                from mcp.server.auth.middleware.bearer_auth import AuthenticatedUser
+                
                 mcp_auth_context = auth_context.get()
-                logger.info(f"🎯 MCP auth context: {mcp_auth_context}")
-                if mcp_auth_context and hasattr(mcp_auth_context, 'user_id'):
+                logger.info(f"🎯 MCP auth context type: {type(mcp_auth_context)}")
+                
+                if isinstance(mcp_auth_context, AuthenticatedUser):
+                    # We have an AuthenticatedUser from MCP
+                    if hasattr(mcp_auth_context, 'access_token') and mcp_auth_context.access_token:
+                        user_id = mcp_auth_context.access_token.client_id
+                        logger.info(f"✅ Got user_id from MCP AuthenticatedUser.access_token: {user_id}")
+                    elif hasattr(mcp_auth_context, 'identity'):
+                        user_id = mcp_auth_context.identity
+                        logger.info(f"✅ Got user_id from MCP AuthenticatedUser.identity: {user_id}")
+                elif mcp_auth_context and hasattr(mcp_auth_context, 'user_id'):
                     user_id = mcp_auth_context.user_id
                     logger.info(f"✅ Got user_id from MCP auth context: {user_id}")
                 elif mcp_auth_context and hasattr(mcp_auth_context, 'client_id'):

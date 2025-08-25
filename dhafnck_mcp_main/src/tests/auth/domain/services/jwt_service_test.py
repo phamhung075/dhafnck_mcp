@@ -34,13 +34,19 @@ class TestJWTService:
         
         token = jwt_service.create_access_token(user_id, email, roles)
         
-        # Decode token to verify contents
-        payload = jwt.decode(token, jwt_service.secret_key, algorithms=[jwt_service.ALGORITHM])
+        # Decode token to verify contents (skip audience validation for testing)
+        payload = jwt.decode(
+            token, 
+            jwt_service.secret_key, 
+            algorithms=[jwt_service.ALGORITHM],
+            options={"verify_aud": False}
+        )
         
         assert payload["sub"] == user_id
         assert payload["email"] == email
         assert payload["roles"] == roles
         assert payload["type"] == "access"
+        assert payload["aud"] == "mcp-server"  # Default audience
         assert payload["iss"] == jwt_service.issuer
         assert "jti" in payload  # JWT ID should be present
         assert "iat" in payload
@@ -62,7 +68,12 @@ class TestJWTService:
             additional_claims=additional_claims
         )
         
-        payload = jwt.decode(token, jwt_service.secret_key, algorithms=[jwt_service.ALGORITHM])
+        payload = jwt.decode(
+            token, 
+            jwt_service.secret_key, 
+            algorithms=[jwt_service.ALGORITHM],
+            options={"verify_aud": False}
+        )
         assert payload["department"] == "Engineering"
         assert payload["level"] == 5
     
@@ -77,7 +88,12 @@ class TestJWTService:
         assert len(token_family) == 32  # hex string of 16 bytes
         
         # Decode and verify token
-        payload = jwt.decode(token, jwt_service.secret_key, algorithms=[jwt_service.ALGORITHM])
+        payload = jwt.decode(
+            token, 
+            jwt_service.secret_key, 
+            algorithms=[jwt_service.ALGORITHM],
+            options={"verify_aud": False}
+        )
         
         assert payload["sub"] == user_id
         assert payload["type"] == "refresh"
@@ -104,7 +120,12 @@ class TestJWTService:
         
         assert returned_family == existing_family
         
-        payload = jwt.decode(token, jwt_service.secret_key, algorithms=[jwt_service.ALGORITHM])
+        payload = jwt.decode(
+            token, 
+            jwt_service.secret_key, 
+            algorithms=[jwt_service.ALGORITHM],
+            options={"verify_aud": False}
+        )
         assert payload["family"] == existing_family
         assert payload["version"] == token_version
     
@@ -115,7 +136,12 @@ class TestJWTService:
         
         token = jwt_service.create_reset_token(user_id, email)
         
-        payload = jwt.decode(token, jwt_service.secret_key, algorithms=[jwt_service.ALGORITHM])
+        payload = jwt.decode(
+            token, 
+            jwt_service.secret_key, 
+            algorithms=[jwt_service.ALGORITHM],
+            options={"verify_aud": False}
+        )
         
         assert payload["sub"] == user_id
         assert payload["email"] == email
@@ -236,7 +262,8 @@ class TestJWTService:
         access_payload = jwt.decode(
             new_access_token,
             jwt_service.secret_key,
-            algorithms=[jwt_service.ALGORITHM]
+            algorithms=[jwt_service.ALGORITHM],
+            options={"verify_aud": False}
         )
         assert access_payload["sub"] == user_id
         assert access_payload["type"] == "access"
@@ -245,7 +272,8 @@ class TestJWTService:
         refresh_payload = jwt.decode(
             new_refresh_token,
             jwt_service.secret_key,
-            algorithms=[jwt_service.ALGORITHM]
+            algorithms=[jwt_service.ALGORITHM],
+            options={"verify_aud": False}
         )
         assert refresh_payload["sub"] == user_id
         assert refresh_payload["type"] == "refresh"
@@ -345,3 +373,110 @@ class TestJWTService:
         assert payload["sub"] == user_id
         assert payload["email"] == email
         assert payload["type"] == "reset"
+    
+    def test_create_access_token_custom_audience(self, jwt_service):
+        """Test access token creation with custom audience"""
+        user_id = "user123"
+        email = "test@example.com"
+        roles = ["user"]
+        custom_audience = "custom-api"
+        
+        token = jwt_service.create_access_token(
+            user_id, email, roles, audience=custom_audience
+        )
+        
+        payload = jwt.decode(
+            token, 
+            jwt_service.secret_key, 
+            algorithms=[jwt_service.ALGORITHM],
+            options={"verify_aud": False}
+        )
+        
+        assert payload["aud"] == custom_audience
+        assert payload["sub"] == user_id
+        assert payload["type"] == "access"
+    
+    def test_verify_token_with_audience_validation(self, jwt_service):
+        """Test token verification with audience validation"""
+        user_id = "user123"
+        email = "test@example.com"
+        roles = ["user"]
+        audience = "test-audience"
+        
+        # Create token with specific audience
+        token = jwt_service.create_access_token(
+            user_id, email, roles, audience=audience
+        )
+        
+        # Verify with correct audience - should succeed
+        payload = jwt_service.verify_token(token, "access", audience)
+        assert payload is not None
+        assert payload["aud"] == audience
+        
+        # Verify with wrong audience - should fail
+        payload = jwt_service.verify_token(token, "access", "wrong-audience")
+        assert payload is None
+        
+        # Verify without audience check - should succeed
+        payload = jwt_service.verify_token(token, "access")
+        assert payload is not None
+    
+    def test_verify_supabase_token_simulation(self, jwt_service):
+        """Test verification of Supabase-style token (no 'type' field, 'authenticated' audience)"""
+        # Create token similar to Supabase structure (no 'type' field)
+        now = datetime.now(timezone.utc)
+        supabase_payload = {
+            "sub": "user123",
+            "email": "test@example.com", 
+            "aud": "authenticated",  # Supabase uses this audience
+            "iat": now,
+            "exp": now + timedelta(minutes=15),
+            "iss": "supabase",
+            # No 'type' field like Supabase tokens
+        }
+        
+        token = jwt.encode(supabase_payload, jwt_service.secret_key, algorithm=jwt_service.ALGORITHM)
+        
+        # Should accept token without 'type' field when checking for access token
+        payload = jwt_service.verify_token(token, "access")
+        assert payload is not None
+        assert payload["sub"] == "user123"
+        assert payload["aud"] == "authenticated"
+        assert "type" not in payload  # No type field in original Supabase token
+    
+    def test_verify_local_vs_supabase_audience_validation(self, jwt_service):
+        """Test that audience validation correctly handles local vs Supabase tokens"""
+        # Create local token (has 'type' field, should have 'mcp-server' audience)
+        local_token = jwt_service.create_access_token(
+            "user123", "test@example.com", ["user"], audience="mcp-server"
+        )
+        
+        # Create Supabase-style token (no 'type' field, should have 'authenticated' audience)
+        now = datetime.now(timezone.utc)
+        supabase_payload = {
+            "sub": "user456",
+            "email": "supabase@example.com",
+            "aud": "authenticated",
+            "iat": now,
+            "exp": now + timedelta(minutes=15),
+            "iss": jwt_service.issuer,
+        }
+        supabase_token = jwt.encode(supabase_payload, jwt_service.secret_key, algorithm=jwt_service.ALGORITHM)
+        
+        # Local token should validate with 'mcp-server' audience
+        payload = jwt_service.verify_token(local_token, "access", "mcp-server")
+        assert payload is not None
+        assert payload["type"] == "access"
+        
+        # Local token should fail with 'authenticated' audience
+        payload = jwt_service.verify_token(local_token, "access", "authenticated")
+        assert payload is None
+        
+        # Supabase token should validate with 'authenticated' audience
+        payload = jwt_service.verify_token(supabase_token, "access", "authenticated")
+        assert payload is not None
+        assert "type" not in payload
+        
+        # Supabase token should fail with 'mcp-server' audience  
+        payload = jwt_service.verify_token(supabase_token, "access", "mcp-server")
+        assert payload is None

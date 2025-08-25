@@ -94,7 +94,7 @@ class TokenVerifierAdapter:
     
     async def verify_token(self, token: str) -> AccessToken | None:
         """
-        Verify a token by delegating to the provider's load_access_token method.
+        Verify a token by delegating to the provider's verify_token or load_access_token method.
         
         Args:
             token: The token to verify
@@ -102,8 +102,12 @@ class TokenVerifierAdapter:
         Returns:
             AccessToken if valid, None otherwise
         """
-        # Handle OAuth providers
-        if hasattr(self.provider, 'load_access_token'):
+        # Handle JWT auth backends (MCP TokenVerifier protocol)
+        if hasattr(self.provider, 'verify_token'):
+            return await self.provider.verify_token(token)
+        
+        # Handle OAuth providers (FastMCP's OAuthProvider)
+        elif hasattr(self.provider, 'load_access_token'):
             return await self.provider.load_access_token(token)
         
         # Handle JWT middleware providers

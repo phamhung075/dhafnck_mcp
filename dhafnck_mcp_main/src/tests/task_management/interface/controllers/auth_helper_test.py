@@ -13,6 +13,7 @@ import os
 from fastmcp.task_management.interface.controllers.auth_helper import (
     get_authenticated_user_id,
     log_authentication_details,
+    get_user_id_from_request_state,
     USER_CONTEXT_AVAILABLE
 )
 from fastmcp.task_management.domain.exceptions.authentication_exceptions import (
@@ -36,11 +37,9 @@ class TestGetAuthenticatedUserId:
             assert result == "request_state_user"
             mock_validate.assert_called_once_with("request_state_user", "test_op")
     
-    @patch('fastmcp.task_management.interface.controllers.auth_helper._current_http_request')
+    @patch('fastmcp.server.http_server._current_http_request')
     def test_get_user_id_from_request_state_success(self, mock_current_request):
         """Test successful extraction of user_id from request state."""
-        from fastmcp.task_management.interface.controllers.auth_helper import get_user_id_from_request_state
-        
         # Mock request with state
         mock_request = Mock()
         mock_request.state.user_id = "state_user_123"
@@ -49,21 +48,17 @@ class TestGetAuthenticatedUserId:
         result = get_user_id_from_request_state()
         assert result == "state_user_123"
     
-    @patch('fastmcp.task_management.interface.controllers.auth_helper._current_http_request')
+    @patch('fastmcp.server.http_server._current_http_request')
     def test_get_user_id_from_request_state_no_request(self, mock_current_request):
         """Test when no current request is available."""
-        from fastmcp.task_management.interface.controllers.auth_helper import get_user_id_from_request_state
-        
         mock_current_request.get.return_value = None
         
         result = get_user_id_from_request_state()
         assert result is None
     
-    @patch('fastmcp.task_management.interface.controllers.auth_helper._current_http_request')
+    @patch('fastmcp.server.http_server._current_http_request')
     def test_get_user_id_from_request_state_no_state(self, mock_current_request):
         """Test when request has no state attribute."""
-        from fastmcp.task_management.interface.controllers.auth_helper import get_user_id_from_request_state
-        
         # Mock request without state
         mock_request = Mock(spec=[])
         mock_current_request.get.return_value = mock_request
@@ -71,11 +66,9 @@ class TestGetAuthenticatedUserId:
         result = get_user_id_from_request_state()
         assert result is None
     
-    @patch('fastmcp.task_management.interface.controllers.auth_helper._current_http_request')
+    @patch('fastmcp.server.http_server._current_http_request')
     def test_get_user_id_from_request_state_exception(self, mock_current_request):
         """Test exception handling in get_user_id_from_request_state."""
-        from fastmcp.task_management.interface.controllers.auth_helper import get_user_id_from_request_state
-        
         mock_current_request.get.side_effect = Exception("Request context error")
         
         result = get_user_id_from_request_state()
@@ -257,13 +250,13 @@ class TestGetAuthenticatedUserId:
                         assert result == "compatibility-default-user"
                         mock_config.log_authentication_bypass.assert_called_with(
                             "test_op", 
-                            "forced compatibility mode for git branch fix"
+                            "forced compatibility mode - development environment"
                         )
     
     @patch('os.getenv')
     @patch('fastmcp.task_management.interface.controllers.auth_helper.get_current_user_id')
     def test_non_dev_environment_no_temporary_fix(self, mock_get_current_user_id, mock_getenv):
-        """Test that temporary fix is not applied in non-development environments."""
+        """Test that temporary fix is not applied in non-development environments for non-context operations."""
         mock_get_current_user_id.return_value = None
         mock_getenv.return_value = 'production'
         
@@ -273,9 +266,35 @@ class TestGetAuthenticatedUserId:
             with patch('fastmcp.task_management.interface.controllers.auth_helper.AuthConfig') as mock_config:
                 mock_config.is_default_user_allowed.return_value = False
                 
-                # Should raise error in production when no auth available
+                # Should raise error in production when no auth available for non-context operations
                 with pytest.raises(UserAuthenticationRequiredError):
                     get_authenticated_user_id(None, "test_op")
+    
+    @patch('os.getenv')
+    @patch('fastmcp.task_management.interface.controllers.auth_helper.get_current_user_id')
+    def test_context_operation_fallback_in_production(self, mock_get_current_user_id, mock_getenv):
+        """Test that context operations get fallback even in production."""
+        mock_get_current_user_id.return_value = None
+        mock_getenv.return_value = 'production'
+        
+        with patch('mcp.server.auth.context.auth_context') as mock_context:
+            mock_context.get.return_value = None
+            
+            with patch('fastmcp.task_management.interface.controllers.auth_helper.AuthConfig') as mock_config:
+                mock_config.is_default_user_allowed.return_value = False
+                mock_config.log_authentication_bypass = Mock()
+                
+                with patch('fastmcp.task_management.domain.constants.validate_user_id') as mock_validate:
+                    mock_validate.return_value = "compatibility-default-user"
+                    
+                    # Context operations should get fallback
+                    result = get_authenticated_user_id(None, "context_operation")
+                    
+                    assert result == "compatibility-default-user"
+                    mock_config.log_authentication_bypass.assert_called_with(
+                        "context_operation", 
+                        "forced compatibility mode - context operation fallback"
+                    )
     
     def test_user_context_not_available_fallback(self):
         """Test behavior when USER_CONTEXT_AVAILABLE is False."""

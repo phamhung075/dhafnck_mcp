@@ -12,6 +12,7 @@ from contextvars import ContextVar
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
+from mcp.server.auth.middleware.bearer_auth import AuthenticatedUser
 
 from .jwt_auth_backend import JWTAuthBackend, MCPUserContext
 
@@ -48,7 +49,10 @@ class UserContextMiddleware(BaseHTTPMiddleware):
     
     async def dispatch(self, request: Request, call_next) -> Response:
         """
-        Extract user context from JWT token and store in context variable.
+        Extract user context from MCP authenticated user and store in context variable.
+        
+        This middleware runs after MCP's AuthenticationMiddleware, so we can rely
+        on the authenticated user being available in request.user if authentication succeeded.
         
         Args:
             request: The incoming request
@@ -63,41 +67,48 @@ class UserContextMiddleware(BaseHTTPMiddleware):
         token_value = current_user_context.set(None)
         
         try:
-            # Extract token from Authorization header
-            auth_header = request.headers.get("Authorization", "")
-            logger.debug(f"Authorization header: {auth_header[:20]}..." if auth_header else "No Authorization header")
+            # Log request details for debugging
+            logger.info(f"📋 Request headers: Authorization={request.headers.get('Authorization', 'None')}")
+            logger.info(f"📋 Request user exists: {hasattr(request, 'user')}")
+            if hasattr(request, 'user'):
+                logger.info(f"📋 Request user type: {type(request.user)}")
+                logger.info(f"📋 Request user value: {request.user}")
             
-            if auth_header.startswith("Bearer "):
-                token = auth_header[7:]  # Remove "Bearer " prefix
-                logger.info(f"🔑 Validating JWT token for user context")
+            # Check if MCP authentication middleware has set an authenticated user
+            if hasattr(request, 'user') and isinstance(request.user, AuthenticatedUser):
+                auth_user = request.user
+                user_id = auth_user.access_token.client_id
                 
-                # Validate token and get user context
-                access_token = await self.jwt_backend.load_access_token(token)
-                if access_token:
-                    logger.info(f"✅ JWT token validated, client_id: {access_token.client_id}")
+                logger.info(f"🔑 Found authenticated user from MCP: {user_id}")
+                
+                # Get user context from our JWT backend
+                user_context = await self.jwt_backend._get_user_context(user_id)
+                
+                if user_context:
+                    # Store in context variable for our application code
+                    current_user_context.set(user_context)
                     
-                    # Get user context from token
-                    user_id = access_token.client_id
-                    user_context = await self.jwt_backend._get_user_context(user_id)
+                    # Add user info to request state for backward compatibility
+                    request.state.user_id = user_context.user_id
+                    request.state.user_email = user_context.email
+                    request.state.user_roles = user_context.roles
+                    request.state.user_scopes = auth_user.scopes
                     
-                    if user_context:
-                        # Store in context variable
-                        current_user_context.set(user_context)
-                        
-                        # Add user info to request state for other middlewares
-                        request.state.user_id = user_context.user_id
-                        request.state.user_email = user_context.email
-                        request.state.user_roles = user_context.roles
-                        request.state.user_scopes = access_token.scopes
-                        
-                        logger.info(f"🎉 User context set for user {user_context.user_id} in ContextVar")
-                        logger.debug(f"Request state updated: user_id={request.state.user_id}")
-                    else:
-                        logger.warning(f"❌ Could not get user context for user_id: {user_id}")
+                    # CRITICAL FIX: Also set MCP auth context for tool calls
+                    # This ensures MCP tools can access the authenticated user
+                    try:
+                        from mcp.server.auth.context import auth_context
+                        auth_context.set(auth_user)
+                        logger.info(f"✅ MCP auth_context set for user {user_context.user_id}")
+                    except Exception as e:
+                        logger.warning(f"Could not set MCP auth_context: {e}")
+                    
+                    logger.info(f"🎉 User context set for user {user_context.user_id} in ContextVar")
+                    logger.debug(f"Request state updated: user_id={request.state.user_id}")
                 else:
-                    logger.warning(f"❌ JWT token validation failed")
+                    logger.warning(f"❌ Could not get user context for user_id: {user_id}")
             else:
-                logger.debug("No Bearer token found in Authorization header")
+                logger.debug("No authenticated user found from MCP authentication")
             
             # Process the request
             response = await call_next(request)
@@ -113,6 +124,15 @@ class UserContextMiddleware(BaseHTTPMiddleware):
         finally:
             # Reset context after request
             current_user_context.reset(token_value)
+            
+            # Also reset MCP auth context
+            try:
+                from mcp.server.auth.context import auth_context
+                auth_context.reset()
+                logger.debug("🔄 MCP auth context reset after request")
+            except Exception as e:
+                logger.debug(f"Could not reset MCP auth_context: {e}")
+            
             logger.debug("🔄 User context reset after request")
 
 

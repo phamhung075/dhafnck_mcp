@@ -6,7 +6,100 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
-### Fixed - V2 Context API Routes and JWT Authentication (2025-08-25 - Continuation)
+### Fixed - JWT Bearer Auth Provider Integration (2025-08-25)
+- **CRITICAL FIX**: Fixed JWTBearerAuthProvider not properly delegating to JWTAuthBackend
+  - **Root Cause**: JWTBearerAuthProvider was creating JWTAuthBackend without proper initialization
+  - **Issue**: JWT tokens validated by DualAuthMiddleware but MCP's RequireAuthMiddleware still returned 401
+  - **Solution**: Fixed JWTBearerAuthProvider to use factory method and delegate to verify_token
+  - **Files Modified**:
+    - `dhafnck_mcp_main/src/fastmcp/server/auth/providers/jwt_bearer.py`
+      - Use `create_jwt_auth_backend()` factory instead of direct initialization
+      - Implement `verify_token()` method for MCP TokenVerifier protocol
+      - Delegate `load_access_token()` to `verify_token()` for consistency
+      - Removed duplicate JWT validation code
+  - **Impact**: MCP endpoints now properly authenticate with JWT tokens like V2 API endpoints
+
+### Fixed - MCP Tool Authentication Context Propagation (2025-08-25)
+- **CRITICAL FIX**: Fixed authentication context not propagating to MCP tool calls (context operations)
+  - **Root Cause**: MCP tools execute without HTTP request context that V2 API endpoints have
+  - **Issue**: Context operations via MCP tools fell back to compatibility mode while subtask API endpoints worked
+  - **Solution**: Enhanced middleware to explicitly set MCP auth_context for tool authentication
+  - **Files Modified**:
+    - `dhafnck_mcp_main/src/fastmcp/auth/mcp_integration/user_context_middleware.py`
+      - Added explicit `auth_context.set(auth_user)` when authenticated user found
+      - Added proper cleanup of MCP auth_context after request
+      - Enhanced logging for debugging authentication flow
+    - `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/auth_helper.py`
+      - Improved detection of MCP AuthenticatedUser instances
+      - Added support for extracting user_id from `access_token.client_id`
+      - Better handling of different auth context types
+  - **Impact**: MCP tool calls (manage_context) now properly authenticate like V2 API endpoints (subtasks)
+  - **Testing**: Context operations via MCP tools now work with JWT authentication
+
+### Fixed - JWT Authentication State Propagation Issue (2025-08-25)
+- **CRITICAL FIX**: Resolved JWT authentication state propagation failure in MCP RequireAuthMiddleware
+  - **Root Cause**: JWT tokens validated successfully but `scope["user"]` not set with `AuthenticatedUser` instance
+  - **Issue**: `RequireAuthMiddleware` expects `AuthenticatedUser` in `scope["user"]` but gets `None`, returns 401 "invalid_token"
+  - **Files Modified**:
+    - `dhafnck_mcp_main/src/fastmcp/auth/mcp_integration/jwt_auth_backend.py` - Changed from `BearerAuthProvider` to `TokenVerifier` protocol
+    - `dhafnck_mcp_main/src/fastmcp/server/http_server.py` - Updated `TokenVerifierAdapter` to check `verify_token` first
+    - `dhafnck_mcp_main/src/fastmcp/auth/mcp_integration/user_context_middleware.py` - Updated to work with MCP authentication flow
+  - **Authentication Flow**: JWT -> TokenVerifier -> BearerAuthBackend -> AuthenticationMiddleware -> scope["user"] = AuthenticatedUser
+  - **Role Mapping Fix**: UserRole enums properly converted to string roles for MCP scope mapping
+  - **Test Coverage**: Added comprehensive integration tests verifying complete authentication chain
+  - **Result**: JWT authentication now properly integrates with MCP's middleware stack, RequireAuthMiddleware passes correctly
+
+### Fixed - Authentication State Propagation to MCP Middleware (2025-08-25 - Final)
+- **CRITICAL FIX**: Resolved JWT authentication state propagation failure that caused 401 errors despite successful token validation
+  - **Root Cause**: JWT tokens validated successfully but `scope["user"]` wasn't set with `AuthenticatedUser` for MCP's `RequireAuthMiddleware`
+  - **Solution**: Refactored JWT authentication integration to properly implement MCP's authentication protocol
+    - Changed `JWTAuthBackend` from inheriting `BearerAuthProvider` to implementing `TokenVerifier` protocol
+    - Updated `TokenVerifierAdapter` to check `verify_token` method first
+    - Fixed role mapping from UserRole enums to proper string roles for MCP compatibility
+    - Modified `UserContextMiddleware` to work with MCP authentication flow
+  - **Files Modified**:
+    - `dhafnck_mcp_main/src/fastmcp/auth/mcp_integration/jwt_auth_backend.py` - Implement TokenVerifier protocol
+    - `dhafnck_mcp_main/src/fastmcp/server/http_server.py` - Fix TokenVerifierAdapter integration
+    - `dhafnck_mcp_main/src/fastmcp/auth/mcp_integration/user_context_middleware.py` - Update for MCP flow
+  - **Impact**: Complete authentication chain now works: JWT → TokenVerifier → AuthenticatedUser → scope["user"] → RequireAuthMiddleware ✅
+  - **Test Coverage**: Added comprehensive integration tests verifying complete authentication flow
+
+### Summary - Complete JWT Authentication Chain Fixed (2025-08-25)
+- **COMPREHENSIVE SESSION FIXES**: Resolved entire JWT authentication chain from frontend to database
+  1. **Context Serialization** - Fixed entity-to-dict conversion in repositories
+  2. **User ID Isolation** - Removed 'system' fallbacks, proper user_id propagation
+  3. **JWT Secret Unification** - Both secrets now use 88-character value
+  4. **V2 Context Routes** - Added missing route registration to http_server.py
+  5. **JWT Audience Validation** - Support for both Supabase and local token audiences
+  6. **JWT_AUDIENCE Cleanup** - Removed all environment variable references
+  - **Current Status**: Authentication working, context APIs accessible at `/api/v2/contexts/*`
+  - **Outstanding Issue**: JWT authentication paradox requiring scope state propagation fix
+
+### Fixed - JWT Audience Validation for Supabase Token Compatibility (2025-08-25 - Continuation)
+- **CRITICAL FIX**: Fixed JWT audience validation mismatch between Supabase tokens ("authenticated") and local tokens ("mcp-server")
+  - **Problem**: Supabase tokens have audience="authenticated" but backend expects audience="mcp-server", causing "Invalid audience" errors
+  - **Root Cause**: JWT service and authentication backend had hardcoded audience expectations
+  - **Solution**: Enhanced JWT validation to handle both token types with flexible audience validation
+  - **JWT Service Enhancements** (`dhafnck_mcp_main/src/fastmcp/auth/domain/services/jwt_service.py`):
+    - Added `expected_audience` parameter to `verify_token()` method (lines 138-216)
+    - Implemented smart audience validation: Supabase tokens use "authenticated", local tokens use "mcp-server"
+    - Enhanced `create_access_token()` to include audience claim with configurable audience parameter (lines 40-77)
+    - Updated `verify_access_token()` to support audience validation (lines 218-229)
+  - **Authentication Backend Updates** (`dhafnck_mcp_main/src/fastmcp/auth/mcp_integration/jwt_auth_backend.py`):
+    - Modified `_validate_token_dual_auth()` to use proper audience validation for each token type (lines 108-191)
+    - Local JWT validation expects "mcp-server" audience (lines 125-140)
+    - Supabase JWT validation expects "authenticated" audience (lines 142-191)
+    - Maintained dual-secret support for backward compatibility
+  - **Test Coverage** (`dhafnck_mcp_main/src/tests/auth/domain/services/jwt_service_test.py`):
+    - Fixed existing tests to handle new audience claims (added `options={"verify_aud": False}` where needed)
+    - Added `test_create_access_token_custom_audience()` - Custom audience creation test
+    - Added `test_verify_token_with_audience_validation()` - Audience validation test
+    - Added `test_verify_supabase_token_simulation()` - Supabase token format test
+    - Added `test_verify_local_vs_supabase_audience_validation()` - Cross-validation test
+  - **Impact**: Resolves authentication failures while maintaining security and backward compatibility
+  - **Testing**: All 24 JWT service tests pass, including new audience validation tests
+
+### Fixed - V2 Context API Routes and JWT Authentication (2025-08-25 - Earlier)
 - **CRITICAL FIX**: Added missing user-scoped context routes to main HTTP server and resolved JWT authentication chain
   - **Problem 1**: V2 context API routes (`/api/v2/contexts/*`) returning 404 Not Found despite being defined
   - **Problem 2**: JWT tokens failing authentication with 401 Unauthorized even after secret unification
@@ -222,7 +315,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
-### Added - Comprehensive MCP Tools Test Suite (2025-08-24)
+### Added
+- Comprehensive frontend JWT token audience analysis documentation (`docs/troubleshooting-guides/frontend-jwt-audience-analysis.md`) documenting the token flow, audience claim mismatch between Supabase and backend expectations, and current workarounds in the dual authentication system - Comprehensive MCP Tools Test Suite (2025-08-24)
 
 - **NEW COMPREHENSIVE TEST SUITE**: Complete testing coverage for all dhafnck_mcp_http tools
   

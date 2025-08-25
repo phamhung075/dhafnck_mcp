@@ -41,7 +41,8 @@ class JWTService:
                           user_id: str,
                           email: str,
                           roles: list[str],
-                          additional_claims: Optional[Dict[str, Any]] = None) -> str:
+                          additional_claims: Optional[Dict[str, Any]] = None,
+                          audience: str = "mcp-server") -> str:
         """
         Create an access token for API authentication
         
@@ -50,6 +51,7 @@ class JWTService:
             email: User's email
             roles: User's roles
             additional_claims: Additional JWT claims
+            audience: Token audience (defaults to "mcp-server" for local tokens)
             
         Returns:
             Encoded JWT access token
@@ -62,6 +64,7 @@ class JWTService:
             "email": email,
             "roles": roles,
             "type": "access",
+            "aud": audience,  # Audience claim
             "iat": now,
             "exp": expires,
             "iss": self.issuer,
@@ -135,38 +138,65 @@ class JWTService:
         
         return jwt.encode(payload, self.secret_key, algorithm=self.ALGORITHM)
     
-    def verify_token(self, token: str, expected_type: str = "access") -> Optional[Dict[str, Any]]:
+    def verify_token(self, token: str, expected_type: str = "access", expected_audience: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
         Verify and decode a JWT token
         
         Args:
             token: JWT token to verify
             expected_type: Expected token type (access, refresh, reset, api_token)
+            expected_audience: Expected audience (optional, for audience validation)
             
         Returns:
             Decoded token payload if valid, None otherwise
         """
         try:
-            # Decode and verify token - try with issuer first, then without for compatibility
+            # Decode and verify token with flexible validation options
             payload = None
-            try:
-                payload = jwt.decode(
-                    token,
-                    self.secret_key,
-                    algorithms=[self.ALGORITHM],
-                    issuer=self.issuer
-                )
-            except InvalidTokenError:
-                # Try without issuer validation for frontend compatibility
-                payload = jwt.decode(
-                    token,
-                    self.secret_key,
-                    algorithms=[self.ALGORITHM]
-                )
+            decode_options = {}
+            
+            # If audience is expected, validate it through JWT library
+            if expected_audience:
+                try:
+                    payload = jwt.decode(
+                        token,
+                        self.secret_key,
+                        algorithms=[self.ALGORITHM],
+                        audience=expected_audience,
+                        issuer=self.issuer
+                    )
+                except InvalidTokenError:
+                    # Try without issuer validation for compatibility
+                    payload = jwt.decode(
+                        token,
+                        self.secret_key,
+                        algorithms=[self.ALGORITHM],
+                        audience=expected_audience
+                    )
+            else:
+                # No audience validation - let JWT library skip audience checks
+                try:
+                    payload = jwt.decode(
+                        token,
+                        self.secret_key,
+                        algorithms=[self.ALGORITHM],
+                        issuer=self.issuer,
+                        options={"verify_aud": False}
+                    )
+                except InvalidTokenError:
+                    # Try without issuer validation for frontend compatibility
+                    payload = jwt.decode(
+                        token,
+                        self.secret_key,
+                        algorithms=[self.ALGORITHM],
+                        options={"verify_aud": False}
+                    )
             
             if not payload:
                 return None
             
+            # Audience validation is now handled by the JWT library above
+            # The token payload will only contain valid tokens with correct audience
             # Verify token type - be flexible with type validation
             token_type = payload.get("type")
             if token_type != expected_type:
@@ -175,6 +205,9 @@ class JWTService:
                     logger.debug(f"Accepting api_token type for access token compatibility")
                 elif expected_type == "api_token" and token_type == "access":
                     logger.debug(f"Accepting access type for api_token compatibility")
+                elif token_type is None:
+                    # Supabase tokens don't have 'type' field, accept them for access tokens
+                    logger.debug(f"Accepting token without 'type' field (likely Supabase token)")
                 else:
                     logger.warning(f"Token type mismatch: expected {expected_type}, got {token_type}")
                     return None
@@ -191,17 +224,18 @@ class JWTService:
             logger.error(f"Token verification error: {e}")
             return None
     
-    def verify_access_token(self, token: str) -> Optional[Dict[str, Any]]:
+    def verify_access_token(self, token: str, expected_audience: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
         Verify an access token
         
         Args:
             token: Access token to verify
+            expected_audience: Expected audience (optional)
             
         Returns:
             Decoded token payload if valid
         """
-        return self.verify_token(token, "access")
+        return self.verify_token(token, "access", expected_audience)
     
     def verify_refresh_token(self, token: str) -> Optional[Dict[str, Any]]:
         """

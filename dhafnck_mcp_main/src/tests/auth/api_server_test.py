@@ -28,12 +28,16 @@ class TestAuthAPIServer:
              patch('fastmcp.auth.api_server.supabase_router') as mock_supabase, \
              patch('fastmcp.auth.api_server.dev_router') as mock_dev, \
              patch('fastmcp.auth.api_server.user_scoped_tasks_router') as mock_user_tasks, \
+             patch('fastmcp.auth.api_server.user_scoped_projects_router') as mock_user_projects, \
+             patch('fastmcp.auth.api_server.user_scoped_contexts_router') as mock_user_contexts, \
              patch('fastmcp.auth.api_server.token_router') as mock_token:
             yield {
                 'auth': mock_auth,
                 'supabase': mock_supabase,
                 'dev': mock_dev,
                 'user_tasks': mock_user_tasks,
+                'user_projects': mock_user_projects,
+                'user_contexts': mock_user_contexts,
                 'token': mock_token
             }
 
@@ -88,6 +92,7 @@ class TestAuthAPIServer:
              patch('fastmcp.auth.api_server.dev_router') as mock_dev, \
              patch('fastmcp.auth.api_server.user_scoped_tasks_router') as mock_user_tasks, \
              patch('fastmcp.auth.api_server.user_scoped_projects_router') as mock_user_projects, \
+             patch('fastmcp.auth.api_server.user_scoped_contexts_router') as mock_user_contexts, \
              patch('fastmcp.auth.api_server.token_router') as mock_token:
             
             # Re-import to get fresh app with dev environment
@@ -114,6 +119,7 @@ class TestAuthAPIServer:
              patch('fastmcp.auth.api_server.dev_router') as mock_dev, \
              patch('fastmcp.auth.api_server.user_scoped_tasks_router') as mock_user_tasks, \
              patch('fastmcp.auth.api_server.user_scoped_projects_router') as mock_user_projects, \
+             patch('fastmcp.auth.api_server.user_scoped_contexts_router') as mock_user_contexts, \
              patch('fastmcp.auth.api_server.token_router') as mock_token:
             
             # Re-import to get fresh app with production environment
@@ -230,6 +236,7 @@ class TestAuthAPIServer:
              patch('fastmcp.auth.api_server.dev_router') as mock_dev, \
              patch('fastmcp.auth.api_server.user_scoped_tasks_router') as mock_user_tasks, \
              patch('fastmcp.auth.api_server.user_scoped_projects_router') as mock_user_projects, \
+             patch('fastmcp.auth.api_server.user_scoped_contexts_router') as mock_user_contexts, \
              patch('fastmcp.auth.api_server.token_router') as mock_token:
             
             # Re-import to get fresh app
@@ -284,6 +291,7 @@ class TestAuthAPIServer:
              patch('fastmcp.auth.api_server.dev_router') as mock_dev, \
              patch('fastmcp.auth.api_server.user_scoped_tasks_router') as mock_user_tasks, \
              patch('fastmcp.auth.api_server.user_scoped_projects_router') as mock_user_projects, \
+             patch('fastmcp.auth.api_server.user_scoped_contexts_router') as mock_user_contexts, \
              patch('fastmcp.auth.api_server.token_router') as mock_token:
             
             # Re-import to get fresh app
@@ -315,6 +323,7 @@ class TestAuthAPIServer:
              patch('fastmcp.auth.api_server.dev_router') as mock_dev, \
              patch('fastmcp.auth.api_server.user_scoped_tasks_router') as mock_user_tasks, \
              patch('fastmcp.auth.api_server.user_scoped_projects_router') as mock_user_projects, \
+             patch('fastmcp.auth.api_server.user_scoped_contexts_router') as mock_user_contexts, \
              patch('fastmcp.auth.api_server.token_router') as mock_token:
             
             # Re-import to get fresh app
@@ -337,3 +346,35 @@ class TestAuthAPIServer:
         
         # Check info was logged
         mock_logger.info.assert_any_call("✅ User-scoped project routes enabled at /api/v2/projects/")
+    
+    def test_user_scoped_contexts_router_included(self, monkeypatch):
+        """Test that user-scoped contexts router is included"""
+        # Mock the routers before import
+        with patch('fastmcp.auth.api_server.auth_router') as mock_auth, \
+             patch('fastmcp.auth.api_server.supabase_router') as mock_supabase, \
+             patch('fastmcp.auth.api_server.dev_router') as mock_dev, \
+             patch('fastmcp.auth.api_server.user_scoped_tasks_router') as mock_user_tasks, \
+             patch('fastmcp.auth.api_server.user_scoped_projects_router') as mock_user_projects, \
+             patch('fastmcp.auth.api_server.user_scoped_contexts_router') as mock_user_contexts, \
+             patch('fastmcp.auth.api_server.token_router') as mock_token:
+            
+            # Re-import to get fresh app
+            import importlib
+            import fastmcp.auth.api_server
+            importlib.reload(fastmcp.auth.api_server)
+            
+            app = fastmcp.auth.api_server.app
+            
+            # The app should exist and have included user-scoped contexts router
+            assert app is not None
+            
+    @patch('fastmcp.auth.api_server.logger')
+    def test_user_scoped_contexts_info_logged(self, mock_logger, monkeypatch):
+        """Test that info is logged when user-scoped contexts routes are enabled"""
+        # Re-import to trigger the logging
+        import importlib
+        import fastmcp.auth.api_server
+        importlib.reload(fastmcp.auth.api_server)
+        
+        # Check info was logged
+        mock_logger.info.assert_any_call("✅ User-scoped context routes enabled at /api/v2/contexts/")

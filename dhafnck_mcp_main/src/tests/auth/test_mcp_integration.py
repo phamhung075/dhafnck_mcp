@@ -87,8 +87,8 @@ class TestJWTAuthBackend:
             additional_claims={"scopes": ["read", "write"]}
         )
         
-        # Load token
-        access_token = await jwt_backend.load_access_token(token)
+        # Load token (using new verify_token method)
+        access_token = await jwt_backend.verify_token(token)
         
         # Verify
         assert access_token is not None
@@ -102,7 +102,7 @@ class TestJWTAuthBackend:
         """Test rejection of invalid token"""
         invalid_token = "invalid.jwt.token"
         
-        access_token = await jwt_backend.load_access_token(invalid_token)
+        access_token = await jwt_backend.verify_token(invalid_token)
         
         assert access_token is None
     
@@ -116,7 +116,7 @@ class TestJWTAuthBackend:
             token_family="family-456"
         )
         
-        access_token = await jwt_backend.load_access_token(refresh_token)
+        access_token = await jwt_backend.verify_token(refresh_token)
         
         assert access_token is None
     
@@ -426,8 +426,8 @@ class TestIntegration:
                 additional_claims={"scopes": ["read", "write"]}
             )
             
-            # Validate token
-            access_token = await jwt_backend.load_access_token(token)
+            # Validate token  
+            access_token = await jwt_backend.verify_token(token)
             
             # Verify complete flow
             assert access_token is not None

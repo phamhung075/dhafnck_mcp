@@ -10,8 +10,9 @@ import time
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
 
-from mcp.server.auth.provider import AccessToken
-from fastmcp.server.auth.providers.bearer import BearerAuthProvider
+from mcp.server.auth.provider import AccessToken, TokenVerifier
+from starlette.authentication import AuthCredentials
+from mcp.server.auth.middleware.bearer_auth import AuthenticatedUser
 
 from ..domain.services.jwt_service import JWTService
 from ..application.services.auth_service import AuthService
@@ -28,7 +29,7 @@ class MCPUserContext:
     scopes: List[str]
 
 
-class JWTAuthBackend(BearerAuthProvider):
+class JWTAuthBackend(TokenVerifier):
     """
     JWT Authentication Backend that integrates our authentication system
     with the MCP server infrastructure.
@@ -65,30 +66,8 @@ class JWTAuthBackend(BearerAuthProvider):
         self._auth_service = auth_service
         self._user_repository = user_repository
         
-        # Get issuer from environment, use default audience
-        issuer = os.getenv("JWT_ISSUER", "dhafnck-mcp")
-        audience = "mcp-server"  # Default audience, not configured via environment
-        
-        # Initialize parent with a dummy public key since we handle validation ourselves
-        # The parent class requires either public_key or jwks_uri, but we use symmetric keys
-        # So we provide a dummy RSA public key that won't be used
-        dummy_public_key = """-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAu1SU1LfVLPHCozMxH2Mo
-4lgOEePzNm0tRgeLezV6ffAt0gunVTLw7onLRnrq0/IzW7yWR7QkrmBL7jTKEn5u
-+qKhbwKfBstIs+bMY2Zkp18gnTxKLxoS2tFczGkPLPgizskuemMghRniWaoLcyeh
-kd3qqGElvW/VDL5AaWTg0nLVkjRo9z+40RQzuVaE8AkAFmxZzow3x+VJYKdjykkJ
-0iT9wCS0DRTXu269V264Vf/3jvredZiKRkgwlL9xNAwxXFg0x/XFw005UWVRIkdg
-cKWTjpBP2dPwVZ4WWC+9aGVd+Gyn1o0CLelf4rEjGoXbAAEgAqeGUxrcIlbjXfbc
-mwIDAQAB
------END PUBLIC KEY-----"""
-        
-        super().__init__(
-            public_key=dummy_public_key,  # Dummy key, we override validation
-            jwks_uri=None,
-            issuer=issuer,
-            audience=audience,
-            required_scopes=required_scopes or ["mcp:access"]
-        )
+        # Store required scopes
+        self._required_scopes = required_scopes or ["mcp:access"]
         
         # Cache for user contexts
         self._user_context_cache: Dict[str, MCPUserContext] = {}
@@ -108,6 +87,7 @@ mwIDAQAB
     async def _validate_token_dual_auth(self, token: str) -> Optional[Dict[str, Any]]:
         """
         Try to validate token with both local JWT secret and Supabase JWT secret.
+        Handles audience validation properly for both token types.
         
         Args:
             token: JWT token string
@@ -116,55 +96,56 @@ mwIDAQAB
             Decoded token payload if valid with either secret, None otherwise
         """
         import logging
+        import jwt as pyjwt
+        from jwt.exceptions import InvalidTokenError, ExpiredSignatureError
+        
         logger = logging.getLogger(__name__)
         
-        # Try local JWT service first (for locally generated tokens)
+        # Try local JWT service first (for locally generated tokens with "mcp-server" audience)
         logger.debug("🔍 Trying local JWT validation...")
         for token_type in ["access", "api_token"]:
             try:
-                payload = self._jwt_service.verify_token(token, expected_type=token_type)
+                payload = self._jwt_service.verify_token(
+                    token, 
+                    expected_type=token_type, 
+                    expected_audience="mcp-server"
+                )
                 if payload:
-                    logger.info(f"✅ Token validated with local JWT secret as '{token_type}' type")
+                    logger.info(f"✅ Token validated with local JWT secret as '{token_type}' type with audience 'mcp-server'")
                     return payload
                 else:
                     logger.debug(f"❌ Local JWT validation failed for type '{token_type}'")
             except Exception as e:
                 logger.debug(f"❌ Local JWT validation exception for type '{token_type}': {e}")
         
-        # Try Supabase JWT secret (for Supabase-generated tokens)
+        # Try Supabase JWT secret (for Supabase-generated tokens with "authenticated" audience)
         logger.debug("🔍 Trying Supabase JWT validation...")
         supabase_jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
         
         if supabase_jwt_secret:
             logger.info(f"✅ SUPABASE_JWT_SECRET found, length: {len(supabase_jwt_secret)}")
             try:
-                # Import jwt here to avoid import issues
-                import jwt as pyjwt
-                from jwt.exceptions import InvalidTokenError, ExpiredSignatureError
-                
-                logger.info(f"🔍 Attempting to decode token with Supabase secret...")
+                logger.info(f"🔍 Attempting to decode token with Supabase secret and 'authenticated' audience...")
                 logger.info(f"🔍 Token header (first 50 chars): {token[:50]}...")
                 
-                # Try to decode with Supabase secret - be very permissive for now
+                # Try to validate with Supabase secret and proper audience validation
                 payload = pyjwt.decode(
                     token,
                     supabase_jwt_secret,
                     algorithms=["HS256"],
+                    audience="authenticated",  # Supabase tokens have this audience
                     options={
-                        "verify_signature": True,  # This is the most important part
-                        "verify_aud": False,       # Don't verify audience
-                        "verify_iss": False,       # Don't verify issuer
-                        "verify_exp": False,       # Don't verify expiration for now
-                        "verify_iat": False,       # Don't verify issued at
-                        "verify_nbf": False,       # Don't verify not before
-                        "require_exp": False,      # Don't require expiration
-                        "require_iat": False,      # Don't require issued at
-                        "require_nbf": False       # Don't require not before
+                        "verify_signature": True,
+                        "verify_aud": True,        # Verify audience
+                        "verify_iss": False,       # Don't verify issuer (Supabase has different issuer)
+                        "verify_exp": True,        # Verify expiration
+                        "verify_iat": True,        # Verify issued at
+                        "verify_nbf": True,        # Verify not before
                     }
                 )
                 
                 if payload:
-                    logger.info("✅ Token validated with Supabase JWT secret")
+                    logger.info("✅ Token validated with Supabase JWT secret and audience 'authenticated'")
                     logger.debug(f"✅ Supabase payload keys: {list(payload.keys())}")
                     logger.debug(f"✅ User from Supabase token: {payload.get('sub')} ({payload.get('email')})")
                     # Add type for compatibility
@@ -188,7 +169,7 @@ mwIDAQAB
         logger.debug("❌ Token validation failed with both JWT secrets")
         return None
 
-    async def load_access_token(self, token: str) -> Optional[AccessToken]:
+    async def verify_token(self, token: str) -> Optional[AccessToken]:
         """
         Validate JWT token and return AccessToken for MCP.
         
@@ -202,7 +183,7 @@ mwIDAQAB
         logger = logging.getLogger(__name__)
         
         try:
-            logger.info(f"🔍 JWT Auth Backend: Validating token for MCP access")
+            logger.info(f"🔍 JWT Auth Backend: Verifying token for MCP access")
             logger.debug(f"Token (first 20 chars): {token[:20]}...")
             
             # Try dual JWT validation - first local, then Supabase
@@ -264,6 +245,13 @@ mwIDAQAB
             logger.debug(f"Full error trace:\n{traceback.format_exc()}")
             return None
     
+    async def load_access_token(self, token: str) -> Optional[AccessToken]:
+        """
+        Legacy method for backward compatibility.
+        Delegates to verify_token.
+        """
+        return await self.verify_token(token)
+    
     async def _get_user_context(self, user_id: str) -> Optional[MCPUserContext]:
         """
         Get user context, using cache if available.
@@ -289,11 +277,23 @@ mwIDAQAB
                 user = self._user_repository.find_by_id(domain_user_id)
                 
                 if user:
+                    # Extract role names from UserRole enums
+                    role_names = []
+                    for role in user.roles:
+                        if hasattr(role, 'value'):
+                            role_names.append(role.value.lower())
+                        else:
+                            # Handle string roles or other formats
+                            role_str = str(role).lower()
+                            if role_str.startswith('userrole.'):
+                                role_str = role_str.replace('userrole.', '')
+                            role_names.append(role_str)
+                    
                     context = MCPUserContext(
                         user_id=str(user.id.value),
                         email=user.email,
                         username=user.username,
-                        roles=[str(role) for role in user.roles],
+                        roles=role_names,
                         scopes=[]  # Scopes come from token
                     )
                     
@@ -340,6 +340,11 @@ mwIDAQAB
                 scopes.extend(scope_mapping[role_lower])
         
         return list(set(scopes))  # Remove duplicates
+    
+    @property
+    def required_scopes(self) -> List[str]:
+        """Get the required scopes for this auth backend."""
+        return self._required_scopes
     
     def get_current_user_id(self, token: str) -> Optional[str]:
         """

@@ -543,8 +543,9 @@ class TestCreateSSEApp:
         server._mcp_server.run = AsyncMock()
         return server
 
+    @patch('fastmcp.server.http_server.register_agent_metadata_routes')
     @patch('fastmcp.server.http_server.SseServerTransport')
-    def test_create_sse_app_without_auth(self, mock_sse_transport, mock_server):
+    def test_create_sse_app_without_auth(self, mock_sse_transport, mock_register_agent_metadata):
         """Test creating SSE app without authentication."""
         mock_sse = Mock()
         mock_sse.connect_sse = AsyncMock()
@@ -573,9 +574,13 @@ class TestCreateSSEApp:
         
         assert sse_route_found
         assert message_mount_found
+        
+        # Verify agent metadata routes were registered
+        mock_register_agent_metadata.assert_called_once_with(app)
 
+    @patch('fastmcp.server.http_server.register_agent_metadata_routes')
     @patch('fastmcp.server.http_server.SseServerTransport')
-    def test_create_sse_app_with_auth(self, mock_sse_transport, mock_server):
+    def test_create_sse_app_with_auth(self, mock_sse_transport, mock_register_agent_metadata, mock_server):
         """Test creating SSE app with authentication."""
         mock_auth = Mock()
         mock_auth.required_scopes = ["stream"]
@@ -610,6 +615,9 @@ class TestCreateSSEApp:
                 assert hasattr(route.endpoint, '__name__')
         
         assert sse_route_found
+        
+        # Verify agent metadata routes were registered
+        mock_register_agent_metadata.assert_called_once_with(app)
 
 
 class TestCreateStreamableHTTPApp:
@@ -688,6 +696,8 @@ class TestCreateStreamableHTTPApp:
         """Test creating streamable HTTP app with event store."""
         mock_event_store = Mock()
         mock_session_manager = Mock()
+        mock_session_manager.run = AsyncMock()
+        mock_session_manager.handle_request = AsyncMock()
         mock_session_manager_class.return_value = mock_session_manager
         
         app = create_streamable_http_app(
@@ -735,13 +745,14 @@ class TestIntegrationScenarios:
         # Add a health check route
         health_route = Route("/health", endpoint=lambda r: Response(content="OK"))
         
-        with patch('fastmcp.server.http_server.SseServerTransport'):
-            app = create_sse_app(
-                server=mock_server,
-                message_path="/messages",
-                sse_path="/sse",
-                routes=[health_route],
-            )
+        with patch('fastmcp.server.http_server.register_agent_metadata_routes'):
+            with patch('fastmcp.server.http_server.SseServerTransport'):
+                app = create_sse_app(
+                    server=mock_server,
+                    message_path="/messages",
+                    sse_path="/sse",
+                    routes=[health_route],
+                )
         
         client = TestClient(app)
         response = client.get("/health")

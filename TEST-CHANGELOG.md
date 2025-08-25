@@ -4,7 +4,22 @@ All notable changes to test files in the DhafnckMCP AI Agent Orchestration Platf
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [Semantic](https://semver.org/spec/v2.0.0.html)
 
-## [2025-08-25] - Project Context Repository Update Method Fix and Test Suite Updates
+## [2025-08-25] - JWT Service Test Updates and Project Context Repository Fix
+
+### Added/Fixed - JWT Service Audience Validation Tests
+- **File**: `dhafnck_mcp_main/src/tests/auth/domain/services/jwt_service_test.py`
+  - **Test Fixes**: Updated all JWT decode calls to skip audience validation (`options={"verify_aud": False}`) after adding audience claims to tokens
+  - **Affected Tests**: Fixed 6 existing tests that decode tokens directly (token creation, refresh, reset, expiry tests)
+  - **New Tests Added**:
+    - `test_create_access_token_custom_audience()` - Tests custom audience parameter in token creation
+    - `test_verify_token_with_audience_validation()` - Tests audience validation success/failure scenarios  
+    - `test_verify_supabase_token_simulation()` - Tests Supabase-style tokens (no 'type' field, 'authenticated' audience)
+    - `test_verify_local_vs_supabase_audience_validation()` - Tests dual token validation logic
+  - **Audience Claim Testing**: Added assertion for default "mcp-server" audience in `test_create_access_token()`
+  - **Test Coverage**: 24 tests total, 4 new audience validation tests, all passing
+  - **Impact**: Ensures JWT audience validation works correctly for both Supabase and local tokens
+
+### Fixed - Project Context Repository Update Method Fix and Test Suite Updates
 
 ### Fixed - Project Context Repository Update Method Signature
 - **File**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/project_context_repository_user_scoped.py`
