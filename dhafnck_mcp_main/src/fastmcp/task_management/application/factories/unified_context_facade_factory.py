@@ -155,9 +155,37 @@ class UnifiedContextFacadeFactory:
         Returns:
             UnifiedContextFacade instance configured with the provided scope
         """
-        # Create user-scoped service if user_id is provided
+        # CRITICAL FIX: Create user-scoped repositories if user_id is provided
         if user_id:
-            scoped_service = self.unified_service.with_user(user_id)
+            # Create new user-scoped repositories for this specific user
+            user_global_repo = self.global_repo.with_user(user_id)
+            user_project_repo = self.project_repo.with_user(user_id) 
+            user_branch_repo = self.branch_repo.with_user(user_id)
+            user_task_repo = self.task_repo.with_user(user_id)
+            
+            # Repository map for user-scoped services
+            user_repo_map = {
+                "global": user_global_repo,
+                "project": user_project_repo,
+                "branch": user_branch_repo,
+                "task": user_task_repo
+            }
+            
+            # Create user-scoped services with user-scoped repositories
+            user_inheritance_service = ContextInheritanceService(user_repo_map)
+            user_delegation_service = ContextDelegationService(user_repo_map)
+            
+            # Create completely user-scoped unified service
+            scoped_service = UnifiedContextService(
+                global_context_repository=user_global_repo,
+                project_context_repository=user_project_repo,
+                branch_context_repository=user_branch_repo,
+                task_context_repository=user_task_repo,
+                cache_service=self.cache_service,
+                inheritance_service=user_inheritance_service,
+                delegation_service=user_delegation_service,
+                validation_service=self.validation_service
+            ).with_user(user_id)
         else:
             scoped_service = self.unified_service
             

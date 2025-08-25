@@ -43,7 +43,8 @@ class TestBranchContextRepository:
         self.mock_session.delete = Mock()
         
         # Create repository instance
-        self.repository = BranchContextRepository(self.mock_session_factory)
+        self.user_id = "test-user-123"
+        self.repository = BranchContextRepository(self.mock_session_factory, user_id=self.user_id)
         
         # Test data
         self.test_context_id = str(uuid.uuid4())
@@ -543,6 +544,237 @@ class TestBranchContextRepository:
         assert hasattr(existing_model, 'updated_at')
         # The updated_at should be between before and after
         assert before_update <= existing_model.updated_at <= after_update
+    
+    def test_with_user_creates_new_instance(self):
+        """Test with_user creates new repository instance with different user."""
+        new_user_id = "different-user-456"
+        new_repo = self.repository.with_user(new_user_id)
+        
+        assert isinstance(new_repo, BranchContextRepository)
+        assert new_repo.user_id == new_user_id
+        assert new_repo.session_factory == self.repository.session_factory
+        # Original repository should be unchanged
+        assert self.repository.user_id == self.user_id
+    
+    def test_get_applies_user_filter(self):
+        """Test get method applies user filtering when user_id is set."""
+        # Mock database model
+        db_model = BranchContextModel(
+            id=self.test_context_id,
+            branch_id=self.test_context_id,
+            parent_project_id=self.test_project_id,
+            data={'test': 'data'},
+            user_id=self.user_id
+        )
+        
+        # Setup mock query
+        mock_query = Mock()
+        mock_query.filter.return_value = mock_query
+        mock_query.first.return_value = db_model
+        self.mock_session.query.return_value = mock_query
+        
+        with patch.object(self.repository, '_to_entity') as mock_to_entity:
+            mock_to_entity.return_value = self.test_entity
+            
+            result = self.repository.get(self.test_context_id)
+        
+        # Verify user filter was applied
+        assert mock_query.filter.call_count == 2  # ID filter + user filter
+        filter_calls = mock_query.filter.call_args_list
+        
+        # Check that user filter was applied
+        user_filter_applied = any(
+            self.user_id in str(call) for call in filter_calls
+        )
+        assert user_filter_applied
+        
+        assert result == self.test_entity
+    
+    def test_get_system_mode_no_user_filter(self):
+        """Test get method without user filtering in system mode."""
+        # Create system repository (no user_id)
+        system_repo = BranchContextRepository(self.mock_session_factory, user_id=None)
+        
+        # Mock database model
+        db_model = BranchContextModel(
+            id=self.test_context_id,
+            branch_id=self.test_context_id,
+            parent_project_id=self.test_project_id,
+            data={'test': 'data'}
+        )
+        
+        # Setup mock query
+        mock_query = Mock()
+        mock_query.filter.return_value = mock_query
+        mock_query.first.return_value = db_model
+        self.mock_session.query.return_value = mock_query
+        
+        with patch.object(system_repo, '_to_entity') as mock_to_entity:
+            mock_to_entity.return_value = self.test_entity
+            
+            result = system_repo.get(self.test_context_id)
+        
+        # Verify only ID filter was applied (no user filter)
+        assert mock_query.filter.call_count == 1  # Only ID filter
+        assert result == self.test_entity
+    
+    def test_list_applies_user_filter(self):
+        """Test list method applies user filtering."""
+        # Mock empty result
+        mock_result = Mock()
+        mock_result.scalars.return_value.all.return_value = []
+        self.mock_session.execute.return_value = mock_result
+        
+        with patch('fastmcp.task_management.infrastructure.repositories.branch_context_repository.select') as mock_select:
+            mock_stmt = Mock()
+            mock_select.return_value = mock_stmt
+            mock_stmt.where.return_value = mock_stmt
+            
+            result = self.repository.list()
+        
+        # Verify user filter was applied to the statement
+        mock_stmt.where.assert_called()
+        assert result == []
+    
+    def test_list_system_mode_no_user_filter(self):
+        """Test list method without user filtering in system mode."""
+        # Create system repository (no user_id)
+        system_repo = BranchContextRepository(self.mock_session_factory, user_id=None)
+        
+        # Mock empty result
+        mock_result = Mock()
+        mock_result.scalars.return_value.all.return_value = []
+        self.mock_session.execute.return_value = mock_result
+        
+        with patch('fastmcp.task_management.infrastructure.repositories.branch_context_repository.select') as mock_select:
+            mock_stmt = Mock()
+            mock_select.return_value = mock_stmt
+            mock_stmt.where.return_value = mock_stmt
+            
+            result = system_repo.list()
+        
+        # In system mode, only additional filters should be applied, not user filter
+        # Check that where was not called (no user filter applied)
+        mock_stmt.where.assert_not_called()
+        assert result == []
+    
+    def test_create_sets_user_id(self):
+        """Test create method sets user_id from repository context."""
+        # Mock no existing context
+        self.mock_session.get.return_value = None
+        
+        with patch.object(self.repository, '_to_entity') as mock_to_entity:
+            mock_to_entity.return_value = self.test_entity
+            
+            result = self.repository.create(self.test_entity)
+        
+        # Verify user_id was set on created model
+        self.mock_session.add.assert_called_once()
+        added_model = self.mock_session.add.call_args[0][0]
+        assert added_model.user_id == self.user_id
+    
+    def test_create_uses_metadata_user_id_fallback(self):
+        """Test create method uses metadata user_id when repository user_id is None."""
+        # Create repository without user_id
+        system_repo = BranchContextRepository(self.mock_session_factory, user_id=None)
+        self.mock_session.get.return_value = None
+        
+        # Create entity with user_id in metadata
+        entity_with_user = BranchContext(
+            id=self.test_context_id,
+            project_id=self.test_project_id,
+            git_branch_name="test-branch",
+            branch_settings={},
+            metadata={'user_id': 'metadata-user-789'}
+        )
+        
+        with patch.object(system_repo, '_to_entity') as mock_to_entity:
+            mock_to_entity.return_value = entity_with_user
+            
+            result = system_repo.create(entity_with_user)
+        
+        # Verify metadata user_id was used
+        self.mock_session.add.assert_called_once()
+        added_model = self.mock_session.add.call_args[0][0]
+        assert added_model.user_id == 'metadata-user-789'
+    
+    def test_create_uses_system_fallback(self):
+        """Test create method uses 'system' fallback when no user_id available."""
+        # Create repository without user_id
+        system_repo = BranchContextRepository(self.mock_session_factory, user_id=None)
+        self.mock_session.get.return_value = None
+        
+        # Create entity without user_id in metadata
+        entity_no_user = BranchContext(
+            id=self.test_context_id,
+            project_id=self.test_project_id,
+            git_branch_name="test-branch",
+            branch_settings={},
+            metadata={}
+        )
+        
+        with patch.object(system_repo, '_to_entity') as mock_to_entity:
+            mock_to_entity.return_value = entity_no_user
+            
+            result = system_repo.create(entity_no_user)
+        
+        # Verify 'system' fallback was used
+        self.mock_session.add.assert_called_once()
+        added_model = self.mock_session.add.call_args[0][0]
+        assert added_model.user_id == 'system'
+    
+    def test_update_preserves_user_id_precedence(self):
+        """Test update method respects user_id precedence: repository > metadata > existing."""
+        # Mock existing model with different user_id
+        existing_model = Mock()
+        existing_model.user_id = "existing-user-999"
+        self.mock_session.get.return_value = existing_model
+        
+        # Create entity with user_id in metadata
+        entity_with_user = BranchContext(
+            id=self.test_context_id,
+            project_id=self.test_project_id,
+            git_branch_name="test-branch",
+            branch_settings={},
+            metadata={'user_id': 'metadata-user-888'}
+        )
+        
+        with patch.object(self.repository, '_to_entity') as mock_to_entity:
+            mock_to_entity.return_value = entity_with_user
+            
+            result = self.repository.update(self.test_context_id, entity_with_user)
+        
+        # Verify repository user_id took precedence
+        assert existing_model.user_id == self.user_id  # Repository user_id wins
+    
+    def test_user_isolation_boundary(self):
+        """Test that users cannot access each other's contexts."""
+        # Create contexts for two different users
+        user1_repo = BranchContextRepository(self.mock_session_factory, user_id="user-001")
+        user2_repo = BranchContextRepository(self.mock_session_factory, user_id="user-002")
+        
+        context_id = str(uuid.uuid4())
+        
+        # Mock query for user1 - returns a context
+        mock_query_user1 = Mock()
+        mock_query_user1.filter.return_value = mock_query_user1
+        mock_query_user1.first.return_value = Mock(id=context_id, user_id="user-001")
+        
+        # Mock query for user2 - returns None (no access)
+        mock_query_user2 = Mock()
+        mock_query_user2.filter.return_value = mock_query_user2
+        mock_query_user2.first.return_value = None
+        
+        self.mock_session.query.side_effect = [mock_query_user1, mock_query_user2]
+        
+        # User1 should find their context
+        with patch.object(user1_repo, '_to_entity', return_value=self.test_entity):
+            result1 = user1_repo.get(context_id)
+            assert result1 is not None
+        
+        # User2 should not find user1's context
+        result2 = user2_repo.get(context_id)
+        assert result2 is None
 
 
 if __name__ == "__main__":

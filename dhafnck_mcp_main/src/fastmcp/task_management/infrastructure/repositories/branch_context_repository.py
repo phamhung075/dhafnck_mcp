@@ -102,7 +102,7 @@ class BranchContextRepository(BaseORMRepository):
                 active_patterns={},  # Using active_patterns instead of agent_assignments
                 local_overrides=entity.metadata.get('local_overrides', {}),
                 delegation_rules=entity.metadata.get('delegation_rules', {}),
-                user_id=self.user_id or entity.metadata.get('user_id') or 'system'  # Enable user_id with repository scope
+                user_id=self.user_id or entity.metadata.get('user_id')  # CRITICAL FIX: Never fallback to 'system' - require valid user_id
             )
             
             session.add(db_model)
@@ -166,7 +166,7 @@ class BranchContextRepository(BaseORMRepository):
             }
             db_model.local_overrides = entity.metadata.get('local_overrides', {})
             db_model.delegation_rules = entity.metadata.get('delegation_rules', {})
-            db_model.user_id = self.user_id or entity.metadata.get('user_id') or db_model.user_id or 'system'
+            db_model.user_id = self.user_id or entity.metadata.get('user_id') or db_model.user_id  # CRITICAL FIX: Never fallback to 'system'
             db_model.updated_at = datetime.now(timezone.utc)
             
             session.flush()

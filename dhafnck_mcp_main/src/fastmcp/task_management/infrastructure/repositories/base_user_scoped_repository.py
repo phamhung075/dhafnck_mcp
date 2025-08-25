@@ -134,6 +134,9 @@ class BaseUserScopedRepository:
         """
         if not self._is_system_mode:
             data['user_id'] = self.user_id
+            logger.debug(f"🚨 USER_ID_DEBUG: Setting user_id in data: {self.user_id}")
+        else:
+            logger.error(f"🚨 USER_ID_DEBUG: Repository in system mode - NOT setting user_id! This may cause 'system' fallbacks.")
         return data
     
     def validate_bulk_operation(self, entities: List[Any]) -> None:

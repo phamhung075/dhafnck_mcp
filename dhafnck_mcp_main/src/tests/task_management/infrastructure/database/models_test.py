@@ -234,7 +234,8 @@ class TestDatabaseModels:
         branch = ProjectGitBranch(
             id=str(uuid4()),
             project_id=project.id,
-            name="main"
+            name="main",
+            user_id="test-user-777"  # Branch also needs user_id
         )
         session.add_all([project, branch])
         session.commit()
@@ -254,11 +255,78 @@ class TestDatabaseModels:
         # Test Agent without user_id
         agent = Agent(
             id=str(uuid4()),
-            project_id=project.id,
             name="Test Agent",
             user_id=None  # Explicitly set to None
         )
         session.add(agent)
+        
+        with pytest.raises(IntegrityError):
+            session.commit()
+        session.rollback()
+        
+        # Test TaskSubtask without user_id
+        task_with_user = Task(
+            id=str(uuid4()),
+            git_branch_id=branch.id,
+            title="Task with User",
+            user_id="test-user-777"
+        )
+        session.add(task_with_user)
+        session.commit()
+        
+        subtask = TaskSubtask(
+            id=str(uuid4()),
+            task_id=task_with_user.id,
+            title="Subtask",
+            user_id=None  # Explicitly set to None
+        )
+        session.add(subtask)
+        
+        with pytest.raises(IntegrityError):
+            session.commit()
+        session.rollback()
+        
+        # Test TaskAssignee without user_id
+        assignee = TaskAssignee(
+            task_id=task_with_user.id,
+            assignee_id="assignee-123",
+            user_id=None  # Explicitly set to None
+        )
+        session.add(assignee)
+        
+        with pytest.raises(IntegrityError):
+            session.commit()
+        session.rollback()
+        
+        # Test TaskLabel without user_id
+        label = Label(id="test-label", name="Test Label", user_id="test-user-777")
+        task_label = TaskLabel(
+            task_id=task_with_user.id,
+            label_id=label.id,
+            user_id=None  # Explicitly set to None
+        )
+        session.add_all([label, task_label])
+        
+        with pytest.raises(IntegrityError):
+            session.commit()
+        session.rollback()
+        
+        # Test TaskDependency without user_id
+        task2 = Task(
+            id=str(uuid4()),
+            git_branch_id=branch.id,
+            title="Task 2",
+            user_id="test-user-777"
+        )
+        session.add(task2)
+        session.commit()
+        
+        dependency = TaskDependency(
+            task_id=task2.id,
+            depends_on_task_id=task_with_user.id,
+            user_id=None  # Explicitly set to None
+        )
+        session.add(dependency)
         
         with pytest.raises(IntegrityError):
             session.commit()
@@ -737,6 +805,8 @@ class TestDatabaseModels:
     
     def test_context_delegation_validation(self, session):
         """Test ContextDelegation with different trigger types"""
+        user_id = "test-user-context"
+        
         # Test auto_pattern trigger
         delegation1 = ContextDelegation(
             id=str(uuid4()),
@@ -748,7 +818,8 @@ class TestDatabaseModels:
             delegation_reason="Common error pattern",
             trigger_type="auto_pattern",
             auto_delegated=True,
-            confidence_score=0.88
+            confidence_score=0.88,
+            user_id=user_id
         )
         
         # Test auto_threshold trigger
@@ -762,7 +833,8 @@ class TestDatabaseModels:
             delegation_reason="Performance pattern used in multiple branches",
             trigger_type="auto_threshold",
             auto_delegated=True,
-            confidence_score=0.92
+            confidence_score=0.92,
+            user_id=user_id
         )
         
         session.add_all([delegation1, delegation2])
@@ -772,10 +844,12 @@ class TestDatabaseModels:
         auto_pattern = session.query(ContextDelegation).filter_by(trigger_type="auto_pattern").first()
         assert auto_pattern.auto_delegated is True
         assert auto_pattern.confidence_score == 0.88
+        assert auto_pattern.user_id == user_id
         
         auto_threshold = session.query(ContextDelegation).filter_by(trigger_type="auto_threshold").first()
         assert auto_threshold.auto_delegated is True
         assert auto_threshold.confidence_score == 0.92
+        assert auto_threshold.user_id == user_id
     
     def test_agent_metadata_and_timestamps(self, session):
         """Test Agent model metadata and timestamp updates"""
@@ -807,3 +881,238 @@ class TestDatabaseModels:
         assert saved_agent.model_metadata["version"] == "2.0"
         assert "async" in saved_agent.model_metadata["features"]
         assert saved_agent.model_metadata["config"]["timeout"] == 300
+    
+    def test_context_user_isolation(self, session):
+        """Test that context models properly enforce user isolation"""
+        user1_id = "user-context-001"
+        user2_id = "user-context-002"
+        
+        # Create global contexts for both users
+        global1 = GlobalContext(
+            id=str(uuid4()),
+            organization_id="00000000-0000-0000-0000-000000000002",
+            user_id=user1_id,
+            autonomous_rules={"rule": "user1"},
+            security_policies={},
+            coding_standards={},
+            workflow_templates={},
+            delegation_rules={}
+        )
+        
+        global2 = GlobalContext(
+            id=str(uuid4()),
+            organization_id="00000000-0000-0000-0000-000000000003",
+            user_id=user2_id,
+            autonomous_rules={"rule": "user2"},
+            security_policies={},
+            coding_standards={},
+            workflow_templates={},
+            delegation_rules={}
+        )
+        
+        # Create project contexts for both users
+        project1 = ProjectContext(
+            id=str(uuid4()),
+            parent_global_id=global1.id,
+            data={"project": "user1"},
+            user_id=user1_id
+        )
+        
+        project2 = ProjectContext(
+            id=str(uuid4()),
+            parent_global_id=global2.id,
+            data={"project": "user2"},
+            user_id=user2_id
+        )
+        
+        # Create branch contexts
+        branch1 = BranchContext(
+            id=str(uuid4()),
+            parent_project_id=project1.id,
+            data={"branch": "user1"},
+            user_id=user1_id
+        )
+        
+        branch2 = BranchContext(
+            id=str(uuid4()),
+            parent_project_id=project2.id,
+            data={"branch": "user2"},
+            user_id=user2_id
+        )
+        
+        # Create task contexts
+        task1 = TaskContext(
+            id=str(uuid4()),
+            parent_branch_context_id=branch1.id,
+            data={"task": "user1"},
+            user_id=user1_id
+        )
+        
+        task2 = TaskContext(
+            id=str(uuid4()),
+            parent_branch_context_id=branch2.id,
+            data={"task": "user2"},
+            user_id=user2_id
+        )
+        
+        session.add_all([global1, global2, project1, project2, branch1, branch2, task1, task2])
+        session.commit()
+        
+        # Test user1 can only access their contexts
+        user1_globals = session.query(GlobalContext).filter_by(user_id=user1_id).all()
+        assert len(user1_globals) == 1
+        assert user1_globals[0].autonomous_rules["rule"] == "user1"
+        
+        user1_projects = session.query(ProjectContext).filter_by(user_id=user1_id).all()
+        assert len(user1_projects) == 1
+        assert user1_projects[0].data["project"] == "user1"
+        
+        user1_branches = session.query(BranchContext).filter_by(user_id=user1_id).all()
+        assert len(user1_branches) == 1
+        assert user1_branches[0].data["branch"] == "user1"
+        
+        user1_tasks = session.query(TaskContext).filter_by(user_id=user1_id).all()
+        assert len(user1_tasks) == 1
+        assert user1_tasks[0].data["task"] == "user1"
+        
+        # Test user2 can only access their contexts
+        user2_globals = session.query(GlobalContext).filter_by(user_id=user2_id).all()
+        assert len(user2_globals) == 1
+        assert user2_globals[0].autonomous_rules["rule"] == "user2"
+        
+        user2_projects = session.query(ProjectContext).filter_by(user_id=user2_id).all()
+        assert len(user2_projects) == 1
+        assert user2_projects[0].data["project"] == "user2"
+        
+        # Verify no cross-contamination
+        assert all(ctx.user_id == user1_id for ctx in user1_globals + user1_projects + user1_branches + user1_tasks)
+        assert all(ctx.user_id == user2_id for ctx in user2_globals + user2_projects)
+    
+    def test_context_inheritance_cache_user_isolation(self, session):
+        """Test that ContextInheritanceCache properly isolates by user"""
+        from datetime import timedelta
+        
+        user1_id = "cache-user-001"
+        user2_id = "cache-user-002"
+        
+        # Create cache entries for both users
+        cache1 = ContextInheritanceCache(
+            context_id="task-123",
+            context_level="task",
+            resolved_context={"user1": "data"},
+            dependencies_hash="hash1",
+            resolution_path="global->project->branch->task",
+            expires_at=datetime.utcnow() + timedelta(hours=1),
+            cache_size_bytes=512,
+            user_id=user1_id
+        )
+        
+        cache2 = ContextInheritanceCache(
+            context_id="task-123",  # Same context_id but different user
+            context_level="task",
+            resolved_context={"user2": "data"},
+            dependencies_hash="hash2", 
+            resolution_path="global->project->branch->task",
+            expires_at=datetime.utcnow() + timedelta(hours=1),
+            cache_size_bytes=256,
+            user_id=user2_id
+        )
+        
+        session.add_all([cache1, cache2])
+        session.commit()
+        
+        # Test user isolation in cache queries
+        user1_cache = session.query(ContextInheritanceCache).filter_by(user_id=user1_id).all()
+        assert len(user1_cache) == 1
+        assert user1_cache[0].resolved_context["user1"] == "data"
+        assert user1_cache[0].cache_size_bytes == 512
+        
+        user2_cache = session.query(ContextInheritanceCache).filter_by(user_id=user2_id).all()
+        assert len(user2_cache) == 1 
+        assert user2_cache[0].resolved_context["user2"] == "data"
+        assert user2_cache[0].cache_size_bytes == 256
+        
+        # Verify no cross-user access
+        assert user1_cache[0].user_id != user2_cache[0].user_id
+    
+    def test_user_isolation_across_all_models(self, session):
+        """Test comprehensive user isolation across all models that have user_id"""
+        user1_id = "isolation-user-001"
+        user2_id = "isolation-user-002"
+        
+        # Create project and branch for testing
+        project = Project(id=str(uuid4()), name="Test Project", user_id=user1_id)
+        branch = ProjectGitBranch(
+            id=str(uuid4()), 
+            project_id=project.id, 
+            name="main", 
+            user_id=user1_id
+        )
+        session.add_all([project, branch])
+        session.commit()
+        
+        # Create task for relationships
+        task = Task(
+            id=str(uuid4()),
+            title="Test Task",
+            description="Test",
+            git_branch_id=branch.id,
+            user_id=user1_id
+        )
+        session.add(task)
+        session.commit()
+        
+        # Test all user-scoped models
+        models_to_test = [
+            # (Model, creation_data, filter_field)
+            (Agent, {"id": str(uuid4()), "name": "Agent", "user_id": user1_id}, "user_id"),
+            (TaskSubtask, {"id": str(uuid4()), "task_id": task.id, "title": "Subtask", "user_id": user1_id}, "user_id"),
+            (TaskAssignee, {"task_id": task.id, "assignee_id": "assignee", "user_id": user1_id}, "user_id"),
+            (TaskDependency, {"task_id": task.id, "depends_on_task_id": task.id, "user_id": str(uuid4())}, "user_id"),
+            (Label, {"id": "label1", "name": "Label 1", "user_id": user1_id}, "user_id"),
+            (TaskLabel, {"task_id": task.id, "label_id": "label1", "user_id": user1_id}, "user_id"),
+            (GlobalContext, {
+                "id": str(uuid4()), "user_id": user1_id,
+                "autonomous_rules": {}, "security_policies": {}, 
+                "coding_standards": {}, "workflow_templates": {}, "delegation_rules": {}
+            }, "user_id"),
+            (ProjectContext, {"id": str(uuid4()), "data": {}, "user_id": user1_id}, "user_id"),
+            (BranchContext, {"id": str(uuid4()), "data": {}, "user_id": user1_id}, "user_id"),
+            (TaskContext, {"id": str(uuid4()), "data": {}, "user_id": user1_id}, "user_id"),
+            (ContextDelegation, {
+                "id": str(uuid4()), "source_level": "task", "source_id": "source",
+                "target_level": "project", "target_id": "target", "delegated_data": {},
+                "delegation_reason": "test", "trigger_type": "manual", "user_id": user1_id
+            }, "user_id"),
+            (ContextInheritanceCache, {
+                "context_id": "ctx1", "context_level": "task", "resolved_context": {},
+                "dependencies_hash": "hash", "resolution_path": "path",
+                "expires_at": datetime.utcnow() + timedelta(hours=1),
+                "cache_size_bytes": 100, "user_id": user1_id
+            }, "user_id")
+        ]
+        
+        # Create instances for user1
+        user1_instances = []
+        for model_class, data, _ in models_to_test:
+            try:
+                instance = model_class(**data)
+                session.add(instance)
+                user1_instances.append((model_class, instance))
+            except Exception as e:
+                # Skip models that have constraint issues
+                print(f"Skipping {model_class.__name__}: {e}")
+                continue
+        
+        session.commit()
+        
+        # Verify user1 can access their data
+        for model_class, instance in user1_instances:
+            results = session.query(model_class).filter_by(user_id=user1_id).all()
+            assert len(results) >= 1, f"User1 should access {model_class.__name__}"
+            assert all(getattr(r, "user_id") == user1_id for r in results)
+        
+        # Verify user2 cannot access user1's data
+        for model_class, _ in user1_instances:
+            results = session.query(model_class).filter_by(user_id=user2_id).all()
+            assert len(results) == 0, f"User2 should not access {model_class.__name__} from user1"

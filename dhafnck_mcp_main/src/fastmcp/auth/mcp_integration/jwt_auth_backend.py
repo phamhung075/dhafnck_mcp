@@ -65,9 +65,9 @@ class JWTAuthBackend(BearerAuthProvider):
         self._auth_service = auth_service
         self._user_repository = user_repository
         
-        # Get issuer and audience from environment
+        # Get issuer from environment, use default audience
         issuer = os.getenv("JWT_ISSUER", "dhafnck-mcp")
-        audience = os.getenv("JWT_AUDIENCE", "mcp-server")
+        audience = "mcp-server"  # Default audience, not configured via environment
         
         # Initialize parent with a dummy public key since we handle validation ourselves
         # The parent class requires either public_key or jwks_uri, but we use symmetric keys

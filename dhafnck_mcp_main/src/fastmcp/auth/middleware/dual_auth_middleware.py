@@ -277,34 +277,61 @@ class DualAuthMiddleware(BaseHTTPMiddleware):
         
         # Special handling for JWT tokens (local development)
         if token.startswith('eyJ'):  # JWT tokens start with this
-            logger.info("🔍 MCP AUTH: Detected JWT token, trying local validation first")
-            try:
-                # Try to validate as a local JWT token
-                from ..domain.services.jwt_service import JWTService
-                import os
-                
-                jwt_secret = os.getenv("JWT_SECRET_KEY", "default-secret-key-change-in-production")
-                jwt_service = JWTService(secret_key=jwt_secret)
-                
-                # Use verify_token instead of decode_token (which doesn't exist)
-                # The token type is 'api_token' not 'access' for MCP tokens
-                payload = jwt_service.verify_token(token, expected_type="api_token")
-                if not payload:
-                    # Try as 'access' type as fallback
-                    payload = jwt_service.verify_token(token, expected_type="access")
-                
-                if payload:
-                    logger.info(f"✅ MCP AUTH: JWT token validated locally for user {payload.get('user_id')}")
-                    return {
-                        'user_id': payload.get('user_id'),
-                        'auth_method': 'local_jwt',
-                        'token_id': payload.get('token_id'),
-                        'scopes': payload.get('scopes', []),
-                        'type': payload.get('type', 'api_token')
-                    }
-            except Exception as jwt_error:
-                logger.debug(f"🔍 MCP AUTH: Local JWT validation failed: {jwt_error}, will try other methods")
-                # Fall through to try other validation methods
+            logger.info("🔍 MCP AUTH: Detected JWT token, trying dual secret validation")
+            
+            # Try both JWT secrets to handle the mismatch between frontend and backend
+            import os
+            from ..domain.services.jwt_service import JWTService
+            
+            # Get both potential secrets
+            jwt_secret = os.getenv("JWT_SECRET_KEY", "default-secret-key-change-in-production")
+            supabase_jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
+            
+            # List of secrets to try (prioritize SUPABASE_JWT_SECRET since frontend uses it)
+            secrets_to_try = []
+            if supabase_jwt_secret:
+                secrets_to_try.append(("SUPABASE_JWT_SECRET", supabase_jwt_secret))
+            if jwt_secret and jwt_secret != "default-secret-key-change-in-production":
+                secrets_to_try.append(("JWT_SECRET_KEY", jwt_secret))
+            
+            # Try each secret until one works
+            for secret_name, secret_value in secrets_to_try:
+                try:
+                    logger.debug(f"🔍 MCP AUTH: Trying JWT validation with {secret_name} (length: {len(secret_value)})")
+                    jwt_service = JWTService(secret_key=secret_value)
+                    
+                    # Try multiple token types for compatibility
+                    payload = None
+                    for token_type in ["api_token", "access"]:
+                        try:
+                            payload = jwt_service.verify_token(token, expected_type=token_type)
+                            if payload:
+                                logger.info(f"✅ MCP AUTH: JWT token validated with {secret_name} as {token_type} type")
+                                break
+                        except Exception as type_error:
+                            logger.debug(f"🔍 MCP AUTH: Token type {token_type} failed with {secret_name}: {type_error}")
+                            continue
+                    
+                    if payload:
+                        # Extract user_id from either 'user_id' or 'sub' fields
+                        user_id = payload.get('user_id') or payload.get('sub')
+                        return {
+                            'user_id': user_id,
+                            'auth_method': 'local_jwt',
+                            'jwt_secret_used': secret_name,
+                            'token_id': payload.get('token_id') or payload.get('jti'),
+                            'scopes': payload.get('scopes', []),
+                            'type': payload.get('type', 'api_token'),
+                            'email': payload.get('email'),
+                            'roles': payload.get('roles', [])
+                        }
+                        
+                except Exception as jwt_error:
+                    logger.debug(f"🔍 MCP AUTH: JWT validation with {secret_name} failed: {jwt_error}")
+                    continue
+            
+            logger.warning("🔍 MCP AUTH: All JWT secret validation attempts failed, will try other methods")
+            # Fall through to try other validation methods
         
         try:
             # Validate token using TokenValidator (for Supabase tokens)

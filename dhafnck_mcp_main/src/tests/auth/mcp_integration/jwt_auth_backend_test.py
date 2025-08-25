@@ -149,7 +149,7 @@ class TestJWTAuthBackend:
         """Test initialization with default values"""
         monkeypatch.setenv("JWT_SECRET_KEY", "test-secret")
         monkeypatch.setenv("JWT_ISSUER", "test-issuer")
-        monkeypatch.setenv("JWT_AUDIENCE", "test-audience")
+        # JWT_AUDIENCE no longer configured via environment
         
         backend = JWTAuthBackend()
         

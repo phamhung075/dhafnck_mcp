@@ -59,28 +59,24 @@ class ContextHierarchyValidator:
         try:
             from ...infrastructure.database.models import GLOBAL_SINGLETON_UUID
             
-            # For user-scoped contexts, look for user-specific global context
-            if self.user_id:
-                # Try user-specific global context ID format
-                user_global_id = f"{GLOBAL_SINGLETON_UUID}_{self.user_id}"
-                global_context = self.global_repo.get(user_global_id)
-                
-                # If not found with composite ID, try standard ID
-                if not global_context:
-                    global_context = self.global_repo.get(GLOBAL_SINGLETON_UUID)
-            else:
-                # No user_id, use standard global singleton
-                global_context = self.global_repo.get(GLOBAL_SINGLETON_UUID)
+            # The global_repo passed to this validator is already user-scoped if needed
+            # So we can directly use it to check for global context existence
+            # First try the standard singleton ID
+            global_context = self.global_repo.get("global_singleton")
             
-            # If still not found, check if ANY global context exists (for user-scoped contexts)
+            # If not found with singleton ID and we have a user_id, the user-scoped repo
+            # will automatically handle the user filtering, so try listing contexts
             if not global_context:
-                # List all global contexts for this user
+                # List all global contexts - if repo is user-scoped, this will only return user contexts
                 global_contexts = self.global_repo.list()
                 if global_contexts and len(global_contexts) > 0:
                     global_context = global_contexts[0]  # Use the first one found
+                    logger.debug(f"Found global context via list() method for user {self.user_id}")
             
+            # If no global context found, provide user-friendly guidance
             if not global_context:
-                return False, "Global context not found", {
+                logger.info(f"No global context found for user {self.user_id} during project context validation")
+                return False, "Global context is required before creating project contexts", {
                     "error": "Cannot create project context without global context",
                     "explanation": "The system requires a global context to exist before creating project contexts. This ensures organization-wide settings are in place.",
                     "required_action": "Create global context first",
@@ -97,9 +93,12 @@ class ContextHierarchyValidator:
                         }
                     ]
                 }
+            
+            logger.debug(f"Global context validation passed for user {self.user_id}")
             return True, None, None
+            
         except Exception as e:
-            logger.debug(f"Global context check error: {e}")
+            logger.error(f"Global context check error for user {self.user_id}: {e}")
             # If global context doesn't exist, provide guidance
             return False, "Global context must be created first", {
                 "error": "Global context is required before creating project contexts",
@@ -127,6 +126,7 @@ class ContextHierarchyValidator:
         
         # Check if project context exists
         try:
+            # The project_repo passed to this validator is already user-scoped if needed
             project_context = self.project_repo.get(project_id)
             if not project_context:
                 return False, f"Project context not found: {project_id}", {
@@ -183,7 +183,7 @@ class ContextHierarchyValidator:
             # Try multiple approaches to find the branch context
             branch_context = None
             
-            # Approach 1: Direct repository get
+            # Approach 1: Direct repository get (branch_repo is already user-scoped if needed)
             if hasattr(self.branch_repo, 'get'):
                 branch_context = self.branch_repo.get(branch_id)
             

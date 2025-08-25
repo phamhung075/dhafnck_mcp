@@ -96,8 +96,9 @@ class ProjectContextRepository(BaseUserScopedRepository):
             # Create new project context with user_id
             logger.info(f"Creating ProjectContextModel: project_id={project_id}, user_id={self.user_id}")
             db_model = ProjectContextModel(
+                id=project_id,  # Set id field (primary key) to project_id
                 project_id=project_id,
-                context_data=context_data,
+                data=context_data,  # Use 'data' field, not 'context_data'
                 user_id=self.user_id,  # Set user_id for isolation
                 created_at=datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc)
@@ -127,9 +128,10 @@ class ProjectContextRepository(BaseUserScopedRepository):
         """
         # Create entity and call main create method
         entity = ProjectContext(
-            id=str(uuid.uuid4()),
-            project_id=project_id,
-            context_data=context_data
+            id=project_id,  # Use project_id as the entity id
+            project_name=context_data.get("project_name", f"Project-{project_id}"),
+            project_settings=context_data.get("project_settings", {}),
+            metadata=context_data.get("metadata", {})
         )
         return self.create(entity)
     
@@ -161,13 +163,13 @@ class ProjectContextRepository(BaseUserScopedRepository):
             
             return self._to_entity(db_model) if db_model else None
     
-    def update(self, project_id: str, context_data: Dict[str, Any]) -> ProjectContext:
+    def update(self, project_id: str, entity: ProjectContext) -> ProjectContext:
         """
         Update project context for the current user.
         
         Args:
             project_id: ID of the project
-            context_data: New context data
+            entity: ProjectContext entity with updated data
             
         Returns:
             Updated ProjectContext entity
@@ -189,8 +191,11 @@ class ProjectContextRepository(BaseUserScopedRepository):
             # Ensure user ownership before update
             self.ensure_user_ownership(db_model)
             
+            # Convert entity to dict for context data storage
+            context_data = entity.dict()
+            
             # Update context data
-            db_model.context_data = context_data
+            db_model.data = context_data
             db_model.updated_at = datetime.now(timezone.utc)
             
             # Log access for audit
@@ -295,13 +300,21 @@ class ProjectContextRepository(BaseUserScopedRepository):
         existing = self.get(project_id)
         
         if existing:
-            # Merge data
-            merged_data = existing.context_data.copy()
-            merged_data.update(additional_data)
-            return self.update(project_id, merged_data)
+            # Merge additional_data into existing project_settings
+            merged_settings = existing.project_settings.copy()
+            merged_settings.update(additional_data)
+            
+            # Create updated entity with merged settings
+            updated_entity = ProjectContext(
+                id=existing.id,
+                project_name=existing.project_name,
+                project_settings=merged_settings,
+                metadata=existing.metadata
+            )
+            return self.update(project_id, updated_entity)
         else:
             # Create new context
-            return self.create(project_id, additional_data)
+            return self.create_by_project_id(project_id, additional_data)
     
     def list(self, filters: Optional[Dict[str, Any]] = None) -> List[ProjectContext]:
         """
@@ -372,15 +385,15 @@ class ProjectContextRepository(BaseUserScopedRepository):
             "user_id": db_model.user_id  # Include user_id in metadata
         }
         
-        # Extract project_name from context_data or use project_id as fallback
-        context_data = db_model.context_data or {}
+        # Extract project_name from data or use project_id as fallback
+        context_data = db_model.data or {}
         project_name = context_data.get("project_name", f"Project-{db_model.project_id}")
         
-        # Extract project_settings from context_data or use empty dict
-        project_settings = context_data.get("project_settings", context_data)
+        # Extract project_settings from data or use empty dict
+        project_settings = context_data.get("project_settings", {})
         
         return ProjectContext(
-            id=db_model.id,
+            id=db_model.id,  # Use id field (should be same as project_id)
             project_name=project_name,
             project_settings=project_settings,
             metadata=metadata
@@ -398,7 +411,7 @@ class ProjectContextRepository(BaseUserScopedRepository):
         """
         # Get project's own context
         project_context = self.get(project_id)
-        result = project_context.context_data if project_context else {}
+        result = project_context.dict() if project_context else {}
         
         # Get user's global context (if we have access to global repo)
         # This would need to be injected or accessed through a service

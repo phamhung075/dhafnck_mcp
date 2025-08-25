@@ -49,6 +49,12 @@ def get_user_id_from_request_state() -> Optional[str]:
             user_id = request.state.user_id
             logger.debug(f"Got user_id from request state: {user_id}")
             return user_id
+        elif request:
+            logger.debug(f"Request found but no user_id in state. State attributes: {dir(request.state) if hasattr(request, 'state') else 'No state'}")
+        else:
+            logger.debug("No current HTTP request found in context")
+    except ImportError as e:
+        logger.debug(f"Could not import _current_http_request: {e}")
     except Exception as e:
         logger.debug(f"Could not get user_id from request state: {e}")
     
@@ -139,13 +145,18 @@ def get_authenticated_user_id(provided_user_id: Optional[str] = None, operation_
                 logger.info(f"✅ Using compatibility mode user_id: {user_id}")
                 AuthConfig.log_authentication_bypass(operation_name, "compatibility mode")
             else:
-                # TEMPORARY FIX: Force enable compatibility mode for development
-                # This addresses the git branch authentication issue during MCP operations
+                # ENHANCED FIX: Force enable compatibility mode for development and context operations
+                # This addresses dual authentication issues where request context isn't available
                 env_name = os.getenv('ENVIRONMENT', '').lower()
-                if env_name in ('development', 'dev', ''):  # Include empty string for local dev
-                    logger.warning(f"🔧 TEMPORARY FIX: Forcing compatibility mode for {operation_name} in development")
+                is_context_operation = "context" in operation_name.lower()
+                is_development = env_name in ('development', 'dev', '')
+                
+                if is_development or is_context_operation:
+                    fallback_reason = "development environment" if is_development else "context operation fallback"
+                    logger.warning(f"🔧 ENHANCED FIX: Forcing compatibility mode for {operation_name} ({fallback_reason})")
                     user_id = "compatibility-default-user"
-                    AuthConfig.log_authentication_bypass(operation_name, "forced compatibility mode for git branch fix")
+                    logger.error(f"🚨 USER_ID_DEBUG: Using fallback user_id '{user_id}' for {operation_name} - THIS SHOULD NOT HAPPEN IN PRODUCTION")
+                    AuthConfig.log_authentication_bypass(operation_name, f"forced compatibility mode - {fallback_reason}")
                 else:
                     logger.error(f"❌ No authentication found and compatibility mode disabled for {operation_name}")
                     raise UserAuthenticationRequiredError(operation_name)

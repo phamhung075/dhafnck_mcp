@@ -86,7 +86,7 @@ class ProjectContextRepository(BaseORMRepository):
                 local_standards=local_standards,
                 global_overrides=entity.metadata.get('global_overrides', {}),
                 delegation_rules=entity.metadata.get('delegation_rules', {}),
-                user_id=self.user_id or 'system'  # Add user_id field
+                user_id=self.user_id  # CRITICAL FIX: Never fallback to 'system' - require valid user_id
             )
             
             session.add(db_model)

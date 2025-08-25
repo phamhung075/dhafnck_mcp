@@ -143,7 +143,7 @@ class GlobalContextRepository(BaseORMRepository):
                 coding_standards=coding_standards,
                 workflow_templates=workflow_templates,
                 delegation_rules=delegation_rules,
-                user_id=self.user_id or "system",  # Add user_id field
+                user_id=self.user_id,  # CRITICAL FIX: Never fallback to "system" - should always have user_id
                 created_at=datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc)
             )

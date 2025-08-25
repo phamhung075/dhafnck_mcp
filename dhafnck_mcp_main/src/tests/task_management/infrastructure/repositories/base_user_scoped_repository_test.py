@@ -70,6 +70,20 @@ class TestBaseUserScopedRepository:
         # Original repository should be unchanged
         assert repository.user_id == "user-123"
     
+    def test_with_user_session_factory(self, mock_session):
+        """Test with_user when repository has session_factory"""
+        mock_session_factory = Mock()
+        repository = BaseUserScopedRepository(mock_session, "user-123")
+        repository.session_factory = mock_session_factory
+        
+        new_user_id = "user-789"
+        new_repo = repository.with_user(new_user_id)
+        
+        assert isinstance(new_repo, BaseUserScopedRepository)
+        assert new_repo.user_id == new_user_id
+        # Should have been initialized with session_factory
+        mock_session_factory.__call__.assert_called_once_with(mock_session_factory, new_user_id)
+    
     def test_get_user_filter_with_user(self, repository):
         """Test getting user filter when user is set"""
         filter_dict = repository.get_user_filter()
@@ -129,6 +143,63 @@ class TestBaseUserScopedRepository:
             )
             assert filtered_query == mock_query
             mock_query.filter.assert_not_called()
+    
+    def test_apply_user_filter_string_query_with_where(self, repository):
+        """Test applying filter to string query that already has WHERE clause"""
+        sql_query = "SELECT * FROM tasks WHERE status = 'todo'"
+        
+        filtered_query = repository.apply_user_filter(sql_query)
+        
+        expected = "SELECT * FROM tasks WHERE status = 'todo' AND user_id = 'user-123'"
+        assert filtered_query == expected
+    
+    def test_apply_user_filter_string_query_without_where(self, repository):
+        """Test applying filter to string query without WHERE clause"""
+        sql_query = "SELECT * FROM tasks ORDER BY created_at"
+        
+        filtered_query = repository.apply_user_filter(sql_query)
+        
+        expected = "SELECT * FROM tasks ORDER BY created_at WHERE user_id = 'user-123'"
+        assert filtered_query == expected
+    
+    def test_apply_user_filter_string_query_system_mode(self, system_repository):
+        """Test applying filter to string query in system mode"""
+        sql_query = "SELECT * FROM tasks WHERE status = 'todo'"
+        
+        filtered_query = system_repository.apply_user_filter(sql_query)
+        
+        # Query should remain unchanged in system mode
+        assert filtered_query == sql_query
+    
+    def test_apply_user_filter_query_exception_handling(self, repository):
+        """Test exception handling in apply_user_filter"""
+        # Mock query that raises exception
+        mock_query = MagicMock()
+        mock_query.column_descriptions = []  # Empty list to cause IndexError
+        
+        with patch('fastmcp.task_management.infrastructure.repositories.base_user_scoped_repository.logger') as mock_logger:
+            filtered_query = repository.apply_user_filter(mock_query)
+            
+            # Should log warning about not being able to apply filter
+            mock_logger.warning.assert_called()
+            warning_call = mock_logger.warning.call_args[0][0]
+            assert "Could not apply user filter" in warning_call
+            assert filtered_query == mock_query
+    
+    def test_apply_user_filter_unknown_query_type(self, repository):
+        """Test applying filter to unknown query type"""
+        # Mock query without column_descriptions
+        mock_query = MagicMock()
+        del mock_query.column_descriptions  # Remove attribute
+        
+        with patch('fastmcp.task_management.infrastructure.repositories.base_user_scoped_repository.logger') as mock_logger:
+            filtered_query = repository.apply_user_filter(mock_query)
+            
+            # Should log warning about unknown query type
+            mock_logger.warning.assert_called_with(
+                "Query type not recognized, attempting generic filter"
+            )
+            assert filtered_query == mock_query
     
     def test_ensure_user_ownership_valid(self, repository):
         """Test ensuring ownership with valid entity"""

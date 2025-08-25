@@ -138,7 +138,7 @@ def configure_jwt_from_env() -> dict:
     config = {
         'secret_key': os.getenv('JWT_SECRET_KEY'),
         'issuer': os.getenv('JWT_ISSUER', 'dhafnck-mcp'),
-        'audience': os.getenv('JWT_AUDIENCE', 'mcp-server'),
+        'audience': 'mcp-server',  # Default audience, not configured via environment
         'algorithm': os.getenv('JWT_ALGORITHM', 'HS256'),
         'access_token_expire_minutes': int(os.getenv('JWT_ACCESS_TOKEN_EXPIRE_MINUTES', '15')),
         'refresh_token_expire_days': int(os.getenv('JWT_REFRESH_TOKEN_EXPIRE_DAYS', '30')),

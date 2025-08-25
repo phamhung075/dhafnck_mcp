@@ -660,6 +660,14 @@ def create_streamable_http_app(
         v2_app.include_router(task_router)
         v2_app.include_router(task_summary_router)
         
+        # Add user-scoped context routes
+        try:
+            from .routes.user_scoped_context_routes import router as context_router
+            v2_app.include_router(context_router)
+            logger.info("User-scoped context routes registered at /api/v2/contexts")
+        except ImportError as context_e:
+            logger.warning(f"Could not import user-scoped context routes: {context_e}")
+        
         # Add MCP token management routes
         try:
             from .routes.mcp_token_routes import router as mcp_token_router
