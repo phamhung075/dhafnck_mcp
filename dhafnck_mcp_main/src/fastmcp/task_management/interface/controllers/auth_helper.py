@@ -116,10 +116,11 @@ def get_authenticated_user_id(provided_user_id: Optional[str] = None, operation_
         else:
             logger.warning("⚠️ User context middleware not available")
         
-        # Try MCP authentication context
+        # Try MCP authentication context (gracefully handle missing module)
         if user_id is None:
             logger.info("🔧 Trying MCP authentication context...")
             try:
+                # Try importing MCP auth context - this may fail if module doesn't exist
                 from mcp.server.auth.context import auth_context
                 from mcp.server.auth.middleware.bearer_auth import AuthenticatedUser
                 
@@ -144,6 +145,9 @@ def get_authenticated_user_id(provided_user_id: Optional[str] = None, operation_
                     logger.warning(f"⚠️ MCP auth context available but no user_id/client_id: {dir(mcp_auth_context)}")
                 else:
                     logger.warning("⚠️ No MCP auth context available")
+            except ImportError as import_e:
+                logger.info(f"⚠️ MCP auth context module not available: {import_e}")
+                logger.info("⚠️ This is expected if using DualAuthMiddleware instead of MCP auth system")
             except Exception as e:
                 logger.info(f"⚠️ Could not access MCP auth context: {e}")
         

@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import Cookies from 'js-cookie';
 
@@ -81,7 +81,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // Set tokens and update user state
-  const setTokens = (tokens: AuthTokens) => {
+  const setTokens = useCallback((tokens: AuthTokens) => {
     setTokensState(tokens);
     
     // Store tokens in cookies
@@ -100,7 +100,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Decode and set user
     const userData = decodeToken(tokens.access_token);
     setUser(userData);
-  };
+  }, []);
 
   // Login function - Updated to use Supabase Auth
   const login = async (email: string, password: string) => {
@@ -210,7 +210,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // Refresh token function
-  const refreshToken = async () => {
+  const refreshToken = useCallback(async () => {
     try {
       const refresh_token = Cookies.get('refresh_token');
       
@@ -240,7 +240,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       logout();
       throw error;
     }
-  };
+  }, [setTokens]);
 
   // Check for existing tokens on mount
   useEffect(() => {
@@ -262,7 +262,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
     
     setIsLoading(false);
-  }, []);
+  }, [refreshToken]);
 
   // Set up token refresh interval
   useEffect(() => {
@@ -281,7 +281,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }, refreshTime);
 
     return () => clearTimeout(timer);
-  }, [tokens]);
+  }, [tokens, refreshToken]);
 
   const value: AuthContextType = {
     user,

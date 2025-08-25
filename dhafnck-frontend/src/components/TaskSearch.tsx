@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Search, X } from 'lucide-react';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
@@ -91,9 +91,9 @@ export const TaskSearch: React.FC<TaskSearchProps> = ({
     }
   }, [taskTreeId]);
 
-  // Debounced search
-  const debouncedSearch = useCallback(
-    debounce((query: string) => performSearch(query), 300),
+  // Debounced search - using useMemo to properly handle the debounced function
+  const debouncedSearch = useMemo(
+    () => debounce((query: string) => performSearch(query), 300),
     [performSearch]
   );
 

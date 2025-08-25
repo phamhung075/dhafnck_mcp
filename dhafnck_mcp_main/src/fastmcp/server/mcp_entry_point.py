@@ -633,23 +633,31 @@ def main():
             # Build middleware stack
             middleware_stack = []
             
-            # Add MCP auth middleware for user context extraction if auth is enabled
+            # Add RequestContextMiddleware to make request available in ContextVar
+            try:
+                from fastmcp.server.http_server import RequestContextMiddleware
+                middleware_stack.append(Middleware(RequestContextMiddleware))
+                logger.info("RequestContextMiddleware added for request context propagation")
+            except ImportError as e:
+                logger.warning(f"Could not add RequestContextMiddleware: {e}")
+            
+            # Add DualAuth middleware for JWT token processing and user context extraction
             if auth_enabled:
                 try:
-                    from fastmcp.auth.mcp_integration.mcp_auth_middleware import MCPAuthMiddleware
-                    from fastmcp.auth.mcp_integration.jwt_auth_backend import create_jwt_auth_backend
+                    from fastmcp.auth.middleware.dual_auth_middleware import DualAuthMiddleware
                     
-                    # Create JWT backend for the middleware
-                    jwt_backend = create_jwt_auth_backend()
-                    
-                    # Add auth middleware first so context is set before other processing
-                    middleware_stack.append(Middleware(MCPAuthMiddleware, jwt_backend=jwt_backend))
-                    logger.info("MCPAuthMiddleware added for user context extraction")
+                    # Add DualAuthMiddleware first so JWT tokens are processed and request.state.user_id is set
+                    middleware_stack.append(Middleware(DualAuthMiddleware))
+                    logger.info("DualAuthMiddleware added for JWT token processing and user context extraction")
                 except Exception as e:
-                    logger.error(f"Failed to add MCPAuthMiddleware: {e}")
+                    logger.error(f"Failed to add DualAuthMiddleware: {e}")
+                    logger.warning("Authentication may not work properly without DualAuthMiddleware")
             
             # Add debug middleware
             middleware_stack.append(Middleware(DebugLoggingMiddleware))
+            
+            # Get log level from environment
+            server_log_level = os.environ.get("FASTMCP_LOG_LEVEL", "INFO").upper()
             
             # For streamable-http transport, pass the middleware stack
             # Authentication is handled by the FastMCP server's built-in auth parameter
@@ -657,8 +665,8 @@ def main():
                 transport="streamable-http", 
                 host=host, 
                 port=port,
-                # Enable detailed logging for debugging HTTP requests
-                log_level="DEBUG",
+                # Use configurable log level from environment variable
+                log_level=server_log_level,
                 # Pass middleware stack for HTTP request processing
                 middleware=middleware_stack
             )

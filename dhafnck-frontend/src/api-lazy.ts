@@ -4,7 +4,6 @@
 import Cookies from 'js-cookie';
 
 const API_BASE = "http://localhost:8000/api";
-const MCP_BASE = "http://localhost:8000/mcp/";
 
 // Helper function to get auth headers
 function getAuthHeaders(): HeadersInit {

@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
-import { Separator } from "./ui/separator";
 import { Textarea } from "./ui/textarea";
 import { Globe, Save, Edit, X, Copy, Check as CheckIcon, Settings, Layers, Zap, Info } from "lucide-react";
 import { getGlobalContext, updateGlobalContext } from "../api";

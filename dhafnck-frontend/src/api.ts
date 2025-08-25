@@ -2,7 +2,7 @@
 // Handles CRUD for tasks, subtasks, and dependencies
 
 import Cookies from 'js-cookie';
-import { taskApiV2, projectApiV2, agentApiV2, isAuthenticated } from './services/apiV2';
+import { taskApiV2, projectApiV2, isAuthenticated } from './services/apiV2';
 
 const API_BASE = "http://localhost:8000/mcp/";
 
@@ -78,7 +78,7 @@ export async function fetchProjectDetails(projectId: string): Promise<Project | 
 
 
 // Function to fetch tasks for a specific project and branch
-export async function fetchTasks(projectId: string, branchName: string): Promise<Task[]> {
+export async function fetchTasks(_projectId: string, _branchName: string): Promise<Task[]> {
     // Backend doesn't support project filtering yet, returns all tasks
     return listTasks();
 }
@@ -103,11 +103,6 @@ function getRpcId() {
   return rpcId++;
 }
 
-const DEFAULTS = {
-  project_id: "default_project",
-  git_branch_name: "main",
-  user_id: "default_id",
-};
 
 // --- MCP Protocol Headers Helper ---
 const MCP_HEADERS = {
@@ -168,7 +163,7 @@ export async function listTasks(params: any = {}): Promise<Task[]> {
   
   console.log('Using V1 API for listTasks...');
   
-  const { git_branch_id, project_id = "default_project", git_branch_name = "main", user_id = "default_id", ...rest } = params;
+  const { git_branch_id, ...rest } = params;
   const filteredParams = {
     action: "list",
     // Remove git_branch_name as it's not a valid parameter - backend returns all tasks

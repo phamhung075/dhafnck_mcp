@@ -36,6 +36,20 @@ check_and_free_ports() {
     fi
 }
 
+# Set Docker build optimization environment variables
+set_build_optimization() {
+    # Disable slow provenance and SBOM features
+    export DOCKER_BUILDKIT_PROVENANCE=false
+    export DOCKER_BUILDKIT_SBOM=false  
+    export BUILDX_NO_DEFAULT_ATTESTATIONS=true
+    
+    # Enable BuildKit for better performance
+    export DOCKER_BUILDKIT=1
+    export COMPOSE_DOCKER_CLI_BUILD=1
+    
+    echo -e "${GREEN}✅ Build optimization enabled (provenance disabled)${RESET}"
+}
+
 # Clean up existing builds and images to save space
 clean_existing_builds() {
     echo -e "${YELLOW}🧹 Cleaning up existing builds for fresh rebuild...${RESET}"
@@ -91,7 +105,7 @@ show_header() {
     echo "╚════════════════════════════════════════════════╝"
     echo -e "${RESET}"
     echo -e "${YELLOW}Backend: Port 8000 | Frontend: Port 3800${RESET}"
-    echo -e "${YELLOW}All builds use --no-cache (no hot reload)${RESET}"
+    echo -e "${YELLOW}All builds use --no-cache (provenance optimized)${RESET}"
     echo ""
 }
 
@@ -125,6 +139,7 @@ start_postgresql_local() {
     echo -e "${GREEN}🐘 Starting PostgreSQL Local configuration...${RESET}"
     cd "$DOCKER_DIR"
     
+    set_build_optimization
     check_and_free_ports
     clean_existing_builds
     
@@ -146,6 +161,8 @@ start_postgresql_local() {
 start_supabase_cloud() {
     echo -e "${GREEN}☁️  Starting Supabase Cloud configuration...${RESET}"
     cd "$DOCKER_DIR"
+    
+    set_build_optimization
     
     # Verify environment setup
     echo -e "${CYAN}📋 Verifying Supabase configuration...${RESET}"
@@ -229,6 +246,7 @@ start_redis_supabase() {
     echo -e "${GREEN}🔴☁️  Starting Redis + Supabase Cloud configuration...${RESET}"
     cd "$DOCKER_DIR"
     
+    set_build_optimization
     check_and_free_ports
     clean_existing_builds
     
@@ -399,6 +417,7 @@ start_optimized_mode() {
     
     cd "$DOCKER_DIR"
     
+    set_build_optimization
     check_and_free_ports
     
     # Check if optimized compose file exists
@@ -408,10 +427,6 @@ start_optimized_mode() {
     fi
     
     echo -e "${CYAN}🔨 Building optimized images...${RESET}"
-    
-    # Enable BuildKit for better caching
-    export DOCKER_BUILDKIT=1
-    export COMPOSE_DOCKER_CLI_BUILD=1
     
     # Build with optimized settings
     docker-compose -f docker-compose.optimized.yml build \

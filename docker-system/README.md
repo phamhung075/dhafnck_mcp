@@ -1,35 +1,39 @@
 # DhafnckMCP Docker Management System
 
-A streamlined Docker management interface for the DhafnckMCP project with multiple database configurations.
+A streamlined Docker management interface for the DhafnckMCP project with unified Docker configuration and multiple deployment modes.
 
 ## Quick Start
 
 ```bash
-./docker-system/docker-menu.sh
+# From project root (recommended)
+./docker-menu.sh
+
+# OR from docker-system directory
+cd docker-system && ./docker-menu.sh
 ```
 
 ## Build Configurations
 
 ### 1. PostgreSQL Local (Option 1)
 - Backend: http://localhost:8000
-- Frontend: http://localhost:3800
+- Frontend: http://localhost:3000
 - PostgreSQL: localhost:5432
-- **Use for**: Standard local development
+- **Use for**: Standard local development with local database
 
-### 2. Supabase Cloud (Option 2)
+### 2. Supabase Cloud (Option 2) ⭐ RECOMMENDED
 - Backend: http://localhost:8000
-- Frontend: http://localhost:3800
-- Database: Supabase Cloud
+- Frontend: http://localhost:3000
+- Database: Supabase Cloud (remote)
 - **Requirements**: .env file with Supabase credentials
-- **Use for**: Development with cloud database
+- **Use for**: Development with cloud database (no local DB required)
 
 ### 3. Supabase Cloud + Redis (Option 3)
 - Backend: http://localhost:8000
-- Frontend: http://localhost:3800
+- Frontend: http://localhost:3000
 - Database: Supabase Cloud
 - Redis: localhost:6379 (for caching)
 - **Requirements**: .env file with Supabase credentials
-- **Use for**: Full stack with caching
+- **Use for**: Full stack with caching and performance optimization
 
 ### P. Performance Mode (Option P)
 - Optimized for low-resource PCs
@@ -41,7 +45,7 @@ A streamlined Docker management interface for the DhafnckMCP project with multip
 - ✅ All builds use `--no-cache` (no hot reload)
 - ✅ **Automatic cleanup of existing builds** (saves disk space since --no-cache doesn't need old versions)
 - ✅ **Automatic port conflict resolution** (stops conflicting containers before starting)
-- ✅ Consistent port mapping: Backend 8000, Frontend 3800
+- ✅ Consistent port mapping: Backend 8000, Frontend 3000
 - ✅ Interactive menu interface
 - ✅ Service status monitoring
 - ✅ Log viewing and database shell access

@@ -1,12 +1,11 @@
-import { ChevronDown, ChevronRight, Eye, FileText, Folder, GitBranchPlus, Globe, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Eye, Folder, GitBranchPlus, Globe, Pencil, Plus, Trash2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { createBranch, createProject, deleteBranch, deleteProject, getGlobalContext, getProjectContext, getBranchContext, getTaskCount, listProjects, Project, updateProject } from "../api";
+import { createBranch, createProject, deleteBranch, deleteProject, listProjects, Project, updateProject } from "../api";
 import { getBranchSummaries, BranchSummary } from "../api-lazy";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Input } from "./ui/input";
-import { Separator } from "./ui/separator";
 import { RefreshButton } from "./ui/refresh-button";
 import BranchDetailsDialog from "./BranchDetailsDialog";
 import ProjectDetailsDialog from "./ProjectDetailsDialog";
@@ -30,7 +29,6 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect, refreshKey }) => {
   const [showProjectDetails, setShowProjectDetails] = useState<Project | null>(null);
   const [showBranchDetails, setShowBranchDetails] = useState<{ project: Project; branch: any } | null>(null);
   const [showGlobalContext, setShowGlobalContext] = useState(false);
-  const [loadingContext, setLoadingContext] = useState(false);
   const [form, setForm] = useState<{ name: string; description: string }>({ name: "", description: "" });
   const [saving, setSaving] = useState(false);
   const [openProjects, setOpenProjects] = useState<Record<string, boolean>>({});
@@ -63,26 +61,6 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect, refreshKey }) => {
     }
   };
 
-  const refreshTaskCounts = async () => {
-    // Refresh by fetching projects again with updated task counts
-    try {
-      const projectsData = await listProjects();
-      setProjects(projectsData);
-      
-      // Extract task counts from the refreshed project data
-      const counts: Record<string, number> = {};
-      for (const project of projectsData) {
-        if (project.git_branchs) {
-          for (const tree of Object.values(project.git_branchs)) {
-            counts[tree.id] = tree.task_count ?? 0;
-          }
-        }
-      }
-      setTaskCounts(counts);
-    } catch (e) {
-      console.error('Error refreshing task counts:', e);
-    }
-  };
 
   const fetchProjects = async () => {
     setLoading(true);

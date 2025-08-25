@@ -17,11 +17,6 @@ import {
   TableRow,
   IconButton,
   Chip,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  FormHelperText,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -35,7 +30,7 @@ import {
   Checkbox,
   Grid
 } from '@mui/material';
-import { Delete, Copy, Key, Shield, Clock, Settings } from 'lucide-react';
+import { Delete, Copy, Key, Shield, Settings } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { tokenService } from '../services/tokenService';
 import { AppLayout } from '../components/AppLayout';
@@ -86,7 +81,7 @@ const AVAILABLE_SCOPES = [
 ];
 
 export function TokenManagement() {
-  const { user } = useAuth();
+  useAuth(); // Ensure user is authenticated
   const [tabValue, setTabValue] = useState(0);
   const [tokens, setTokens] = useState<APIToken[]>([]);
   const [loading, setLoading] = useState(false);

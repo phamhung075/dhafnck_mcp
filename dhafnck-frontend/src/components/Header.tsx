@@ -1,7 +1,6 @@
 import React, { useContext, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
-import { Button } from './ui/button';
 import { User, LogOut, ChevronDown, Settings, Home, Key } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 

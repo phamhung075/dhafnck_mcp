@@ -1,12 +1,11 @@
-import { Check, Eye, FileText, Link, Minus, Pencil, Plus, Trash2, Users, ChevronDown, ChevronRight } from "lucide-react";
+import { Eye, FileText, Pencil, Plus, Trash2, Users, ChevronDown, ChevronRight } from "lucide-react";
 import React, { useEffect, useState, useCallback, useMemo, lazy, Suspense } from "react";
-import { listTasks, Task, Subtask, updateTask, getTaskContext, listAgents, getAvailableAgents, callAgent, createTask, completeTask, deleteTask } from "../api";
+import { listTasks, Task, listAgents, getAvailableAgents, deleteTask } from "../api";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { RefreshButton } from "./ui/refresh-button";
 import TaskSearch from "./TaskSearch";
-import ClickableAssignees from "./ClickableAssignees";
 
 // Lazy-loaded components
 const LazySubtaskList = lazy(() => import("./LazySubtaskList"));
@@ -14,9 +13,7 @@ const TaskDetailsDialog = lazy(() => import("./TaskDetailsDialog"));
 const TaskEditDialog = lazy(() => import("./TaskEditDialog"));
 const AgentAssignmentDialog = lazy(() => import("./AgentAssignmentDialog"));
 const TaskContextDialog = lazy(() => import("./TaskContextDialog"));
-const TaskCompleteDialog = lazy(() => import("./TaskCompleteDialog"));
 const DeleteConfirmDialog = lazy(() => import("./DeleteConfirmDialog"));
-const AgentResponseDialog = lazy(() => import("./AgentResponseDialog"));
 
 interface LazyTaskListProps {
   projectId: string;
@@ -26,7 +23,6 @@ interface LazyTaskListProps {
 
 // Pagination configuration
 const TASKS_PER_PAGE = 20;
-const INITIAL_LOAD_COUNT = 10;
 
 // Lightweight task summary for initial load
 interface TaskSummary {
@@ -48,15 +44,11 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
   const [error, setError] = useState<string | null>(null);
   
   // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
   const [totalTasks, setTotalTasks] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
   
   // Lazy loading state
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [loadingTasks, setLoadingTasks] = useState<Set<string>>(new Set());
-  const [loadedSubtasks, setLoadedSubtasks] = useState<Set<string>>(new Set());
-  const [loadedContexts, setLoadedContexts] = useState<Set<string>>(new Set());
   const [loadedAgents, setLoadedAgents] = useState(false);
   
   // Dialog states - simplified
@@ -69,7 +61,6 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
   // Lazy data stores
   const [agents, setAgents] = useState<any[]>([]);
   const [availableAgents, setAvailableAgents] = useState<string[]>([]);
-  const [taskContexts, setTaskContexts] = useState<Map<string, any>>(new Map());
 
   // Memoized filtered and sorted tasks
   const displayTasks = useMemo(() => {
@@ -77,10 +68,8 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
     if (!taskSummaries || !Array.isArray(taskSummaries)) {
       return [];
     }
-    const startIndex = (currentPage - 1) * TASKS_PER_PAGE;
-    const endIndex = startIndex + TASKS_PER_PAGE;
-    return taskSummaries.slice(0, endIndex);
-  }, [taskSummaries, currentPage]);
+    return taskSummaries.slice(0, TASKS_PER_PAGE);
+  }, [taskSummaries]);
 
   // Fallback to current implementation if lightweight endpoint isn't available
   const loadFullTasksFallback = useCallback(async () => {
@@ -131,7 +120,7 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
     // TODO: Implement /api/tasks/summaries endpoint for better performance
     await loadFullTasksFallback();
     setLoading(false);
-  }, [taskTreeId, loadFullTasksFallback]);
+  }, [loadFullTasksFallback]);
 
   // Load full task data on demand
   const loadFullTask = useCallback(async (taskId: string): Promise<Task | null> => {
@@ -200,30 +189,6 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
   }, [projectId, loadedAgents]);
 
   // Load task context on demand
-  const loadTaskContext = useCallback(async (taskId: string) => {
-    if (taskContexts.has(taskId) || loadedContexts.has(taskId)) {
-      return taskContexts.get(taskId) || null;
-    }
-    
-    setLoadedContexts(prev => {
-      const newSet = new Set(prev);
-      newSet.add(taskId);
-      return newSet;
-    });
-    
-    try {
-      const context = await getTaskContext(taskId);
-      setTaskContexts(prev => {
-        const newMap = new Map(prev);
-        newMap.set(taskId, context);
-        return newMap;
-      });
-      return context;
-    } catch (e) {
-      console.error(`Failed to load context for task ${taskId}:`, e);
-      return null;
-    }
-  }, [taskContexts, loadedContexts]);
 
   // Task expansion with lazy subtask loading
   const toggleTaskExpansion = useCallback(async (taskId: string) => {
@@ -288,15 +253,15 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
       console.error('Failed to delete task:', error);
     }
     closeDialog();
-  }, [onTasksChanged]);
+  }, [onTasksChanged, closeDialog]);
 
-  // Load more tasks (pagination)
+  // Load more tasks (pagination) - simplified version
   const loadMoreTasks = useCallback(async () => {
-    if (!hasMore || loading) return;
+    if (loading) return;
     
     const nextPage = Math.floor(taskSummaries.length / TASKS_PER_PAGE) + 1;
     await loadTaskSummaries(nextPage);
-  }, [hasMore, loading, taskSummaries.length, loadTaskSummaries]);
+  }, [loading, taskSummaries.length, loadTaskSummaries]);
 
   // Initial load
   useEffect(() => {
@@ -655,7 +620,7 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
       )}
 
       {/* Load More Button */}
-      {hasMore && (
+      {taskSummaries.length > 0 && (
         <div className="flex justify-center p-4">
           <Button
             onClick={loadMoreTasks}
@@ -708,9 +673,9 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
             open={true}
             onOpenChange={closeDialog}
             task={fullTasks.get(activeDialog.taskId) || null}
-            context={taskContexts.get(activeDialog.taskId) || null}
+            context={null}
             onClose={closeDialog}
-            loading={loadedContexts.has(activeDialog.taskId) && !taskContexts.has(activeDialog.taskId)}
+            loading={false}
           />
         )}
         

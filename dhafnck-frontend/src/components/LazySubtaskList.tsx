@@ -1,6 +1,6 @@
-import { Check, Eye, Pencil, Plus, Trash2, Users } from "lucide-react";
+import { Check, Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import React, { useEffect, useState, useCallback, useMemo, lazy, Suspense } from "react";
-import { deleteSubtask, listSubtasks, createSubtask as newSubtask, updateSubtask as saveSubtask, Subtask, completeSubtask } from "../api";
+import { deleteSubtask, listSubtasks, Subtask } from "../api";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import Cookies from 'js-cookie';
@@ -70,6 +70,33 @@ export default function LazySubtaskList({ projectId, taskTreeId, parentTaskId }:
   const [editingSubtask, setEditingSubtask] = useState<Subtask | null>(null);
   const [showDetails, setShowDetails] = useState<string | null>(null);
 
+  // Fallback to current implementation
+  const loadFullSubtasksFallback = useCallback(async () => {
+    try {
+      const subtasks = await listSubtasks(parentTaskId);
+      
+      // Convert to summaries
+      const summaries: SubtaskSummary[] = subtasks.map(subtask => ({
+        id: subtask.id,
+        title: subtask.title,
+        status: subtask.status,
+        priority: subtask.priority,
+        assignees_count: subtask.assignees?.length || 0,
+        progress_percentage: subtask.progress_percentage
+      }));
+      
+      setSubtaskSummaries(summaries);
+      
+      // Store full subtasks for immediate access
+      const subtaskMap = new Map();
+      subtasks.forEach(subtask => subtaskMap.set(subtask.id, subtask));
+      setFullSubtasks(subtaskMap);
+      
+    } catch (e: any) {
+      setError(e.message);
+    }
+  }, [parentTaskId]);
+
   // Load subtask summaries (lightweight)
   const loadSubtaskSummaries = useCallback(async () => {
     if (hasLoaded) return; // Only load once
@@ -111,34 +138,7 @@ export default function LazySubtaskList({ projectId, taskTreeId, parentTaskId }:
       setLoading(false);
       setHasLoaded(true);
     }
-  }, [parentTaskId, hasLoaded]);
-
-  // Fallback to current implementation
-  const loadFullSubtasksFallback = useCallback(async () => {
-    try {
-      const subtasks = await listSubtasks(parentTaskId);
-      
-      // Convert to summaries
-      const summaries: SubtaskSummary[] = subtasks.map(subtask => ({
-        id: subtask.id,
-        title: subtask.title,
-        status: subtask.status,
-        priority: subtask.priority,
-        assignees_count: subtask.assignees?.length || 0,
-        progress_percentage: subtask.progress_percentage
-      }));
-      
-      setSubtaskSummaries(summaries);
-      
-      // Store full subtasks for immediate access
-      const subtaskMap = new Map();
-      subtasks.forEach(subtask => subtaskMap.set(subtask.id, subtask));
-      setFullSubtasks(subtaskMap);
-      
-    } catch (e: any) {
-      setError(e.message);
-    }
-  }, [parentTaskId]);
+  }, [parentTaskId, hasLoaded, loadFullSubtasksFallback]);
 
   // Load full subtask data on demand
   const loadFullSubtask = useCallback(async (subtaskId: string): Promise<Subtask | null> => {

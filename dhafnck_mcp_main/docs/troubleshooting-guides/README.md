@@ -13,6 +13,12 @@ This folder contains comprehensive troubleshooting documentation to help diagnos
 - **[Fix Supabase Connection](fix-supabase-connection.md)** - Detailed Supabase connection troubleshooting steps
 - **[Frontend Supabase Fix Summary](frontend-supabase-fix-summary.md)** - Frontend-specific Supabase connection solutions
 
+### Docker Configuration Issues
+- **Unified Docker Setup**: All Docker configurations consolidated to single `docker-compose.yml` with profiles
+- **Port Conflicts**: Backend runs on 8000, Frontend on 3000 (changed from 3800)
+- **Environment Variables**: Single `.env` file at project root instead of scattered config files
+- **Memory Issues**: Frontend memory crashes resolved with increased NODE_OPTIONS (1536MB)
+
 ## 🔍 Troubleshooting Approach
 
 Our troubleshooting guides follow a systematic approach:
@@ -25,12 +31,15 @@ Our troubleshooting guides follow a systematic approach:
 
 ## 🎯 Common Issues Covered
 
-- Database connection problems
+- Database connection problems (PostgreSQL, Supabase)
 - MCP tool integration issues
 - Context system errors
 - Agent orchestration failures
 - Performance bottlenecks
-- Configuration problems
+- Docker configuration problems
+- Frontend memory crashes
+- Port conflicts and networking
+- Environment variable issues
 
 ## 👥 Audience
 

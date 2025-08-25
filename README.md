@@ -36,11 +36,13 @@ git clone <repository-url>
 cd agentic-project
 
 # Quick start with Docker (interactive menu)
-./docker-system/docker-menu.sh
+./docker-menu.sh  # Can run from project root
+# OR
+cd docker-system && ./docker-menu.sh
 
 # The menu provides multiple configuration options:
-# - PostgreSQL Local (Backend + Frontend)
-# - Supabase Cloud (No Redis)
+# - PostgreSQL Local (Backend + Frontend) 
+# - Supabase Cloud (No Redis) - RECOMMENDED
 # - Supabase Cloud + Redis (Full Stack)
 # - Performance Mode for low-resource PCs
 ```
@@ -98,7 +100,7 @@ mcp__dhafnck_mcp_http__manage_context(
 | Configuration | Menu Option | Description | Requirements |
 |---------------|-------------|-------------|--------------|
 | **PostgreSQL Local** | Option 1 | Local PostgreSQL database | No external dependencies |
-| **Supabase Cloud** | Option 2 | Cloud database (Supabase) | Requires .env with Supabase credentials |
+| **Supabase Cloud** | Option 2 ⭐ | Cloud database (Supabase) - RECOMMENDED | Requires .env with Supabase credentials |
 | **Supabase + Redis** | Option 3 | Cloud DB with Redis cache | Requires .env + Redis setup |
 | **Performance Mode** | Option P | Optimized for low-resource PCs | For systems with limited RAM/CPU |
 
@@ -106,7 +108,7 @@ mcp__dhafnck_mcp_http__manage_context(
 
 The project includes a comprehensive React-based dashboard:
 
-- **Access via Docker**: http://localhost:3800 (automatic when using Docker)
+- **Access via Docker**: http://localhost:3000 (automatic when using Docker)
 - **Backend API**: http://localhost:8000
 - **Health Check**: http://localhost:8000/health
 
