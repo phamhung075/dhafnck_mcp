@@ -83,14 +83,15 @@ class AuthConfig:
             )
         
         logger.warning(
-            "⚠️ Using fallback user ID 'compatibility-default-user' - "
+            "⚠️ Using fallback user ID '00000000-0000-0000-0000-000000000001' - "
             "this is temporary and will be removed in future versions. "
             "Please implement proper authentication."
         )
         
         # Return a special compatibility user ID that's distinct from the old default_id
         # This makes it easier to track and migrate later
-        return "compatibility-default-user"
+        # Using a valid UUID instead of string to satisfy PostgreSQL UUID constraints
+        return "00000000-0000-0000-0000-000000000001"
     
     @staticmethod
     def should_enforce_authentication() -> bool:

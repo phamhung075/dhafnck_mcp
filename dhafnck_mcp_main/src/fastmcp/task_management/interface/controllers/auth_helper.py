@@ -165,7 +165,7 @@ def get_authenticated_user_id(provided_user_id: Optional[str] = None, operation_
                 if is_development or is_context_operation:
                     fallback_reason = "development environment" if is_development else "context operation fallback"
                     logger.warning(f"🔧 ENHANCED FIX: Forcing compatibility mode for {operation_name} ({fallback_reason})")
-                    user_id = "compatibility-default-user"
+                    user_id = "00000000-0000-0000-0000-000000000001"
                     logger.error(f"🚨 USER_ID_DEBUG: Using fallback user_id '{user_id}' for {operation_name} - THIS SHOULD NOT HAPPEN IN PRODUCTION")
                     AuthConfig.log_authentication_bypass(operation_name, f"forced compatibility mode - {fallback_reason}")
                 else:

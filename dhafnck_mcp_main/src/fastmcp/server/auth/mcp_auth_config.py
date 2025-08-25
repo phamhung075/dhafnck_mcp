@@ -62,6 +62,10 @@ def get_default_auth_provider():
     Returns:
         Default authentication provider
     """
+    # Check if authentication is explicitly disabled
+    if os.getenv("DHAFNCK_AUTH_ENABLED", "true").lower() == "false":
+        return None
+    
     auth_type = os.getenv("MCP_AUTH_TYPE")
     
     # Auto-detect based on available configuration

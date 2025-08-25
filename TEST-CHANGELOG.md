@@ -4,6 +4,51 @@ All notable changes to test files in the DhafnckMCP AI Agent Orchestration Platf
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [Semantic](https://semver.org/spec/v2.0.0.html)
 
+## [2025-08-25] - Authentication Test Suite Updates for JWT Backend Method Renaming
+
+### Updated - JWT Authentication Backend Tests
+- **File**: `dhafnck_mcp_main/src/tests/auth/mcp_integration/jwt_auth_backend_test.py`
+  - **Method Renaming**: Updated all test methods to use `verify_token()` instead of deprecated `load_access_token()`
+  - **Dual Authentication Tests**: Added tests for Supabase token validation with 'authenticated' audience
+  - **Role Mapping Fix**: Fixed user role extraction tests to expect lowercase role names ("admin", "user") instead of "UserRole.ADMIN"
+  - **Backward Compatibility**: Added test for `load_access_token()` delegating to `verify_token()`
+  - **Import Updates**: Added missing `import jwt as pyjwt` for proper JWT handling
+  - **Test Coverage**: Updated 15+ test methods to match new API interface
+
+### Updated - User Context Middleware Tests  
+- **File**: `dhafnck_mcp_main/src/tests/auth/mcp_integration/user_context_middleware_test.py`
+  - **MCP Integration**: Updated tests to work with MCP's AuthenticatedUser instead of mocking JWT validation
+  - **Import Changes**: Changed from `JWTAccessToken` to `AccessToken` from MCP provider module
+  - **Mock Strategy**: Now mocks `request.user` as AuthenticatedUser from MCP authentication
+  - **Removed JWT Backend Mocking**: Tests now assume MCP authentication middleware has already validated tokens
+  - **Integration Test Updates**: Updated integration tests to reflect real-world MCP middleware behavior
+  - **Test Coverage**: Modified 10+ test methods to work with MCP authentication flow
+
+### Updated - JWT Authentication Middleware Tests
+- **File**: `dhafnck_mcp_main/src/tests/auth/middleware/jwt_auth_middleware_test.py`
+  - **Audience Validation Tests**: Added tests for Supabase tokens with 'authenticated' audience
+  - **Dual Token Support**: Added tests for tokens with different audience claims
+  - **Logging Tests**: Added tests for audience validation fallback logging
+  - **Test Methods Added**:
+    - `test_extract_user_from_supabase_token()` - Tests Supabase-style token extraction
+    - `test_supabase_token_decode_logging()` - Tests logging for Supabase token validation
+    - `test_audience_fallback_logging()` - Tests audience validation fallback behavior
+  - **Test Coverage**: Added 3 new test methods for enhanced JWT validation
+
+### Updated - JWT Bearer Provider Tests
+- **File**: `dhafnck_mcp_main/src/tests/server/auth/providers/jwt_bearer_test.py`
+  - **Complete Rewrite**: Refactored tests to match new JWTBearerAuthProvider implementation
+  - **JWT Backend Delegation**: Tests now verify provider delegates to JWT backend instead of direct validation
+  - **Mock Strategy Update**: Provider tests now mock jwt_backend.verify_token instead of implementing validation
+  - **Test Classes Renamed**: Changed from testing internal methods to testing public API
+  - **New Test Classes**:
+    - `TestJWTBearerAuthProviderVerifyToken` - Tests verify_token delegation to JWT backend
+    - `TestJWTBearerAuthProviderValidateUserToken` - Tests internal user token validation
+    - `TestJWTBearerAuthProviderScopeMapping` - Tests scope mapping functionality
+    - `TestJWTBearerAuthProviderDatabaseValidation` - Tests database token validation
+  - **Removed Legacy Tests**: Removed tests for methods that no longer exist in new implementation
+  - **Test Coverage**: Restructured 50+ test methods to match new architecture
+
 ## [2025-08-25] - JWT Service Test Updates and Project Context Repository Fix
 
 ### Added/Fixed - JWT Service Audience Validation Tests

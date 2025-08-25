@@ -68,6 +68,17 @@ class TestJWTAuthMiddleware:
         user_id = middleware.extract_user_from_token(valid_token)
         assert user_id == "test-user-123"
     
+    def test_extract_user_from_supabase_token(self, middleware, secret_key):
+        """Test extracting user from Supabase-style token with authenticated audience"""
+        payload = {
+            "sub": "supabase-user-123",
+            "aud": "authenticated",
+            "exp": datetime.utcnow() + timedelta(hours=1)
+        }
+        token = jwt.encode(payload, secret_key, algorithm="HS256")
+        user_id = middleware.extract_user_from_token(token)
+        assert user_id == "supabase-user-123"
+    
     def test_extract_user_from_bearer_token(self, middleware, valid_token):
         """Test extracting user from token with Bearer prefix"""
         bearer_token = f"Bearer {valid_token}"
@@ -448,6 +459,21 @@ class TestJWTAuthMiddlewareLogging:
         assert "✅ JWTAuthMiddleware successfully decoded token" in caplog.text
         assert "Extracted user_id test-user-123 from JWT token" in caplog.text
     
+    def test_supabase_token_decode_logging(self, middleware, secret_key, caplog):
+        """Test Supabase token decode with authenticated audience logging"""
+        payload = {
+            "sub": "supabase-user-456",
+            "aud": "authenticated",
+            "exp": datetime.utcnow() + timedelta(hours=1)
+        }
+        token = jwt.encode(payload, secret_key, algorithm="HS256")
+        
+        with caplog.at_level(logging.DEBUG):
+            user_id = middleware.extract_user_from_token(token)
+            
+        assert "✅ Token validated with audience='authenticated' (Supabase)" in caplog.text
+        assert user_id == "supabase-user-456"
+    
     def test_token_decode_failure_logging(self, middleware, caplog):
         """Test failed token decode logging"""
         invalid_token = "this-is-not-a-valid-jwt-token"
@@ -514,3 +540,21 @@ class TestJWTAuthMiddlewareLogging:
                 
         assert "❌ JWTAuthMiddleware - Error extracting user from token: Unexpected error" in caplog.text
         assert user_id is None
+    
+    def test_audience_fallback_logging(self, middleware, secret_key, caplog):
+        """Test audience validation fallback logging"""
+        # Create token with different audience
+        payload = {
+            "sub": "test-user-999",
+            "aud": "some-other-audience",
+            "exp": datetime.utcnow() + timedelta(hours=1)
+        }
+        token = jwt.encode(payload, secret_key, algorithm="HS256")
+        
+        with caplog.at_level(logging.DEBUG):
+            user_id = middleware.extract_user_from_token(token)
+            
+        # Should fail authenticated audience check but succeed without audience check
+        assert "Token doesn't have 'authenticated' audience, trying without audience" in caplog.text
+        assert "✅ Token validated without audience check (local token)" in caplog.text
+        assert user_id == "test-user-999"

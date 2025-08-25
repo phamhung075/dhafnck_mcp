@@ -27,29 +27,21 @@ REQUIRED BEHAVIORS:
 ## Missing Test Files - CREATE IMMEDIATELY:
 
 ## Stale Test Files (Source Newer Than Test)
-- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/api_server.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/auth/api_server_test.py`
-  - **Days stale**: 3
+- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/mcp_integration/jwt_auth_backend.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/auth/mcp_integration/jwt_auth_backend_test.py`
+  - **Days stale**: 0
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/middleware/dual_auth_middleware.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/auth/middleware/dual_auth_middleware_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/mcp_integration/user_context_middleware.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/auth/mcp_integration/user_context_middleware_test.py`
+  - **Days stale**: 4
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/middleware/jwt_auth_middleware.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/auth/middleware/jwt_auth_middleware_test.py`
   - **Days stale**: 2
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/http_server.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/server/http_server_test.py`
-  - **Days stale**: 2
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/auth_helper.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/auth_helper_test.py`
-  - **Days stale**: 2
-
-
-## Missing Test Files
-- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/mcp_integration/server_config.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/auth/mcp_integration/server_config_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/user_scoped_context_routes.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/server/routes/user_scoped_context_routes_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/auth/providers/jwt_bearer.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/server/auth/providers/jwt_bearer_test.py`
+  - **Days stale**: 4
 
 
 ## EXECUTION COMMANDS - DO NOW:
