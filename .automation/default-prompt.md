@@ -29,15 +29,31 @@ REQUIRED BEHAVIORS:
 ## Stale Test Files (Source Newer Than Test)
 - **Source**: `dhafnck_mcp_main/src/fastmcp/config/auth_config.py`
   - **Test**: `dhafnck_mcp_main/src/tests/config/auth_config_test.py`
-  - **Days stale**: 3
+  - **Days stale**: 0
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/auth/mcp_auth_config.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/server/auth/mcp_auth_config_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/facades/task_application_facade.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/task_management/application/facades/task_application_facade_test.py`
+  - **Days stale**: 1
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/factories/task_facade_factory.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/task_management/application/factories/task_facade_factory_test.py`
   - **Days stale**: 5
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/mcp_entry_point.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/server/mcp_entry_point_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/agent_repository_factory.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/agent_repository_factory_test.py`
+  - **Days stale**: 4
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/project_repository.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/project_repository_test.py`
   - **Days stale**: 2
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/task_repository.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/task_repository_test.py`
+  - **Days stale**: 0
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/task_repository_factory.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/task_repository_factory_test.py`
+  - **Days stale**: 4
 
 - **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/auth_helper.py`
   - **Test**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/auth_helper_test.py`

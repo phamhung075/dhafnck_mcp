@@ -86,14 +86,10 @@ class CreateProjectUseCase:
                     user_id = getattr(self._project_repository, 'user_id', None)
                 
                 if user_id is None:
-                    # Check if compatibility mode is enabled
-                    if AuthConfig.is_default_user_allowed():
-                        user_id = AuthConfig.get_fallback_user_id()
-                        AuthConfig.log_authentication_bypass("Project context creation", "compatibility mode")
-                    else:
-                        raise UserAuthenticationRequiredError("Project context creation")
-                else:
-                    user_id = validate_user_id(user_id, "Project context creation")
+                    # NO FALLBACKS ALLOWED - user authentication is required
+                    raise UserAuthenticationRequiredError("Project context creation")
+                
+                user_id = validate_user_id(user_id, "Project context creation")
                 
                 # Create unified context facade
                 factory = UnifiedContextFacadeFactory()

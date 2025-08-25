@@ -119,14 +119,10 @@ class CreateTaskUseCase:
                 # Get user_id from request or handle authentication
                 user_id = getattr(request, 'user_id', None)
                 if user_id is None:
-                    # Check if compatibility mode is enabled
-                    if AuthConfig.is_default_user_allowed():
-                        user_id = AuthConfig.get_fallback_user_id()
-                        AuthConfig.log_authentication_bypass("Task context creation", "compatibility mode")
-                    else:
-                        raise UserAuthenticationRequiredError("Task context creation")
-                else:
-                    user_id = validate_user_id(user_id, "Task context creation")
+                    # NO FALLBACKS ALLOWED - user authentication is required
+                    raise UserAuthenticationRequiredError("Task context creation")
+                
+                user_id = validate_user_id(user_id, "Task context creation")
                 
                 # Create unified context facade
                 factory = UnifiedContextFacadeFactory()

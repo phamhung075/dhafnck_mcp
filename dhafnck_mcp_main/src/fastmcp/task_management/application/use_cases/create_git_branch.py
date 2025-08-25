@@ -44,14 +44,10 @@ class CreateGitBranchUseCase:
                 # Get user_id from request or handle authentication
                 user_id = getattr(request, 'user_id', None)
                 if user_id is None:
-                    # Check if compatibility mode is enabled
-                    if AuthConfig.is_default_user_allowed():
-                        user_id = AuthConfig.get_fallback_user_id()
-                        AuthConfig.log_authentication_bypass("Branch context creation", "compatibility mode")
-                    else:
-                        raise UserAuthenticationRequiredError("Branch context creation")
-                else:
-                    user_id = validate_user_id(user_id, "Branch context creation")
+                    # NO FALLBACKS ALLOWED - user authentication is required
+                    raise UserAuthenticationRequiredError("Branch context creation")
+                
+                user_id = validate_user_id(user_id, "Branch context creation")
                 
                 # Create unified context facade
                 factory = UnifiedContextFacadeFactory()
