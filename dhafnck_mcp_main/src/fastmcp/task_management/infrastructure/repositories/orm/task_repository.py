@@ -58,23 +58,81 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
         self.project_id = project_id
         self.git_branch_name = git_branch_name
     
+    def _load_task_with_relationships(self, session, task_id: str) -> Task | None:
+        """
+        Load task with relationships using graceful error handling.
+        Falls back to basic loading if relationships fail.
+        """
+        try:
+            # Try to load with all relationships
+            task = session.query(Task).options(
+                joinedload(Task.assignees),
+                joinedload(Task.labels).joinedload(TaskLabel.label),
+                joinedload(Task.subtasks),
+                joinedload(Task.dependencies)
+            ).filter(Task.id == task_id).first()
+            
+            if task:
+                logger.debug(f"Successfully loaded task {task_id} with all relationships")
+                return task
+            
+        except Exception as e:
+            logger.warning(f"Failed to load task {task_id} with relationships: {e}")
+        
+        try:
+            # Fallback: Load task without relationships
+            logger.info(f"Falling back to basic task loading for {task_id}")
+            task = session.query(Task).filter(Task.id == task_id).first()
+            
+            if task:
+                # Manually initialize empty relationships to prevent AttributeError
+                task.assignees = []
+                task.labels = []
+                task.subtasks = []
+                task.dependencies = []
+                logger.info(f"Loaded task {task_id} with empty relationships as fallback")
+                return task
+            
+        except Exception as e:
+            logger.error(f"Failed to load task {task_id} even with fallback: {e}")
+        
+        return None
+    
     def _model_to_entity(self, task: Task) -> TaskEntity:
-        """Convert SQLAlchemy model to domain entity"""
-        # Get assignee IDs
-        assignee_ids = [a.assignee_id for a in task.assignees]
+        """Convert SQLAlchemy model to domain entity with graceful error handling"""
+        # Get assignee IDs with error handling
+        assignee_ids = []
+        try:
+            assignee_ids = [a.assignee_id for a in task.assignees]
+        except Exception as e:
+            logger.warning(f"Failed to load assignees for task {task.id}: {e}")
+            assignee_ids = []
         
-        # Get label names
-        label_names = [tl.label.name for tl in task.labels]
+        # Get label names with error handling
+        label_names = []
+        try:
+            label_names = [tl.label.name for tl in task.labels if tl.label]
+        except Exception as e:
+            logger.warning(f"Failed to load labels for task {task.id}: {e}")
+            label_names = []
         
-        # Convert subtasks to IDs only (as per Task entity definition)
+        # Convert subtasks to IDs only with error handling
         subtask_ids = []
-        for subtask in task.subtasks:
-            subtask_ids.append(subtask.id)  # Only store subtask IDs, not full objects
+        try:
+            for subtask in task.subtasks:
+                subtask_ids.append(subtask.id)  # Only store subtask IDs, not full objects
+        except Exception as e:
+            logger.warning(f"Failed to load subtasks for task {task.id}: {e}")
+            subtask_ids = []
         
-        # Convert dependencies to TaskId objects
+        # Convert dependencies to TaskId objects with error handling
         dependency_ids = []
-        for dependency in task.dependencies:
-            dependency_ids.append(TaskId(dependency.depends_on_task_id))
+        try:
+            for dependency in task.dependencies:
+                dependency_ids.append(TaskId(dependency.depends_on_task_id))
+        except Exception as e:
+            logger.warning(f"Failed to load dependencies for task {task.id}: {e}")
+            dependency_ids = []
         
         # Convert status and priority to proper value objects
         
@@ -144,12 +202,17 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
                 if assignee_ids:
                     with self.get_db_session() as session:
                         for assignee_id in assignee_ids:
-                            assignee = TaskAssignee(
-                                task_id=task.id,
-                                assignee_id=assignee_id,
-                                role=kwargs.get('assignee_role', 'contributor')
-                            )
-                            session.add(assignee)
+                            try:
+                                assignee = TaskAssignee(
+                                    task_id=task.id,
+                                    assignee_id=assignee_id,
+                                    role=kwargs.get('assignee_role', 'contributor'),
+                                    user_id=self.user_id  # CRITICAL: Add user_id for database constraint
+                                )
+                                session.add(assignee)
+                            except Exception as e:
+                                logger.error(f"Failed to create task assignee relationship: {e}")
+                                # Continue without this assignee rather than failing completely
                 
                 # Handle labels if provided
                 if label_names:
@@ -178,14 +241,9 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
                             )
                             session.add(task_label)
                 
-                # Reload with relationships
+                # Reload with relationships - use graceful loading
                 with self.get_db_session() as session:
-                    task = session.query(Task).options(
-                        joinedload(Task.assignees),
-                        joinedload(Task.labels),
-                        joinedload(Task.subtasks),
-                        joinedload(Task.dependencies)
-                    ).filter(Task.id == task.id).first()
+                    task = self._load_task_with_relationships(session, task.id)
                 
                 return self._model_to_entity(task)
                 
@@ -194,29 +252,39 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
             raise TaskCreationError(f"Failed to create task: {str(e)}")
     
     def get_task(self, task_id: str) -> TaskEntity | None:
-        """Get a task by ID with user isolation"""
+        """Get a task by ID with user isolation and graceful error handling"""
         with self.get_db_session() as session:
-            query = session.query(Task).options(
-                joinedload(Task.assignees),
-                joinedload(Task.labels).joinedload(TaskLabel.label),
-                joinedload(Task.subtasks),
-                joinedload(Task.dependencies)
-            )
-            
-            # Apply user filter for data isolation
-            query = self.apply_user_filter(query)
-            
-            # Apply additional filters
-            filters = [Task.id == task_id]
-            if self.git_branch_id:
-                filters.append(Task.git_branch_id == self.git_branch_id)
-            
-            task = query.filter(and_(*filters)).first()
-            
-            # Log access for audit
-            self.log_access('read', 'task', task_id)
-            
-            return self._model_to_entity(task) if task else None
+            try:
+                # Try graceful loading first
+                task = self._load_task_with_relationships(session, task_id)
+                
+                if task:
+                    # Apply user filter for data isolation
+                    user_filter_query = session.query(Task)
+                    user_filter_query = self.apply_user_filter(user_filter_query)
+                    
+                    # Check if task passes user filter
+                    filters = [Task.id == task_id]
+                    if self.git_branch_id:
+                        filters.append(Task.git_branch_id == self.git_branch_id)
+                    
+                    filtered_task = user_filter_query.filter(and_(*filters)).first()
+                    
+                    if not filtered_task:
+                        logger.warning(f"Task {task_id} failed user isolation filter")
+                        return None
+                    
+                    # Log access for audit
+                    self.log_access('read', 'task', task_id)
+                    
+                    return self._model_to_entity(task)
+                
+            except Exception as e:
+                logger.error(f"Failed to get task {task_id}: {e}")
+                # Log access attempt even if failed
+                self.log_access('read_failed', 'task', task_id)
+        
+        return None
     
     def update_task(self, task_id: str, **updates) -> TaskEntity:
         """Update a task"""
@@ -284,13 +352,9 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
                             )
                             session.add(task_label)
                 
-                # Reload with relationships
+                # Reload with relationships - use graceful loading
                 with self.get_db_session() as session:
-                    task = session.query(Task).options(
-                        joinedload(Task.assignees),
-                        joinedload(Task.labels).joinedload(TaskLabel.label),
-                        joinedload(Task.subtasks)
-                    ).filter(Task.id == task_id).first()
+                    task = self._load_task_with_relationships(session, task_id)
                 
                 return self._model_to_entity(task)
                 

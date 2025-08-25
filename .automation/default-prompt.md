@@ -27,38 +27,25 @@ REQUIRED BEHAVIORS:
 ## Missing Test Files - CREATE IMMEDIATELY:
 
 ## Stale Test Files (Source Newer Than Test)
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/task_summary_routes.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/server/routes/task_summary_routes_test.py`
-  - **Days stale**: 2
+- **Source**: `dhafnck-frontend/src/api.ts`
+  - **Test**: `dhafnck-frontend/src/tests/api.test.ts`
+  - **Days stale**: 3
 
 - **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/user_scoped_task_routes.py`
   - **Test**: `dhafnck_mcp_main/src/tests/server/routes/user_scoped_task_routes_test.py`
-  - **Days stale**: 1
+  - **Days stale**: 0
 
 - **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/facades/task_application_facade.py`
   - **Test**: `dhafnck_mcp_main/src/tests/task_management/application/facades/task_application_facade_test.py`
-  - **Days stale**: 2
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/task_repository.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/task_repository_test.py`
-  - **Days stale**: 1
+  - **Days stale**: 0
 
 
 ## Missing Test Files
-- **Source**: `dhafnck-frontend/src/api-lazy.ts`
-  - **Create test at**: `dhafnck-frontend/src/tests/api-lazy.test.ts`
+- **Source**: `dhafnck-frontend/src/components/SubtaskList.tsx`
+  - **Create test at**: `dhafnck-frontend/src/tests/components/SubtaskList.test.tsx`
 
-- **Source**: `dhafnck-frontend/src/components/LazySubtaskList.tsx`
-  - **Create test at**: `dhafnck-frontend/src/tests/components/LazySubtaskList.test.tsx`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/use_cases/list_tasks.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/use_cases/list_tasks_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/optimized_task_repository.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/optimized_task_repository_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/supabase_optimized_repository.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/supabase_optimized_repository_test.py`
+- **Source**: `dhafnck-frontend/src/components/ui/badge.tsx`
+  - **Create test at**: `dhafnck-frontend/src/tests/components/ui/badge.test.tsx`
 
 
 ## EXECUTION COMMANDS - DO NOW:

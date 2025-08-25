@@ -20,10 +20,15 @@ logger = logging.getLogger(__name__)
 class ProjectContextRepository(BaseORMRepository):
     """Repository for project context operations."""
     
-    def __init__(self, session_factory):
+    def __init__(self, session_factory, user_id: Optional[str] = None):
         super().__init__(ProjectContextModel)
         self.session_factory = session_factory
         self.model_class = ProjectContextModel
+        self.user_id = user_id
+    
+    def with_user(self, user_id: str) -> 'ProjectContextRepository':
+        """Create a new repository instance scoped to a specific user."""
+        return ProjectContextRepository(self.session_factory, user_id)
     
     @contextmanager
     def get_db_session(self):
@@ -80,19 +85,27 @@ class ProjectContextRepository(BaseORMRepository):
                 project_workflow=project_settings.get('project_workflow', {}),
                 local_standards=local_standards,
                 global_overrides=entity.metadata.get('global_overrides', {}),
-                delegation_rules=entity.metadata.get('delegation_rules', {})
+                delegation_rules=entity.metadata.get('delegation_rules', {}),
+                user_id=self.user_id or 'system'  # Add user_id field
             )
             
             session.add(db_model)
             session.flush()
-            session.refresh(db_model)
+            # Don't refresh to avoid UUID conversion issues with SQLite
+            # session.refresh(db_model)
             
             return self._to_entity(db_model)
     
     def get(self, context_id: str) -> Optional[ProjectContext]:
         """Get project context by ID."""
         with self.get_db_session() as session:
-            db_model = session.get(ProjectContextModel, context_id)
+            query = session.query(ProjectContextModel).filter(ProjectContextModel.id == context_id)
+            
+            # Add user filter if user_id is set
+            if self.user_id:
+                query = query.filter(ProjectContextModel.user_id == self.user_id)
+            
+            db_model = query.first()
             return self._to_entity(db_model) if db_model else None
     
     def update(self, context_id: str, entity: ProjectContext) -> ProjectContext:
@@ -129,7 +142,8 @@ class ProjectContextRepository(BaseORMRepository):
             db_model.updated_at = datetime.now(timezone.utc)
             
             session.flush()
-            session.refresh(db_model)
+            # Don't refresh to avoid UUID conversion issues with SQLite
+            # session.refresh(db_model)
             
             return self._to_entity(db_model)
     
@@ -148,6 +162,10 @@ class ProjectContextRepository(BaseORMRepository):
         """List project contexts."""
         with self.get_db_session() as session:
             stmt = select(ProjectContextModel)
+            
+            # Add user filter if user_id is set
+            if self.user_id:
+                stmt = stmt.where(ProjectContextModel.user_id == self.user_id)
             
             # Apply filters if provided
             if filters:

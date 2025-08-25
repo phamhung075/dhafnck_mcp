@@ -9,8 +9,8 @@ from typing import Optional
 
 from ..facades.unified_context_facade import UnifiedContextFacade
 from ..services.unified_context_service import UnifiedContextService
-from ...infrastructure.repositories.global_context_repository import GlobalContextRepository
-from ...infrastructure.repositories.project_context_repository import ProjectContextRepository
+from ...infrastructure.repositories.global_context_repository_user_scoped import GlobalContextRepository
+from ...infrastructure.repositories.project_context_repository_user_scoped import ProjectContextRepository
 from ...infrastructure.repositories.branch_context_repository import BranchContextRepository
 from ...infrastructure.repositories.task_context_repository import TaskContextRepository
 from ..services.context_cache_service import ContextCacheService
@@ -155,8 +155,14 @@ class UnifiedContextFacadeFactory:
         Returns:
             UnifiedContextFacade instance configured with the provided scope
         """
+        # Create user-scoped service if user_id is provided
+        if user_id:
+            scoped_service = self.unified_service.with_user(user_id)
+        else:
+            scoped_service = self.unified_service
+            
         return UnifiedContextFacade(
-            unified_service=self.unified_service,
+            unified_service=scoped_service,
             user_id=user_id,
             project_id=project_id,
             git_branch_id=git_branch_id

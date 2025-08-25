@@ -503,6 +503,34 @@ describe('api.ts', () => {
         expect(result[1].id).toBe('sub2');
       });
 
+      it('should handle subtask data with value property', async () => {
+        const mockResponse = {
+          result: {
+            content: [{
+              text: JSON.stringify({
+                success: true,
+                data: {
+                  subtasks: [
+                    { id: 'sub1', title: { value: 'Subtask 1' }, priority: { value: 'high' } },
+                    { id: 'sub2', title: 'Subtask 2', status: { value: 'in_progress' } }
+                  ]
+                }
+              })
+            }]
+          }
+        };
+        (global.fetch as any).mockResolvedValue({
+          json: jest.fn().mockResolvedValue(mockResponse)
+        });
+
+        const result = await api.listSubtasks(taskId);
+
+        expect(result).toHaveLength(2);
+        expect(result[0].title).toBe('Subtask 1');
+        expect(result[0].priority).toBe('high');
+        expect(result[1].status).toBe('in_progress');
+      });
+
       it('should sanitize subtask data', async () => {
         const mockResponse = {
           result: {
@@ -515,7 +543,9 @@ describe('api.ts', () => {
                     title: 'Subtask 1',
                     _events: 'should be removed',
                     _eventsCount: 10,
-                    _maxListeners: 5
+                    _maxListeners: 5,
+                    assignees: ['user1', { value: 'user2' }, null, '[', ']'],
+                    progress_percentage: { value: 75 }
                   }]
                 }
               })
@@ -533,6 +563,8 @@ describe('api.ts', () => {
         expect(subtask._events).toBeUndefined();
         expect(subtask._eventsCount).toBeUndefined();
         expect(subtask._maxListeners).toBeUndefined();
+        expect(subtask.assignees).toEqual(['user1', 'user2']);
+        expect(subtask.progress_percentage).toBe(75);
       });
     });
 
@@ -591,6 +623,38 @@ describe('api.ts', () => {
         const result = await api.updateSubtask(taskId, subtaskId, updates);
 
         expect(result).toMatchObject({ id: subtaskId, ...updates });
+      });
+
+      it('should extract and sanitize values from object properties', async () => {
+        const mockResponse = {
+          result: {
+            content: [{
+              text: JSON.stringify({
+                success: true,
+                data: {
+                  subtask: {
+                    id: subtaskId,
+                    title: { value: 'Updated Title' },
+                    status: { value: 'done' },
+                    assignees: [{ value: 'user1' }, 'user2', { assignee_id: 'user3' }]
+                  }
+                }
+              })
+            }]
+          }
+        };
+        (global.fetch as any).mockResolvedValue({
+          json: jest.fn().mockResolvedValue(mockResponse)
+        });
+
+        const result = await api.updateSubtask(taskId, subtaskId, updates);
+
+        expect(result).toMatchObject({ 
+          id: subtaskId, 
+          title: 'Updated Title',
+          status: 'done',
+          assignees: ['user1', 'user2', 'user3']
+        });
       });
 
       it('should handle error response', async () => {

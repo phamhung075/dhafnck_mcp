@@ -20,9 +20,14 @@ logger = logging.getLogger(__name__)
 class TaskContextRepository(BaseORMRepository):
     """Repository for task context operations."""
     
-    def __init__(self, session_factory):
+    def __init__(self, session_factory, user_id: Optional[str] = None):
         super().__init__(TaskContextModel)
         self.session_factory = session_factory
+        self.user_id = user_id
+    
+    def with_user(self, user_id: str) -> 'TaskContextRepository':
+        """Create a new repository instance scoped to a specific user."""
+        return TaskContextRepository(self.session_factory, user_id)
     
     @contextmanager
     def get_db_session(self):
@@ -72,20 +77,27 @@ class TaskContextRepository(BaseORMRepository):
                 delegation_triggers=entity.metadata.get('delegation_triggers', {}),
                 inheritance_disabled=entity.metadata.get('inheritance_disabled', False),
                 force_local_only=entity.metadata.get('force_local_only', False),
-                # user_id=entity.metadata.get('user_id') or 'system',  # Temporarily disabled for DB compatibility
+                user_id=self.user_id or entity.metadata.get('user_id') or 'system',  # Enable user_id with repository scope
                 version=1
             )
             
             session.add(db_model)
             session.flush()
-            session.refresh(db_model)
+            # Don't refresh to avoid UUID conversion issues with SQLite
+            # session.refresh(db_model)
             
             return self._to_entity(db_model)
     
     def get(self, context_id: str) -> Optional[TaskContext]:
         """Get task context by ID."""
         with self.get_db_session() as session:
-            db_model = session.get(TaskContextModel, context_id)
+            query = session.query(TaskContextModel).filter(TaskContextModel.id == context_id)
+            
+            # Add user filter if user_id is set
+            if self.user_id:
+                query = query.filter(TaskContextModel.user_id == self.user_id)
+            
+            db_model = query.first()
             return self._to_entity(db_model) if db_model else None
     
     def update(self, context_id: str, entity: TaskContext) -> TaskContext:
@@ -111,11 +123,12 @@ class TaskContextRepository(BaseORMRepository):
             db_model.delegation_triggers = entity.metadata.get('delegation_triggers', {})
             db_model.inheritance_disabled = entity.metadata.get('inheritance_disabled', False)
             db_model.force_local_only = entity.metadata.get('force_local_only', False)
-            # db_model.user_id = entity.metadata.get('user_id') or db_model.user_id or 'system'  # Temporarily disabled for DB compatibility
+            db_model.user_id = self.user_id or entity.metadata.get('user_id') or db_model.user_id or 'system'
             db_model.version += 1
             
             session.flush()
-            session.refresh(db_model)
+            # Don't refresh to avoid UUID conversion issues with SQLite
+            # session.refresh(db_model)
             
             return self._to_entity(db_model)
     
@@ -133,6 +146,10 @@ class TaskContextRepository(BaseORMRepository):
         """List task contexts."""
         with self.get_db_session() as session:
             stmt = select(TaskContextModel)
+            
+            # Add user filter if user_id is set
+            if self.user_id:
+                stmt = stmt.where(TaskContextModel.user_id == self.user_id)
             
             # Apply filters if provided
             if filters:

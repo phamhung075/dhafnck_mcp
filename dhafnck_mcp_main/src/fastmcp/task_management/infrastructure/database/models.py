@@ -287,7 +287,7 @@ class GlobalContext(Base):
     __tablename__ = "global_contexts"
     
     # All IDs are now UUID
-    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=GLOBAL_SINGLETON_UUID)
+    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)  # Removed default to avoid conversion issues
     organization_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=True)  # No default org ID
     
     # Core organizational configuration

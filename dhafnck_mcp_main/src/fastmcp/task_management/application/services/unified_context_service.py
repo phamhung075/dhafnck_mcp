@@ -56,27 +56,42 @@ class UnifiedContextService:
         )
         self.validation_service = validation_service or ContextValidationService()
         
-        # Initialize hierarchy validator
+        # Initialize hierarchy validator with potentially user-scoped repositories
+        # When repositories are passed from with_user(), they're already scoped
+        # When created directly, we need to scope them
         self.hierarchy_validator = ContextHierarchyValidator(
-            global_repo=global_context_repository,
+            global_repo=global_context_repository,  # Use repos as passed (might already be scoped)
             project_repo=project_context_repository,
             branch_repo=branch_context_repository,
-            task_repo=task_context_repository
+            task_repo=task_context_repository,
+            user_id=self._user_id
         )
 
     def with_user(self, user_id: str) -> 'UnifiedContextService':
         """Create a new service instance scoped to a specific user."""
+        # Create user-scoped repositories
+        global_repo = self._get_user_scoped_repository_for_user(self.repositories[ContextLevel.GLOBAL], user_id)
+        project_repo = self._get_user_scoped_repository_for_user(self.repositories[ContextLevel.PROJECT], user_id)
+        branch_repo = self._get_user_scoped_repository_for_user(self.repositories[ContextLevel.BRANCH], user_id)
+        task_repo = self._get_user_scoped_repository_for_user(self.repositories[ContextLevel.TASK], user_id)
+        
         return UnifiedContextService(
-            self.repositories[ContextLevel.GLOBAL],
-            self.repositories[ContextLevel.PROJECT], 
-            self.repositories[ContextLevel.BRANCH],
-            self.repositories[ContextLevel.TASK],
+            global_repo,
+            project_repo,
+            branch_repo,
+            task_repo,
             self.cache_service,
             self.inheritance_service,
             self.delegation_service,
             self.validation_service,
             user_id
         )
+    
+    def _get_user_scoped_repository_for_user(self, repository, user_id: str):
+        """Get user-scoped repository for a specific user."""
+        if repository and hasattr(repository, 'with_user'):
+            return repository.with_user(user_id)
+        return repository
 
     def _get_user_scoped_repository(self, repository):
         """Get user-scoped repository if user_id is available."""
@@ -197,7 +212,7 @@ class UnifiedContextService:
                     if is_valid:
                         logger.info(f"Successfully auto-created parent contexts for {level}")
                     else:
-                        logger.warning(f"Auto-creation succeeded but validation still fails for {level}")
+                        logger.warning(f"Auto-creation succeeded but validation still fails for {level}: {error_msg}")
                 
                 if not is_valid:
                     # For task contexts with git_branch_id, try alternative validation
@@ -250,17 +265,37 @@ class UnifiedContextService:
                 }
             
             # Get appropriate repository
-            repository = self.repositories.get(context_level)
+            repository = self._get_user_scoped_repository(self.repositories.get(context_level))
             if not repository:
                 return {
                     "success": False,
                     "error": f"No repository configured for level: {level}"
                 }
             
-            # Use user-scoped repository if user_id is available
-            repo = self._get_user_scoped_repository(repository)
+            # Use user-scoped repository with provided user_id or service user_id
+            effective_user_id = user_id or self._user_id
+            if effective_user_id and hasattr(repository, 'with_user'):
+                repo = repository.with_user(effective_user_id)
+            else:
+                repo = repository
             
             # Create context entity based on level
+            logger.info(f"Creating entity with context_id: {context_id}")
+            
+            # Normalize context_id for database storage (generate proper UUIDs)
+            if context_level == ContextLevel.GLOBAL:
+                from ...infrastructure.database.models import GLOBAL_SINGLETON_UUID
+                # Check if it's a concatenated global context (starts with global singleton UUID)
+                if context_id.startswith(GLOBAL_SINGLETON_UUID + "_"):
+                    import uuid
+                    # Extract user_id from the concatenated ID
+                    parts = context_id.split("_", 1)
+                    if len(parts) == 2:
+                        user_uuid = parts[1]
+                        namespace = uuid.UUID(GLOBAL_SINGLETON_UUID)
+                        proper_uuid = str(uuid.uuid5(namespace, user_uuid))
+                        context_id = proper_uuid
+            
             context_entity = self._create_context_entity(
                 level=context_level,
                 context_id=context_id,
@@ -268,9 +303,12 @@ class UnifiedContextService:
                 user_id=user_id,
                 project_id=project_id
             )
+            logger.info(f"Created entity with ID: {getattr(context_entity, 'id', 'NO_ID')}")
             
             # Save to repository
+            logger.info(f"About to create {level} context in repository with entity: {context_entity}")
             saved_context = repo.create(context_entity)
+            logger.info(f"Successfully created {level} context in repository: {saved_context}")
             
             # Invalidate cache for this context
             # Note: Cache service still async - skip for now in sync mode
@@ -305,11 +343,25 @@ class UnifiedContextService:
             # Validate level
             context_level = ContextLevel(level)
             
+            # Normalize context_id for user-specific global contexts (same logic as create)
+            if context_level == ContextLevel.GLOBAL:
+                from ...infrastructure.database.models import GLOBAL_SINGLETON_UUID
+                # Check if it's a concatenated global context (starts with global singleton UUID)
+                if context_id.startswith(GLOBAL_SINGLETON_UUID + "_"):
+                    import uuid
+                    # Extract user_id from the concatenated ID
+                    parts = context_id.split("_", 1)
+                    if len(parts) == 2:
+                        user_uuid = parts[1]
+                        namespace = uuid.UUID(GLOBAL_SINGLETON_UUID)
+                        proper_uuid = str(uuid.uuid5(namespace, user_uuid))
+                        context_id = proper_uuid
+            
             # Skip cache operations for now (cache service is async)
             # TODO: Make cache service sync or skip caching in sync mode
             
             # Get from repository
-            repository = self.repositories.get(context_level)
+            repository = self._get_user_scoped_repository(self.repositories.get(context_level))
             if not repository:
                 return {
                     "success": False,
@@ -364,8 +416,22 @@ class UnifiedContextService:
             # Validate level
             context_level = ContextLevel(level)
             
+            # Normalize context_id for user-specific global contexts (same logic as create)
+            if context_level == ContextLevel.GLOBAL:
+                from ...infrastructure.database.models import GLOBAL_SINGLETON_UUID
+                # Check if it's a concatenated global context (starts with global singleton UUID)
+                if context_id.startswith(GLOBAL_SINGLETON_UUID + "_"):
+                    import uuid
+                    # Extract user_id from the concatenated ID
+                    parts = context_id.split("_", 1)
+                    if len(parts) == 2:
+                        user_uuid = parts[1]
+                        namespace = uuid.UUID(GLOBAL_SINGLETON_UUID)
+                        proper_uuid = str(uuid.uuid5(namespace, user_uuid))
+                        context_id = proper_uuid
+            
             # Get existing context
-            repository = self.repositories.get(context_level)
+            repository = self._get_user_scoped_repository(self.repositories.get(context_level))
             if not repository:
                 return {
                     "success": False,
@@ -439,8 +505,22 @@ class UnifiedContextService:
             # Validate level
             context_level = ContextLevel(level)
             
+            # Normalize context_id for user-specific global contexts (same logic as create)
+            if context_level == ContextLevel.GLOBAL:
+                from ...infrastructure.database.models import GLOBAL_SINGLETON_UUID
+                # Check if it's a concatenated global context (starts with global singleton UUID)
+                if context_id.startswith(GLOBAL_SINGLETON_UUID + "_"):
+                    import uuid
+                    # Extract user_id from the concatenated ID
+                    parts = context_id.split("_", 1)
+                    if len(parts) == 2:
+                        user_uuid = parts[1]
+                        namespace = uuid.UUID(GLOBAL_SINGLETON_UUID)
+                        proper_uuid = str(uuid.uuid5(namespace, user_uuid))
+                        context_id = proper_uuid
+            
             # Get repository
-            repository = self.repositories.get(context_level)
+            repository = self._get_user_scoped_repository(self.repositories.get(context_level))
             if not repository:
                 return {
                     "success": False,
@@ -556,22 +636,30 @@ class UnifiedContextService:
     ) -> Dict[str, Any]:
         """List contexts at specified level with optional filtering."""
         try:
+            logger.info(f"list_contexts called with level={level}, filters={filters}")
+            
             # Validate level
             context_level = ContextLevel(level)
+            logger.info(f"Validated level: {context_level}")
             
             # Get repository
-            repository = self.repositories.get(context_level)
+            repository = self._get_user_scoped_repository(self.repositories.get(context_level))
             if not repository:
                 return {
                     "success": False,
                     "error": f"No repository configured for level: {level}"
                 }
             
+            logger.info(f"Got repository: {repository}")
+            
             # Use user-scoped repository if user_id is available
             repo = self._get_user_scoped_repository(repository)
+            logger.info(f"User-scoped repository: {repo}, user_id={self._user_id}")
             
             # Get contexts
+            logger.info(f"About to call repo.list with filters: {filters}")
             contexts = repo.list(filters=filters)
+            logger.info(f"repo.list returned {len(contexts)} contexts")
             
             return {
                 "success": True,
@@ -581,7 +669,7 @@ class UnifiedContextService:
             }
             
         except Exception as e:
-            logger.error(f"Failed to list contexts: {e}")
+            logger.error(f"Failed to list contexts: {e}", exc_info=True)
             return {
                 "success": False,
                 "error": str(e)
@@ -1231,8 +1319,14 @@ class UnifiedContextService:
             
             if target_level == ContextLevel.PROJECT:
                 # Project needs global context
+                # Use user-specific global context ID if user_id is available
+                global_context_id = "global_singleton"
+                if self._user_id:
+                    from ...infrastructure.database.models import GLOBAL_SINGLETON_UUID
+                    global_context_id = f"{GLOBAL_SINGLETON_UUID}_{self._user_id}"
+                
                 return self._create_hierarchy_atomically([
-                    (ContextLevel.GLOBAL, "global_singleton", {})
+                    (ContextLevel.GLOBAL, global_context_id, {})
                 ])
                 
             elif target_level == ContextLevel.BRANCH:
@@ -1242,8 +1336,14 @@ class UnifiedContextService:
                     logger.warning("No project_id available for branch context auto-creation")
                     return False
                 
+                # Use user-specific global context ID if user_id is available
+                global_context_id = "global_singleton"
+                if self._user_id:
+                    from ...infrastructure.database.models import GLOBAL_SINGLETON_UUID
+                    global_context_id = f"{GLOBAL_SINGLETON_UUID}_{self._user_id}"
+                
                 return self._create_hierarchy_atomically([
-                    (ContextLevel.GLOBAL, "global_singleton", {}),
+                    (ContextLevel.GLOBAL, global_context_id, {}),
                     (ContextLevel.PROJECT, branch_project_id, {"project_name": f"Auto-created Project {branch_project_id[:8]}"})
                 ])
                 
@@ -1265,8 +1365,14 @@ class UnifiedContextService:
                     logger.warning("No project_id available for task context auto-creation")
                     return False
                 
+                # Use user-specific global context ID if user_id is available
+                global_context_id = "global_singleton"
+                if self._user_id:
+                    from ...infrastructure.database.models import GLOBAL_SINGLETON_UUID
+                    global_context_id = f"{GLOBAL_SINGLETON_UUID}_{self._user_id}"
+                
                 return self._create_hierarchy_atomically([
-                    (ContextLevel.GLOBAL, "global_singleton", {}),
+                    (ContextLevel.GLOBAL, global_context_id, {}),
                     (ContextLevel.PROJECT, task_project_id, {"project_name": f"Auto-created Project {task_project_id[:8]}"}),
                     (ContextLevel.BRANCH, branch_id, {"project_id": task_project_id, "git_branch_name": f"auto-branch-{branch_id[:8]}"})
                 ])
@@ -1346,7 +1452,7 @@ class UnifiedContextService:
             bool: True if context exists or was created, False otherwise
         """
         try:
-            repository = self.repositories.get(level)
+            repository = self._get_user_scoped_repository(self.repositories.get(level))
             if not repository:
                 logger.error(f"No repository configured for level: {level}")
                 return False
@@ -1369,6 +1475,22 @@ class UnifiedContextService:
                 project_id=data.get("project_id"),
                 git_branch_id=data.get("git_branch_id")
             )
+            
+            # Normalize context_id for database storage (generate proper UUIDs)
+            if level == ContextLevel.GLOBAL:
+                from ...infrastructure.database.models import GLOBAL_SINGLETON_UUID
+                # Check if it's a concatenated global context (starts with global singleton UUID)
+                if context_id.startswith(GLOBAL_SINGLETON_UUID + "_"):
+                    logger.info(f"Atomic flow: Found concatenated global context ID, converting to UUID")
+                    import uuid
+                    # Extract user_id from the concatenated ID
+                    parts = context_id.split("_", 1)
+                    if len(parts) == 2:
+                        user_uuid = parts[1]
+                        namespace = uuid.UUID(GLOBAL_SINGLETON_UUID)
+                        proper_uuid = str(uuid.uuid5(namespace, user_uuid))
+                        context_id = proper_uuid
+                        logger.info(f"Atomic flow: Converted global context ID to proper UUID: {proper_uuid}")
             
             # Create entity directly
             context_entity = self._create_context_entity(
@@ -1476,7 +1598,7 @@ class UnifiedContextService:
             context_level = ContextLevel(level)
             
             # Check if context already exists
-            repository = self.repositories.get(context_level)
+            repository = self._get_user_scoped_repository(self.repositories.get(context_level))
             if not repository:
                 return {
                     "success": False,

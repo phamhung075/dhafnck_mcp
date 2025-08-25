@@ -20,9 +20,14 @@ logger = logging.getLogger(__name__)
 class BranchContextRepository(BaseORMRepository):
     """Repository for branch context operations."""
     
-    def __init__(self, session_factory):
+    def __init__(self, session_factory, user_id: Optional[str] = None):
         super().__init__(BranchContextModel)
         self.session_factory = session_factory
+        self.user_id = user_id
+    
+    def with_user(self, user_id: str) -> 'BranchContextRepository':
+        """Create a new repository instance scoped to a specific user."""
+        return BranchContextRepository(self.session_factory, user_id)
     
     @contextmanager
     def get_db_session(self):
@@ -70,8 +75,12 @@ class BranchContextRepository(BaseORMRepository):
             if custom_fields:
                 branch_standards['_custom'] = custom_fields
             
-            # Create new branch context with proper field mapping
-            # Provide default project_id if not specified
+            # The issue was that branch_id was incorrectly set to entity.id, causing a foreign key 
+            # constraint violation since branch_id references project_git_branchs.id
+            # Setting branch_id to None since it's nullable and we don't need to reference a git branch
+            
+            # Use the entity data as provided, SQLAlchemy will handle UUID format conversion
+            branch_id = entity.id
             project_id = entity.project_id or "default-project"
             
             # Combine all data into the data field
@@ -84,28 +93,35 @@ class BranchContextRepository(BaseORMRepository):
             }
             
             db_model = BranchContextModel(
-                id=entity.id,  # Use entity.id as the primary key
-                branch_id=entity.id,
-                parent_project_id=project_id,  # This should reference project_contexts.id
+                id=branch_id,  # Use formatted entity.id as the primary key
+                branch_id=None,  # Set to NULL since this is a branch context ID, not a git branch reference
+                parent_project_id=project_id,  # This should reference project_contexts.id with proper format
                 data=data_field,
                 branch_workflow=branch_workflow,
                 feature_flags={},  # Using feature_flags instead of branch_standards
                 active_patterns={},  # Using active_patterns instead of agent_assignments
                 local_overrides=entity.metadata.get('local_overrides', {}),
                 delegation_rules=entity.metadata.get('delegation_rules', {}),
-                user_id=entity.metadata.get('user_id') or 'system'  # Enable user_id with default
+                user_id=self.user_id or entity.metadata.get('user_id') or 'system'  # Enable user_id with repository scope
             )
             
             session.add(db_model)
             session.flush()
-            session.refresh(db_model)
+            # Don't refresh to avoid UUID conversion issues with SQLite
+            # session.refresh(db_model)
             
             return self._to_entity(db_model)
     
     def get(self, context_id: str) -> Optional[BranchContext]:
         """Get branch context by ID."""
         with self.get_db_session() as session:
-            db_model = session.get(BranchContextModel, context_id)
+            query = session.query(BranchContextModel).filter(BranchContextModel.id == context_id)
+            
+            # Add user filter if user_id is set
+            if self.user_id:
+                query = query.filter(BranchContextModel.user_id == self.user_id)
+            
+            db_model = query.first()
             return self._to_entity(db_model) if db_model else None
     
     def update(self, context_id: str, entity: BranchContext) -> BranchContext:
@@ -150,11 +166,12 @@ class BranchContextRepository(BaseORMRepository):
             }
             db_model.local_overrides = entity.metadata.get('local_overrides', {})
             db_model.delegation_rules = entity.metadata.get('delegation_rules', {})
-            # db_model.user_id = entity.metadata.get('user_id') or db_model.user_id or 'system'  # Temporarily disabled for DB compatibility
+            db_model.user_id = self.user_id or entity.metadata.get('user_id') or db_model.user_id or 'system'
             db_model.updated_at = datetime.now(timezone.utc)
             
             session.flush()
-            session.refresh(db_model)
+            # Don't refresh to avoid UUID conversion issues with SQLite
+            # session.refresh(db_model)
             
             return self._to_entity(db_model)
     
@@ -172,6 +189,10 @@ class BranchContextRepository(BaseORMRepository):
         """List branch contexts."""
         with self.get_db_session() as session:
             stmt = select(BranchContextModel)
+            
+            # Add user filter if user_id is set
+            if self.user_id:
+                stmt = stmt.where(BranchContextModel.user_id == self.user_id)
             
             # Apply filters if provided
             if filters:

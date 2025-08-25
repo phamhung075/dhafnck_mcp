@@ -11,6 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime, timezone
 from contextlib import contextmanager
 import logging
+import uuid
 
 from ...domain.entities.context import ProjectContext
 from ...infrastructure.database.models import ProjectContext as ProjectContextModel
@@ -60,18 +61,22 @@ class ProjectContextRepository(BaseUserScopedRepository):
             finally:
                 session.close()
     
-    def create(self, project_id: str, context_data: Dict[str, Any]) -> ProjectContext:
+    def create(self, entity: ProjectContext) -> ProjectContext:
         """
         Create a new project context for the current user.
         
         Args:
-            project_id: ID of the project
-            context_data: Context data to store
+            entity: ProjectContext entity to create
             
         Returns:
             Created ProjectContext entity
         """
         with self.get_db_session() as session:
+            # Extract project_id and data from entity
+            # The entity.id is the project UUID for project contexts
+            project_id = entity.id
+            context_data = entity.dict()  # Convert entire entity to dict for context_data
+            
             # Check if context already exists for this project and user
             if self.user_id:
                 existing = session.query(ProjectContextModel).filter(
@@ -89,6 +94,7 @@ class ProjectContextRepository(BaseUserScopedRepository):
                 raise ValueError(f"Project context already exists for project {project_id}")
             
             # Create new project context with user_id
+            logger.info(f"Creating ProjectContextModel: project_id={project_id}, user_id={self.user_id}")
             db_model = ProjectContextModel(
                 project_id=project_id,
                 context_data=context_data,
@@ -99,12 +105,33 @@ class ProjectContextRepository(BaseUserScopedRepository):
             
             # Log access for audit
             self.log_access("create", "project_context", project_id)
+            logger.info(f"Created ProjectContextModel with ID: {db_model.id}, user_id: {db_model.user_id}")
             
             session.add(db_model)
             session.flush()
             session.refresh(db_model)
             
             return self._to_entity(db_model)
+    
+    def create_by_project_id(self, project_id: str, context_data: Dict[str, Any]) -> ProjectContext:
+        """
+        Legacy method for backward compatibility.
+        Create a new project context by project ID and context data.
+        
+        Args:
+            project_id: ID of the project
+            context_data: Context data to store
+            
+        Returns:
+            Created ProjectContext entity
+        """
+        # Create entity and call main create method
+        entity = ProjectContext(
+            id=str(uuid.uuid4()),
+            project_id=project_id,
+            context_data=context_data
+        )
+        return self.create(entity)
     
     def get(self, project_id: str) -> Optional[ProjectContext]:
         """
@@ -276,6 +303,55 @@ class ProjectContextRepository(BaseUserScopedRepository):
             # Create new context
             return self.create(project_id, additional_data)
     
+    def list(self, filters: Optional[Dict[str, Any]] = None) -> List[ProjectContext]:
+        """
+        Generic list method that respects user isolation and filters.
+        
+        Args:
+            filters: Optional filters to apply (user_id filter is automatically applied)
+            
+        Returns:
+            List of ProjectContext entities for the current user
+        """
+        with self.get_db_session() as session:
+            # Start with base query
+            query = session.query(ProjectContextModel)
+            
+            # Log debug info
+            logger.info(f"Starting list query for user_id={self.user_id}, filters={filters}")
+            
+            # Apply user filter - CRITICAL for isolation
+            original_query = query
+            query = self.apply_user_filter(query)
+            logger.info(f"Applied user filter. Query changed: {query is not original_query}")
+            
+            # Apply additional filters if provided
+            if filters:
+                for key, value in filters.items():
+                    if hasattr(ProjectContextModel, key) and key != 'user_id':  # Don't override user filter
+                        query = query.filter(getattr(ProjectContextModel, key) == value)
+                        logger.info(f"Applied filter: {key} = {value}")
+            
+            # Execute query and get results
+            db_models = query.all()
+            logger.info(f"Query returned {len(db_models)} results")
+            
+            # Debug: check if there are any records at all (without user filter)
+            if len(db_models) == 0:
+                total_records = session.query(ProjectContextModel).count()
+                logger.info(f"Total project contexts in database (all users): {total_records}")
+                
+                # Check records for this specific user
+                user_records = session.query(ProjectContextModel).filter(
+                    ProjectContextModel.user_id == self.user_id
+                ).count()
+                logger.info(f"Project contexts for user {self.user_id}: {user_records}")
+            
+            # Log access for audit
+            self.log_access("list", "project_context", f"count={len(db_models)}, filters={filters}")
+            
+            return [self._to_entity(model) for model in db_models]
+
     def count_user_project_contexts(self) -> int:
         """
         Count the number of project contexts for the current user.
@@ -296,10 +372,17 @@ class ProjectContextRepository(BaseUserScopedRepository):
             "user_id": db_model.user_id  # Include user_id in metadata
         }
         
+        # Extract project_name from context_data or use project_id as fallback
+        context_data = db_model.context_data or {}
+        project_name = context_data.get("project_name", f"Project-{db_model.project_id}")
+        
+        # Extract project_settings from context_data or use empty dict
+        project_settings = context_data.get("project_settings", context_data)
+        
         return ProjectContext(
             id=db_model.id,
-            project_id=db_model.project_id,
-            context_data=db_model.context_data or {},
+            project_name=project_name,
+            project_settings=project_settings,
             metadata=metadata
         )
     

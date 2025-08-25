@@ -53,8 +53,12 @@ class GlobalContextRepository(BaseUserScopedRepository):
         For user-scoped contexts, we generate a unique ID per user.
         """
         if context_id == "global_singleton" and self.user_id:
-            # Create a user-specific global context ID
-            return f"{GLOBAL_SINGLETON_UUID}_{self.user_id}"
+            # Create a user-specific global context ID using UUID5 for deterministic generation
+            # This ensures the same user always gets the same global context UUID
+            import uuid
+            namespace = uuid.UUID(GLOBAL_SINGLETON_UUID)
+            user_uuid = uuid.UUID(self.user_id)
+            return str(uuid.uuid5(namespace, str(user_uuid)))
         elif context_id == "global_singleton":
             return GLOBAL_SINGLETON_UUID
         return context_id
@@ -118,7 +122,7 @@ class GlobalContextRepository(BaseUserScopedRepository):
             # Create new global context with user_id
             db_model = GlobalContextModel(
                 id=self._normalize_context_id("global_singleton"),
-                organization_id=entity.organization_name,
+                organization_id=None,  # Set to None since we don't have organization UUIDs
                 autonomous_rules=autonomous_rules,
                 security_policies=security_policies,
                 coding_standards=coding_standards,

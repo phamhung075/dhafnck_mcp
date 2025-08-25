@@ -406,9 +406,12 @@ class UnifiedContextFacade:
             
             if self._user_id:
                 filters["user_id"] = self._user_id
-            if self._project_id:
+            
+            # Only add project_id and git_branch_id filters for levels that actually use them
+            # Project contexts are independent entities, not filtered by hierarchy project_id
+            if level != "project" and self._project_id:
                 filters["project_id"] = self._project_id
-            if self._git_branch_id:
+            if level not in ["project", "branch"] and self._git_branch_id:
                 filters["git_branch_id"] = self._git_branch_id
             
             result = self._service.list_contexts(level, filters)

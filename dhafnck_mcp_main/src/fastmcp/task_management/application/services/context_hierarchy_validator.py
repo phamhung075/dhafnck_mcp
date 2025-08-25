@@ -15,12 +15,13 @@ logger = logging.getLogger(__name__)
 class ContextHierarchyValidator:
     """Validates context hierarchy requirements and provides guidance."""
     
-    def __init__(self, global_repo, project_repo, branch_repo, task_repo):
-        """Initialize with context repositories."""
+    def __init__(self, global_repo, project_repo, branch_repo, task_repo, user_id: Optional[str] = None):
+        """Initialize with context repositories and optional user_id."""
         self.global_repo = global_repo
         self.project_repo = project_repo
         self.branch_repo = branch_repo
         self.task_repo = task_repo
+        self.user_id = user_id
     
     def validate_hierarchy_requirements(
         self, 
@@ -56,9 +57,28 @@ class ContextHierarchyValidator:
         """Validate project context requirements."""
         # Check if global context exists
         try:
-            # Use the correct UUID for global singleton
             from ...infrastructure.database.models import GLOBAL_SINGLETON_UUID
-            global_context = self.global_repo.get(GLOBAL_SINGLETON_UUID)
+            
+            # For user-scoped contexts, look for user-specific global context
+            if self.user_id:
+                # Try user-specific global context ID format
+                user_global_id = f"{GLOBAL_SINGLETON_UUID}_{self.user_id}"
+                global_context = self.global_repo.get(user_global_id)
+                
+                # If not found with composite ID, try standard ID
+                if not global_context:
+                    global_context = self.global_repo.get(GLOBAL_SINGLETON_UUID)
+            else:
+                # No user_id, use standard global singleton
+                global_context = self.global_repo.get(GLOBAL_SINGLETON_UUID)
+            
+            # If still not found, check if ANY global context exists (for user-scoped contexts)
+            if not global_context:
+                # List all global contexts for this user
+                global_contexts = self.global_repo.list()
+                if global_contexts and len(global_contexts) > 0:
+                    global_context = global_contexts[0]  # Use the first one found
+            
             if not global_context:
                 return False, "Global context not found", {
                     "error": "Cannot create project context without global context",

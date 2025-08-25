@@ -1,5 +1,40 @@
 # Fix Prompts for MCP Tools Issues - 2025-08-24
 
+## Critical Issue: Task Data Persistence Problem
+
+### Prompt for Fix
+```
+CRITICAL: Tasks are being created successfully with valid UUIDs but cannot be retrieved afterward. 
+
+Evidence:
+- Created 7 tasks across 2 branches
+- All creation responses showed success with valid task IDs
+- manage_task(action="list") returns 0 tasks for all branches
+- Project statistics show task_count: 0 for all branches
+- Subtasks remain accessible even though parent tasks cannot be retrieved
+
+Debug and fix the task persistence/retrieval issue:
+1. Check if tasks are being committed to database properly
+2. Verify the git_branch_id is being stored and queried correctly
+3. Check if there's a visibility/permission filter preventing retrieval
+4. Ensure database transactions are being committed
+5. Check if tasks are being created in wrong schema or context
+
+Files to investigate:
+- TaskRepository.create() - check commit logic
+- TaskRepository.list() - check filter/query logic
+- TaskApplicationFacade - check transaction handling
+- Database models - verify git_branch_id field mapping
+
+Add detailed logging:
+- Log task creation with all fields
+- Log database commit status
+- Log retrieval queries with filters
+- Log raw database results before filtering
+```
+
+---
+
 ## Issue 1: Improve Context Creation Error Messages
 
 ### Prompt for Fix
