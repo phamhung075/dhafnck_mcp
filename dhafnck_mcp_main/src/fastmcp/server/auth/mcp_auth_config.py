@@ -34,9 +34,8 @@ def create_mcp_auth_provider(
         return None
     
     if auth_type == "env":
-        # Use simple environment variable Bearer token
-        from fastmcp.server.auth.providers.bearer_env import EnvBearerAuthProvider
-        return EnvBearerAuthProvider()
+        # Environment bearer auth no longer supported - use JWT instead
+        return None
     
     if auth_type == "jwt":
         # Use JWT Bearer authentication with token management system

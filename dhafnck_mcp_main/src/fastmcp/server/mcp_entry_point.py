@@ -451,36 +451,27 @@ def create_dhafnck_mcp_server() -> FastMCP:
             """
             Generate a new secure authentication token.
             
+            NOTE: Token generation is now handled through the API at /api/v2/tokens
+            This MCP tool is deprecated and will return an informative message.
+            
             Returns:
-                New token information
+                Information about how to generate tokens
             """
-            try:
-                if not auth_middleware.enabled:
-                    return {
-                        "success": False,
-                        "error": "Authentication is disabled",
-                        "token": None
-                    }
-                
-                # Generate token using Supabase client
-                token = auth_middleware.token_validator.supabase_client.generate_token()
-                
-                return {
-                    "success": True,
-                    "token": token,
-                    "message": "Token generated successfully",
-                    "instructions": (
-                        "Store this token securely. Use it in the 'token' parameter "
-                        "for authenticated MCP operations. Token expires in 30 days by default."
-                    )
+            return {
+                "success": False,
+                "error": "Token generation via MCP tool is deprecated",
+                "message": (
+                    "Please use the API endpoint POST /api/v2/tokens to generate tokens. "
+                    "This provides better security and integration with the authentication system."
+                ),
+                "api_endpoint": "/api/v2/tokens",
+                "method": "POST",
+                "example": {
+                    "name": "my-token",
+                    "expires_in_days": 30,
+                    "scopes": ["read", "write"]
                 }
-            except Exception as e:
-                logger.error(f"Token generation error: {e}")
-                return {
-                    "success": False,
-                    "error": str(e),
-                    "token": None
-                }
+            }
     else:
         logger.info("Authentication disabled - skipping auth tools registration")
     
@@ -631,17 +622,11 @@ def main():
             from starlette.middleware import Middleware
             
             # Build middleware stack
+            # IMPORTANT: Middleware executes in REVERSE order of addition!
+            # Last added = First executed
             middleware_stack = []
             
-            # Add RequestContextMiddleware to make request available in ContextVar
-            try:
-                from fastmcp.server.http_server import RequestContextMiddleware
-                middleware_stack.append(Middleware(RequestContextMiddleware))
-                logger.info("RequestContextMiddleware added for request context propagation")
-            except ImportError as e:
-                logger.warning(f"Could not add RequestContextMiddleware: {e}")
-            
-            # Add DualAuth middleware for JWT token processing and user context extraction
+            # Step 1: Add DualAuth middleware FIRST (runs first to process JWT tokens)
             if auth_enabled:
                 try:
                     from fastmcp.auth.middleware.dual_auth_middleware import DualAuthMiddleware
@@ -652,6 +637,22 @@ def main():
                 except Exception as e:
                     logger.error(f"Failed to add DualAuthMiddleware: {e}")
                     logger.warning("Authentication may not work properly without DualAuthMiddleware")
+            
+            # Step 2: Add RequestContextMiddleware SECOND (runs after DualAuth to capture auth context)
+            # This runs AFTER DualAuthMiddleware processes authentication and sets request.state
+            try:
+                from fastmcp.auth.middleware.request_context_middleware import RequestContextMiddleware
+                middleware_stack.append(Middleware(RequestContextMiddleware))
+                logger.info("RequestContextMiddleware added for authentication context propagation")
+            except ImportError as e:
+                logger.warning(f"Could not add RequestContextMiddleware: {e}")
+                # Fallback to legacy RequestContextMiddleware if new one not available
+                try:
+                    from fastmcp.server.http_server import RequestContextMiddleware as LegacyRequestContextMiddleware
+                    middleware_stack.append(Middleware(LegacyRequestContextMiddleware))
+                    logger.info("Legacy RequestContextMiddleware added as fallback")
+                except ImportError as fallback_e:
+                    logger.warning(f"Could not add fallback RequestContextMiddleware: {fallback_e}")
             
             # Add debug middleware
             middleware_stack.append(Middleware(DebugLoggingMiddleware))

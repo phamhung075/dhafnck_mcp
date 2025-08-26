@@ -60,13 +60,20 @@ from .auth_helper import get_authenticated_user_id, log_authentication_details
 
 logger = logging.getLogger(__name__)
 
-# Try to import user context utilities - gracefully handle if not available
+# Import user context utilities - REQUIRED for authentication
 try:
     from fastmcp.auth.mcp_integration.user_context_middleware import get_current_user_id
     from fastmcp.auth.mcp_integration.thread_context_manager import ContextPropagationMixin
 except ImportError:
-    logger.warning("User context middleware not available - using default user ID")
-    get_current_user_id = lambda: None
+    # Try alternative import path for RequestContextMiddleware
+    try:
+        from .auth_helper import get_authenticated_user_id as get_current_user_id
+    except ImportError:
+        # Authentication is required - no fallbacks allowed
+        from ...domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
+        def get_current_user_id():
+            raise UserAuthenticationRequiredError("User context middleware not available")
+    
     # Fallback mixin if thread context manager is not available
     class ContextPropagationMixin:
         def _run_async_with_context(self, async_func, *args, **kwargs):

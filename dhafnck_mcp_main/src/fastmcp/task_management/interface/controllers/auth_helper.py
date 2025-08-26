@@ -14,14 +14,26 @@ from ....config.auth_config import AuthConfig
 
 logger = logging.getLogger(__name__)
 
-# Try to import user context utilities - gracefully handle if not available
+# Import user context from RequestContextMiddleware
+# Try to import the new RequestContextMiddleware context functions
 try:
-    from fastmcp.auth.mcp_integration.user_context_middleware import get_current_user_id
-    USER_CONTEXT_AVAILABLE = True
-except ImportError:
-    logger.warning("User context middleware not available")
-    get_current_user_id = lambda: None
-    USER_CONTEXT_AVAILABLE = False
+    from fastmcp.auth.middleware.request_context_middleware import (
+        get_current_user_id as get_user_from_request_context,
+        get_current_user_email,
+        get_current_auth_method,
+        is_request_authenticated,
+        get_authentication_context
+    )
+    REQUEST_CONTEXT_AVAILABLE = True
+    logger.info("✅ RequestContextMiddleware context functions imported successfully")
+except ImportError as e:
+    logger.warning(f"RequestContextMiddleware context functions not available: {e}")
+    get_user_from_request_context = lambda: None
+    get_current_user_email = lambda: None
+    get_current_auth_method = lambda: None
+    is_request_authenticated = lambda: False
+    get_authentication_context = lambda: {}
+    REQUEST_CONTEXT_AVAILABLE = False
 
 # Try to import Starlette request context for dual auth
 try:
@@ -45,18 +57,26 @@ def get_user_id_from_request_state() -> Optional[str]:
         from fastmcp.server.http_server import _current_http_request
         request = _current_http_request.get()
         
-        if request and hasattr(request, 'state') and hasattr(request.state, 'user_id'):
-            user_id = request.state.user_id
-            logger.debug(f"Got user_id from request state: {user_id}")
-            return user_id
+        logger.info(f"🔍 Request state check: request exists = {request is not None}")
+        
+        if request and hasattr(request, 'state'):
+            logger.info(f"🔍 Request has state, attributes: {dir(request.state)}")
+            if hasattr(request.state, 'user_id'):
+                user_id = request.state.user_id
+                logger.info(f"✅ Got user_id from request state: {user_id}")
+                return user_id
+            else:
+                logger.warning("⚠️ Request state exists but no user_id attribute")
         elif request:
-            logger.debug(f"Request found but no user_id in state. State attributes: {dir(request.state) if hasattr(request, 'state') else 'No state'}")
+            logger.warning(f"⚠️ Request exists but no state. Request type: {type(request)}")
         else:
-            logger.debug("No current HTTP request found in context")
+            logger.warning("❌ No current HTTP request found in ContextVar")
     except ImportError as e:
-        logger.debug(f"Could not import _current_http_request: {e}")
+        logger.error(f"❌ Could not import _current_http_request: {e}")
     except Exception as e:
-        logger.debug(f"Could not get user_id from request state: {e}")
+        logger.error(f"❌ Error getting user_id from request state: {e}")
+        import traceback
+        logger.debug(f"Full traceback: {traceback.format_exc()}")
     
     return None
 
@@ -65,10 +85,12 @@ def get_authenticated_user_id(provided_user_id: Optional[str] = None, operation_
     """
     Get authenticated user ID from various sources with proper validation.
     
-    This function tries to extract user_id from:
+    This function tries to extract user_id from (in priority order):
     1. Provided user_id parameter
-    2. Custom user context middleware 
-    3. MCP authentication context
+    2. RequestContextMiddleware context variables (NEW - set by DualAuthMiddleware)
+    3. Legacy request state (old method)
+    4. Custom user context middleware 
+    5. MCP authentication context
     
     Args:
         provided_user_id: User ID provided explicitly (takes precedence)
@@ -84,6 +106,7 @@ def get_authenticated_user_id(provided_user_id: Optional[str] = None, operation_
     """
     logger.info(f"🔍 get_authenticated_user_id called for operation: {operation_name}")
     logger.info(f"📝 Provided user_id: {provided_user_id}")
+    logger.info(f"🔧 REQUEST_CONTEXT_AVAILABLE: {REQUEST_CONTEXT_AVAILABLE}")
     logger.info(f"🔧 USER_CONTEXT_AVAILABLE: {USER_CONTEXT_AVAILABLE}")
     print(f"DEBUG: get_authenticated_user_id called for {operation_name} with provided_user_id={provided_user_id}")
     
@@ -93,12 +116,37 @@ def get_authenticated_user_id(provided_user_id: Optional[str] = None, operation_
     if user_id is None:
         logger.info("🔍 No user_id provided, trying authentication context sources...")
         
-        # Try request state first (set by DualAuthMiddleware)
-        user_id = get_user_id_from_request_state()
-        if user_id:
-            logger.info(f"✅ Got user_id from request state (DualAuthMiddleware): {user_id}")
+        # PRIORITY 1: Try RequestContextMiddleware context variables (NEW METHOD)
+        if REQUEST_CONTEXT_AVAILABLE:
+            logger.info("🆕 Trying RequestContextMiddleware context variables...")
+            try:
+                context_user_id = get_user_from_request_context()
+                logger.info(f"🎯 RequestContextMiddleware returned: {context_user_id}")
+                if context_user_id:
+                    user_id = context_user_id
+                    logger.info(f"✅ Got user_id from RequestContextMiddleware: {user_id}")
+                    
+                    # Log additional context info for debugging
+                    if is_request_authenticated():
+                        auth_method = get_current_auth_method()
+                        logger.info(f"🔐 Authentication method: {auth_method}")
+                else:
+                    logger.warning("⚠️ RequestContextMiddleware returned None - request not authenticated")
+            except Exception as e:
+                logger.error(f"❌ Error accessing RequestContextMiddleware context: {e}")
+                import traceback
+                logger.debug(f"Full traceback: {traceback.format_exc()}")
+        else:
+            logger.warning("⚠️ RequestContextMiddleware context not available")
         
-        # Try custom user context middleware if no user_id yet
+        # PRIORITY 2: Try legacy request state (set by DualAuthMiddleware)
+        if user_id is None:
+            logger.info("🔧 Trying legacy request state...")
+            user_id = get_user_id_from_request_state()
+            if user_id:
+                logger.info(f"✅ Got user_id from legacy request state: {user_id}")
+        
+        # PRIORITY 3: Try custom user context middleware if no user_id yet
         if user_id is None and USER_CONTEXT_AVAILABLE:
             logger.info("🔧 Trying custom user context middleware...")
             try:
@@ -114,9 +162,10 @@ def get_authenticated_user_id(provided_user_id: Optional[str] = None, operation_
                 import traceback
                 logger.debug(f"Full traceback: {traceback.format_exc()}")
         else:
-            logger.warning("⚠️ User context middleware not available")
+            if user_id is None:
+                logger.warning("⚠️ User context middleware not available")
         
-        # Try MCP authentication context (gracefully handle missing module)
+        # PRIORITY 4: Try MCP authentication context (gracefully handle missing module)
         if user_id is None:
             logger.info("🔧 Trying MCP authentication context...")
             try:
@@ -154,6 +203,10 @@ def get_authenticated_user_id(provided_user_id: Optional[str] = None, operation_
         # If still no user ID, throw authentication error
         if user_id is None:
             logger.error(f"❌ No authentication found for {operation_name}")
+            # Log all available context for debugging
+            if REQUEST_CONTEXT_AVAILABLE:
+                auth_context = get_authentication_context()
+                logger.error(f"❌ Full authentication context: {auth_context}")
             raise UserAuthenticationRequiredError(operation_name)
     else:
         logger.info(f"✅ Using provided user_id: {user_id}")

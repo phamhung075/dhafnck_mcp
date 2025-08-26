@@ -133,14 +133,14 @@ services:
       - ../.env
     environment:
       # Database Configuration
-      - DATABASE_TYPE=${DATABASE_TYPE:-postgresql}
-      - DATABASE_URL=${DATABASE_URL:-postgresql://${DATABASE_USER:-dhafnck_user}:${DATABASE_PASSWORD:-dhafnck_password}@postgres:5432/${DATABASE_NAME:-dhafnck_mcp}}
+      - DATABASE_TYPE=${DATABASE_TYPE:-supabase}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres.pmswmvxhzdfxeqsfdgif:P02tqbj016p9@aws-0-eu-north-1.pooler.supabase.com:5432/postgres?sslmode=require}
       
       # Supabase Configuration
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
-      - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
+      - SUPABASE_URL=${SUPABASE_URL:-https://pmswmvxhzdfxeqsfdgif.supabase.co}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBtc3dtdnhoemRmeGVxc2ZkZ2lmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1MjAzOTcsImV4cCI6MjA3MDA5NjM5N30.UyHFbWB4qRRkEFjHIrvyjk0h_l1w85dAa7pa-POC4a4}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBtc3dtdnhoemRmeGVxc2ZkZ2lmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDUyMDM5NywiZXhwIjoyMDcwMDk2Mzk3fQ.-z-VdY5iZghvNMxUhud6BoHkC4swMHh9cO6zLmGO6-Y}
+      - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET:-xQVwQQIPe9X00jzJT64CkDnt2/IDmst4TjzNDIVfg0T8ADxlsUZDK+SOtaBs6lYuEttroRNHIOGMPYmoyHHs7A==}
       
       # Redis Configuration
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
@@ -148,8 +148,8 @@ services:
       - ENABLE_REDIS=${ENABLE_REDIS:-true}
       
       # Security
-      - SECRET_KEY=${SECRET_KEY}
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - SECRET_KEY=${SECRET_KEY:-dev_secret_key_min_32_chars_change_in_production_environment}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-dGhpcyBpcyBhIGR1bW15IGp3dCBzZWNyZXQgZm9yIGRldmVsb3BtZW50}
       - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
       - JWT_EXPIRATION_MINUTES=${JWT_EXPIRATION_MINUTES:-1440}
       
@@ -158,6 +158,10 @@ services:
       - APP_DEBUG=${APP_DEBUG:-false}
       - APP_LOG_LEVEL=${APP_LOG_LEVEL:-INFO}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3800}
+      
+      # Authentication Configuration - CRITICAL SECURITY
+      - DHAFNCK_AUTH_ENABLED=${DHAFNCK_AUTH_ENABLED:-true}
+      - MCP_AUTH_ENABLED=${MCP_AUTH_ENABLED:-true}
       
       # Performance Configuration
       - PYTHONUNBUFFERED=1

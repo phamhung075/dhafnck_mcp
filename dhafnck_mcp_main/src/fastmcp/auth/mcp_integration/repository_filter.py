@@ -296,8 +296,9 @@ class UserFilteredContextRepository(UserFilteredRepository):
                 user_id = self._get_current_user_id()
                 context_user_id = getattr(context, self._user_id_field, None)
                 
-                # Allow access to global contexts (no user_id)
-                if context_user_id is None or context_user_id == user_id:
+                # CRITICAL FIX: All contexts (including global) must belong to user
+                # Global contexts are user-scoped, not truly global
+                if context_user_id == user_id:
                     return context
                 else:
                     logger.warning(f"User {user_id} attempted to access context {context_id} belonging to {context_user_id}")
@@ -332,11 +333,13 @@ class UserFilteredContextRepository(UserFilteredRepository):
         try:
             user_id = self._get_current_user_id()
             
-            # Check if this is a global context (special handling)
+            # CRITICAL FIX: Global contexts now require user_id for user isolation
+            # Each user has their own "global" context space
             context_level = getattr(context, 'level', None)
             if context_level == 'global':
-                # Global contexts don't have user_id
-                setattr(context, self._user_id_field, None)
+                # Set user_id for global contexts (user-scoped globals)
+                setattr(context, self._user_id_field, user_id)
+                logger.debug(f"Setting user_id {user_id} for global context")
             else:
                 # For new contexts, set user_id
                 if not hasattr(context, 'id') or context.id is None:

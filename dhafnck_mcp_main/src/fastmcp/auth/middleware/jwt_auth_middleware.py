@@ -18,9 +18,10 @@ logger = logging.getLogger(__name__)
 class JWTAuthMiddleware:
     """Middleware for JWT authentication and user context management."""
     
-    def __init__(self, secret_key: str, algorithm: str = "HS256"):
+    def __init__(self, secret_key: str, algorithm: str = "HS256", enabled: bool = True):
         self.secret_key = secret_key
         self.algorithm = algorithm
+        self.enabled = enabled  # Add enabled attribute for compatibility
         
         # Enhanced debug logging for JWT secret
         logger.info(f"🔐 JWTAuthMiddleware initialized with secret length: {len(secret_key)} chars")
@@ -99,6 +100,26 @@ class JWTAuthMiddleware:
         except Exception as e:
             logger.error(f"❌ JWTAuthMiddleware - Error extracting user from token: {e}")
             return None
+    
+    def get_auth_status(self) -> dict:
+        """
+        Get authentication system status.
+        
+        Returns:
+            Authentication status and configuration
+        """
+        return {
+            "enabled": self.enabled,
+            "algorithm": self.algorithm,
+            "secret_configured": self.secret_key != "default-secret-key-change-in-production",
+            "middleware": "JWTAuthMiddleware",
+            "features": {
+                "jwt_validation": True,
+                "supabase_tokens": True,
+                "local_tokens": True,
+                "audience_validation": True
+            }
+        }
     
     def create_user_scoped_repository(
         self,

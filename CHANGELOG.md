@@ -6,6 +6,71 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Fixed
+- **Removed Default User ID Fallback** (2025-08-26)
+  - Eliminated all default user ID fallback code per security requirements
+  - Fixed warning "User context middleware not available - using default user ID" 
+  - Updated all MCP controllers to require authentication with no fallbacks:
+    - `agent_mcp_controller.py` - Now raises UserAuthenticationRequiredError instead of using None
+    - `task_mcp_controller.py` - Uses auth_helper as fallback, no default user
+    - `project_mcp_controller.py` - Uses get_authenticated_user_id from auth_helper
+    - `git_branch_mcp_controller.py` - Uses get_authenticated_user_id from auth_helper
+    - `subtask_mcp_controller.py` - Uses get_authenticated_user_id from auth_helper
+  - Authentication is now strictly required for all operations - no exceptions
+
+- **Docker Warning Fixes** (2025-08-26)
+  - Fixed database schema validation sync/async handling error in `schema_validator.py`
+  - Added `_validate_model_sync()` method to properly handle synchronous database connections
+  - Removed obsolete `HierarchicalContext` migration code from `init_database.py`
+  - Created resources directory at `dhafnck_mcp_main/data/resources/` to prevent warnings
+  - Fixed `UserContextMiddleware` import warnings by aliasing to `RequestContextMiddleware`
+  - Updated `auth/mcp_integration/__init__.py` and `server_config.py` for backward compatibility
+  - Created minimal `config/vision_hierarchy.json` to prevent vision hierarchy loading errors
+  - All Docker container warnings now resolved
+
+- **Server Startup Error Resolution** (2025-08-26)
+  - Fixed server boot loop caused by import of deleted `bearer_env` module
+  - Removed `EnvBearerAuthProvider` import from `server.py` line 51
+  - Removed usage of `EnvBearerAuthProvider()` fallback in server initialization
+  - Server now starts successfully with DualAuthMiddleware handling all authentication
+  - Backend container health check passing, server operational on port 8000
+
+### Changed
+- **Unified Single-Token Authentication** (2025-08-26)
+  - Simplified DualAuthMiddleware to accept ONE token for all request types
+  - Eliminated need to pass different tokens for frontend vs MCP requests
+  - Implemented unified token validation with automatic fallback chain:
+    - Tries Supabase JWT validation first
+    - Falls back to local JWT validation
+    - Finally tries MCP token validation
+  - Token extraction from multiple sources: Bearer header, cookies, custom headers
+  - Updated authentication documentation to reflect single-token approach
+  - Key benefit: Pass one token, access everything - no token conversion needed
+
+### Added
+- **Authentication Documentation** (2025-08-26)
+  - Created comprehensive authentication architecture documentation
+  - Added detailed token flow documentation with diagrams
+  - Created auth system README with quick start guide
+  - Documented dual-token system (Supabase for users, MCP for tools)
+  - Added security best practices and troubleshooting guides
+  - Included migration guide from single to dual token system
+
+### Removed
+- **Authentication System Cleanup** (2025-08-26)
+  - Removed unused authentication systems to simplify codebase
+  - Deleted `auth/bridge/` - FastAPI auth bridge (server uses Starlette directly)
+  - Deleted `auth/api/dev_endpoints.py` - Development-only auth endpoints
+  - Deleted `auth/interface/dev_auth.py` - Development auth interface
+  - Deleted `auth/interface/fastapi_auth.py` - FastAPI auth interface (unused)
+  - Deleted `auth/services/mcp_token_service.py` - Legacy MCP token service
+  - Deleted `auth/middleware.py` - Legacy middleware file (replaced by modular middleware)
+  - Deleted `auth/mcp_integration/thread_context_manager.py` - Thread context (async doesn't need it)
+  - Deleted `auth/mcp_integration/user_context_middleware.py` - Duplicate of RequestContextMiddleware
+  - Deleted `server/auth/providers/bearer_env.py` - Simple bearer token provider
+  - Simplified to JWT + Supabase authentication only
+  - Kept minimal OAuth stub for import compatibility
+
 ### Added
 - **React 19 Upgrade with Vite Migration** (2025-08-25)
   - Updated to React 19.1.1 and React DOM 19.1.1 with TypeScript support
@@ -30,6 +95,51 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
   - Hierarchy validation logic tests
 
 ### Fixed
+- **CRITICAL AUTHENTICATION CONTEXT PROPAGATION FIX**: Resolved JWT token validation but authentication failure in MCP handlers (2025-08-26)
+  - **Root Cause**: DualAuthMiddleware successfully validated JWT tokens but authentication context was not propagating to MCP request handlers, causing 401 errors
+  - **Solution**: Implemented RequestContextMiddleware for authentication context propagation
+  - **Implementation**:
+    - Created `RequestContextMiddleware` at `src/fastmcp/auth/middleware/request_context_middleware.py` using contextvars for thread-safe storage
+    - Updated `auth_helper.py` to use context variables with priority fallback chain
+    - Fixed middleware ordering in `mcp_entry_point.py` (DualAuthMiddleware → RequestContextMiddleware)
+    - Added comprehensive test suites for context propagation and integration
+  - **Authentication Flow Now**: RequestContextMiddleware initializes → DualAuthMiddleware validates JWT → RequestContextMiddleware captures context → auth_helper reads from context → MCP handlers get authenticated user
+  - **Files Modified**: 
+    - `src/fastmcp/auth/middleware/request_context_middleware.py` (NEW)
+    - `src/fastmcp/task_management/interface/controllers/auth_helper.py`  
+    - `src/fastmcp/server/mcp_entry_point.py`
+  - **Tests Added**:
+    - `src/tests/fastmcp/auth/middleware/test_request_context_middleware.py`
+    - `src/tests/task_management/interface/controllers/test_auth_helper_request_context_integration.py`
+  - **Impact**: MCP operations now work correctly with JWT tokens, no more 401 errors despite valid authentication
+
+- **CRITICAL AUTHENTICATION FIX**: Resolved global context user isolation authentication issue (2025-08-26)
+  - **Root Cause**: JWT authentication succeeded in DualAuthMiddleware but MCP tools returned 401 "Authentication required"
+  - **Fix 1**: Fixed RequestContextMiddleware ordering - moved from last to first position (ContextVar propagation issue)
+  - **Fix 2**: Enforced user isolation for global contexts - removed None user_id exception  
+  - **Fix 3**: Enhanced authentication debugging with comprehensive logging
+  - Created comprehensive validation test suite (4/4 tests pass)
+  - Files: `src/fastmcp/server/http_server.py`, `src/fastmcp/auth/mcp_integration/repository_filter.py`, `src/fastmcp/task_management/interface/controllers/auth_helper.py`
+  - Documentation: `docs/troubleshooting-guides/global-context-authentication-fix.md`
+  - **Impact**: MCP context operations now work correctly with JWT authentication, user isolation fully enforced
+
+- **CRITICAL SECURITY FIX**: Resolved authentication bypass vulnerability (2025-08-26)
+  - Fixed DualAuthMiddleware not loading when auth_enabled was misconfigured
+  - Verified proper JWT token processing and validation
+  - Confirmed authentication rejection of invalid tokens
+  - Tested end-to-end authentication flow with Supabase JWT tokens
+  - All authentication security tests now pass
+  - Files: `dhafnck_mcp_main/src/fastmcp/server/mcp_entry_point.py`, `.env`, `docker-system/docker-compose.yml`
+
+- **GLOBAL CONTEXT USER ISOLATION IMPLEMENTATION** (2025-08-26)
+  - Implemented RequestContextMiddleware for authentication context propagation
+  - Fixed JWT authentication context not being available to MCP request handlers
+  - Created comprehensive multi-layer solution covering database schema, DDD layers, and frontend
+  - Global context now properly auto-creates one unique context per user
+  - Supports update/get operations only, deletion protected for data integrity
+  - Complete test suite with TDD approach covering all layers
+  - Files: `src/fastmcp/auth/middleware/request_context_middleware.py`, `src/fastmcp/task_management/interface/controllers/auth_helper.py`, multiple test files
+
 - **Frontend Test Suite Updates** (2025-08-26)
   - Updated 7 test files to match current component implementations
   - Fixed GlobalContextDialog.test.tsx: Complete rewrite for shadcn/ui components

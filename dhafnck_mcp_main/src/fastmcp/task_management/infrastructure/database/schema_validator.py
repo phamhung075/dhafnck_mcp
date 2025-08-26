@@ -79,29 +79,63 @@ class SchemaValidator:
         warnings = []
         validated_models = []
         
-        async with self.engine.connect() as conn:
-            # Get database metadata
-            metadata = MetaData()
-            await conn.run_sync(metadata.reflect)
-            
-            for model_class in self.models:
-                try:
-                    result = await self._validate_model(model_class, metadata, conn)
-                    validated_models.append(model_class.__name__)
-                    
-                    if result['issues']:
-                        issues.extend(result['issues'])
-                    if result['warnings']:
-                        warnings.extend(result['warnings'])
+        # Handle both sync and async engines
+        try:
+            from sqlalchemy.ext.asyncio import AsyncEngine
+            is_async = isinstance(self.engine, AsyncEngine)
+        except ImportError:
+            is_async = False
+        
+        if is_async:
+            async with self.engine.connect() as conn:
+                # Get database metadata
+                metadata = MetaData()
+                await conn.run_sync(metadata.reflect)
+                
+                for model_class in self.models:
+                    try:
+                        result = await self._validate_model(model_class, metadata, conn)
+                        validated_models.append(model_class.__name__)
                         
-                except Exception as e:
-                    error_msg = f"Failed to validate model {model_class.__name__}: {str(e)}"
-                    logger.error(error_msg)
-                    issues.append({
-                        'model': model_class.__name__,
-                        'type': 'validation_error',
-                        'message': error_msg
-                    })
+                        if result['issues']:
+                            issues.extend(result['issues'])
+                        if result['warnings']:
+                            warnings.extend(result['warnings'])
+                            
+                    except Exception as e:
+                        error_msg = f"Failed to validate model {model_class.__name__}: {str(e)}"
+                        logger.error(error_msg)
+                        issues.append({
+                            'model': model_class.__name__,
+                            'type': 'validation_error',
+                            'message': error_msg
+                        })
+        else:
+            # For synchronous engines, use regular context manager
+            with self.engine.connect() as conn:
+                # Get database metadata
+                metadata = MetaData()
+                metadata.reflect(bind=conn)
+                
+                for model_class in self.models:
+                    try:
+                        # For sync connections, we need to handle validation differently
+                        result = self._validate_model_sync(model_class, metadata, conn)
+                        validated_models.append(model_class.__name__)
+                        
+                        if result['issues']:
+                            issues.extend(result['issues'])
+                        if result['warnings']:
+                            warnings.extend(result['warnings'])
+                            
+                    except Exception as e:
+                        error_msg = f"Failed to validate model {model_class.__name__}: {str(e)}"
+                        logger.error(error_msg)
+                        issues.append({
+                            'model': model_class.__name__,
+                            'type': 'validation_error',
+                            'message': error_msg
+                        })
         
         # Generate summary
         summary = {
@@ -326,6 +360,115 @@ class SchemaValidator:
                 break
         
         return normalized
+    
+    def _validate_model_sync(self, model_class: Any, metadata: MetaData, conn: Any) -> Dict[str, Any]:
+        """
+        Validate a single ORM model against its database table (synchronous version).
+        
+        Args:
+            model_class: The ORM model class to validate
+            metadata: Database metadata
+            conn: Database connection (synchronous)
+            
+        Returns:
+            Dictionary containing validation results for the model
+        """
+        issues = []
+        warnings = []
+        
+        try:
+            # Get mapper for the model
+            mapper = class_mapper(model_class)
+            table_name = mapper.local_table.name
+            
+            # Check if table exists in database
+            if table_name not in metadata.tables:
+                issues.append({
+                    'model': model_class.__name__,
+                    'table': table_name,
+                    'type': 'missing_table',
+                    'message': f"Table '{table_name}' does not exist in database"
+                })
+                return {'issues': issues, 'warnings': warnings}
+            
+            db_table = metadata.tables[table_name]
+            
+            # Validate columns
+            model_columns = {col.name: col for col in mapper.local_table.columns}
+            db_columns = {col.name: col for col in db_table.columns}
+            
+            # Check for missing columns in database
+            for col_name, model_col in model_columns.items():
+                if col_name not in db_columns:
+                    issues.append({
+                        'model': model_class.__name__,
+                        'table': table_name,
+                        'column': col_name,
+                        'type': 'missing_column',
+                        'message': f"Column '{col_name}' defined in model but missing in database"
+                    })
+                else:
+                    # Validate column types
+                    db_col = db_columns[col_name]
+                    type_issue = self._validate_column_type(model_col, db_col)
+                    if type_issue:
+                        warnings.append({
+                            'model': model_class.__name__,
+                            'table': table_name,
+                            'column': col_name,
+                            'type': 'type_mismatch',
+                            'message': type_issue
+                        })
+            
+            # Check for extra columns in database not in model
+            for col_name in db_columns:
+                if col_name not in model_columns:
+                    warnings.append({
+                        'model': model_class.__name__,
+                        'table': table_name,
+                        'column': col_name,
+                        'type': 'extra_column',
+                        'message': f"Column '{col_name}' exists in database but not in model"
+                    })
+            
+            # Validate foreign keys
+            model_fks = {fk.parent.name: fk for fk in mapper.local_table.foreign_keys}
+            
+            # Get database foreign keys using inspector (synchronous)
+            inspector = inspect(conn)
+            inspector_result = inspector.get_foreign_keys(table_name)
+            
+            db_fks = set()
+            for fk in inspector_result:
+                if 'constrained_columns' in fk:
+                    for col in fk['constrained_columns']:
+                        db_fks.add(col)
+            
+            # Check for missing foreign keys
+            for fk_col in model_fks:
+                if fk_col not in db_fks:
+                    warnings.append({
+                        'model': model_class.__name__,
+                        'table': table_name,
+                        'column': fk_col,
+                        'type': 'missing_foreign_key',
+                        'message': f"Foreign key constraint on '{fk_col}' defined in model but not in database"
+                    })
+            
+        except NoInspectionAvailable:
+            issues.append({
+                'model': model_class.__name__,
+                'type': 'inspection_error',
+                'message': f"Cannot inspect model {model_class.__name__}"
+            })
+        except Exception as e:
+            issues.append({
+                'model': model_class.__name__,
+                'type': 'validation_error',
+                'message': str(e)
+            })
+        
+        return {'issues': issues, 'warnings': warnings}
 
 
 async def validate_schema_on_startup(engine: AsyncEngine) -> bool:

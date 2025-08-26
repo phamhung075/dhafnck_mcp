@@ -1,45 +1,60 @@
-from mcp.server.auth.provider import (
-    AccessToken,
-    AuthorizationCode,
-    OAuthAuthorizationServerProvider,
-    RefreshToken,
-)
-from mcp.server.auth.settings import (
-    ClientRegistrationOptions,
-    RevocationOptions,
-)
-from pydantic import AnyHttpUrl
+"""
+OAuth provider compatibility layer
+This module provides minimal OAuth classes for import compatibility.
+Actual authentication uses JWT tokens.
+"""
 
+from typing import Optional, List, Any
+from dataclasses import dataclass
+from pydantic import BaseModel
 
-class OAuthProvider(
-    OAuthAuthorizationServerProvider[AuthorizationCode, RefreshToken, AccessToken]
-):
+# MCP OAuth types for compatibility
+class ClientRegistrationOptions(BaseModel):
+    """Client registration options for OAuth"""
+    enabled: bool = False
+    client_name: Optional[str] = None
+    client_uri: Optional[str] = None
+    redirect_uris: List[str] = []
+
+class RevocationOptions(BaseModel):
+    """Token revocation options for OAuth"""
+    enabled: bool = False
+    revocation_endpoint: Optional[str] = None
+
+class OAuthProvider:
+    """Minimal OAuth provider stub for compatibility"""
+    
     def __init__(
         self,
-        issuer_url: AnyHttpUrl | str,
-        service_documentation_url: AnyHttpUrl | str | None = None,
-        client_registration_options: ClientRegistrationOptions | None = None,
-        revocation_options: RevocationOptions | None = None,
-        required_scopes: list[str] | None = None,
+        issuer_url: str,
+        service_documentation_url: Optional[str] = None,
+        client_registration_options: Optional[ClientRegistrationOptions] = None,
+        revocation_options: Optional[RevocationOptions] = None,
+        required_scopes: Optional[List[str]] = None,
     ):
-        """
-        Initialize the OAuth provider.
-
-        Args:
-            issuer_url: The URL of the OAuth issuer.
-            service_documentation_url: The URL of the service documentation.
-            client_registration_options: The client registration options.
-            revocation_options: The revocation options.
-            required_scopes: Scopes that are required for all requests.
-        """
-        super().__init__()
-        if isinstance(issuer_url, str):
-            issuer_url = AnyHttpUrl(issuer_url)
-        if isinstance(service_documentation_url, str):
-            service_documentation_url = AnyHttpUrl(service_documentation_url)
-
         self.issuer_url = issuer_url
         self.service_documentation_url = service_documentation_url
         self.client_registration_options = client_registration_options
         self.revocation_options = revocation_options
-        self.required_scopes = required_scopes
+        self.required_scopes = required_scopes or []
+
+# Additional classes that may be imported
+@dataclass
+class AuthorizationCode:
+    """OAuth authorization code"""
+    code: str
+    state: Optional[str] = None
+
+@dataclass
+class RefreshToken:
+    """OAuth refresh token"""
+    token: str
+    expires_at: Optional[int] = None
+
+@dataclass
+class AccessToken:
+    """OAuth access token"""
+    token: str
+    token_type: str = "Bearer"
+    expires_in: Optional[int] = None
+    scope: Optional[str] = None

@@ -13,7 +13,6 @@ import logging
 import json
 
 # Import OAuth2 dependencies
-from fastmcp.auth.bridge import get_current_user_from_bridge
 from fastmcp.auth.interface.fastapi_auth import get_current_active_user
 from fastmcp.auth.domain.entities.user import User
 

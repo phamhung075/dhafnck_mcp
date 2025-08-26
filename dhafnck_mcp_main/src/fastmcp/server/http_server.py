@@ -33,12 +33,12 @@ from fastmcp.utilities.logging import get_logger
 # Initialize logger first to avoid NameError
 logger = get_logger(__name__)
 
-# Import user context middleware for JWT token processing
+# Import request context middleware for authentication context propagation
 try:
-    from fastmcp.auth.mcp_integration.user_context_middleware import UserContextMiddleware
+    from fastmcp.auth.middleware.request_context_middleware import RequestContextMiddleware
     USER_CONTEXT_MIDDLEWARE_AVAILABLE = True
 except ImportError:
-    logger.warning("UserContextMiddleware not available - user context will not be propagated")
+    logger.warning("RequestContextMiddleware not available - user context will not be propagated")
     USER_CONTEXT_MIDDLEWARE_AVAILABLE = False
 
 if TYPE_CHECKING:
@@ -173,10 +173,10 @@ def setup_auth_middleware_and_routes(
     
     # Add our custom user context middleware to extract user_id from JWT tokens
     if USER_CONTEXT_MIDDLEWARE_AVAILABLE:
-        middleware.append(Middleware(UserContextMiddleware))
-        logger.info("Added UserContextMiddleware for user_id extraction from JWT tokens")
+        middleware.append(Middleware(RequestContextMiddleware))
+        logger.info("Added RequestContextMiddleware for authentication context propagation")
     else:
-        logger.warning("UserContextMiddleware not available - MCP tools will not have user context")
+        logger.warning("RequestContextMiddleware not available - MCP tools will not have user context")
 
     required_scopes = getattr(auth, 'required_scopes', None) or []
 
@@ -217,8 +217,9 @@ def create_base_app(
     Returns:
         A Starlette application
     """
-    # Always add RequestContextMiddleware as the outermost middleware
-    middleware.append(Middleware(RequestContextMiddleware))
+    # CRITICAL FIX: Add RequestContextMiddleware as the FIRST middleware
+    # Middleware executes in reverse order, so insert at beginning to run first
+    middleware.insert(0, Middleware(RequestContextMiddleware))
     
     # Add error handling middleware
     # Temporarily disabled to fix circular import
@@ -401,17 +402,8 @@ def create_sse_app(
     except ImportError as e:
         logger.warning(f"Could not import user-scoped V2 routes: {e}")
     
-    # Add OAuth2 auth endpoints using bridge pattern
-    try:
-        from fastmcp.auth.bridge.fastapi_mount import integrate_auth_with_mcp_server
-        server_routes, server_middleware = integrate_auth_with_mcp_server(
-            server_routes,
-            server_middleware,
-            enable_bridge=True
-        )
-        logger.info("OAuth2 auth endpoints mounted via bridge pattern")
-    except ImportError as e:
-        logger.warning(f"Could not mount OAuth2 auth endpoints: {e}")
+    # OAuth2 auth endpoints removed - using JWT authentication only
+    # Auth is handled by middleware stack
 
     # Set up SSE transport
     sse = SseServerTransport(message_path)

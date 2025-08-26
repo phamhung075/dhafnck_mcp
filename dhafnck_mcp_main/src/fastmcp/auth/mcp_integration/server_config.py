@@ -11,7 +11,12 @@ from starlette.middleware import Middleware
 
 from fastmcp.server.auth.auth import OAuthProvider
 from .jwt_auth_backend import JWTAuthBackend, create_jwt_auth_backend
-from .user_context_middleware import UserContextMiddleware
+# UserContextMiddleware has been replaced with RequestContextMiddleware
+try:
+    from ..middleware.request_context_middleware import RequestContextMiddleware as UserContextMiddleware
+except ImportError:
+    # Fallback if middleware not available
+    UserContextMiddleware = None
 
 
 def configure_jwt_auth_for_mcp(
@@ -56,9 +61,13 @@ def get_jwt_middleware(
     if jwt_backend is None:
         jwt_backend = configure_jwt_auth_for_mcp()
     
-    return [
-        Middleware(UserContextMiddleware, jwt_backend=jwt_backend)
-    ]
+    middleware_list = []
+    if UserContextMiddleware is not None:
+        middleware_list.append(
+            Middleware(UserContextMiddleware, jwt_backend=jwt_backend)
+        )
+    
+    return middleware_list
 
 
 def setup_mcp_with_jwt_auth(

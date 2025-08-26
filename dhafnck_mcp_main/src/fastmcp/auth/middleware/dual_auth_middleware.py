@@ -1,12 +1,21 @@
 """
-Dual Authentication Middleware
+Unified Authentication Middleware
 
-This middleware handles two types of authentication:
-1. Frontend requests (API V2) - Uses Supabase cookies
-2. MCP requests - Uses generated tokens from frontend
+This middleware provides a single, unified authentication approach where
+any valid token (Supabase JWT, local JWT, or MCP token) authenticates 
+the user for ALL request types.
 
-The middleware automatically detects the request type and applies
-the appropriate authentication method.
+Key Features:
+- Single token authentication for both frontend and MCP requests
+- Automatic token extraction from multiple sources (headers, cookies, etc.)
+- Fallback chain: Supabase JWT → Local JWT → MCP Token
+- No need to pass multiple tokens or handle different auth flows
+
+The middleware extracts tokens from:
+1. Authorization header (Bearer or Token prefix)
+2. Custom MCP headers (x-mcp-token, mcp-token)
+3. Cookies (access_token for browser requests)
+4. Query parameters (for testing only, insecure)
 """
 
 import logging
@@ -26,8 +35,15 @@ logger = logging.getLogger(__name__)
 
 class DualAuthMiddleware(BaseHTTPMiddleware):
     """
-    Dual authentication middleware that handles both Supabase cookies
-    for frontend requests and generated tokens for MCP requests.
+    Unified authentication middleware that accepts a single token
+    for all request types (frontend, MCP, API).
+    
+    Any valid token authenticates the user universally:
+    - Supabase JWT tokens (from frontend login)
+    - Local JWT tokens (for development/testing)
+    - MCP generated tokens (for tool access)
+    
+    No need to pass different tokens for different endpoints.
     """
     
     def __init__(self, app: ASGIApp):
@@ -38,7 +54,9 @@ class DualAuthMiddleware(BaseHTTPMiddleware):
     
     async def dispatch(self, request: Request, call_next) -> Response:
         """
-        Process request and apply appropriate authentication.
+        Process request and apply unified authentication.
+        
+        A single token authenticates for all request types.
         
         Args:
             request: Incoming HTTP request
@@ -47,42 +65,42 @@ class DualAuthMiddleware(BaseHTTPMiddleware):
         Returns:
             HTTP response
         """
-        # Detect request type
+        # Detect request type (for logging and error formatting only)
         request_type = self._detect_request_type(request)
         
         # Add debug logging
-        logger.debug(f"🔍 DUAL AUTH: Request type detected: {request_type}")
-        logger.debug(f"🔍 DUAL AUTH: Path: {request.url.path}")
-        logger.debug(f"🔍 DUAL AUTH: Method: {request.method}")
+        logger.debug(f"🔍 UNIFIED AUTH: Processing {request.method} {request.url.path}")
+        logger.debug(f"🔍 UNIFIED AUTH: Request type: {request_type} (for error formatting)")
         
         # Skip authentication for certain paths
         if self._should_skip_auth(request):
-            logger.debug("🔍 DUAL AUTH: Skipping authentication for this path")
+            logger.debug("🔍 UNIFIED AUTH: Skipping authentication for this path")
             return await call_next(request)
         
         try:
-            # Apply appropriate authentication
+            # Apply unified authentication (single token for all requests)
             auth_result = await self._authenticate_request(request, request_type)
             
             if auth_result:
                 # Add authentication info to request state
                 request.state.user_id = auth_result.get('user_id')
-                request.state.auth_type = request_type
+                request.state.auth_type = auth_result.get('auth_method', 'unified')
                 request.state.auth_info = auth_result
                 
-                logger.debug(f"✅ DUAL AUTH: Authenticated user {auth_result.get('user_id')} via {request_type}")
+                logger.info(f"✅ UNIFIED AUTH: Authenticated user {auth_result.get('user_id')} with {auth_result.get('auth_method')} method")
             else:
-                logger.debug("🔍 DUAL AUTH: No authentication required or MVP mode")
+                # No authentication found - may be allowed for some endpoints
+                logger.debug("🔍 UNIFIED AUTH: No authentication token provided")
             
             # Continue to next middleware
             response = await call_next(request)
             return response
             
         except (TokenValidationError, RateLimitError) as e:
-            logger.warning(f"❌ DUAL AUTH: Authentication failed for {request_type}: {e}")
+            logger.warning(f"❌ UNIFIED AUTH: Authentication failed: {e}")
             return self._create_auth_error_response(request_type, str(e))
         except Exception as e:
-            logger.error(f"❌ DUAL AUTH: Unexpected error: {e}")
+            logger.error(f"❌ UNIFIED AUTH: Unexpected error: {e}")
             return self._create_auth_error_response(request_type, "Authentication system error")
     
     def _detect_request_type(self, request: Request) -> str:
@@ -150,7 +168,10 @@ class DualAuthMiddleware(BaseHTTPMiddleware):
     
     async def _authenticate_request(self, request: Request, request_type: str) -> Optional[Dict[str, Any]]:
         """
-        Authenticate request based on its type.
+        Authenticate request with a single unified token approach.
+        
+        Any valid token (Supabase JWT or MCP token) authenticates the user
+        for both frontend and MCP requests.
         
         Args:
             request: HTTP request
@@ -159,29 +180,70 @@ class DualAuthMiddleware(BaseHTTPMiddleware):
         Returns:
             Authentication result or None
         """
-        if request_type == 'frontend':
-            return await self._authenticate_frontend_request(request)
-        elif request_type == 'mcp':
-            return await self._authenticate_mcp_request(request)
-        else:
-            # Unknown request type - try both methods
-            logger.debug("🔍 DUAL AUTH: Unknown request type, trying both auth methods")
-            
-            # Try MCP first (Bearer token)
-            try:
-                result = await self._authenticate_mcp_request(request)
-                if result:
-                    return result
-            except:
-                pass
-            
-            # Try frontend (cookies)
-            try:
-                return await self._authenticate_frontend_request(request)
-            except:
-                pass
-            
+        # Extract token from request (Bearer header, cookies, or custom headers)
+        token = self._extract_token(request)
+        
+        if not token:
+            logger.debug("🔍 UNIFIED AUTH: No token found in request")
             return None
+        
+        # Try to validate token with any available method
+        # Priority: Supabase JWT > Local JWT > MCP Token
+        
+        # 1. Try Supabase validation (most common)
+        try:
+            logger.debug("🔍 UNIFIED AUTH: Trying Supabase validation")
+            result = await self.supabase_auth.verify_token(token)
+            if result.success and result.user:
+                user_id = result.user.id if hasattr(result.user, 'id') else result.user.get('id')
+                email = result.user.email if hasattr(result.user, 'email') else result.user.get('email')
+                
+                logger.info(f"✅ UNIFIED AUTH: Supabase token validated for user {user_id}")
+                return {
+                    'user_id': user_id,
+                    'email': email,
+                    'auth_method': 'supabase',
+                    'user_data': result.user
+                }
+        except Exception as e:
+            logger.debug(f"🔍 UNIFIED AUTH: Supabase validation failed: {e}")
+        
+        # 2. Try local JWT validation
+        if token.startswith('eyJ'):  # JWT tokens start with this
+            try:
+                logger.debug("🔍 UNIFIED AUTH: Trying local JWT validation")
+                auth_result = await self._validate_local_jwt(token)
+                if auth_result:
+                    logger.info(f"✅ UNIFIED AUTH: Local JWT validated for user {auth_result.get('user_id')}")
+                    return auth_result
+            except Exception as e:
+                logger.debug(f"🔍 UNIFIED AUTH: Local JWT validation failed: {e}")
+        
+        # 3. Try MCP token validation (for generated tokens)
+        try:
+            logger.debug("🔍 UNIFIED AUTH: Trying MCP token validation")
+            client_info = {
+                'user_agent': request.headers.get('user-agent', ''),
+                'path': request.url.path,
+                'method': request.method
+            }
+            
+            token_info = await self.token_validator.validate_token(token, client_info)
+            
+            logger.info(f"✅ UNIFIED AUTH: MCP token validated for user {token_info.user_id}")
+            return {
+                'user_id': token_info.user_id,
+                'auth_method': 'mcp_token',
+                'token_info': token_info,
+                'created_at': token_info.created_at.isoformat() if token_info.created_at else None,
+                'expires_at': token_info.expires_at.isoformat() if token_info.expires_at else None
+            }
+        except Exception as e:
+            logger.debug(f"🔍 UNIFIED AUTH: MCP token validation failed: {e}")
+        
+        # No valid authentication found
+        logger.warning("❌ UNIFIED AUTH: All token validation methods failed")
+        return None
     
     async def _authenticate_frontend_request(self, request: Request) -> Optional[Dict[str, Any]]:
         """
@@ -373,6 +435,123 @@ class DualAuthMiddleware(BaseHTTPMiddleware):
         except Exception as e:
             logger.debug(f"🔍 MCP AUTH: Token validation failed: {e}")
             raise
+    
+    def _extract_token(self, request: Request) -> Optional[str]:
+        """
+        Extract token from various sources in the request.
+        
+        Priority order:
+        1. Authorization header (Bearer or Token)
+        2. Custom MCP headers
+        3. Cookies (for browser requests)
+        4. Query parameters (only for testing, insecure)
+        
+        Args:
+            request: HTTP request
+            
+        Returns:
+            Token string or None
+        """
+        # 1. Check Authorization header
+        auth_header = request.headers.get('authorization', '')
+        if auth_header.startswith('Bearer '):
+            return auth_header[7:].strip()
+        elif auth_header.startswith('Token '):
+            return auth_header[6:].strip()
+        
+        # 2. Check custom headers
+        token = request.headers.get('x-mcp-token') or request.headers.get('mcp-token')
+        if token:
+            return token
+        
+        # 3. Check cookies (for browser requests)
+        access_token = request.cookies.get('access_token')
+        if access_token:
+            return access_token
+        
+        # 4. Check query parameters (insecure, only for testing)
+        if 'token' in request.query_params:
+            logger.warning("⚠️ UNIFIED AUTH: Using token from query parameter (insecure)")
+            return request.query_params['token']
+        
+        return None
+    
+    async def _validate_local_jwt(self, token: str) -> Optional[Dict[str, Any]]:
+        """
+        Validate a local JWT token using available secrets.
+        
+        Args:
+            token: JWT token string
+            
+        Returns:
+            Authentication result or None
+        """
+        import os
+        from ..domain.services.jwt_service import JWTService
+        
+        # Get both potential secrets
+        jwt_secret = os.getenv("JWT_SECRET_KEY", "default-secret-key-change-in-production")
+        supabase_jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
+        
+        # List of secrets to try
+        secrets_to_try = []
+        if supabase_jwt_secret:
+            secrets_to_try.append(("SUPABASE_JWT_SECRET", supabase_jwt_secret))
+        if jwt_secret and jwt_secret != "default-secret-key-change-in-production":
+            secrets_to_try.append(("JWT_SECRET_KEY", jwt_secret))
+        
+        # Try each secret until one works
+        for secret_name, secret_value in secrets_to_try:
+            try:
+                jwt_service = JWTService(secret_key=secret_value)
+                
+                # Special handling for Supabase tokens
+                if secret_name == "SUPABASE_JWT_SECRET":
+                    try:
+                        import jwt as pyjwt
+                        payload = pyjwt.decode(
+                            token,
+                            secret_value,
+                            algorithms=["HS256"],
+                            audience="authenticated",
+                            options={"verify_iss": False}
+                        )
+                        if payload:
+                            user_id = payload.get('user_id') or payload.get('sub')
+                            return {
+                                'user_id': user_id,
+                                'auth_method': 'local_jwt',
+                                'jwt_secret_used': secret_name,
+                                'email': payload.get('email'),
+                                'roles': payload.get('roles', [])
+                            }
+                    except:
+                        pass
+                
+                # Try standard validation
+                for token_type in ["api_token", "access"]:
+                    try:
+                        payload = jwt_service.verify_token(token, expected_type=token_type)
+                        if payload:
+                            user_id = payload.get('user_id') or payload.get('sub')
+                            return {
+                                'user_id': user_id,
+                                'auth_method': 'local_jwt',
+                                'jwt_secret_used': secret_name,
+                                'token_id': payload.get('token_id') or payload.get('jti'),
+                                'scopes': payload.get('scopes', []),
+                                'type': payload.get('type', 'api_token'),
+                                'email': payload.get('email'),
+                                'roles': payload.get('roles', [])
+                            }
+                    except:
+                        continue
+                        
+            except Exception as e:
+                logger.debug(f"JWT validation with {secret_name} failed: {e}")
+                continue
+        
+        return None
     
     def _create_auth_error_response(self, request_type: str, error_message: str) -> Response:
         """

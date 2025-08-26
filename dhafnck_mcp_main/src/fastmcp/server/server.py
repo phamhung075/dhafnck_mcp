@@ -48,7 +48,7 @@ from ..prompts.prompt import FunctionPrompt
 from ..resources import Resource, ResourceManager
 from ..resources.template import ResourceTemplate
 from .auth.auth import OAuthProvider
-from .auth.providers.bearer_env import EnvBearerAuthProvider
+# Bearer auth provider removed - using DualAuthMiddleware instead
 from .auth.mcp_auth_config import get_default_auth_provider
 from .http_server import (
     StarletteWithLifespan,
@@ -241,11 +241,9 @@ class FastMCP(Generic[LifespanResultT]):
         )
 
         if auth is None:
-            # Try to get default auth provider (JWT if available, env Bearer, or None)
+            # Try to get default auth provider (JWT if available)
             auth = get_default_auth_provider()
-            if auth is None and fastmcp.settings.default_auth_provider == "bearer_env":
-                # Fallback to env Bearer if configured in settings
-                auth = EnvBearerAuthProvider()
+            # Bearer auth removed - DualAuthMiddleware handles authentication
         self.auth = auth
 
         if tools:

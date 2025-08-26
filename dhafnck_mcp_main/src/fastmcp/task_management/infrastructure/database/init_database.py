@@ -151,30 +151,9 @@ def migrate_from_sqlite_to_postgresql(sqlite_path: str):
             )
             session.merge(subtask)
         
-        # Migrate hierarchical context
-        logger.info("Migrating hierarchical context...")
-        cursor = sqlite_conn.execute("SELECT * FROM hierarchical_context")
-        for row in cursor:
-            context = HierarchicalContext(
-                id=row['id'],
-                level=row['level'],
-                context_id=row['context_id'],
-                parent_level=row['parent_level'],
-                parent_context_id=row['parent_context_id'],
-                patterns=row['patterns'] or {},
-                architectures=row['architectures'] or {},
-                constraints=row['constraints'] or {},
-                decisions=row['decisions'] or {},
-                insights=row['insights'] or {},
-                relationships=row['relationships'] or {},
-                custom_data=row['custom_data'] or {},
-                last_accessed_at=row['last_accessed_at'],
-                access_count=row['access_count'] or 0,
-                version=row['version'] or 1,
-                created_at=row['created_at'],
-                updated_at=row['updated_at']
-            )
-            session.merge(context)
+        # Note: HierarchicalContext has been removed and replaced with granular context models
+        # (GlobalContext, ProjectContext, BranchContext, TaskContext)
+        # If you need to migrate old hierarchical_context data, you'll need to map it to the new models
         
         # Commit all changes
         session.commit()
