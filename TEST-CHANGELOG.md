@@ -1,5 +1,13 @@
 # Test Changelog
 
+## Test Warning Fixes - 2025-08-26
+
+### Fixed SQLAlchemy 2.0 Deprecation Warning in Test File
+- **File**: `src/tests/task_management/infrastructure/database/migrations/add_user_id_to_project_contexts_test.py`
+- **Issue**: Test was using deprecated `sqlalchemy.ext.declarative.declarative_base` import
+- **Fix**: Changed to `sqlalchemy.orm.declarative_base` on line 284
+- **Impact**: Test file now SQLAlchemy 2.0 compatible without deprecation warnings
+
 ## Test Fixes - 2025-08-26 (Comprehensive Test Error Resolution - 28 Failing Tests Fixed)
 
 ### Fixed Unified Context Controller Test Failures (30 tests fixed)

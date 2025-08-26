@@ -7,8 +7,7 @@ to support automatic progress aggregation from subtasks.
 """
 
 from sqlalchemy import Column, Integer
-from sqlalchemy.orm import Session
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import Session, declarative_base
 
 Base = declarative_base()
 

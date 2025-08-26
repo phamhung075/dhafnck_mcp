@@ -23,6 +23,23 @@ capabilities:
   - edit
   - mcp
   - command
+  debugging_tools:
+    browsermcp:
+      description: Browser automation for component testing and debugging
+      capabilities:
+      - Live component testing in browser environment
+      - Accessibility testing for shadcn/ui components
+      - Interactive debugging of React components
+      - Visual regression testing for UI consistency
+      - Console monitoring for React errors and warnings
+      - Component state inspection through interactions
+      usage_examples:
+      - "Test shadcn components: mcp__browsermcp__browser_navigate(url='http://localhost:3800')"
+      - "Verify accessibility: mcp__browsermcp__browser_snapshot()"
+      - "Test interactions: mcp__browsermcp__browser_click(element='Button', ref='button-1')"
+      - "Debug component errors: mcp__browsermcp__browser_get_console_logs()"
+      - "Test form inputs: mcp__browsermcp__browser_type(element='Input', ref='input-1', text='test')"
+      - "Capture component state: mcp__browsermcp__browser_screenshot()"
 compatibility:
   backward_compatible: true
   mcp_version: 1.0.0

@@ -19,6 +19,7 @@ from fastmcp.task_management.infrastructure.database.database_adapter import Dat
 
 class DatabaseIsolation:
     """Manages database isolation for tests"""
+    __test__ = False  # Tell pytest not to collect this as a test class
     
     def __init__(self):
         self.databases = {}
@@ -51,6 +52,7 @@ class DatabaseIsolation:
 
 class DbTestAdapter:
     """Adapter for test database operations"""
+    __test__ = False  # Tell pytest not to collect this as a test class
     
     def __init__(self, db_path: str):
         self.db_path = db_path
@@ -218,6 +220,7 @@ class FixturesBase:
 
 class FixtureManager:
     """Manages test fixtures"""
+    __test__ = False  # Tell pytest not to collect this as a test class
     
     def __init__(self):
         self.fixtures = {}
@@ -416,6 +419,7 @@ def list_fixtures(fixture_type: Optional[str] = None) -> List[Any]:
 # Mock Repository Classes
 class MockRepository:
     """Base mock repository class"""
+    __test__ = False  # Tell pytest not to collect this as a test class
     
     def __init__(self, repository_type: str):
         self.repository_type = repository_type
@@ -630,6 +634,7 @@ def configure_mock_responses(repo: MockRepository, method: str, response=None, s
 # Test Data Factory Classes
 class DataFactory:
     """Factory for generating test data"""
+    __test__ = False  # Tell pytest not to collect this as a test class
     
     def __init__(self, seed: Optional[int] = None):
         self.seed = seed
@@ -728,6 +733,7 @@ class DataFactory:
 
 class DataGenerator:
     """Advanced data generator with patterns"""
+    __test__ = False  # Tell pytest not to collect this as a test class
     
     def __init__(self):
         self._counter = 0

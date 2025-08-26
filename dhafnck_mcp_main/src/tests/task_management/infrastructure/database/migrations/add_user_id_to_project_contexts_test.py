@@ -281,7 +281,7 @@ class TestAddUserIdToProjectContextsMigration:
         assert hasattr(migration_module, 'Base')
         
         # Base should be properly configured
-        from sqlalchemy.ext.declarative import declarative_base
+        from sqlalchemy.orm import declarative_base
         assert isinstance(migration_module.Base, type(declarative_base()))
     
     def test_migration_sql_formatting(self):

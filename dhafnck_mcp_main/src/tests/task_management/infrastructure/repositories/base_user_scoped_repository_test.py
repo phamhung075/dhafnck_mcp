@@ -345,8 +345,8 @@ class TestBaseUserScopedRepository:
 class TestInheritance:
     """Test repository inheritance behavior"""
     
-    class TestRepository(BaseUserScopedRepository):
-        """Test repository that inherits from BaseUserScopedRepository"""
+    class MockRepository(BaseUserScopedRepository):
+        """Mock repository that inherits from BaseUserScopedRepository"""
         pass
     
     def test_inherited_repository_with_user(self):
@@ -354,7 +354,7 @@ class TestInheritance:
         mock_session = Mock(spec=Session)
         user_id = "user-789"
         
-        repo = self.TestRepository(mock_session, user_id)
+        repo = self.MockRepository(mock_session, user_id)
         
         assert isinstance(repo, BaseUserScopedRepository)
         assert repo.user_id == user_id
@@ -363,22 +363,22 @@ class TestInheritance:
     def test_inherited_with_user_method(self):
         """Test that with_user returns correct subclass instance"""
         mock_session = Mock(spec=Session)
-        repo = self.TestRepository(mock_session, "user-111")
+        repo = self.MockRepository(mock_session, "user-111")
         
         new_repo = repo.with_user("user-222")
         
-        assert isinstance(new_repo, self.TestRepository)
+        assert isinstance(new_repo, self.MockRepository)
         assert new_repo.user_id == "user-222"
     
     def test_inherited_create_system_context(self):
         """Test that create_system_context returns correct subclass instance"""
         mock_session = Mock(spec=Session)
-        repo = self.TestRepository(mock_session, "user-333")
+        repo = self.MockRepository(mock_session, "user-333")
         
         with patch('fastmcp.task_management.infrastructure.repositories.base_user_scoped_repository.logger'):
             system_repo = repo.create_system_context()
         
-        assert isinstance(system_repo, self.TestRepository)
+        assert isinstance(system_repo, self.MockRepository)
         assert system_repo.is_system_mode() is True
 
 

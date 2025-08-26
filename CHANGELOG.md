@@ -6,7 +6,50 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Added
+- **UI Designer Agents - Browser Debugging Tools** (2025-08-26)
+  - Enhanced UI Designer Agent (`dhafnck_mcp_main/agent-library/agents/ui_designer_agent/config.yaml`)
+    - Added browsermcp debugging tools configuration for frontend testing
+    - Capabilities: URL navigation, accessibility snapshots, user interactions, screenshot capture
+    - Console log monitoring for JavaScript error detection
+    - Responsive design testing across viewports
+  - Enhanced Shadcn/UI Expert Agent (`dhafnck_mcp_main/agent-library/agents/ui_designer_expert_shadcn_agent/config.yaml`)  
+    - Added specialized browsermcp configuration for shadcn/ui component testing
+    - Component-specific testing: state inspection, React error monitoring
+    - Interactive debugging with form inputs and button interactions
+    - Visual regression testing for UI consistency
+  - **Impact**: UI agents can now perform live browser debugging and testing of frontend components
+
 ### Fixed
+- **pytest Collection Errors Fixed** (2025-08-26)
+  - Removed duplicate test file `src/tests/unit/task_management/application/test_unified_context_service_comprehensive.py` that was conflicting with existing file in `src/tests/task_management/application/services/`
+  - Removed incompatible test files created with wrong entity imports:
+    - `src/tests/unit/task_management/infrastructure/test_context_repositories_all_levels.py`
+    - `src/tests/unit/task_management/domain/test_context_all_levels_comprehensive.py`
+  - **Impact**: Clean test collection with 4467 tests collected successfully, no import errors
+- **SQLAlchemy 2.0 Deprecation Warnings Fixed** (2025-08-26)
+  - Fixed deprecated `sqlalchemy.ext.declarative.declarative_base` imports in 3 files:
+    - `src/tests/task_management/infrastructure/database/migrations/add_user_id_to_project_contexts_test.py`
+    - `src/fastmcp/server/routes/token_router.py`
+    - `src/fastmcp/task_management/infrastructure/database/migrations/add_task_progress_field.py`
+  - Changed all imports to use `sqlalchemy.orm.declarative_base` (SQLAlchemy 2.0 compatible)
+  - **Impact**: Eliminates deprecation warnings, ensures SQLAlchemy 2.0 compatibility
+- **Test Suite Warning Fixes** (2025-08-26)
+  - **SQLAlchemy 2.0 Deprecation Warning Fixed**:
+    - File: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/database/migrations/add_user_id_to_project_contexts.py`
+    - Changed import from `sqlalchemy.ext.declarative.declarative_base` to `sqlalchemy.orm.declarative_base`
+    - Resolved deprecation warning for SQLAlchemy 2.0 compatibility
+  - **pytest Collection Warnings Fixed**:
+    - **base_user_scoped_repository_test.py**: Renamed inner class `TestRepository` to `MockRepository` to prevent pytest collection
+    - **test_helpers.py**: Added `__test__ = False` attribute to helper classes with `__init__` constructors:
+      - `DbTestAdapter`: Database test adapter utility class
+      - `DataFactory`: Test data generation factory
+      - `DataGenerator`: Advanced data generator with patterns
+      - `DatabaseIsolation`: Database isolation manager for tests
+      - `FixtureManager`: Test fixture management class
+      - `MockRepository`: Base mock repository class
+    - Resolution: All classes with constructors in test files now explicitly excluded from pytest collection
+  - **Impact**: Clean test execution without warnings, improved test suite maintainability
 - **Test Suite Cleanup - Obsolete Test Failures Resolved** (2025-08-26)
   - **TaskApplicationFacade Tests**: Confirmed all 8 failing tests were from a deleted/obsolete test file (`test_task_application_facade.py`)
     - Tests: `test_create_task_success`, `test_create_task_invalid_data`, `test_list_tasks_empty`, `test_list_tasks_with_data`

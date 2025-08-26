@@ -21,6 +21,21 @@ capabilities:
   - edit
   - mcp
   - command
+  debugging_tools:
+    browsermcp:
+      description: Browser automation for frontend debugging and testing
+      capabilities:
+      - Navigate to URLs for live UI testing
+      - Capture accessibility snapshots for element inspection
+      - Perform user interactions (click, type, hover)
+      - Take screenshots for visual debugging
+      - Monitor console logs for JavaScript errors
+      - Test responsive design across viewports
+      usage_examples:
+      - "Navigate to frontend: mcp__browsermcp__browser_navigate(url='http://localhost:3800')"
+      - "Inspect UI elements: mcp__browsermcp__browser_snapshot()"
+      - "Debug console errors: mcp__browsermcp__browser_get_console_logs()"
+      - "Visual regression testing: mcp__browsermcp__browser_screenshot()"
 compatibility:
   backward_compatible: true
   mcp_version: 1.0.0

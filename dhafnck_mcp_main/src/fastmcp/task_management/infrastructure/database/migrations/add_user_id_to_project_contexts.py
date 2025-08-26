@@ -7,8 +7,7 @@ to support user isolation and multi-tenancy.
 """
 
 from sqlalchemy import Column, String, text
-from sqlalchemy.orm import Session
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import Session, declarative_base
 
 Base = declarative_base()
 
