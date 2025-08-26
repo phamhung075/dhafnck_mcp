@@ -237,6 +237,39 @@ def get_authentication_context() -> Dict[str, Any]:
         }
 
 
+# Backward compatibility functions for old user_context_middleware
+def get_current_user_context():
+    """
+    Backward compatibility function for get_current_user_context.
+    Returns a simple object with user_id and email for compatibility.
+    """
+    try:
+        user_id = get_current_user_id()
+        email = get_current_user_email()
+        if user_id:
+            # Return a simple object that matches the old MCPUserContext interface
+            class BackwardCompatUserContext:
+                def __init__(self, user_id, email):
+                    self.user_id = user_id
+                    self.email = email
+                    self.roles = []  # Default empty roles
+            return BackwardCompatUserContext(user_id, email)
+        return None
+    except Exception as e:
+        logger.error(f"Error in get_current_user_context: {e}")
+        return None
+
+
+def get_current_user_id_alias():
+    """Alias for get_current_user_id for compatibility"""
+    return get_current_user_id()
+
+
+# Backward compatibility context variable
+# This simulates the old current_user_context ContextVar
+current_user_context = _current_user_id
+
+
 # Factory function for easy middleware creation
 def create_request_context_middleware():
     """

@@ -35,7 +35,7 @@ class BaseUserScopedRepository:
         self._is_system_mode = user_id is None
         
         if self._is_system_mode:
-            logger.warning("Repository initialized in system mode - no user filtering applied")
+            logger.info("Repository initialized in system mode during startup - no user filtering applied (expected behavior)")
     
     def with_user(self, user_id: str) -> 'BaseUserScopedRepository':
         """

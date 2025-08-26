@@ -37,12 +37,24 @@ class VisionEnrichmentService:
         """Initialize the vision enrichment service.
         
         Args:
-            task_repository: Repository for task data access
-            vision_repository: Repository for vision data access
+            task_repository: Repository for task data access (can be None for graceful degradation)
+            vision_repository: Repository for vision data access (can be None for graceful degradation)
             config_path: Optional path to vision configuration file
+        
+        Note:
+            If repositories are None, the service will operate in degraded mode:
+            - Vision hierarchy will be loaded only from configuration files
+            - Database operations will be skipped with warnings logged
+            - Task alignment calculations that require database access will return None
         """
         self.task_repository = task_repository
         self.vision_repository = vision_repository
+        
+        # Log repository availability status for debugging
+        if self.vision_repository is None:
+            logger.info("Vision enrichment service initialized without vision repository - operating in degraded mode")
+        if self.task_repository is None:
+            logger.info("Vision enrichment service initialized without task repository - some features unavailable")
         
         # Load configuration
         self.config = get_vision_config()
@@ -67,26 +79,36 @@ class VisionEnrichmentService:
     def _load_vision_hierarchy(self) -> None:
         """Load vision hierarchy from configuration or database."""
         try:
-            # Try loading from database first
-            objectives = self.vision_repository.list_objectives()
-            if objectives:
-                logger.info(f"Loaded {len(objectives)} objectives from database")
-                self._build_cache(objectives)
-                return
+            # Check if vision repository is available
+            if self.vision_repository is not None:
+                # Try loading from database first
+                objectives = self.vision_repository.list_objectives()
+                if objectives:
+                    logger.info(f"Loaded {len(objectives)} objectives from database")
+                    self._build_cache(objectives)
+                    return
+            else:
+                logger.info("Vision repository not available - skipping database load")
             
             # Fall back to configuration file
             if self.config_path.exists():
                 with open(self.config_path, 'r') as f:
                     config = json.load(f)
                     objectives = self._parse_config(config)
-                    # Store in database for future use
-                    for obj in objectives:
-                        self.vision_repository.create_objective(obj)
+                    
+                    # Store in database for future use (only if repository is available)
+                    if self.vision_repository is not None:
+                        for obj in objectives:
+                            self.vision_repository.create_objective(obj)
+                    
                     self._build_cache(objectives)
                     logger.info(f"Loaded {len(objectives)} objectives from config")
+            else:
+                logger.info(f"Vision hierarchy config file not found at {self.config_path}")
+                
         except Exception as e:
             logger.error(f"Error loading vision hierarchy: {e}")
-            # Initialize with empty cache
+            # Initialize with empty cache for graceful degradation
             self._vision_cache = {}
             self._hierarchy_cache = {}
     
@@ -509,6 +531,10 @@ class VisionEnrichmentService:
         task_id: UUID
     ) -> Optional[Dict[str, Any]]:
         """Calculate and return vision alignment for a specific task."""
+        if self.task_repository is None:
+            logger.warning("Task repository not available - cannot calculate task alignment")
+            return None
+            
         task = self.task_repository.get_by_id(task_id)
         if not task:
             return None
@@ -558,8 +584,12 @@ class VisionEnrichmentService:
             metadata=objective.metadata
         )
         
-        # Update in repository and cache
-        self.vision_repository.update_objective(updated_objective)
+        # Update in repository and cache (only if repository is available)
+        if self.vision_repository is not None:
+            self.vision_repository.update_objective(updated_objective)
+        else:
+            logger.warning("Vision repository not available - metrics updated only in cache")
+            
         self._vision_cache[objective_id] = updated_objective
         
         return updated_objective

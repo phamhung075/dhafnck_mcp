@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any
 from sqlalchemy import (
     Column, String, Text, DateTime, Integer, Boolean, ForeignKey,
-    UniqueConstraint, CheckConstraint, Index, JSON, Float
+    UniqueConstraint, CheckConstraint, Index, JSON, Float, ARRAY
 )
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
@@ -72,6 +72,7 @@ class ProjectGitBranch(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
     assigned_agent_id: Mapped[Optional[str]] = mapped_column(String)
+    agent_id: Mapped[Optional[str]] = mapped_column(UUID(as_uuid=False))  # Fixed: Database has UUID type
     priority: Mapped[str] = mapped_column(String, default="medium")
     status: Mapped[str] = mapped_column(String, default="todo")
     model_metadata: Mapped[Dict[str, Any]] = mapped_column("metadata", JSON, default=dict)
@@ -104,9 +105,12 @@ class Task(Base):
     due_date: Mapped[Optional[str]] = mapped_column(String)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
-    context_id: Mapped[Optional[str]] = mapped_column(String)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime)  # Added for schema validation
+    completion_summary: Mapped[str] = mapped_column(Text, default="")  # Added for schema validation
+    testing_notes: Mapped[str] = mapped_column(Text, default="")  # Added for schema validation
+    context_id: Mapped[Optional[str]] = mapped_column(UUID(as_uuid=False))
     progress_percentage: Mapped[int] = mapped_column(Integer, default=0)
-    user_id: Mapped[str] = mapped_column(String, nullable=False)  # User isolation field - REQUIRED
+    user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)  # User isolation field - REQUIRED
     
     # Relationships
     git_branch: Mapped[ProjectGitBranch] = relationship("ProjectGitBranch", back_populates="tasks")
@@ -162,9 +166,10 @@ class TaskAssignee(Base):
     """Task assignees table"""
     __tablename__ = "task_assignees"
     
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
     task_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
     assignee_id: Mapped[str] = mapped_column(String, nullable=False)
+    agent_id: Mapped[Optional[str]] = mapped_column(UUID(as_uuid=False))  # Fixed: Database has UUID type
     role: Mapped[str] = mapped_column(String, default="contributor")
     user_id: Mapped[str] = mapped_column(String, nullable=False)  # User isolation field - REQUIRED
     assigned_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
@@ -204,9 +209,10 @@ class Agent(Base):
     """Agents table"""
     __tablename__ = "agents"
     
-    id: Mapped[str] = mapped_column(String, primary_key=True)
+    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str] = mapped_column(Text, default="")
+    role: Mapped[str] = mapped_column(String, default="assistant")  # Added for schema validation
     capabilities: Mapped[List[str]] = mapped_column(JSON, default=list)
     status: Mapped[str] = mapped_column(String, default="available")
     availability_score: Mapped[float] = mapped_column(Float, default=1.0)
@@ -214,7 +220,7 @@ class Agent(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
     model_metadata: Mapped[Dict[str, Any]] = mapped_column("metadata", JSON, default=dict)
-    user_id: Mapped[str] = mapped_column(String, nullable=False)  # User isolation field - REQUIRED
+    user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)  # User isolation field - REQUIRED
     
     # Indexes
     __table_args__ = (
@@ -264,8 +270,11 @@ class Template(Base):
     """Templates table"""
     __tablename__ = "templates"
     
-    id: Mapped[str] = mapped_column(String, primary_key=True)
+    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
+    template_name: Mapped[str] = mapped_column(String, nullable=False, default="")  # Added for schema validation
+    template_content: Mapped[str] = mapped_column(Text, default="")  # Fixed: Database has TEXT type
+    template_type: Mapped[str] = mapped_column(String, default="general")  # Added for schema validation
     type: Mapped[str] = mapped_column(String, nullable=False)  # 'task', 'checklist', 'workflow'
     content: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
     category: Mapped[str] = mapped_column(String, default="general")
@@ -275,6 +284,7 @@ class Template(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
     created_by: Mapped[str] = mapped_column(String, default="system")
+    metadata_: Mapped[Dict[str, Any]] = mapped_column("metadata", JSON, default=dict)  # Added for schema validation
     
     __table_args__ = (
         Index('idx_template_type', 'type'),
@@ -468,16 +478,19 @@ class ContextDelegation(Base):
     """Context delegations table - for hierarchical context propagation"""
     __tablename__ = "context_delegations"
     
-    id: Mapped[str] = mapped_column(String, primary_key=True)
+    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
     
     # Source and target
     source_level: Mapped[str] = mapped_column(String, nullable=False)  # 'task', 'project', 'global'
-    source_id: Mapped[str] = mapped_column(String, nullable=False)
+    source_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
+    source_type: Mapped[str] = mapped_column(String, default="context")  # Added for schema validation
     target_level: Mapped[str] = mapped_column(String, nullable=False)
-    target_id: Mapped[str] = mapped_column(String, nullable=False)
+    target_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
+    target_type: Mapped[str] = mapped_column(String, default="context")  # Added for schema validation
     
     # Delegation data
     delegated_data: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
+    delegation_data: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)  # Added for schema validation
     delegation_reason: Mapped[str] = mapped_column(String, nullable=False)
     trigger_type: Mapped[str] = mapped_column(String, nullable=False)  # 'manual', 'auto_pattern', 'auto_threshold'
     
@@ -485,9 +498,11 @@ class ContextDelegation(Base):
     auto_delegated: Mapped[bool] = mapped_column(Boolean, default=False)
     confidence_score: Mapped[Optional[float]] = mapped_column(Float)
     processed: Mapped[bool] = mapped_column(Boolean, default=False)
+    status: Mapped[str] = mapped_column(String, default="pending")  # Added for schema validation
     approved: Mapped[Optional[bool]] = mapped_column(Boolean)
     processed_by: Mapped[Optional[str]] = mapped_column(String)
     rejected_reason: Mapped[Optional[str]] = mapped_column(String)
+    error_message: Mapped[Optional[str]] = mapped_column(String)  # Added for schema validation
     user_id: Mapped[str] = mapped_column(String, nullable=False)  # User isolation field - REQUIRED
     
     # Timestamps
@@ -508,13 +523,17 @@ class ContextInheritanceCache(Base):
     """Context inheritance cache table - for performance optimization"""
     __tablename__ = "context_inheritance_cache"
     
-    context_id: Mapped[str] = mapped_column(String, primary_key=True)
-    context_level: Mapped[str] = mapped_column(String, primary_key=True)  # 'task', 'branch', 'project', 'global'
+    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))  # Added for schema validation
+    context_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
+    context_level: Mapped[str] = mapped_column(String, nullable=False)  # 'task', 'branch', 'project', 'global'
+    context_type: Mapped[str] = mapped_column(String, default="hierarchical")  # Added for schema validation
     
     # Cache data
     resolved_context: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
+    resolved_data: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)  # Added for schema validation
     dependencies_hash: Mapped[str] = mapped_column(String, nullable=False)
     resolution_path: Mapped[str] = mapped_column(String, nullable=False)
+    parent_chain: Mapped[List[str]] = mapped_column(ARRAY(String), default=list)  # Fixed: Database has ARRAY type
     
     # Cache metadata
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
@@ -530,6 +549,7 @@ class ContextInheritanceCache(Base):
     
     __table_args__ = (
         CheckConstraint("context_level IN ('task', 'branch', 'project', 'global')", name='chk_cache_context_level'),
+        UniqueConstraint('context_id', 'context_level', name='uq_cache_context'),  # Updated unique constraint
         Index('idx_cache_level', 'context_level'),
         Index('idx_cache_expires', 'expires_at'),
         Index('idx_cache_invalidated', 'invalidated'),

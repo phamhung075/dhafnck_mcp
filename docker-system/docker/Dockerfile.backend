@@ -78,7 +78,7 @@ RUN groupadd -r dhafnck && \
 WORKDIR /app
 
 # Create directories with correct ownership
-RUN mkdir -p /data /data/logs /app/.cache && \
+RUN mkdir -p /data /data/logs /data/resources /app/.cache && \
     chown -R dhafnck:dhafnck /app /data
 
 # Copy optimized virtual environment and application

@@ -10,7 +10,7 @@ from typing import Optional
 from contextvars import ContextVar
 
 from .jwt_auth_backend import JWTAuthBackend, MCPUserContext, create_jwt_auth_backend
-from .user_context_middleware import current_user_context
+from ..middleware.request_context_middleware import current_user_context
 
 logger = logging.getLogger(__name__)
 

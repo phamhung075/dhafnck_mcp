@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 # Import user context utilities - REQUIRED for authentication
 try:
-    from fastmcp.auth.mcp_integration.user_context_middleware import get_current_user_id
+    from fastmcp.auth.middleware.request_context_middleware import get_current_user_id
     from fastmcp.auth.mcp_integration.thread_context_manager import ContextPropagationMixin
 except ImportError:
     # Use auth_helper which is already imported

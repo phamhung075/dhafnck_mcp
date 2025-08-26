@@ -153,7 +153,7 @@ class TaskApplicationFacade:
             # Try to get user_id from authentication context (same approach as project facade)
             derived_user_id = None
             try:
-                from fastmcp.auth.mcp_integration.user_context_middleware import get_current_user_id
+                from fastmcp.auth.middleware.request_context_middleware import get_current_user_id
                 derived_user_id = get_current_user_id()
                 logger.info(f"🎯 TaskApplicationFacade: get_current_user_id() returned: {derived_user_id}")
             except ImportError:

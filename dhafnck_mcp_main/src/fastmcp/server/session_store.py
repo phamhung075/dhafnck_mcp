@@ -133,22 +133,39 @@ class RedisEventStore(EventStore):
             self._redis = redis.from_url(
                 self.redis_url,
                 decode_responses=False,  # We handle encoding ourselves
-                socket_connect_timeout=5,
-                socket_timeout=5,
-                retry_on_timeout=True,
-                health_check_interval=30
+                socket_connect_timeout=2,  # Reduced timeout for faster fallback
+                socket_timeout=3,  # Reduced timeout
+                retry_on_timeout=False,  # Disable retries for faster fallback
+                health_check_interval=30,
+                retry_on_error=[],  # Don't retry on specific errors
+                connection_pool=redis.ConnectionPool.from_url(
+                    self.redis_url,
+                    max_connections=10,
+                    socket_connect_timeout=2,
+                    socket_timeout=3
+                )
             )
             
-            # Test connection
-            await self._redis.ping()
+            # Test connection with short timeout
+            await asyncio.wait_for(self._redis.ping(), timeout=2.0)
             self._connection_healthy = True
             self._using_fallback = False
             
             logger.info("Successfully connected to Redis for session storage")
             return True
             
+        except (ConnectionError, asyncio.TimeoutError, OSError) as e:
+            logger.warning(f"Redis not available ({type(e).__name__}): {e}")
+            self._connection_healthy = False
+            
+            if self.fallback_to_memory:
+                logger.info("Falling back to memory-based session storage")
+                self._using_fallback = True
+                return True
+            
+            return False
         except Exception as e:
-            logger.error(f"Failed to connect to Redis: {e}")
+            logger.error(f"Unexpected Redis connection error: {e}")
             self._connection_healthy = False
             
             if self.fallback_to_memory:
@@ -174,6 +191,56 @@ class RedisEventStore(EventStore):
         if stream_id:
             return f"{self.key_prefix}{session_id}:stream:{stream_id}"
         return f"{self.key_prefix}{session_id}"
+    
+    def _serialize_message(self, message: Any) -> Dict[str, Any]:
+        """Safely serialize message objects to prevent JSON serialization errors"""
+        try:
+            # Handle FastAPI JSONResponse objects
+            if hasattr(message, 'body') and hasattr(message, 'status_code'):
+                # This is likely a JSONResponse object
+                try:
+                    if hasattr(message, 'body') and isinstance(message.body, bytes):
+                        # Decode JSON body
+                        import json as json_lib
+                        body = json_lib.loads(message.body.decode('utf-8'))
+                        return {
+                            "type": "json_response",
+                            "body": body,
+                            "status_code": getattr(message, 'status_code', 200),
+                            "headers": dict(getattr(message, 'headers', {}))
+                        }
+                except Exception:
+                    # Fallback for JSONResponse
+                    return {
+                        "type": "json_response", 
+                        "body": str(message.body) if hasattr(message, 'body') else None,
+                        "status_code": getattr(message, 'status_code', 200)
+                    }
+            
+            # Handle Pydantic models
+            if hasattr(message, 'model_dump'):
+                return message.model_dump()
+            
+            # Handle dict-like objects
+            if hasattr(message, '__dict__'):
+                # Recursively serialize nested objects
+                result = {}
+                for key, value in message.__dict__.items():
+                    try:
+                        # Test if value is JSON serializable
+                        json.dumps(value)
+                        result[key] = value
+                    except TypeError:
+                        # Convert non-serializable values to string
+                        result[key] = str(value)
+                return result
+            
+            # Handle other types by converting to string
+            return {"message": str(message), "type": type(message).__name__}
+            
+        except Exception as e:
+            logger.error(f"Failed to serialize message: {e}")
+            return {"error": f"Serialization failed: {str(e)}", "type": type(message).__name__}
     
     def _serialize_event(self, event: SessionEvent) -> bytes:
         """Serialize event for storage"""
@@ -228,7 +295,7 @@ class RedisEventStore(EventStore):
             event_id=event_id,
             event_type="message",
             event_data={
-                "message": message.model_dump() if hasattr(message, 'model_dump') else message.__dict__,
+                "message": self._serialize_message(message),
                 "event_id": event_id
             },
             timestamp=time.time(),
@@ -593,7 +660,7 @@ class MemoryEventStore(EventStore):
             event_id=event_id,
             event_type="message",
             event_data={
-                "message": message.model_dump() if hasattr(message, 'model_dump') else message.__dict__,
+                "message": self._serialize_message(message),
                 "event_id": event_id
             },
             timestamp=time.time(),

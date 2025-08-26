@@ -15,7 +15,7 @@ from fastmcp.auth.mcp_integration.mcp_auth_middleware import (
     get_mcp_auth_middleware
 )
 from fastmcp.auth.mcp_integration.jwt_auth_backend import MCPUserContext
-from fastmcp.auth.mcp_integration.user_context_middleware import current_user_context
+from fastmcp.auth.middleware.request_context_middleware import current_user_context
 
 
 class TestMCPAuthMiddleware:

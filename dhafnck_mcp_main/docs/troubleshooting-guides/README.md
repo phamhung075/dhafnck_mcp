@@ -9,6 +9,7 @@ This folder contains comprehensive troubleshooting documentation to help diagnos
 - **[Quick Troubleshooting Reference](TROUBLESHOOTING.md)** - Common issues and quick fixes
 
 ### Database & Connection Issues
+- **[Legacy Database Columns Analysis](legacy-database-columns.md)** - Analysis of 19 extra database columns not in models, migration strategy, and risk assessment
 - **[Supabase Connection Fix Guide](supabase-connection-fix-guide.md)** - Fix for Supabase data not showing after Docker rebuild
 - **[Fix Supabase Connection](fix-supabase-connection.md)** - Detailed Supabase connection troubleshooting steps
 - **[Frontend Supabase Fix Summary](frontend-supabase-fix-summary.md)** - Frontend-specific Supabase connection solutions
@@ -32,6 +33,7 @@ Our troubleshooting guides follow a systematic approach:
 ## 🎯 Common Issues Covered
 
 - Database connection problems (PostgreSQL, Supabase)
+- Database schema inconsistencies and legacy column issues
 - MCP tool integration issues
 - Context system errors
 - Agent orchestration failures

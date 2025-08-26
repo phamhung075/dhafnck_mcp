@@ -18,8 +18,8 @@ from fastmcp.auth.mcp_integration.jwt_auth_backend import (
     MCPUserContext,
     create_jwt_auth_backend
 )
-from fastmcp.auth.mcp_integration.user_context_middleware import (
-    UserContextMiddleware,
+from fastmcp.auth.middleware.request_context_middleware import (
+    RequestContextMiddleware as UserContextMiddleware,  # Alias for backward compatibility
     get_current_user_context,
     get_current_user_id,
     current_user_context

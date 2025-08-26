@@ -18,6 +18,90 @@ from pathlib import Path
 from typing import Generator, Dict, Any
 import sys
 
+# Set environment variables for tests
+os.environ['JWT_SECRET_KEY'] = 'test-secret-key-for-testing-only-do-not-use-in-production'
+os.environ['JWT_AUDIENCE'] = 'test-audience'
+os.environ['JWT_ISSUER'] = 'test-issuer'
+
+# Mock supabase before any other imports
+class MockSupabaseClient:
+    def __init__(self, *args, **kwargs):
+        pass
+
+def create_mock_client(*args, **kwargs):
+    return MockSupabaseClient()
+
+mock_supabase = type(sys)('supabase')
+mock_supabase.create_client = create_mock_client
+mock_supabase.Client = MockSupabaseClient
+sys.modules['supabase'] = mock_supabase
+
+# Mock FastAPI before any other imports
+class MockAPIRouter:
+    def __init__(self, *args, **kwargs):
+        pass
+    def get(self, *args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator
+    def post(self, *args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator
+    def put(self, *args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator
+    def delete(self, *args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator
+
+class MockHTTPException(Exception):
+    def __init__(self, status_code, detail):
+        self.status_code = status_code
+        self.detail = detail
+
+class MockDepends:
+    def __init__(self, dependency):
+        self.dependency = dependency
+
+class MockStatus:
+    HTTP_200_OK = 200
+    HTTP_401_UNAUTHORIZED = 401
+    HTTP_403_FORBIDDEN = 403
+    HTTP_404_NOT_FOUND = 404
+
+class MockRequest:
+    def __init__(self):
+        self.headers = {}
+        self.state = type('State', (), {})()
+
+class MockResponse:
+    def __init__(self):
+        pass
+
+# Mock FastAPI security module
+class MockOAuth2PasswordRequestForm:
+    def __init__(self):
+        self.username = "test_user"
+        self.password = "test_password"
+
+mock_fastapi_security = type(sys)('fastapi.security')
+mock_fastapi_security.OAuth2PasswordRequestForm = MockOAuth2PasswordRequestForm
+sys.modules['fastapi.security'] = mock_fastapi_security
+
+# Create fastapi module mock
+mock_fastapi = type(sys)('fastapi')
+mock_fastapi.APIRouter = MockAPIRouter
+mock_fastapi.HTTPException = MockHTTPException
+mock_fastapi.Depends = MockDepends
+mock_fastapi.status = MockStatus
+mock_fastapi.Request = MockRequest
+mock_fastapi.Response = MockResponse
+mock_fastapi.security = mock_fastapi_security
+sys.modules['fastapi'] = mock_fastapi
+
 # Ensure src directory is on sys.path for fastmcp imports
 src_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src'))
 if src_path not in sys.path:

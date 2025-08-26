@@ -45,8 +45,7 @@ class GlobalContextRepository(BaseUserScopedRepository):
         if user_id:
             logger.info(f"GlobalContextRepository initialized for user: {user_id}")
         else:
-            logger.error("🚨 USER_ID_DEBUG: GlobalContextRepository initialized in system mode - THIS MAY CAUSE 'system' USER_ID ISSUES")
-            logger.warning("GlobalContextRepository initialized in system mode - use with caution")
+            logger.debug("GlobalContextRepository initialized in system mode during startup - use with caution (expected behavior)")
     
     def _normalize_context_id(self, context_id: str) -> str:
         """

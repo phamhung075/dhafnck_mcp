@@ -26,7 +26,7 @@ from mcp.server.auth.middleware.bearer_auth import BearerAuthBackend, RequireAut
 from mcp.server.auth.provider import AccessToken
 
 from fastmcp.auth.mcp_integration.jwt_auth_backend import JWTAuthBackend, MCPUserContext
-from fastmcp.auth.mcp_integration.user_context_middleware import UserContextMiddleware, get_current_user_context
+from fastmcp.auth.middleware.request_context_middleware import RequestContextMiddleware as UserContextMiddleware, get_current_user_context
 from fastmcp.auth.domain.services.jwt_service import JWTService
 from fastmcp.auth.domain.entities.user import User, UserStatus, UserRole
 from fastmcp.auth.domain.value_objects import UserId

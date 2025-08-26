@@ -9,7 +9,7 @@ import logging
 from typing import Optional, List, Any, TypeVar, Generic
 from abc import ABC, abstractmethod
 
-from .user_context_middleware import get_current_user_id, get_current_user_context
+from ..middleware.request_context_middleware import get_current_user_id, get_authentication_context as get_current_user_context
 
 logger = logging.getLogger(__name__)
 

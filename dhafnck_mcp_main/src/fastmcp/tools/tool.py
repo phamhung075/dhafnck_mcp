@@ -149,7 +149,7 @@ class FunctionTool(Tool):
         
         # Import user context middleware for authentication context propagation
         try:
-            from fastmcp.auth.mcp_integration.user_context_middleware import (
+            from fastmcp.auth.middleware.request_context_middleware import (
                 current_user_context, 
                 get_current_user_context
             )
