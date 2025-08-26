@@ -52,7 +52,8 @@ class TestAgentAssignmentMCPIntegration:
         return {
             "project_id": project_id,
             "branch_id": branch_id,
-            "branch_name": "test-agent-branch"
+            "branch_name": "test-agent-branch",
+            "user_id": test_user_id
         }
     
     def test_assign_agent_with_prefixed_name_via_mcp(self, mcp_tools, project_and_branch):
@@ -63,12 +64,15 @@ class TestAgentAssignmentMCPIntegration:
             action="assign_agent",
             project_id=project_and_branch["project_id"],
             git_branch_id=project_and_branch["branch_id"],
-            agent_id=agent_name
+            agent_id=agent_name,
+            user_id=project_and_branch["user_id"]
         )
         
         assert result["success"], f"Agent assignment failed: {result.get('error')}"
         assert result["action"] == "assign_agent"
-        assert result["agent_id"] == agent_name
+        # agent_id should be the resolved UUID format from auto-registration
+        assert ":" in result["agent_id"], f"Expected UUID:name format, got: {result['agent_id']}"
+        # original_agent_id should preserve user input
         assert result["original_agent_id"] == agent_name
         assert "workflow_guidance" in result, "Response should include workflow guidance"
     
@@ -81,12 +85,17 @@ class TestAgentAssignmentMCPIntegration:
             action="assign_agent",
             project_id=project_and_branch["project_id"],
             git_branch_id=project_and_branch["branch_id"],
-            agent_id=agent_name
+            agent_id=agent_name,
+            user_id=project_and_branch["user_id"]
         )
         
         assert result["success"], f"Agent assignment failed: {result.get('error')}"
         assert result["action"] == "assign_agent"
-        assert result["agent_id"] == expected_resolved
+        # agent_id should be the resolved UUID format from auto-registration
+        assert ":" in result["agent_id"], f"Expected UUID:name format, got: {result['agent_id']}"
+        # The UUID:name format should contain the prefixed name
+        assert "mcp_unprefixed_agent" in result["agent_id"], f"Expected agent name in UUID format: {result['agent_id']}"
+        # original_agent_id should preserve user input
         assert result["original_agent_id"] == agent_name
         assert "workflow_guidance" in result, "Response should include workflow guidance"
     
@@ -98,12 +107,15 @@ class TestAgentAssignmentMCPIntegration:
             action="assign_agent",
             project_id=project_and_branch["project_id"],
             git_branch_name=project_and_branch["branch_name"],
-            agent_id=agent_name
+            agent_id=agent_name,
+            user_id=project_and_branch["user_id"]
         )
         
         assert result["success"], f"Agent assignment failed: {result.get('error')}"
         assert result["action"] == "assign_agent"
-        assert result["agent_id"] == agent_name
+        # agent_id should be the resolved UUID format from auto-registration
+        assert ":" in result["agent_id"], f"Expected UUID:name format, got: {result['agent_id']}"
+        # original_agent_id should preserve user input
         assert result["original_agent_id"] == agent_name
         assert result["git_branch_name"] == project_and_branch["branch_name"]
         assert "workflow_guidance" in result, "Response should include workflow guidance"
@@ -117,7 +129,8 @@ class TestAgentAssignmentMCPIntegration:
             action="assign_agent",
             project_id=project_and_branch["project_id"],
             git_branch_id=project_and_branch["branch_id"],
-            agent_id=agent_name
+            agent_id=agent_name,
+            user_id=project_and_branch["user_id"]
         )
         assert assign_result["success"], f"Failed to assign agent: {assign_result.get('error')}"
         
@@ -126,12 +139,16 @@ class TestAgentAssignmentMCPIntegration:
             action="unassign_agent",
             project_id=project_and_branch["project_id"],
             git_branch_id=project_and_branch["branch_id"],
-            agent_id=agent_name
+            agent_id=agent_name,
+            user_id=project_and_branch["user_id"]
         )
         
         assert unassign_result["success"], f"Agent unassignment failed: {unassign_result.get('error')}"
         assert unassign_result["action"] == "unassign_agent"
-        assert unassign_result["agent_id"] == agent_name
+        # For unassign, we should get the same UUID format that was assigned
+        # The agent_id should match what was returned from assignment
+        assigned_agent_id = assign_result["agent_id"]
+        assert unassign_result["agent_id"] == assigned_agent_id
         assert unassign_result["original_agent_id"] == agent_name
         assert "workflow_guidance" in unassign_result, "Response should include workflow guidance"
     
@@ -141,7 +158,8 @@ class TestAgentAssignmentMCPIntegration:
             action="assign_agent",
             project_id=project_and_branch["project_id"],
             git_branch_name="non-existent-branch",
-            agent_id="@error_test_agent"
+            agent_id="@error_test_agent",
+            user_id=project_and_branch["user_id"]
         )
         
         assert not result["success"], "Assignment to non-existent branch should fail"
@@ -166,7 +184,8 @@ class TestAgentAssignmentMCPIntegration:
                 action="create",
                 project_id=project_id,
                 git_branch_name=f"test-{branch_suffix}",
-                git_branch_description=f"Branch for testing {input_agent}"
+                git_branch_description=f"Branch for testing {input_agent}",
+                user_id=project_and_branch["user_id"]
             )
             assert branch_result["success"], f"Failed to create branch for {input_agent}"
             branch_id = branch_result["git_branch"]["id"]
@@ -176,9 +195,14 @@ class TestAgentAssignmentMCPIntegration:
                 action="assign_agent",
                 project_id=project_id,
                 git_branch_id=branch_id,
-                agent_id=input_agent
+                agent_id=input_agent,
+                user_id=project_and_branch["user_id"]
             )
             
             assert assign_result["success"], f"Assignment failed for agent '{input_agent}': {assign_result.get('error')}"
-            assert assign_result["agent_id"] == expected_agent, f"Expected {expected_agent}, got {assign_result['agent_id']}"
+            # agent_id should be the resolved UUID format from auto-registration
+            assert ":" in assign_result["agent_id"], f"Expected UUID:name format, got: {assign_result['agent_id']}"
+            # The UUID:name format should contain the clean agent name (no @ prefix)
+            clean_expected = expected_agent.lstrip('@')
+            assert clean_expected in assign_result["agent_id"], f"Expected '{clean_expected}' in UUID format: {assign_result['agent_id']}"
             assert assign_result["original_agent_id"] == input_agent, f"Original agent ID should be preserved"

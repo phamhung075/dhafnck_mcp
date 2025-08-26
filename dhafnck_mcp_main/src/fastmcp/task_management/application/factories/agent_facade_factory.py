@@ -73,8 +73,11 @@ class AgentFacadeFactory:
                     user_id=user_id
                 )
             else:
-                # Use default repository if no factory provided
-                agent_repository = get_default_agent_repository()
+                # Always use user-specific repository - no default without user_id
+                from ...infrastructure.repositories.agent_repository_factory import AgentRepositoryFactory
+                agent_repository = AgentRepositoryFactory.create(
+                    user_id=user_id
+                )
             
             # Create facade with repository
             facade = AgentApplicationFacade(agent_repository)

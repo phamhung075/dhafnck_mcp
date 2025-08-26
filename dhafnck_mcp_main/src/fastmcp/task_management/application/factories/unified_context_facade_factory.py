@@ -238,8 +238,11 @@ class UnifiedContextFacadeFactory:
                 }
             }
             
-            # Create facade and use it to create global context
-            facade = self.create_facade()
+            # Create facade with system user ID for global context creation
+            # Global context requires a user_id due to database schema constraints
+            # We use a system user ID for organization-wide global contexts
+            SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000000"  # System user for global contexts
+            facade = self.create_facade(user_id=SYSTEM_USER_ID)
             result = facade.create_context(
                 level="global",
                 context_id=GLOBAL_SINGLETON_UUID,

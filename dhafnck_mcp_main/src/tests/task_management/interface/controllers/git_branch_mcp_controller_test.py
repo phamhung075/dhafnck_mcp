@@ -82,14 +82,17 @@ class TestGitBranchMCPController:
         with patch('fastmcp.task_management.interface.controllers.auth_helper.validate_user_id') as mock_validate:
             mock_validate.return_value = "jwt-user-123"
             
-            result = self.controller._get_facade_for_request(project_id)
-            
-            assert result == self.mock_facade
-            mock_validate.assert_called_once_with("jwt-user-123", "Git branch facade creation")
-            self.mock_facade_factory.create_git_branch_facade.assert_called_once_with(
-                project_id=project_id,
-                user_id="jwt-user-123"
-            )
+            with patch('fastmcp.task_management.interface.controllers.auth_helper.get_authenticated_user_id') as mock_get_auth_user:
+                mock_get_auth_user.return_value = "jwt-user-123"
+                
+                result = self.controller._get_facade_for_request(project_id)
+                
+                assert result == self.mock_facade
+                mock_validate.assert_called_once_with("jwt-user-123", "Git branch facade creation")
+                self.mock_facade_factory.create_git_branch_facade.assert_called_once_with(
+                    project_id=project_id,
+                    user_id="jwt-user-123"
+                )
     
     @patch('fastmcp.task_management.interface.controllers.git_branch_mcp_controller.get_current_user_id')
     def test_get_facade_for_request_no_auth_raises_error(self, mock_get_user_id):
@@ -537,26 +540,26 @@ class TestGitBranchMCPControllerIntegration:
                 mock_get_auth_user.return_value = "test-user"
                 
                 with patch('fastmcp.task_management.application.factories.agent_facade_factory.AgentFacadeFactory') as mock_factory_class:
-                # Mock the agent facade and its methods
-                mock_agent_facade = Mock()
-                mock_agent_facade.assign_agent.return_value = {"success": True}
-                mock_factory = Mock()
-                mock_factory.create_agent_facade.return_value = mock_agent_facade
-                mock_factory_class.return_value = mock_factory
-                
-                result = self.controller.manage_git_branch(
-                    action="assign_agent",
-                    project_id="test-project",
-                    agent_id="agent-123",
-                    git_branch_id="branch-456"
-                )
-                
-                # Verify successful assignment
-                assert result["success"] is True
-                assert result["workflow_guidance"] == mock_guidance
-                
-                # Verify agent facade was called correctly
-                mock_agent_facade.assign_agent.assert_called_once()
+                    # Mock the agent facade and its methods
+                    mock_agent_facade = Mock()
+                    mock_agent_facade.assign_agent.return_value = {"success": True}
+                    mock_factory = Mock()
+                    mock_factory.create_agent_facade.return_value = mock_agent_facade
+                    mock_factory_class.return_value = mock_factory
+                    
+                    result = self.controller.manage_git_branch(
+                        action="assign_agent",
+                        project_id="test-project",
+                        agent_id="agent-123",
+                        git_branch_id="branch-456"
+                    )
+                    
+                    # Verify successful assignment
+                    assert result["success"] is True
+                    assert result["workflow_guidance"] == mock_guidance
+                    
+                    # Verify agent facade was called correctly
+                    mock_agent_facade.assign_agent.assert_called_once()
 
 
 if __name__ == "__main__":

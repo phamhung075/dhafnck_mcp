@@ -26,39 +26,42 @@ def test_progress_field_mapping():
     # Use the existing test infrastructure that's already set up by conftest.py
     db_config = get_db_config()
     
-    # Find an existing git branch from the test setup using raw SQL to avoid UUID issues
+    # Enable foreign key constraints for SQLite
     with db_config.get_session() as session:
-        # Use raw SQL to avoid UUID processing issues
+        if db_config.database_type == "sqlite":
+            session.execute(text("PRAGMA foreign_keys = ON"))
+    
+    # Find an existing git branch from the test setup (conftest.py creates one automatically)
+    with db_config.get_session() as session:
         result = session.execute(text(
-            "SELECT id FROM project_git_branchs WHERE project_id = 'default_project' LIMIT 1"
+            "SELECT id FROM project_git_branchs WHERE project_id = 'default_project' AND user_id = 'system' LIMIT 1"
         ))
         row = result.fetchone()
         
-        if row:
-            test_branch_id = row[0]
-        else:
-            # Create one if needed
-            test_branch_id = str(uuid.uuid4())
-            session.execute(text("""
-                INSERT INTO project_git_branchs (id, project_id, name, description, created_at, updated_at, priority, status, metadata, task_count, completed_task_count)
-                VALUES (:id, :project_id, :name, :description, :created_at, :updated_at, :priority, :status, :metadata, :task_count, :completed_task_count)
-            """), {
-                'id': test_branch_id,
-                'project_id': 'default_project',
-                'name': 'test-progress-branch',
-                'description': 'Branch for progress field testing',
-                'created_at': datetime.now(timezone.utc),
-                'updated_at': datetime.now(timezone.utc),
-                'priority': 'medium',
-                'status': 'todo',
-                'metadata': '{}',
-                'task_count': 0,
-                'completed_task_count': 0
-            })
-            session.commit()
+        if not row:
+            raise RuntimeError("No test git branch found - test database may not be properly initialized")
+        
+        test_branch_id = str(row[0])  # Ensure it's a string
+        print(f"DEBUG: Using git_branch_id: {test_branch_id} (type: {type(test_branch_id)})")
     
-    # Create repository with the valid git_branch_id
-    repo = ORMTaskRepository(git_branch_id=test_branch_id)
+    # Verify the git branch exists before creating tasks
+    with db_config.get_session() as session:
+        verify_result = session.execute(text(
+            "SELECT COUNT(*) FROM project_git_branchs WHERE id = :branch_id"
+        ), {"branch_id": test_branch_id})
+        count = verify_result.fetchone()[0]
+        print(f"DEBUG: Found {count} git branch(es) with id {test_branch_id}")
+        
+        if count == 0:
+            # List all available branches for debugging
+            all_branches = session.execute(text("SELECT id, name, project_id, user_id FROM project_git_branchs"))
+            print("DEBUG: Available git branches:")
+            for branch in all_branches.fetchall():
+                print(f"  - ID: {branch[0]}, Name: {branch[1]}, Project: {branch[2]}, User: {branch[3]}")
+            raise RuntimeError(f"Git branch {test_branch_id} does not exist in database")
+
+    # Create repository with the valid git_branch_id and system user_id (matches conftest setup)
+    repo = ORMTaskRepository(git_branch_id=test_branch_id, user_id="system")
     
     # Create a task
     task = repo.create_task(

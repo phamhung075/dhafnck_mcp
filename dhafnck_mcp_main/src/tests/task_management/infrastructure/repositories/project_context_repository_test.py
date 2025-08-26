@@ -106,9 +106,22 @@ class TestProjectContextRepositoryUserScoping:
         """Test that user-scoped repository filters by user_id in queries"""
         project_id = str(uuid.uuid4())
         
+        # Create a proper mock for ProjectContextModel with all required attributes
+        mock_db_model = Mock()
+        mock_db_model.project_id = project_id
+        mock_db_model.team_preferences = {}
+        mock_db_model.technology_stack = {}
+        mock_db_model.project_workflow = {}
+        mock_db_model.local_standards = {}  # This needs to be a dict, not a Mock
+        mock_db_model.global_overrides = {}
+        mock_db_model.delegation_rules = {}
+        mock_db_model.created_at = None
+        mock_db_model.updated_at = None
+        mock_db_model.version = 1
+        
         mock_query = Mock()
         mock_query.filter.return_value = mock_query
-        mock_query.first.return_value = Mock()
+        mock_query.first.return_value = mock_db_model
         self.mock_session.query.return_value = mock_query
         
         # Act
@@ -216,11 +229,19 @@ class TestProjectContextRepositoryEdgeCases:
         mock_session.rollback = Mock()
         mock_session.close = Mock()
         
-        # Mock the context manager to return our failing session
-        with patch.object(self.repository, 'get_db_session') as mock_get_db:
-            mock_get_db.return_value.__enter__ = Mock(return_value=mock_session)
-            mock_get_db.return_value.__exit__ = Mock(return_value=None)
+        # Create a context manager mock that properly handles exceptions
+        class MockContextManager:
+            def __enter__(self):
+                return mock_session
             
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                if exc_type is not None:
+                    mock_session.rollback()
+                mock_session.close()
+                return False  # Don't suppress the exception
+        
+        # Mock the context manager to return our failing session
+        with patch.object(self.repository, 'get_db_session', return_value=MockContextManager()):
             # Act & Assert
             with pytest.raises(SQLAlchemyError):
                 self.repository.create(entity)

@@ -67,29 +67,39 @@ class TestTaskMCPController:
             assert call_kwargs["name"] == "manage_task"
             assert call_kwargs["description"] == "Test description"
     
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
-    def test_get_facade_for_request_with_user_context(self, mock_get_user_id):
+    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_authenticated_user_id')
+    def test_get_facade_for_request_with_user_context(self, mock_get_auth_user_id):
         """Test getting facade with user context from JWT."""
-        mock_get_user_id.return_value = "jwt-user-123"
-        git_branch_id = "branch-123"
+        mock_get_auth_user_id.return_value = "jwt-user-123"
+        git_branch_id = "550e8400-e29b-41d4-a716-446655440000"
         
-        with patch('fastmcp.task_management.interface.controllers.task_mcp_controller.validate_user_id') as mock_validate:
-            mock_validate.return_value = "jwt-user-123"
+        # Mock database session to return branch data
+        with patch('fastmcp.task_management.infrastructure.database.session_manager.get_session_manager') as mock_session_mgr:
+            mock_session = MagicMock()
+            mock_session_mgr.return_value.get_session.return_value.__enter__.return_value = mock_session
             
-            result = self.controller._get_facade_for_request(git_branch_id)
+            # Mock database query result
+            mock_result = MagicMock()
+            mock_result.fetchone.return_value = ("test-project-id", "feature/test-branch")
+            mock_session.execute.return_value = mock_result
             
-            assert result == self.mock_facade
-            mock_validate.assert_called_once_with("jwt-user-123", "Task facade creation")
-            self.mock_facade_factory.create_task_facade.assert_called_once_with(
-                git_branch_id=git_branch_id,
-                user_id="jwt-user-123"
-            )
+            with patch('fastmcp.task_management.interface.controllers.task_mcp_controller.validate_user_id') as mock_validate:
+                mock_validate.return_value = "jwt-user-123"
+                
+                result = self.controller._get_facade_for_request(git_branch_id)
+                
+                assert result == self.mock_facade
+                mock_validate.assert_called_once_with("jwt-user-123", "Task facade creation")
+                self.mock_facade_factory.create_task_facade.assert_called_once_with(
+                    git_branch_id=git_branch_id,
+                    user_id="jwt-user-123"
+                )
     
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
-    def test_get_facade_for_request_no_auth_raises_error(self, mock_get_user_id):
+    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_authenticated_user_id')
+    def test_get_facade_for_request_no_auth_raises_error(self, mock_get_auth_user_id):
         """Test getting facade without authentication raises error."""
-        mock_get_user_id.return_value = None
-        git_branch_id = "branch-123"
+        mock_get_auth_user_id.side_effect = UserAuthenticationRequiredError("No auth")
+        git_branch_id = "550e8400-e29b-41d4-a716-446655440000"
         
         with pytest.raises(UserAuthenticationRequiredError) as exc_info:
             self.controller._get_facade_for_request(git_branch_id)

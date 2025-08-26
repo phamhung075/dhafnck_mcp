@@ -254,7 +254,7 @@ class TestVisionEnrichmentService:
     
     def test_is_enrichment_enabled(self):
         """Test enrichment enablement check"""
-        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
             with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled') as mock_enabled:
                 mock_enabled.return_value = True
                 service = VisionEnrichmentService()
@@ -269,7 +269,7 @@ class TestVisionEnrichmentService:
         """Test task enrichment when service is disabled"""
         task = MockTask(title="Test Task", description="Test description")
         
-        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
             with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled', return_value=False):
                 service = VisionEnrichmentService()
                 
@@ -289,8 +289,10 @@ class TestVisionEnrichmentService:
             labels=["performance", "user", "web"]
         )
         
-        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
             with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled', return_value=True):
+                mock_config.return_value = {"vision_system": {"vision_enrichment": {}}}
+                
                 service = VisionEnrichmentService(config_path=config_file)
                 
                 result = service.enrich_task(task)
@@ -318,8 +320,9 @@ class TestVisionEnrichmentService:
             labels=["user", "experience"]
         )
         
-        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
             with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled', return_value=True):
+                mock_config.return_value = {"vision_system": {"vision_enrichment": {}}}
                 service = VisionEnrichmentService(config_path=config_file)
                 
                 alignments = service._calculate_alignments(task)
@@ -352,8 +355,9 @@ class TestVisionEnrichmentService:
             labels=["performance", "user", "web"]
         )
         
-        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
             with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled', return_value=True):
+                mock_config.return_value = {"vision_system": {"vision_enrichment": {}}}
                 service = VisionEnrichmentService(config_path=config_file)
                 
                 # Get an objective to test against
@@ -393,8 +397,9 @@ class TestVisionEnrichmentService:
             ("todo", 0.6, False, ContributionType.MAINTENANCE),
         ]
         
-        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
             with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled', return_value=True):
+                mock_config.return_value = {"vision_system": {"vision_enrichment": {}}}
                 service = VisionEnrichmentService(config_path=config_file)
                 objective = list(service._vision_cache.values())[0]
                 
@@ -412,7 +417,7 @@ class TestVisionEnrichmentService:
     
     def test_calculate_confidence(self):
         """Test confidence calculation"""
-        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
             with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled', return_value=False):
                 service = VisionEnrichmentService()
                 
@@ -444,8 +449,9 @@ class TestVisionEnrichmentService:
     
     def test_generate_rationale(self, config_file):
         """Test rationale generation"""
-        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
             with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled', return_value=True):
+                mock_config.return_value = {"vision_system": {"vision_enrichment": {}}}
                 service = VisionEnrichmentService(config_path=config_file)
                 
                 task = MockTask()
@@ -471,7 +477,7 @@ class TestVisionEnrichmentService:
         """Test insight generation for low alignment scenarios"""
         task = MockTask(title="Unrelated Task", description="Something completely unrelated")
         
-        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
             with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled', return_value=False):
                 service = VisionEnrichmentService()
                 
@@ -496,8 +502,9 @@ class TestVisionEnrichmentService:
             description="Critical improvement for user satisfaction"
         )
         
-        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
             with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled', return_value=True):
+                mock_config.return_value = {"vision_system": {"vision_enrichment": {}}}
                 service = VisionEnrichmentService(config_path=config_file)
                 
                 # Find high priority objectives
@@ -527,8 +534,9 @@ class TestVisionEnrichmentService:
     
     def test_calculate_contribution_summary(self, config_file):
         """Test calculation of contribution summary"""
-        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
             with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled', return_value=True):
+                mock_config.return_value = {"vision_system": {"vision_enrichment": {}}}
                 service = VisionEnrichmentService(config_path=config_file)
                 
                 objectives = list(service._vision_cache.values())
@@ -565,7 +573,7 @@ class TestVisionEnrichmentService:
     
     def test_calculate_contribution_summary_no_alignments(self):
         """Test contribution summary with no alignments"""
-        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
             with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled', return_value=False):
                 service = VisionEnrichmentService()
                 
@@ -584,8 +592,9 @@ class TestVisionEnrichmentService:
             labels=["performance"]
         )
         
-        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
             with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled', return_value=True):
+                mock_config.return_value = {"vision_system": {"vision_enrichment": {}}}
                 service = VisionEnrichmentService(config_path=config_file)
                 
                 # Mock current alignments (exclude some objectives)
@@ -613,8 +622,9 @@ class TestVisionEnrichmentService:
         task = MockTask(task_id=task_id, title="Test Task")
         mock_task_repository.get_by_id.return_value = task
         
-        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
             with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled', return_value=True):
+                mock_config.return_value = {"vision_system": {"vision_enrichment": {}}}
                 service = VisionEnrichmentService(
                     task_repository=mock_task_repository,
                     config_path=config_file
@@ -630,7 +640,7 @@ class TestVisionEnrichmentService:
     
     def test_calculate_task_alignment_without_repository(self):
         """Test task alignment calculation without repository"""
-        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
             with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled', return_value=False):
                 service = VisionEnrichmentService()
                 
@@ -642,7 +652,7 @@ class TestVisionEnrichmentService:
         """Test task alignment calculation when task not found"""
         mock_task_repository.get_by_id.return_value = None
         
-        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
             with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled', return_value=False):
                 service = VisionEnrichmentService(task_repository=mock_task_repository)
                 
@@ -652,8 +662,9 @@ class TestVisionEnrichmentService:
     
     def test_update_objective_metrics_with_repository(self, mock_vision_repository, config_file):
         """Test objective metrics updating with repository"""
-        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
             with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled', return_value=True):
+                mock_config.return_value = {"vision_system": {"vision_enrichment": {}}}
                 service = VisionEnrichmentService(
                     vision_repository=mock_vision_repository,
                     config_path=config_file
@@ -683,8 +694,9 @@ class TestVisionEnrichmentService:
     
     def test_update_objective_metrics_without_repository(self, config_file):
         """Test objective metrics updating without repository"""
-        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
             with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled', return_value=True):
+                mock_config.return_value = {"vision_system": {"vision_enrichment": {}}}
                 service = VisionEnrichmentService(config_path=config_file)
                 
                 objective_id = list(service._vision_cache.keys())[0]
@@ -703,7 +715,7 @@ class TestVisionEnrichmentService:
     
     def test_update_objective_metrics_not_found(self):
         """Test objective metrics updating for non-existent objective"""
-        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
             with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled', return_value=False):
                 service = VisionEnrichmentService()
                 
@@ -713,8 +725,9 @@ class TestVisionEnrichmentService:
     
     def test_get_vision_hierarchy_full(self, config_file):
         """Test getting complete vision hierarchy"""
-        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
             with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled', return_value=True):
+                mock_config.return_value = {"vision_system": {"vision_enrichment": {}}}
                 service = VisionEnrichmentService(config_path=config_file)
                 
                 hierarchy = service.get_vision_hierarchy()
@@ -736,8 +749,9 @@ class TestVisionEnrichmentService:
     
     def test_get_vision_hierarchy_specific_root(self, config_file):
         """Test getting vision hierarchy from specific root"""
-        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
             with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled', return_value=True):
+                mock_config.return_value = {"vision_system": {"vision_enrichment": {}}}
                 service = VisionEnrichmentService(config_path=config_file)
                 
                 # Get a root objective ID
@@ -758,7 +772,7 @@ class TestVisionEnrichmentService:
     
     def test_get_vision_hierarchy_empty_cache(self):
         """Test getting vision hierarchy with empty cache"""
-        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
             with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled', return_value=False):
                 service = VisionEnrichmentService()
                 
@@ -791,7 +805,7 @@ class TestVisionEnrichmentServiceIntegration:
                             "current_value": 10000000,
                             "target_value": 15000000,
                             "unit": "USD",
-                            "type": "financial"
+                            "type": "currency"
                         }
                     ],
                     "children": [
@@ -829,7 +843,7 @@ class TestVisionEnrichmentServiceIntegration:
                                             "current_value": 4.2,
                                             "target_value": 4.8,
                                             "unit": "rating",
-                                            "type": "quality"
+                                            "type": "rating"
                                         }
                                     ]
                                 }
@@ -855,15 +869,34 @@ class TestVisionEnrichmentServiceIntegration:
                 labels=["mobile", "performance", "ux", "app"]
             )
             
-            with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+            with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
                 with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled', return_value=True):
+                    mock_config.return_value = {"vision_system": {"vision_enrichment": {}}}
                     service = VisionEnrichmentService(config_path=config_path)
+                    
+                    # Debug: Print what was loaded
+                    print(f"📋 Complex config cache size: {len(service._vision_cache)}")
+                    for obj_id, obj in service._vision_cache.items():
+                        print(f"  - {obj_id}: {obj.title} (tags: {obj.tags})")
+                    
+                    # Debug: Test task details
+                    print(f"🎯 Task: {task.title}")
+                    print(f"📝 Description: {task.description}")
+                    print(f"🏷️ Labels: {task.labels}")
+                    
+                    # Debug: Check alignments directly
+                    alignments = service._calculate_alignments(task)
+                    print(f"⚡ Direct alignments found: {len(alignments)}")
+                    for alignment in alignments:
+                        print(f"  - Score: {alignment.alignment_score:.3f}, Type: {alignment.contribution_type}")
                     
                     result = service.enrich_task(task)
                     
                     # Verify comprehensive enrichment
                     assert "vision_context" in result
                     vision_context = result["vision_context"]
+                    
+                    print(f"📋 Vision context alignments: {len(vision_context['alignments'])}")
                     
                     # Should have multiple alignments across hierarchy levels
                     assert len(vision_context["alignments"]) > 0
@@ -906,8 +939,9 @@ class TestVisionEnrichmentServiceIntegration:
             config_path = Path(f.name)
         
         try:
-            with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+            with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
                 with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled', return_value=True):
+                    mock_config.return_value = {"vision_system": {"vision_enrichment": {}}}
                     service = VisionEnrichmentService(config_path=config_path)
                     
                     # Debug: Print all objectives in cache
@@ -966,8 +1000,9 @@ class TestVisionEnrichmentServiceIntegration:
             config_path = Path(f.name)
         
         try:
-            with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+            with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
                 with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled', return_value=True):
+                    mock_config.return_value = {"vision_system": {"vision_enrichment": {}}}
                     service = VisionEnrichmentService(config_path=config_path)
                     
                     # Get full hierarchy
@@ -1073,8 +1108,9 @@ class TestVisionEnrichmentServiceErrorScenarios:
             config_path = Path(f.name)
         
         try:
-            with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+            with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
                 with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled', return_value=True):
+                    mock_config.return_value = {"vision_system": {"vision_enrichment": {}}}
                     service = VisionEnrichmentService(config_path=config_path)
                     
                     # Should handle corrupted file gracefully
@@ -1096,7 +1132,7 @@ class TestVisionEnrichmentServiceErrorScenarios:
             return {"id": str(task.id), "title": task.title}
         task.to_dict = mock_to_dict
         
-        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
             with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled', return_value=False):
                 service = VisionEnrichmentService()
                 
@@ -1152,8 +1188,9 @@ class TestVisionEnrichmentServiceErrorScenarios:
             config_path = Path(f.name)
         
         try:
-            with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+            with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
                 with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled', return_value=True):
+                    mock_config.return_value = {"vision_system": {"vision_enrichment": {}}}
                     service = VisionEnrichmentService(config_path=config_path)
                     
                     # Should load objectives (checking we have a reasonable number)
@@ -1184,8 +1221,9 @@ class TestVisionEnrichmentServiceErrorScenarios:
         import threading
         import time
         
-        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config'):
+        with patch('fastmcp.vision_orchestration.vision_enrichment_service.get_vision_config') as mock_config:
             with patch('fastmcp.vision_orchestration.vision_enrichment_service.is_phase_enabled', return_value=True):
+                mock_config.return_value = {"vision_system": {"vision_enrichment": {}}}
                 service = VisionEnrichmentService(config_path=config_file)
                 
                 results = []

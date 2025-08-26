@@ -52,7 +52,7 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
         # Initialize BaseORMRepository
         BaseORMRepository.__init__(self, Task)
         # Initialize BaseUserScopedRepository with proper session handling
-        from ..database.database_config import get_session
+        from ...database.database_config import get_session
         actual_session = session or get_session()
         BaseUserScopedRepository.__init__(self, actual_session, user_id)
         

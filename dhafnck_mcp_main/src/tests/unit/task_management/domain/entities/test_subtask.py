@@ -231,7 +231,11 @@ class TestSubtask:
         # Initially not blocked
         assert str(subtask.status) != 'blocked'
         
-        # Set to blocked status if supported
+        # To reach blocked status, first transition to in_progress, then to blocked
+        subtask.update_status(TaskStatus.in_progress())
+        assert str(subtask.status) == 'in_progress'
+        
+        # Now can transition to blocked
         subtask.update_status(TaskStatus.blocked())
         assert str(subtask.status) == 'blocked'
     
@@ -389,7 +393,7 @@ class TestSubtask:
         for subtask in subtasks:
             subtask.complete()
         
-        assert all(s.is_completed() for s in subtasks)
+        assert all(s.is_completed for s in subtasks)
     
     def test_subtask_ordering(self):
         """Test ordering of subtasks"""
@@ -419,10 +423,10 @@ class TestSubtask:
             priority=Priority.medium()
         )
         
-        # Sort by priority (assuming HIGH > MEDIUM > LOW)
+        # Sort by priority (HIGH > MEDIUM > LOW)
         subtasks = sorted(
             [subtask1, subtask2, subtask3],
-            key=lambda s: s.priority.value if hasattr(s.priority, 'value') else str(s.priority),
+            key=lambda s: s.priority,
             reverse=True
         )
         

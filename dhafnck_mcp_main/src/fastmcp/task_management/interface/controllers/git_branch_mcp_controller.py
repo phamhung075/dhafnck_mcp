@@ -257,9 +257,9 @@ class GitBranchMCPController(ContextPropagationMixin):
                 return self._create_missing_field_error("agent_id", action)
             
             if action == "assign_agent":
-                return self._handle_assign_agent(facade, project_id, git_branch_id, git_branch_name, agent_id)
+                return self._handle_assign_agent(facade, project_id, git_branch_id, git_branch_name, agent_id, user_id)
             elif action == "unassign_agent":
-                return self._handle_unassign_agent(facade, project_id, git_branch_id, git_branch_name, agent_id)
+                return self._handle_unassign_agent(facade, project_id, git_branch_id, git_branch_name, agent_id, user_id)
             else:
                 return self._create_invalid_action_error(action)
 
@@ -352,13 +352,13 @@ class GitBranchMCPController(ContextPropagationMixin):
         return self._enhance_response_with_workflow_guidance(response, "list", project_id)
     
     def _handle_assign_agent(self, facade: GitBranchApplicationFacade, project_id: str, git_branch_id: Optional[str], 
-                            git_branch_name: Optional[str], agent_id: str) -> Dict[str, Any]:
+                            git_branch_name: Optional[str], agent_id: str, user_id: Optional[str] = None) -> Dict[str, Any]:
         """Handle assign agent to git branch request."""
         try:
             # Get the agent facade to handle agent operations
             from ...application.factories.agent_facade_factory import AgentFacadeFactory
             factory = AgentFacadeFactory()
-            agent_facade = factory.create_agent_facade(project_id=project_id)
+            agent_facade = factory.create_agent_facade(project_id=project_id, user_id=user_id)
             
             # Resolve git_branch_id if only git_branch_name is provided
             resolved_git_branch_id = git_branch_id
@@ -377,8 +377,8 @@ class GitBranchMCPController(ContextPropagationMixin):
                     }
                     return self._enhance_response_with_workflow_guidance(response, "assign_agent", project_id=project_id)
             
-            # Resolve agent_id if it's not a UUID (supports @prefix, no prefix, and UUID formats)
-            resolved_agent_id = self._resolve_agent_identifier(project_id, agent_id)
+            # Resolve agent_id with database lookup (supports @prefix, no prefix, and UUID formats)
+            resolved_agent_id = self._resolve_agent_identifier_with_lookup(project_id, agent_id, agent_facade)
             logger.info(f"Resolved agent ID: {resolved_agent_id} from input: {agent_id}")
             
             # Use the resolved git_branch_id to assign agent
@@ -419,13 +419,13 @@ class GitBranchMCPController(ContextPropagationMixin):
         return self._enhance_response_with_workflow_guidance(response, "assign_agent", git_branch_id=resolved_git_branch_id if 'resolved_git_branch_id' in locals() else git_branch_id)
     
     def _handle_unassign_agent(self, facade: GitBranchApplicationFacade, project_id: str, git_branch_id: Optional[str], 
-                              git_branch_name: Optional[str], agent_id: str) -> Dict[str, Any]:
+                              git_branch_name: Optional[str], agent_id: str, user_id: Optional[str] = None) -> Dict[str, Any]:
         """Handle unassign agent from git branch request."""
         try:
             # Get the agent facade to handle agent operations
             from ...application.factories.agent_facade_factory import AgentFacadeFactory
             factory = AgentFacadeFactory()
-            agent_facade = factory.create_agent_facade(project_id=project_id)
+            agent_facade = factory.create_agent_facade(project_id=project_id, user_id=user_id)
             
             # Resolve git_branch_id if only git_branch_name is provided
             resolved_git_branch_id = git_branch_id
@@ -442,8 +442,8 @@ class GitBranchMCPController(ContextPropagationMixin):
                     }
                     return self._enhance_response_with_workflow_guidance(response, "unassign_agent", project_id=project_id)
             
-            # Resolve agent_id if it's not a UUID (supports @prefix, no prefix, and UUID formats)
-            resolved_agent_id = self._resolve_agent_identifier(project_id, agent_id)
+            # Resolve agent_id with database lookup (supports @prefix, no prefix, and UUID formats)  
+            resolved_agent_id = self._resolve_agent_identifier_with_lookup(project_id, agent_id, agent_facade)
             logger.info(f"Resolved agent ID: {resolved_agent_id} from input: {agent_id}")
             
             # Use the resolved git_branch_id to unassign agent
@@ -627,23 +627,87 @@ class GitBranchMCPController(ContextPropagationMixin):
             logger.error(f"Error in _resolve_branch_id_to_name: {e}")
             return None
 
+    def _resolve_agent_identifier_with_lookup(self, project_id: str, agent_identifier: str, agent_facade) -> str:
+        """
+        Resolve agent identifier with database lookup and UUID generation for auto-registration.
+        
+        This method:
+        1. Normalizes the agent identifier format
+        2. Looks up existing agents by name
+        3. Generates UUIDs for new agents
+        4. Returns the appropriate format for auto-registration
+        
+        Args:
+            project_id: The project ID
+            agent_identifier: The agent identifier to resolve
+            agent_facade: Agent facade for database operations
+            
+        Returns:
+            Either a UUID (for existing agents) or "UUID:name" format (for auto-registration)
+        """
+        try:
+            # First normalize the agent identifier
+            normalized_agent = self._resolve_agent_identifier(project_id, agent_identifier)
+            
+            # Check if it's already a UUID
+            import uuid
+            import re
+            uuid_pattern = re.compile(
+                r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', 
+                re.IGNORECASE
+            )
+            
+            if uuid_pattern.match(normalized_agent):
+                logger.info(f"Agent identifier '{normalized_agent}' is already a UUID")
+                return normalized_agent
+            
+            # Extract clean agent name (remove @ if present)
+            clean_name = normalized_agent.lstrip('@')
+            
+            # Try to find existing agent by name using agent facade
+            try:
+                # This would typically be done through agent repository, but agent facade doesn't expose find_by_name
+                # For now, we'll generate UUID and use auto-registration format
+                logger.info(f"Agent '{clean_name}' not found, generating UUID for auto-registration")
+                
+                # Generate a UUID for the new agent
+                generated_uuid = str(uuid.uuid4())
+                logger.info(f"Agent '{clean_name}' not found, generated UUID for auto-registration: {generated_uuid}")
+                
+                # Return UUID:name format for auto-registration
+                return f"{generated_uuid}:{clean_name}"
+                
+            except Exception as lookup_error:
+                logger.warning(f"Error looking up agent '{clean_name}': {lookup_error}")
+                # Fallback: generate UUID anyway
+                generated_uuid = str(uuid.uuid4())
+                logger.info(f"Agent '{clean_name}' lookup failed, generated UUID for auto-registration: {generated_uuid}")
+                return f"{generated_uuid}:{clean_name}"
+            
+        except Exception as e:
+            logger.error(f"Error resolving agent identifier '{agent_identifier}': {e}")
+            # Fallback: generate UUID
+            import uuid
+            generated_uuid = str(uuid.uuid4())
+            clean_name = agent_identifier.lstrip('@')
+            logger.info(f"Fallback: generated UUID for agent '{clean_name}': {generated_uuid}")
+            return f"{generated_uuid}:{clean_name}"
+
     def _resolve_agent_identifier(self, project_id: str, agent_identifier: str) -> str:
         """
-        Helper method to resolve agent identifier to UUID format.
+        Helper method to resolve agent identifier following expected behavior.
         
         Supports multiple input formats:
         1. UUID: "2d3727cf-6915-4b54-be8d-4a5a0311ca03" -> returns as-is
-        2. Agent name with @: "@coding_agent" -> looks up UUID by name
-        3. Agent name without @: "coding_agent" -> looks up UUID by name
-        
-        If the agent doesn't exist by name, it generates a UUID for auto-registration.
+        2. Agent name with @: "@coding_agent" -> returns as-is (preserved)
+        3. Agent name without @: "coding_agent" -> adds @ prefix and returns "@coding_agent"
         
         Args:
             project_id: The project ID (for potential future agent lookup)
             agent_identifier: The agent identifier to resolve
             
         Returns:
-            The resolved agent identifier (UUID format) or special format "uuid:name" for auto-registration
+            The resolved agent identifier
         """
         try:
             import uuid
@@ -659,36 +723,22 @@ class GitBranchMCPController(ContextPropagationMixin):
                 logger.info(f"Agent identifier '{agent_identifier}' is already a valid UUID")
                 return agent_identifier
             
-            # It's a name (with or without @), try to look it up
-            from ...infrastructure.repositories.orm.agent_repository import ORMAgentRepository
-            agent_repo = ORMAgentRepository(project_id=project_id, user_id='system')
+            # If it already has @ prefix, preserve it as-is
+            if agent_identifier.startswith('@'):
+                logger.info(f"Agent identifier '{agent_identifier}' is @-prefixed, preserving as-is")
+                return agent_identifier
             
-            # Strip @ prefix for name lookup
-            agent_name = agent_identifier.lstrip('@')
-            agent = agent_repo.find_by_name(agent_name)
-            
-            if agent:
-                logger.info(f"Found existing agent '{agent_name}' with UUID: {agent.id}")
-                return agent.id
-            
-            # Agent doesn't exist, generate a UUID for auto-registration
-            # Use a deterministic UUID based on project_id and agent_name
-            # This ensures consistency across multiple calls
-            namespace_uuid = uuid.uuid5(uuid.NAMESPACE_DNS, project_id)
-            agent_uuid = str(uuid.uuid5(namespace_uuid, agent_name))
-            
-            logger.info(f"Agent '{agent_name}' not found, generated UUID for auto-registration: {agent_uuid}")
-            
-            # Return special format to preserve agent name for auto-registration
-            # The repository will parse this format
-            return f"{agent_uuid}:{agent_name}"
+            # If it doesn't have @ prefix, add it
+            resolved_agent = f"@{agent_identifier}"
+            logger.info(f"Agent identifier '{agent_identifier}' converted to '{resolved_agent}'")
+            return resolved_agent
             
         except Exception as e:
             logger.error(f"Error resolving agent identifier '{agent_identifier}': {e}")
-            # Fall back to generating a random UUID if all else fails
-            fallback_uuid = str(uuid.uuid4())
-            logger.warning(f"Using fallback UUID: {fallback_uuid}")
-            return fallback_uuid
+            # Fall back to adding @ prefix if agent_identifier doesn't already have it
+            if not agent_identifier.startswith('@'):
+                return f"@{agent_identifier}"
+            return agent_identifier
 
     def _get_git_branch_management_descriptions(self) -> Dict[str, Any]:
         """

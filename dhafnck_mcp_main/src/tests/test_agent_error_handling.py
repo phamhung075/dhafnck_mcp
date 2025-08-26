@@ -28,7 +28,15 @@ def test_agent_error_handling():
     """Test improved agent registration error handling"""
     
     try:
-        # Import required modules
+        # Set environment to use SQLite for testing BEFORE importing any database modules
+        import os
+        # Clear any existing database type configuration
+        if "DATABASE_TYPE" in os.environ:
+            del os.environ["DATABASE_TYPE"]
+        os.environ["DHAFNCK_DATABASE_TYPE"] = "sqlite"
+        os.environ["MCP_DB_PATH"] = "/tmp/test_agent_errors.db"
+        
+        # Import required modules AFTER setting environment
         from fastmcp.task_management.infrastructure.database.database_config import get_db_config
         from fastmcp.task_management.infrastructure.repositories.orm.agent_repository import ORMAgentRepository
         from fastmcp.task_management.application.facades.agent_application_facade import AgentApplicationFacade
@@ -38,19 +46,17 @@ def test_agent_error_handling():
         logger.info("TESTING IMPROVED AGENT ERROR HANDLING")
         logger.info("=" * 60)
         
-        # Set environment to use SQLite for testing
-        import os
-        os.environ["DHAFNCK_DATABASE_TYPE"] = "sqlite"
-        os.environ["MCP_DB_PATH"] = "/tmp/test_agent_errors.db"
-        
         # Get database configuration
         db_config = get_db_config()
         if not db_config:
             logger.error("Could not get database configuration")
             assert False, "Could not get database configuration"
         
+        # Use a valid UUID for project_id (required by current validation)
+        test_project_id = "550e8400-e29b-41d4-a716-446655440000"  # Valid UUID format
+        
         # Create repository and facade
-        agent_repo = ORMAgentRepository(project_id="test_project")
+        agent_repo = ORMAgentRepository(project_id=test_project_id)
         agent_facade = AgentApplicationFacade(agent_repo)
         
         # Test 1: Register a new agent successfully
@@ -58,7 +64,7 @@ def test_agent_error_handling():
         test_agent_id = str(uuid.uuid4())
         
         result1 = agent_facade.register_agent(
-            project_id="test_project",
+            project_id=test_project_id,
             agent_id=test_agent_id,
             name="test_agent_unique",
             call_agent="@test_agent"
@@ -72,7 +78,7 @@ def test_agent_error_handling():
         # Test 2: Try to register the same agent ID again
         logger.info("\nTest 2: Register duplicate agent by ID...")
         result2 = agent_facade.register_agent(
-            project_id="test_project",
+            project_id=test_project_id,
             agent_id=test_agent_id,
             name="different_name",
             call_agent="@different"
@@ -92,7 +98,7 @@ def test_agent_error_handling():
         try:
             # Direct repository call to test pre-validation
             result3 = agent_repo.register_agent(
-                project_id="test_project",
+                project_id=test_project_id,
                 agent_id=str(uuid.uuid4()),
                 name="test_agent_unique",  # Same name as Test 1
                 call_agent="@another"
@@ -108,8 +114,9 @@ def test_agent_error_handling():
         
         # Test 4: Test error message quality for missing project
         logger.info("\nTest 4: Register agent with non-existent project...")
+        non_existent_project_id = "550e8400-e29b-41d4-a716-446655440999"  # Different valid UUID
         result4 = agent_facade.register_agent(
-            project_id="non_existent_project",
+            project_id=non_existent_project_id,
             agent_id=str(uuid.uuid4()),
             name="test_agent_4",
             call_agent="@test4"
@@ -126,7 +133,7 @@ def test_agent_error_handling():
         # Test 5: Test helpful error for missing required fields
         logger.info("\nTest 5: Register agent with missing name...")
         result5 = agent_facade.register_agent(
-            project_id="test_project",
+            project_id=test_project_id,
             agent_id=str(uuid.uuid4()),
             name="",  # Empty name
             call_agent="@test5"
@@ -144,7 +151,7 @@ def test_agent_error_handling():
         
         # Try to register duplicate again and check message quality
         duplicate_result = agent_facade.register_agent(
-            project_id="test_project",
+            project_id=test_project_id,
             agent_id=test_agent_id,
             name="test_agent_unique",
             call_agent="@duplicate"
