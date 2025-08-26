@@ -60,7 +60,8 @@ class TestContextCRUDUserIsolation:
             id=str(uuid.uuid4()),
             project_id=project.id,
             name="feature/test-context",
-            description="Test branch for context CRUD"
+            description="Test branch for context CRUD",
+            user_id=user_id_1
         )
         db_session.add(git_branch)
         

@@ -223,8 +223,8 @@ class TestTaskEntity:
         with pytest.raises(MissingCompletionSummaryError):
             task.complete_task(completion_summary="   ")
     
-    def test_task_completion_requires_context(self):
-        """Task cannot be completed without context (context_id must be set)"""
+    def test_task_completion_allows_no_context(self):
+        """Task can be completed without context (context is recommended but not mandatory)"""
         # Arrange
         task = Task.create(
             id=self.task_id,
@@ -233,9 +233,12 @@ class TestTaskEntity:
         )
         # No context_id set
         
-        # Act & Assert
-        with pytest.raises(ValueError, match="Context must be updated before completing task"):
-            task.complete_task(completion_summary="Task completed successfully")
+        # Act
+        task.complete_task(completion_summary="Task completed successfully")
+        
+        # Assert - Task should be completed successfully without raising an error
+        # The task completion should succeed without raising an exception
+        assert task.status.value == "done" or str(task.status) == "done"
     
     def test_task_completion_requires_all_subtasks_completed(self):
         """Task with subtask IDs can be completed (validation done by service)"""

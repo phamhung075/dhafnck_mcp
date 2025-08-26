@@ -117,9 +117,10 @@ class TestAgentApplicationFacade:
         )
         facade._register_agent_use_case.execute = Mock(return_value=mock_response)
         
-        # Call register_agent
+        # Call register_agent with a valid UUID format that doesn't exist
+        nonexistent_project_id = "550e8400-e29b-41d4-a716-446655440999"
         result = facade.register_agent(
-            project_id="nonexistent-project",
+            project_id=nonexistent_project_id,
             agent_id=self.AGENT_ID,
             name="test_agent"
         )
