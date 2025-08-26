@@ -1433,7 +1433,6 @@ class TaskMCPController(ContextPropagationMixin):
             )
         elif action in ["list", "search", "next"]:
             return self.handle_list_search_next(
-                facade=facade,
                 action=action, 
                 status=status, 
                 priority=priority,

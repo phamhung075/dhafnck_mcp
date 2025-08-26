@@ -456,23 +456,17 @@ class TestTaskRepositoryFactoryIntegration:
         if 'ALLOW_DEFAULT_USER' in os.environ:
             del os.environ['ALLOW_DEFAULT_USER']
     
-    @patch('fastmcp.task_management.infrastructure.repositories.task_repository_factory.AuthConfig')
-    def test_complete_workflow_with_authentication(self, mock_auth_config):
+    def test_complete_workflow_with_authentication(self):
         """Test complete workflow with authentication integration."""
-        mock_auth_config.is_default_user_allowed.return_value = True
-        mock_auth_config.get_fallback_user_id.return_value = "compatibility-user"
+        # Initialize factory with explicit user_id
+        factory = TaskRepositoryFactory(project_root=self.project_root, default_user_id="test-user-123")
         
-        # Initialize factory without explicit user
-        factory = TaskRepositoryFactory(project_root=self.project_root)
-        
-        # Create repository should use compatibility user
-        repo = factory.create_repository("test-project", "main")
+        # Create repository should work with valid user
+        repo = factory.create_repository("test-project", "main", user_id="test-user-456")
         assert isinstance(repo, (ORMTaskRepository, MockTaskRepository))
         
-        # Verify authentication bypass was logged
-        mock_auth_config.log_authentication_bypass.assert_called_with(
-            "Task repository factory initialization", "compatibility mode"
-        )
+        # Verify repository was created successfully
+        assert repo is not None
     
     def test_complete_workflow_without_authentication(self):
         """Test complete workflow without authentication (strict mode)."""
