@@ -2,7 +2,7 @@
 import Cookies from 'js-cookie';
 import { taskApiV2 } from './apiV2';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 interface MCPToken {
   success: boolean;

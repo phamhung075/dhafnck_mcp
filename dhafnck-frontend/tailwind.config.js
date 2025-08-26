@@ -1,5 +1,5 @@
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+export default {
   darkMode: 'class',
   content: [
     "./src/**/*.{js,jsx,ts,tsx,scss,css}"
@@ -100,6 +100,8 @@ module.exports = {
         'base': 'var(--color-background)',
         'base-secondary': 'var(--color-background-secondary)',
         'base-tertiary': 'var(--color-background-tertiary)',
+        'surface': 'var(--color-surface)',
+        'surface-hover': 'var(--color-surface-hover)',
       },
       textColor: {
         'base': 'var(--color-text)',
@@ -109,6 +111,13 @@ module.exports = {
       borderColor: {
         'base': 'var(--color-surface-border)',
         'base-hover': 'var(--color-surface-border-hover)',
+        'surface-border': 'var(--color-surface-border)',
+        'surface-border-hover': 'var(--color-surface-border-hover)',
+        'nav-border': 'var(--color-nav-border)',
+        'button-outline-border': 'var(--color-button-outline-border)',
+        'input-border': 'var(--color-input-border)',
+        'input-border-focus': 'var(--color-input-border-focus)',
+        'input-border-error': 'var(--color-input-border-error)',
       },
       boxShadow: {
         'sm': '0 1px 2px 0 var(--color-shadow)',

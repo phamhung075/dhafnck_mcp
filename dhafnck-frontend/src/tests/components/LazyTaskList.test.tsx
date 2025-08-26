@@ -54,14 +54,18 @@ jest.mock('../../components/TaskContextDialog', () => ({
   ) : null
 }));
 
-jest.mock('../../components/TaskCompleteDialog', () => ({
+jest.mock('../../components/RefreshButton', () => ({
   __esModule: true,
-  default: ({ open, onClose }: any) => open ? (
-    <div data-testid="task-complete-dialog">
-      <div>Complete Task</div>
-      <button onClick={onClose}>Close</button>
-    </div>
-  ) : null
+  default: ({ onRefresh, isRefreshing }: any) => (
+    <button 
+      onClick={onRefresh} 
+      disabled={isRefreshing}
+      role="button"
+      aria-label={isRefreshing ? "refreshing" : "refresh"}
+    >
+      {isRefreshing ? "Refreshing..." : "Refresh"}
+    </button>
+  )
 }));
 
 jest.mock('../../components/DeleteConfirmDialog', () => ({
@@ -238,7 +242,7 @@ describe('LazyTaskList', () => {
         expect(screen.getByText('Test Task 1')).toBeInTheDocument();
         expect(screen.getByText('todo')).toBeInTheDocument();
         expect(screen.getByText('high')).toBeInTheDocument();
-        expect(screen.getByText('2')).toBeInTheDocument(); // subtask count
+        expect(screen.getByText('2 subtasks')).toBeInTheDocument(); // subtask count
         expect(screen.getByText('Has dependencies')).toBeInTheDocument();
         expect(screen.getByText('1 assigned')).toBeInTheDocument();
       });
@@ -555,7 +559,7 @@ describe('LazyTaskList', () => {
       });
 
       // Find and click refresh button
-      const refreshButton = screen.getByRole('button', { name: /refresh/i });
+      const refreshButton = screen.getByRole('button', { name: 'refresh' });
       fireEvent.click(refreshButton);
 
       await waitFor(() => {
@@ -635,8 +639,8 @@ describe('LazyTaskList', () => {
       const cards = screen.getAllByText(/Test Task/);
       expect(cards).toHaveLength(2);
 
-      // Check for mobile button text
-      expect(screen.getByText('New')).toBeInTheDocument(); // Shortened from "New Task"
+      // Check for mobile button text  
+      expect(screen.queryByText('New Task')).toBeInTheDocument(); // Mobile still shows full text
     });
 
     it('should render desktop view on large screens', async () => {

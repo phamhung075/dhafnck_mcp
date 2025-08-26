@@ -1,9 +1,7 @@
 /* Global Theme CSS Variables and Styles */
 
-/* Import base styles */
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
-@import 'tailwindcss/utilities';
+/* Import Tailwind configuration for @apply directives */
+@import 'tailwindcss/theme' reference;
 
 /* Root CSS Variables - Will be dynamically updated by JavaScript */
 :root {
@@ -117,83 +115,122 @@ body {
 @layer components {
   /* Card Component */
   .theme-card {
-    @apply bg-surface border border-surface-border rounded-lg shadow-sm;
-    @apply hover:shadow-md transition-shadow duration-200;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-surface-border);
+    @apply rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200;
   }
   
   /* Button Components */
   .theme-btn-primary {
-    @apply bg-button-primary-bg text-button-primary-text;
-    @apply hover:bg-button-primary-hover;
-    @apply px-4 py-2 rounded-md font-medium;
-    @apply transition-colors duration-200;
+    background-color: var(--color-button-primary-bg);
+    color: var(--color-button-primary-text);
+    @apply px-4 py-2 rounded-md font-medium transition-colors duration-200;
+  }
+  
+  .theme-btn-primary:hover {
+    background-color: var(--color-button-primary-hover);
   }
   
   .theme-btn-secondary {
-    @apply bg-button-secondary-bg text-button-secondary-text;
-    @apply hover:bg-button-secondary-hover;
-    @apply px-4 py-2 rounded-md font-medium;
-    @apply transition-colors duration-200;
+    background-color: var(--color-button-secondary-bg);
+    color: var(--color-button-secondary-text);
+    @apply px-4 py-2 rounded-md font-medium transition-colors duration-200;
+  }
+  
+  .theme-btn-secondary:hover {
+    background-color: var(--color-button-secondary-hover);
   }
   
   .theme-btn-outline {
-    @apply bg-transparent border border-button-outline-border;
-    @apply hover:bg-button-outline-hover;
-    @apply px-4 py-2 rounded-md font-medium;
-    @apply transition-colors duration-200;
+    background-color: transparent;
+    border: 1px solid var(--color-button-outline-border);
+    @apply px-4 py-2 rounded-md font-medium transition-colors duration-200;
+  }
+  
+  .theme-btn-outline:hover {
+    background-color: var(--color-button-outline-hover);
   }
   
   .theme-btn-danger {
-    @apply bg-button-danger-bg text-white;
-    @apply hover:bg-button-danger-hover;
-    @apply px-4 py-2 rounded-md font-medium;
-    @apply transition-colors duration-200;
+    background-color: var(--color-button-danger-bg);
+    @apply text-white px-4 py-2 rounded-md font-medium transition-colors duration-200;
+  }
+  
+  .theme-btn-danger:hover {
+    background-color: var(--color-button-danger-hover);
   }
   
   /* Input Components */
   .theme-input {
-    @apply bg-input-background border border-input-border;
-    @apply text-input-text placeholder-input-placeholder;
-    @apply focus:border-input-border-focus focus:ring-2 focus:ring-primary focus:ring-opacity-20;
-    @apply px-3 py-2 rounded-md;
-    @apply transition-colors duration-200;
+    background-color: var(--color-input-background);
+    border: 1px solid var(--color-input-border);
+    color: var(--color-input-text);
+    @apply px-3 py-2 rounded-md transition-colors duration-200 focus:ring-2;
+  }
+  
+  .theme-input:focus {
+    border-color: var(--color-input-border-focus);
+    --tw-ring-color: rgba(59, 130, 246, 0.2); /* primary with opacity */
+  }
+  
+  .theme-input::placeholder {
+    color: var(--color-input-placeholder);
   }
   
   .theme-input-error {
-    @apply border-input-border-error focus:border-input-border-error;
-    @apply focus:ring-error focus:ring-opacity-20;
+    border-color: var(--color-input-border-error);
+    @apply focus:ring-2;
+  }
+  
+  .theme-input-error:focus {
+    border-color: var(--color-input-border-error);
+    --tw-ring-color: rgba(239, 68, 68, 0.2); /* error with opacity */
   }
   
   /* Table Components */
   .theme-table {
-    @apply w-full bg-surface border border-surface-border rounded-lg overflow-hidden;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-surface-border);
+    @apply w-full rounded-lg overflow-hidden;
   }
   
   .theme-table-header {
-    @apply bg-background-secondary border-b border-surface-border;
+    background-color: var(--color-background-secondary);
+    border-bottom: 1px solid var(--color-surface-border);
   }
   
   .theme-table-row {
-    @apply border-b border-surface-border hover:bg-background-hover;
+    border-bottom: 1px solid var(--color-surface-border);
     @apply transition-colors duration-150;
   }
   
+  .theme-table-row:hover {
+    background-color: var(--color-background-hover);
+  }
+  
   .theme-table-cell {
-    @apply px-4 py-3 text-text;
+    color: var(--color-text);
+    @apply px-4 py-3;
   }
   
   /* Navigation Components */
   .theme-nav {
-    @apply bg-nav-background border-b border-nav-border;
+    background-color: var(--color-nav-background);
+    border-bottom: 1px solid var(--color-nav-border);
   }
   
   .theme-nav-item {
-    @apply text-nav-text hover:text-nav-text-hover;
+    color: var(--color-nav-text);
     @apply transition-colors duration-200;
   }
   
+  .theme-nav-item:hover {
+    color: var(--color-nav-text-hover);
+  }
+  
   .theme-nav-item-active {
-    @apply text-nav-text-active font-medium;
+    color: var(--color-nav-text-active);
+    @apply font-medium;
   }
   
   /* Modal/Dialog Components */
@@ -203,16 +240,19 @@ body {
   }
   
   .theme-modal {
-    @apply bg-surface border border-surface-border rounded-lg shadow-xl;
-    @apply p-6 max-w-md mx-auto;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-surface-border);
+    @apply rounded-lg shadow-xl p-6 max-w-md mx-auto;
   }
   
   .theme-modal-header {
-    @apply text-lg font-semibold text-text mb-4;
+    color: var(--color-text);
+    @apply text-lg font-semibold mb-4;
   }
   
   .theme-modal-body {
-    @apply text-text-secondary mb-6;
+    color: var(--color-text-secondary);
+    @apply mb-6;
   }
   
   /* Alert Components */
@@ -276,49 +316,65 @@ body {
   
   /* Dropdown Components */
   .theme-dropdown {
-    @apply bg-surface border border-surface-border rounded-lg shadow-lg;
-    @apply py-2;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-surface-border);
+    @apply rounded-lg shadow-lg py-2;
   }
   
   .theme-dropdown-item {
-    @apply px-4 py-2 text-text hover:bg-background-hover;
-    @apply transition-colors duration-150 cursor-pointer;
+    color: var(--color-text);
+    @apply px-4 py-2 transition-colors duration-150 cursor-pointer;
+  }
+  
+  .theme-dropdown-item:hover {
+    background-color: var(--color-background-hover);
   }
   
   /* Tab Components */
   .theme-tab-list {
-    @apply flex space-x-1 border-b border-surface-border;
+    border-bottom: 1px solid var(--color-surface-border);
+    @apply flex space-x-1;
   }
   
   .theme-tab {
-    @apply px-4 py-2 text-text-secondary hover:text-text;
-    @apply border-b-2 border-transparent hover:border-surface-border;
-    @apply transition-colors duration-200;
+    color: var(--color-text-secondary);
+    border-bottom: 2px solid transparent;
+    @apply px-4 py-2 transition-colors duration-200;
+  }
+  
+  .theme-tab:hover {
+    color: var(--color-text);
+    border-color: var(--color-surface-border);
   }
   
   .theme-tab-active {
-    @apply text-primary border-primary;
+    color: var(--color-primary);
+    border-color: var(--color-primary);
   }
   
   /* Tooltip Components */
   .theme-tooltip {
-    @apply bg-background-tertiary text-text text-sm;
-    @apply px-2 py-1 rounded shadow-lg;
-    @apply border border-surface-border;
+    background-color: var(--color-background-tertiary);
+    color: var(--color-text);
+    border: 1px solid var(--color-surface-border);
+    @apply text-sm px-2 py-1 rounded shadow-lg;
   }
   
   /* Progress Components */
   .theme-progress-bar {
-    @apply w-full bg-background-tertiary rounded-full h-2;
+    background-color: var(--color-background-tertiary);
+    @apply w-full rounded-full h-2;
   }
   
   .theme-progress-fill {
-    @apply bg-primary h-full rounded-full transition-all duration-300;
+    background-color: var(--color-primary);
+    @apply h-full rounded-full transition-all duration-300;
   }
   
   /* Skeleton Loading */
   .theme-skeleton {
-    @apply bg-background-tertiary animate-pulse rounded;
+    background-color: var(--color-background-tertiary);
+    @apply animate-pulse rounded;
   }
 }
 

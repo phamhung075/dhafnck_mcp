@@ -27,29 +27,61 @@ REQUIRED BEHAVIORS:
 ## Missing Test Files - CREATE IMMEDIATELY:
 
 ## Stale Test Files (Source Newer Than Test)
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/services/task_context_sync_service.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/application/services/task_context_sync_service_test.py`
+- **Source**: `dhafnck-frontend/src/api.ts`
+  - **Test**: `dhafnck-frontend/src/tests/api.test.ts`
   - **Days stale**: 0
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/domain/constants.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/domain/constants_test.py`
+- **Source**: `dhafnck-frontend/src/components/GlobalContextDialog.tsx`
+  - **Test**: `dhafnck-frontend/src/tests/components/GlobalContextDialog.test.tsx`
+  - **Days stale**: 6
+
+- **Source**: `dhafnck-frontend/src/components/Header.tsx`
+  - **Test**: `dhafnck-frontend/src/tests/components/Header.test.tsx`
+  - **Days stale**: 6
+
+- **Source**: `dhafnck-frontend/src/components/LazyTaskList.tsx`
+  - **Test**: `dhafnck-frontend/src/tests/components/LazyTaskList.test.tsx`
   - **Days stale**: 4
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/agent_mcp_controller.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/agent_mcp_controller_test.py`
-  - **Days stale**: 4
+- **Source**: `dhafnck-frontend/src/components/auth/SignupForm.tsx`
+  - **Test**: `dhafnck-frontend/src/tests/components/auth/SignupForm.test.tsx`
+  - **Days stale**: 6
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/compliance_mcp_controller.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/compliance_mcp_controller_test.py`
-  - **Days stale**: 4
+- **Source**: `dhafnck-frontend/src/index.tsx`
+  - **Test**: `dhafnck-frontend/src/tests/index.test.tsx`
+  - **Days stale**: 6
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/project_mcp_controller.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/project_mcp_controller_test.py`
-  - **Days stale**: 4
+- **Source**: `dhafnck-frontend/src/pages/TokenManagement.tsx`
+  - **Test**: `dhafnck-frontend/src/tests/pages/TokenManagement.test.tsx`
+  - **Days stale**: 5
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/task_mcp_controller.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/task_mcp_controller_test.py`
-  - **Days stale**: 4
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/mcp_entry_point.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/server/mcp_entry_point_test.py`
+  - **Days stale**: 0
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/auth_helper.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/auth_helper_test.py`
+  - **Days stale**: 0
+
+
+## Missing Test Files
+- **Source**: `dhafnck-frontend/src/SimpleApp.tsx`
+  - **Create test at**: `dhafnck-frontend/src/tests/SimpleApp.test.tsx`
+
+- **Source**: `dhafnck-frontend/src/api-lazy.ts`
+  - **Create test at**: `dhafnck-frontend/src/tests/api-lazy.test.ts`
+
+- **Source**: `dhafnck-frontend/src/components/LazySubtaskList.tsx`
+  - **Create test at**: `dhafnck-frontend/src/tests/components/LazySubtaskList.test.tsx`
+
+- **Source**: `dhafnck-frontend/src/components/ProjectList.tsx`
+  - **Create test at**: `dhafnck-frontend/src/tests/components/ProjectList.test.tsx`
+
+- **Source**: `dhafnck-frontend/src/components/TaskSearch.tsx`
+  - **Create test at**: `dhafnck-frontend/src/tests/components/TaskSearch.test.tsx`
+
+- **Source**: `dhafnck-frontend/src/contexts/AuthContext.tsx`
+  - **Create test at**: `dhafnck-frontend/src/tests/contexts/AuthContext.test.tsx`
 
 
 ## EXECUTION COMMANDS - DO NOW:

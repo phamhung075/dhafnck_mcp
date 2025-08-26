@@ -1,5 +1,34 @@
 # Test Changelog
 
+## Test Updates - 2025-08-26
+
+### Frontend Test Updates
+- **GlobalContextDialog.test.tsx** - Complete rewrite for shadcn/ui component library
+  - Replaced Material-UI mocks with shadcn/ui component mocks
+  - Updated to test tabbed interface with markdown editing
+  - Added tests for tab switching and maintaining state
+  - Updated all assertions to match new component structure
+  - Added test for filtering empty lines when saving
+
+- **Header.test.tsx** - Fixed React Router mocking
+  - Removed improper BrowserRouter mock from jest.mock
+  - Component already wraps itself with BrowserRouter in tests
+
+- **LazyTaskList.test.tsx** - Updated mocks and assertions
+  - Added RefreshButton mock to replace missing TaskCompleteDialog
+  - Updated subtask count display from "2" to "2 subtasks"
+  - Fixed refresh button selector to use aria-label instead of name
+
+- **SignupForm.test.tsx** - Modernized to use async userEvent API
+  - Converted all userEvent calls to async/await pattern
+  - Fixed environment variable usage from process.env.REACT_APP_API_URL to import.meta.env.VITE_API_URL
+  - Added proper import.meta.env mock setup
+  - Updated resend verification URL construction to use Vite env variables
+
+- **index.test.tsx** - Removed invalid CSS mock
+  - Removed mock for non-existent 'tailwindcss/tailwind.css' import
+  - Kept other CSS mocks for actual imports
+
 ## Test Updates - 2025-08-25
 
 ### Security Fix Test Updates

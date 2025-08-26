@@ -51,7 +51,7 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -88,13 +88,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     Cookies.set('access_token', tokens.access_token, { 
       expires: 1, // 1 day
       sameSite: 'strict',
-      secure: process.env.NODE_ENV === 'production'
+      secure: import.meta.env.MODE === 'production'
     });
     
     Cookies.set('refresh_token', tokens.refresh_token, { 
       expires: 30, // 30 days
       sameSite: 'strict',
-      secure: process.env.NODE_ENV === 'production'
+      secure: import.meta.env.MODE === 'production'
     });
 
     // Decode and set user

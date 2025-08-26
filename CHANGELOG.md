@@ -30,6 +30,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
   - Hierarchy validation logic tests
 
 ### Fixed
+- **Frontend Test Suite Updates** (2025-08-26)
+  - Updated 7 test files to match current component implementations
+  - Fixed GlobalContextDialog.test.tsx: Complete rewrite for shadcn/ui components
+  - Fixed Header.test.tsx: Removed improper BrowserRouter mock
+  - Fixed LazyTaskList.test.tsx: Added RefreshButton mock, updated subtask display format
+  - Fixed SignupForm.test.tsx: Updated to async userEvent API, fixed import.meta.env usage
+  - Fixed index.test.tsx: Removed non-existent tailwindcss import mock
+  - Modernized all tests to use proper async/await patterns
 - **Frontend Development Environment** (2025-08-25)
   - Fixed Node.js version compatibility: Updated from 18.20.8 to 20.x for Vite 7.1.3
   - Resolved ESM module import issues in Docker containers

@@ -20,15 +20,32 @@ jest.mock('../../../hooks/useAuth', () => ({
 // Mock fetch
 global.fetch = jest.fn();
 
+// Mock import.meta.env
+const mockEnv = {
+  VITE_API_URL: 'http://localhost:8000'
+};
+
+Object.defineProperty(global, 'import', {
+  value: {
+    meta: {
+      env: mockEnv
+    }
+  },
+  writable: true,
+  configurable: true
+});
+
 describe('SignupForm', () => {
   const mockNavigate = jest.fn();
   const mockSignup = jest.fn();
+  let user: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
     (useNavigate as jest.Mock).mockReturnValue(mockNavigate);
     (useAuth as jest.Mock).mockReturnValue({ signup: mockSignup });
     (global.fetch as jest.Mock).mockReset();
+    user = userEvent.setup();
   });
 
   const renderComponent = () => {
@@ -76,17 +93,17 @@ describe('SignupForm', () => {
       const submitButton = screen.getByRole('button', { name: 'Sign Up' });
 
       // Invalid email
-      userEvent.type(emailInput, 'invalid-email');
-      userEvent.click(submitButton);
+      await user.type(emailInput, 'invalid-email');
+      await user.click(submitButton);
 
       await waitFor(() => {
         expect(screen.getByText('Invalid email address')).toBeInTheDocument();
       });
 
       // Valid email
-      userEvent.clear(emailInput);
-      userEvent.type(emailInput, 'test@example.com');
-      userEvent.click(submitButton);
+      await user.clear(emailInput);
+      await user.type(emailInput, 'test@example.com');
+      await user.click(submitButton);
 
       await waitFor(() => {
         expect(screen.queryByText('Invalid email address')).not.toBeInTheDocument();
@@ -100,26 +117,26 @@ describe('SignupForm', () => {
       const submitButton = screen.getByRole('button', { name: 'Sign Up' });
 
       // Too short
-      userEvent.type(usernameInput, 'ab');
-      userEvent.click(submitButton);
+      await user.type(usernameInput, 'ab');
+      await user.click(submitButton);
 
       await waitFor(() => {
         expect(screen.getByText('Username must be at least 3 characters')).toBeInTheDocument();
       });
 
       // Too long
-      userEvent.clear(usernameInput);
-      userEvent.type(usernameInput, 'a'.repeat(21));
-      userEvent.click(submitButton);
+      await user.clear(usernameInput);
+      await user.type(usernameInput, 'a'.repeat(21));
+      await user.click(submitButton);
 
       await waitFor(() => {
         expect(screen.getByText('Username must not exceed 20 characters')).toBeInTheDocument();
       });
 
       // Invalid characters
-      userEvent.clear(usernameInput);
-      userEvent.type(usernameInput, 'user@name');
-      userEvent.click(submitButton);
+      await user.clear(usernameInput);
+      await user.type(usernameInput, 'user@name');
+      await user.click(submitButton);
 
       await waitFor(() => {
         expect(screen.getByText('Username can only contain letters, numbers, and underscores')).toBeInTheDocument();
@@ -133,17 +150,17 @@ describe('SignupForm', () => {
       const submitButton = screen.getByRole('button', { name: 'Sign Up' });
 
       // Too short
-      userEvent.type(passwordInput, 'Pass1!');
-      userEvent.click(submitButton);
+      await user.type(passwordInput, 'Pass1!');
+      await user.click(submitButton);
 
       await waitFor(() => {
         expect(screen.getByText('Password must be at least 8 characters')).toBeInTheDocument();
       });
 
       // Too weak
-      userEvent.clear(passwordInput);
-      userEvent.type(passwordInput, 'password');
-      userEvent.click(submitButton);
+      await user.clear(passwordInput);
+      await user.type(passwordInput, 'password');
+      await user.click(submitButton);
 
       await waitFor(() => {
         expect(screen.getByText('Password is too weak. Use a mix of uppercase, lowercase, numbers, and special characters')).toBeInTheDocument();
@@ -157,9 +174,9 @@ describe('SignupForm', () => {
       const confirmPasswordInput = screen.getByLabelText('Confirm Password');
       const submitButton = screen.getByRole('button', { name: 'Sign Up' });
 
-      userEvent.type(passwordInput, 'Password123!');
-      userEvent.type(confirmPasswordInput, 'Password456!');
-      userEvent.click(submitButton);
+      await user.type(passwordInput, 'Password123!');
+      await user.type(confirmPasswordInput, 'Password456!');
+      await user.click(submitButton);
 
       await waitFor(() => {
         expect(screen.getByText('Passwords do not match')).toBeInTheDocument();
@@ -170,7 +187,7 @@ describe('SignupForm', () => {
       renderComponent();
 
       const submitButton = screen.getByRole('button', { name: 'Sign Up' });
-      userEvent.click(submitButton);
+      await user.click(submitButton);
 
       await waitFor(() => {
         expect(screen.getByText('Email is required')).toBeInTheDocument();
@@ -188,17 +205,17 @@ describe('SignupForm', () => {
       const passwordInput = screen.getByLabelText('Password');
 
       // Weak password
-      userEvent.type(passwordInput, 'weak');
+      await user.type(passwordInput, 'weak');
       expect(screen.getByText('Very Weak')).toBeInTheDocument();
 
       // Medium password
-      userEvent.clear(passwordInput);
-      userEvent.type(passwordInput, 'Medium123');
+      await user.clear(passwordInput);
+      await user.type(passwordInput, 'Medium123');
       expect(screen.getByText('Fair')).toBeInTheDocument();
 
       // Strong password
-      userEvent.clear(passwordInput);
-      userEvent.type(passwordInput, 'Strong123!@#');
+      await user.clear(passwordInput);
+      await user.type(passwordInput, 'Strong123!@#');
       expect(screen.getByText('Strong')).toBeInTheDocument();
     });
 
@@ -207,7 +224,7 @@ describe('SignupForm', () => {
 
       const passwordInput = screen.getByLabelText('Password');
       
-      userEvent.type(passwordInput, 'p');
+      await user.type(passwordInput, 'p');
 
       expect(screen.getByText('At least 8 characters')).toBeInTheDocument();
       expect(screen.getByText('One lowercase letter')).toBeInTheDocument();
@@ -227,10 +244,10 @@ describe('SignupForm', () => {
 
       expect(passwordInput).toHaveAttribute('type', 'password');
 
-      userEvent.click(passwordToggle);
+      await user.click(passwordToggle);
       expect(passwordInput).toHaveAttribute('type', 'text');
 
-      userEvent.click(passwordToggle);
+      await user.click(passwordToggle);
       expect(passwordInput).toHaveAttribute('type', 'password');
     });
 
@@ -243,10 +260,10 @@ describe('SignupForm', () => {
 
       expect(confirmPasswordInput).toHaveAttribute('type', 'password');
 
-      userEvent.click(confirmPasswordToggle);
+      await user.click(confirmPasswordToggle);
       expect(confirmPasswordInput).toHaveAttribute('type', 'text');
 
-      userEvent.click(confirmPasswordToggle);
+      await user.click(confirmPasswordToggle);
       expect(confirmPasswordInput).toHaveAttribute('type', 'password');
     });
   });
@@ -261,13 +278,13 @@ describe('SignupForm', () => {
 
       renderComponent();
 
-      userEvent.type(screen.getByLabelText('Email Address'), 'test@example.com');
-      userEvent.type(screen.getByLabelText('Username'), 'testuser');
-      userEvent.type(screen.getByLabelText('Password'), 'Password123!');
-      userEvent.type(screen.getByLabelText('Confirm Password'), 'Password123!');
+      await user.type(screen.getByLabelText('Email Address'), 'test@example.com');
+      await user.type(screen.getByLabelText('Username'), 'testuser');
+      await user.type(screen.getByLabelText('Password'), 'Password123!');
+      await user.type(screen.getByLabelText('Confirm Password'), 'Password123!');
 
       const submitButton = screen.getByRole('button', { name: 'Sign Up' });
-      userEvent.click(submitButton);
+      await user.click(submitButton);
 
       await waitFor(() => {
         expect(mockSignup).toHaveBeenCalledWith('test@example.com', 'testuser', 'Password123!');
@@ -290,12 +307,12 @@ describe('SignupForm', () => {
 
       renderComponent();
 
-      userEvent.type(screen.getByLabelText('Email Address'), 'test@example.com');
-      userEvent.type(screen.getByLabelText('Username'), 'testuser');
-      userEvent.type(screen.getByLabelText('Password'), 'Password123!');
-      userEvent.type(screen.getByLabelText('Confirm Password'), 'Password123!');
+      await user.type(screen.getByLabelText('Email Address'), 'test@example.com');
+      await user.type(screen.getByLabelText('Username'), 'testuser');
+      await user.type(screen.getByLabelText('Password'), 'Password123!');
+      await user.type(screen.getByLabelText('Confirm Password'), 'Password123!');
 
-      userEvent.click(screen.getByRole('button', { name: 'Sign Up' }));
+      await user.click(screen.getByRole('button', { name: 'Sign Up' }));
 
       await waitFor(() => {
         expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
@@ -307,12 +324,12 @@ describe('SignupForm', () => {
 
       renderComponent();
 
-      userEvent.type(screen.getByLabelText('Email Address'), 'test@example.com');
-      userEvent.type(screen.getByLabelText('Username'), 'testuser');
-      userEvent.type(screen.getByLabelText('Password'), 'Password123!');
-      userEvent.type(screen.getByLabelText('Confirm Password'), 'Password123!');
+      await user.type(screen.getByLabelText('Email Address'), 'test@example.com');
+      await user.type(screen.getByLabelText('Username'), 'testuser');
+      await user.type(screen.getByLabelText('Password'), 'Password123!');
+      await user.type(screen.getByLabelText('Confirm Password'), 'Password123!');
 
-      userEvent.click(screen.getByRole('button', { name: 'Sign Up' }));
+      await user.click(screen.getByRole('button', { name: 'Sign Up' }));
 
       await waitFor(() => {
         expect(screen.getByText('This email is already registered but not verified.')).toBeInTheDocument();
@@ -326,12 +343,12 @@ describe('SignupForm', () => {
 
       renderComponent();
 
-      userEvent.type(screen.getByLabelText('Email Address'), 'test@example.com');
-      userEvent.type(screen.getByLabelText('Username'), 'testuser');
-      userEvent.type(screen.getByLabelText('Password'), 'Password123!');
-      userEvent.type(screen.getByLabelText('Confirm Password'), 'Password123!');
+      await user.type(screen.getByLabelText('Email Address'), 'test@example.com');
+      await user.type(screen.getByLabelText('Username'), 'testuser');
+      await user.type(screen.getByLabelText('Password'), 'Password123!');
+      await user.type(screen.getByLabelText('Confirm Password'), 'Password123!');
 
-      userEvent.click(screen.getByRole('button', { name: 'Sign Up' }));
+      await user.click(screen.getByRole('button', { name: 'Sign Up' }));
 
       await waitFor(() => {
         expect(screen.getByText('Network error')).toBeInTheDocument();
@@ -343,12 +360,12 @@ describe('SignupForm', () => {
 
       renderComponent();
 
-      userEvent.type(screen.getByLabelText('Email Address'), 'test@example.com');
-      userEvent.type(screen.getByLabelText('Username'), 'testuser');
-      userEvent.type(screen.getByLabelText('Password'), 'Password123!');
-      userEvent.type(screen.getByLabelText('Confirm Password'), 'Password123!');
+      await user.type(screen.getByLabelText('Email Address'), 'test@example.com');
+      await user.type(screen.getByLabelText('Username'), 'testuser');
+      await user.type(screen.getByLabelText('Password'), 'Password123!');
+      await user.type(screen.getByLabelText('Confirm Password'), 'Password123!');
 
-      userEvent.click(screen.getByRole('button', { name: 'Sign Up' }));
+      await user.click(screen.getByRole('button', { name: 'Sign Up' }));
 
       await waitFor(() => {
         expect(screen.getByText('Registration completed but response was unexpected. Please try signing in.')).toBeInTheDocument();
@@ -360,13 +377,13 @@ describe('SignupForm', () => {
 
       renderComponent();
 
-      userEvent.type(screen.getByLabelText('Email Address'), 'test@example.com');
-      userEvent.type(screen.getByLabelText('Username'), 'testuser');
-      userEvent.type(screen.getByLabelText('Password'), 'Password123!');
-      userEvent.type(screen.getByLabelText('Confirm Password'), 'Password123!');
+      await user.type(screen.getByLabelText('Email Address'), 'test@example.com');
+      await user.type(screen.getByLabelText('Username'), 'testuser');
+      await user.type(screen.getByLabelText('Password'), 'Password123!');
+      await user.type(screen.getByLabelText('Confirm Password'), 'Password123!');
 
       const submitButton = screen.getByRole('button', { name: 'Sign Up' });
-      userEvent.click(submitButton);
+      await user.click(submitButton);
 
       expect(submitButton).toBeDisabled();
       expect(screen.getByRole('progressbar')).toBeInTheDocument();
@@ -388,11 +405,11 @@ describe('SignupForm', () => {
       renderComponent();
 
       // Complete signup first
-      userEvent.type(screen.getByLabelText('Email Address'), 'test@example.com');
-      userEvent.type(screen.getByLabelText('Username'), 'testuser');
-      userEvent.type(screen.getByLabelText('Password'), 'Password123!');
-      userEvent.type(screen.getByLabelText('Confirm Password'), 'Password123!');
-      userEvent.click(screen.getByRole('button', { name: 'Sign Up' }));
+      await user.type(screen.getByLabelText('Email Address'), 'test@example.com');
+      await user.type(screen.getByLabelText('Username'), 'testuser');
+      await user.type(screen.getByLabelText('Password'), 'Password123!');
+      await user.type(screen.getByLabelText('Confirm Password'), 'Password123!');
+      await user.click(screen.getByRole('button', { name: 'Sign Up' }));
 
       await waitFor(() => {
         expect(screen.getByText("Didn't receive the email?")).toBeInTheDocument();
@@ -400,11 +417,11 @@ describe('SignupForm', () => {
 
       // Click resend button in success alert
       const resendButtons = screen.getAllByRole('button', { name: 'Resend Verification Email' });
-      userEvent.click(resendButtons[0]);
+      await user.click(resendButtons[0]);
 
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledWith(
-          'http://localhost:8000/auth/supabase/resend-verification',
+          `${mockEnv.VITE_API_URL}/auth/supabase/resend-verification`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -426,17 +443,17 @@ describe('SignupForm', () => {
       renderComponent();
 
       // Trigger error state
-      userEvent.type(screen.getByLabelText('Email Address'), 'test@example.com');
-      userEvent.type(screen.getByLabelText('Username'), 'testuser');
-      userEvent.type(screen.getByLabelText('Password'), 'Password123!');
-      userEvent.type(screen.getByLabelText('Confirm Password'), 'Password123!');
-      userEvent.click(screen.getByRole('button', { name: 'Sign Up' }));
+      await user.type(screen.getByLabelText('Email Address'), 'test@example.com');
+      await user.type(screen.getByLabelText('Username'), 'testuser');
+      await user.type(screen.getByLabelText('Password'), 'Password123!');
+      await user.type(screen.getByLabelText('Confirm Password'), 'Password123!');
+      await user.click(screen.getByRole('button', { name: 'Sign Up' }));
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: 'Resend Verification Email' })).toBeInTheDocument();
       });
 
-      userEvent.click(screen.getByRole('button', { name: 'Resend Verification Email' }));
+      await user.click(screen.getByRole('button', { name: 'Resend Verification Email' }));
 
       await waitFor(() => {
         expect(screen.getByText('Invalid email')).toBeInTheDocument();
@@ -451,17 +468,17 @@ describe('SignupForm', () => {
       renderComponent();
 
       // Trigger error state
-      userEvent.type(screen.getByLabelText('Email Address'), 'test@example.com');
-      userEvent.type(screen.getByLabelText('Username'), 'testuser');
-      userEvent.type(screen.getByLabelText('Password'), 'Password123!');
-      userEvent.type(screen.getByLabelText('Confirm Password'), 'Password123!');
-      userEvent.click(screen.getByRole('button', { name: 'Sign Up' }));
+      await user.type(screen.getByLabelText('Email Address'), 'test@example.com');
+      await user.type(screen.getByLabelText('Username'), 'testuser');
+      await user.type(screen.getByLabelText('Password'), 'Password123!');
+      await user.type(screen.getByLabelText('Confirm Password'), 'Password123!');
+      await user.click(screen.getByRole('button', { name: 'Sign Up' }));
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: 'Resend Verification Email' })).toBeInTheDocument();
       });
 
-      userEvent.click(screen.getByRole('button', { name: 'Resend Verification Email' }));
+      await user.click(screen.getByRole('button', { name: 'Resend Verification Email' }));
 
       await waitFor(() => {
         expect(screen.getByText('Failed to resend verification email. Please try again.')).toBeInTheDocument();
@@ -484,18 +501,18 @@ describe('SignupForm', () => {
 
       renderComponent();
 
-      userEvent.type(screen.getByLabelText('Email Address'), 'test@example.com');
-      userEvent.type(screen.getByLabelText('Username'), 'testuser');
-      userEvent.type(screen.getByLabelText('Password'), 'Password123!');
-      userEvent.type(screen.getByLabelText('Confirm Password'), 'Password123!');
-      userEvent.click(screen.getByRole('button', { name: 'Sign Up' }));
+      await user.type(screen.getByLabelText('Email Address'), 'test@example.com');
+      await user.type(screen.getByLabelText('Username'), 'testuser');
+      await user.type(screen.getByLabelText('Password'), 'Password123!');
+      await user.type(screen.getByLabelText('Confirm Password'), 'Password123!');
+      await user.click(screen.getByRole('button', { name: 'Sign Up' }));
 
       await waitFor(() => {
         expect(screen.getByText('Test error')).toBeInTheDocument();
       });
 
       const closeButton = screen.getByRole('button', { name: 'Close' });
-      userEvent.click(closeButton);
+      await user.click(closeButton);
 
       await waitFor(() => {
         expect(screen.queryByText('Test error')).not.toBeInTheDocument();
@@ -505,8 +522,8 @@ describe('SignupForm', () => {
 
   describe('Environment Variables', () => {
     it('uses custom API URL from environment variable', async () => {
-      const originalEnv = process.env.REACT_APP_API_URL;
-      process.env.REACT_APP_API_URL = 'https://api.example.com';
+      const originalEnv = mockEnv.VITE_API_URL;
+      mockEnv.VITE_API_URL = 'https://api.example.com';
 
       mockSignup.mockRejectedValueOnce(new Error('User already registered'));
       (global.fetch as jest.Mock).mockResolvedValueOnce({
@@ -517,17 +534,17 @@ describe('SignupForm', () => {
       renderComponent();
 
       // Trigger error state and resend
-      userEvent.type(screen.getByLabelText('Email Address'), 'test@example.com');
-      userEvent.type(screen.getByLabelText('Username'), 'testuser');
-      userEvent.type(screen.getByLabelText('Password'), 'Password123!');
-      userEvent.type(screen.getByLabelText('Confirm Password'), 'Password123!');
-      userEvent.click(screen.getByRole('button', { name: 'Sign Up' }));
+      await user.type(screen.getByLabelText('Email Address'), 'test@example.com');
+      await user.type(screen.getByLabelText('Username'), 'testuser');
+      await user.type(screen.getByLabelText('Password'), 'Password123!');
+      await user.type(screen.getByLabelText('Confirm Password'), 'Password123!');
+      await user.click(screen.getByRole('button', { name: 'Sign Up' }));
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: 'Resend Verification Email' })).toBeInTheDocument();
       });
 
-      userEvent.click(screen.getByRole('button', { name: 'Resend Verification Email' }));
+      await user.click(screen.getByRole('button', { name: 'Resend Verification Email' }));
 
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledWith(
@@ -536,7 +553,7 @@ describe('SignupForm', () => {
         );
       });
 
-      process.env.REACT_APP_API_URL = originalEnv;
+      mockEnv.VITE_API_URL = originalEnv;
     });
   });
 });

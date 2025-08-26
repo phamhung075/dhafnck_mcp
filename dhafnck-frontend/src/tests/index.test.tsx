@@ -17,7 +17,6 @@ jest.mock('react-router-dom', () => ({
 }));
 
 // Mock CSS imports
-jest.mock('tailwindcss/tailwind.css', () => ({}));
 jest.mock('../index.css', () => ({}));
 jest.mock('../styles/theme.css', () => ({}));
 jest.mock('../theme/global.scss', () => ({}));
