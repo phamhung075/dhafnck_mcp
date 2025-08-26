@@ -4,7 +4,7 @@ Tests for ORM Project Repository Implementation
 
 import pytest
 from unittest.mock import Mock, MagicMock, patch, AsyncMock
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from fastmcp.task_management.infrastructure.repositories.orm.project_repository import ORMProjectRepository
@@ -50,7 +50,6 @@ class TestORMProjectRepository:
     @pytest.fixture
     def mock_project_model(self):
         """Create a mock Project model"""
-        from datetime import timezone
         project = Mock(spec=Project)
         project.id = "project-123"
         project.name = "Test Project"
@@ -65,7 +64,6 @@ class TestORMProjectRepository:
     @pytest.fixture
     def mock_git_branch_model(self):
         """Create a mock ProjectGitBranch model"""
-        from datetime import timezone
         branch = Mock(spec=ProjectGitBranch)
         branch.id = "branch-123"
         branch.name = "main"
@@ -80,7 +78,6 @@ class TestORMProjectRepository:
     @pytest.fixture
     def mock_project_entity(self):
         """Create a mock Project entity"""
-        from datetime import timezone
         return ProjectEntity(
             id="project-123",
             name="Test Project",
@@ -154,7 +151,6 @@ class TestORMProjectRepository:
     @pytest.mark.asyncio
     async def test_save_project_with_branches(self, repository, mock_project_entity):
         """Test saving project with git branches"""
-        from datetime import timezone
         # Add branches to entity
         branch = GitBranch(
             id="branch-456",

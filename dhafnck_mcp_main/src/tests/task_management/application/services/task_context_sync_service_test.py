@@ -74,7 +74,7 @@ class TestTaskContextSyncService:
         task.title = "Test Task"
         task.description = "Test Description"
         task.status = TaskStatus.TODO
-        task.priority = Priority.MEDIUM
+        task.priority = Priority.medium()
         task.assignees = ["user-1"]
         task.labels = ["test"]
         task.estimated_effort = "2 hours"
@@ -187,7 +187,7 @@ class TestTaskContextSyncServiceSyncContext:
         task.title = "Test Task"
         task.description = "Test Description"
         task.status = TaskStatus.TODO
-        task.priority = Priority.MEDIUM
+        task.priority = Priority.medium()
         task.assignees = ["user-1"]
         task.labels = ["test"]
         task.estimated_effort = "2 hours"
@@ -420,7 +420,7 @@ class TestTaskContextSyncServiceSyncContext:
         mock_task.title = "User Task"
         mock_task.description = "User Description"
         mock_task.status = Status.TODO
-        mock_task.priority = Priority.HIGH
+        mock_task.priority = Priority.high()
         mock_task.assignees = ["user-123"]
         mock_task.labels = ["user-task"]
         mock_task.estimated_effort = "1 hour"
@@ -500,7 +500,7 @@ class TestTaskContextSyncServiceErrorScenarios:
         mock_task.title = "Test Task"
         mock_task.description = "Test Description"
         mock_task.status = Status.TODO
-        mock_task.priority = Priority.MEDIUM
+        mock_task.priority = Priority.medium()
         mock_task.assignees = []
         mock_task.labels = []
         mock_task.estimated_effort = None

@@ -150,8 +150,8 @@ async def test_delete_project_not_found(delete_project_use_case, mock_repositori
 
 
 @pytest.mark.asyncio
-async def test_delete_project_with_active_tasks_no_force(delete_project_use_case, mock_repositories, sample_project, sample_branches, sample_tasks):
-    """Test deletion blocked when active tasks exist and force=False."""
+async def test_delete_project_with_multiple_branches_no_force(delete_project_use_case, mock_repositories, sample_project, sample_branches, sample_tasks):
+    """Test deletion blocked when multiple branches exist and force=False."""
     # Setup mocks
     mock_repositories["project_repo"].find_by_id = AsyncMock(return_value=sample_project)
     mock_repositories["git_branch_repo"].find_by_project = AsyncMock(return_value=sample_branches)
@@ -161,7 +161,7 @@ async def test_delete_project_with_active_tasks_no_force(delete_project_use_case
     with pytest.raises(ValidationException) as exc_info:
         await delete_project_use_case.execute(sample_project.id, force=False)
     
-    assert "active tasks" in str(exc_info.value).lower()
+    assert "multiple branches" in str(exc_info.value).lower()
     assert "force=True" in str(exc_info.value)
 
 

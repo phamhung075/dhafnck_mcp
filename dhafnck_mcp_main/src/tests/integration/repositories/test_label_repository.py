@@ -337,8 +337,9 @@ class TestORMLabelRepository:
         
         mock_session.query.return_value.filter.return_value.first.return_value = None
         
-        with pytest.raises(NotFoundError, match="Task with id 'task-123' not found"):
-            label_repository.assign_label_to_task("12345678-1234-1234-1234-123456789abc", 1)
+        task_id = "12345678-1234-1234-1234-123456789abc"
+        with pytest.raises(NotFoundError, match=f"Task with id '{task_id}' not found"):
+            label_repository.assign_label_to_task(task_id, 1)
     
     def test_assign_label_to_task_label_not_found(self, label_repository, mock_db_adapter, sample_task_model):
         """Test assigning non-existent label to task"""
@@ -421,8 +422,9 @@ class TestORMLabelRepository:
         
         mock_session.query.return_value.filter.return_value.first.return_value = None
         
-        with pytest.raises(NotFoundError, match="Task with id 'task-123' not found"):
-            label_repository.get_labels_by_task("12345678-1234-1234-1234-123456789abc")
+        task_id = "12345678-1234-1234-1234-123456789abc"
+        with pytest.raises(NotFoundError, match=f"Task with id '{task_id}' not found"):
+            label_repository.get_labels_by_task(task_id)
     
     def test_database_error_handling(self, label_repository, mock_db_adapter):
         """Test general database error handling"""

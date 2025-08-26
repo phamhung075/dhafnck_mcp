@@ -36,9 +36,10 @@ class MockProjectRepository(ProjectRepository):
         self._projects: Dict[str, Project] = {}
         logger.warning("Using MockProjectRepository - data will not persist")
     
-    async def save(self, project: Project) -> None:
+    async def save(self, project: Project) -> Project:
         """Save project to in-memory storage"""
         self._projects[project.id] = project
+        return project
     
     async def find_by_id(self, project_id: str) -> Optional[Project]:
         """Find a project by its ID"""
@@ -222,20 +223,31 @@ class MockGitBranchRepository(GitBranchRepository):
             self._branches[git_branch_id]["archived"] = False
             return {"success": True, "message": "Branch restored"}
         return {"success": False, "error": f"Branch {git_branch_id} not found"}
+    
+    async def find_all(self) -> List[Dict[str, Any]]:
+        """Find all git branches across all projects"""
+        return list(self._branches.values())
+    
+    async def count(self) -> int:
+        """Count total number of branches"""
+        return len(self._branches)
 
 
 class MockTaskRepository(TaskRepository):
     """Mock task repository for database-less operation"""
     
-    def __init__(self):
+    def __init__(self, project_id: Optional[str] = None, branch_id: Optional[str] = None, user_id: Optional[str] = None):
         self._tasks: Dict[str, Task] = {}
         self._next_id = 1
+        self.project_id = project_id
+        self.branch_id = branch_id
+        self.user_id = user_id
         logger.warning("Using MockTaskRepository - data will not persist")
     
-    def save(self, task: Task) -> bool:
+    def save(self, task: Task) -> Task:
         """Save a task"""
         self._tasks[str(task.id)] = task
-        return True
+        return task
     
     def find_by_id(self, task_id: TaskId) -> Optional[Task]:
         """Find task by ID"""
@@ -334,15 +346,18 @@ class MockTaskRepository(TaskRepository):
 class MockSubtaskRepository(SubtaskRepository):
     """Mock subtask repository for database-less operation"""
     
-    def __init__(self):
+    def __init__(self, project_id: Optional[str] = None, branch_id: Optional[str] = None, user_id: Optional[str] = None):
         self._subtasks: Dict[str, Subtask] = {}
         self._next_id = 1
+        self.project_id = project_id
+        self.branch_id = branch_id
+        self.user_id = user_id
         logger.warning("Using MockSubtaskRepository - data will not persist")
     
-    def save(self, subtask: Subtask) -> bool:
+    def save(self, subtask: Subtask) -> Subtask:
         """Save a subtask"""
         self._subtasks[str(subtask.id)] = subtask
-        return True
+        return subtask
     
     def find_by_id(self, id: str) -> Optional[Subtask]:
         """Find a subtask by its id."""
@@ -470,15 +485,15 @@ class MockRepositoryFactory:
         return cls._branch_repo
     
     @classmethod
-    def get_task_repository(cls) -> TaskRepository:
+    def get_task_repository(cls, project_id: str = None, branch_id: str = None, user_id: str = None) -> TaskRepository:
         """Get mock task repository"""
         if cls._task_repo is None:
-            cls._task_repo = MockTaskRepository()
+            cls._task_repo = MockTaskRepository(project_id, branch_id, user_id)
         return cls._task_repo
     
     @classmethod
-    def get_subtask_repository(cls) -> SubtaskRepository:
+    def get_subtask_repository(cls, project_id: str = None, branch_id: str = None, user_id: str = None) -> SubtaskRepository:
         """Get mock subtask repository"""
         if cls._subtask_repo is None:
-            cls._subtask_repo = MockSubtaskRepository()
+            cls._subtask_repo = MockSubtaskRepository(project_id, branch_id, user_id)
         return cls._subtask_repo

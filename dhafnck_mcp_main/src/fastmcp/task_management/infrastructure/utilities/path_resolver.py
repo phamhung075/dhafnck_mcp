@@ -76,8 +76,28 @@ class PathResolver:
                     "description": "Project management configuration"
                 }
             }
-            with open(self.projects_file, 'w') as f:
-                json.dump(default_projects, f, indent=2)
+            
+            # Try to create parent directory and file
+            try:
+                # Ensure parent directory exists
+                self.projects_file.parent.mkdir(parents=True, exist_ok=True)
+                with open(self.projects_file, 'w') as f:
+                    json.dump(default_projects, f, indent=2)
+                logger.info(f"Created projects file at: {self.projects_file}")
+            except (PermissionError, OSError) as e:
+                # Fall back to project-relative path if the environment-specified path isn't writable
+                logger.warning(f"Cannot create projects file at {self.projects_file}: {e}")
+                fallback_projects_file = self.project_root / ".cursor/rules/brain/projects.json"
+                logger.info(f"Falling back to: {fallback_projects_file}")
+                
+                # Update projects_file to use fallback
+                self.projects_file = fallback_projects_file
+                
+                # Ensure fallback parent directory exists and create file
+                self.projects_file.parent.mkdir(parents=True, exist_ok=True)
+                with open(self.projects_file, 'w') as f:
+                    json.dump(default_projects, f, indent=2)
+                logger.info(f"Created fallback projects file at: {self.projects_file}")
         
     def get_tasks_json_path(self, project_id: str = None, git_branch_name: str = "main", user_id: Optional[str] = None) -> Path:
         """

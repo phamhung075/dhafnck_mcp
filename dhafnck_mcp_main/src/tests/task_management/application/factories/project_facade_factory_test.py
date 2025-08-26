@@ -93,7 +93,7 @@ class TestProjectFacadeFactory:
     def test_create_project_facade_default_user_prohibited(self):
         """Test that default user ID is prohibited."""
         with patch('fastmcp.task_management.domain.constants.validate_user_id') as mock_validate:
-            mock_validate.side_effect = DefaultUserProhibitedError("Default user not allowed")
+            mock_validate.side_effect = DefaultUserProhibitedError()
             
             with pytest.raises(DefaultUserProhibitedError):
                 self.factory.create_project_facade("default_user")

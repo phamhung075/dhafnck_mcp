@@ -68,7 +68,7 @@ class TestUserScopedProjectRoutes:
         
         with patch('fastmcp.server.routes.user_scoped_project_routes.ORMProjectRepository') as mock_repo_class:
             with patch('fastmcp.server.routes.user_scoped_project_routes.ProjectApplicationService') as mock_service_class:
-                with patch('fastmcp.server.routes.user_scoped_project_routes.uuid4', return_value=project_id):
+                with patch('uuid.uuid4', return_value=project_id):
                     mock_service_class.return_value = mock_service
                     
                     # Execute
@@ -102,7 +102,7 @@ class TestUserScopedProjectRoutes:
         
         with patch('fastmcp.server.routes.user_scoped_project_routes.ORMProjectRepository'):
             with patch('fastmcp.server.routes.user_scoped_project_routes.ProjectApplicationService', return_value=mock_service):
-                with patch('fastmcp.server.routes.user_scoped_project_routes.uuid4'):
+                with patch('uuid.uuid4'):
                     # Execute and assert
                     with pytest.raises(HTTPException) as exc_info:
                         await create_project(

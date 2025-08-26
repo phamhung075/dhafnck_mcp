@@ -5,7 +5,7 @@ Test cases for dual authentication middleware.
 import pytest
 import json
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from datetime import datetime
+from datetime import datetime, timedelta
 from starlette.testclient import TestClient
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
@@ -74,11 +74,12 @@ class TestDualAuthMiddleware:
     def mock_token_info(self):
         """Create mock token info."""
         return TokenInfo(
+            token_hash="test-hash-123",
             user_id="test-user-123",
-            email="test@example.com",
-            token_type="mcp_token",
-            expires_at=datetime.now().timestamp() + 3600,
-            created_at=datetime.now()
+            created_at=datetime.now(),
+            expires_at=datetime.now() + timedelta(hours=1),
+            is_active=True,
+            usage_count=0
         )
     
     @pytest.fixture

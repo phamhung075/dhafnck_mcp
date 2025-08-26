@@ -70,7 +70,7 @@ def sample_task_data():
         "title": "Test Task",
         "description": "A test task for unit testing",
         "status": TaskStatus.TODO.value,
-        "priority": TaskPriority.MEDIUM.value,
+        "priority": TaskPriority.medium().value,
         "project_id": "test-project-123",
         "git_branch_name": "feature/test-branch",
         "user_id": "test-user-789",
@@ -93,7 +93,7 @@ def sample_task_entity(sample_task_data):
         title=sample_task_data["title"],
         description=sample_task_data["description"],
         status=TaskStatus.TODO,
-        priority=TaskPriority.MEDIUM,
+        priority=TaskPriority.medium(),
         project_id=sample_task_data["project_id"],
         git_branch_name=sample_task_data["git_branch_name"],
         user_id=sample_task_data["user_id"]

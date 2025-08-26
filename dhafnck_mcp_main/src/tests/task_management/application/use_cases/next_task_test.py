@@ -170,7 +170,7 @@ class TestNextTaskUseCase:
         
         assert factory == mock_context_factory
     
-    @patch('fastmcp.task_management.application.use_cases.next_task.UnifiedContextFacadeFactory')
+    @patch('fastmcp.task_management.application.factories.unified_context_facade_factory.UnifiedContextFacadeFactory')
     def test_get_context_factory_create_new(self, mock_factory_class, mock_task_repository):
         """Test _get_context_factory creating new factory"""
         mock_new_factory = Mock()

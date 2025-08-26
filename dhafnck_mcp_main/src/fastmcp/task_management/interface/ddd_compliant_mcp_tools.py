@@ -510,5 +510,36 @@ class DDDCompliantMCPTools:
         """Get the vision analytics service if Vision System is enabled"""
         return getattr(self, '_vision_analytics_service', None)
     
+    # Wrapper methods for backward compatibility with tests and legacy code
+    def manage_project(self, **kwargs) -> Dict[str, Any]:
+        """Wrapper method for project management - delegates to project controller"""
+        return self._project_controller.manage_project(**kwargs)
     
+    def manage_git_branch(self, **kwargs) -> Dict[str, Any]:
+        """Wrapper method for git branch management - delegates to git branch controller"""
+        return self._git_branch_controller.manage_git_branch(**kwargs)
+    
+    def manage_task(self, **kwargs) -> Dict[str, Any]:
+        """Wrapper method for task management - delegates to task controller"""
+        return self._task_controller.manage_task(**kwargs)
+    
+    def manage_subtask(self, **kwargs) -> Dict[str, Any]:
+        """Wrapper method for subtask management - delegates to subtask controller"""
+        return self._subtask_controller.manage_subtask(**kwargs)
+    
+    def manage_context(self, **kwargs) -> Dict[str, Any]:
+        """Wrapper method for context management - delegates to context controller"""
+        return self._context_controller.manage_context(**kwargs)
+    
+    def manage_agent(self, **kwargs) -> Dict[str, Any]:
+        """Wrapper method for agent management - delegates to agent controller"""
+        return self._agent_controller.manage_agent(**kwargs)
+    
+    def call_agent(self, **kwargs) -> Dict[str, Any]:
+        """Wrapper method for agent calls - delegates to call agent controller"""
+        return self._call_agent_controller.call_agent(**kwargs)
+    
+    def manage_compliance(self, **kwargs) -> Dict[str, Any]:
+        """Wrapper method for compliance management - delegates to compliance controller"""
+        return self._compliance_controller.manage_compliance(**kwargs)
  

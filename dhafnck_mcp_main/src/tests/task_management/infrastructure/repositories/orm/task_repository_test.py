@@ -829,7 +829,7 @@ class TestORMTaskRepository:
         filters = {
             'git_branch_id': 'branch-123',
             'status': TaskStatus.IN_PROGRESS,
-            'priority': Priority.HIGH,
+            'priority': Priority.high(),
             'assignees': ['user-1', 'user-2'],
             'labels': ['bug', 'feature']
         }

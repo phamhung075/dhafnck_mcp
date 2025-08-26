@@ -32,13 +32,8 @@ class TestProjectMCPController:
         self.mock_facade = Mock(spec=ProjectApplicationFacade)
         self.mock_facade_factory.create_project_facade.return_value = self.mock_facade
         
-        # Mock workflow guidance factory if it exists
-        try:
-            with patch('fastmcp.task_management.interface.controllers.project_mcp_controller.ProjectWorkflowFactory'):
-                self.controller = ProjectMCPController(self.mock_facade_factory)
-        except ImportError:
-            # Fallback if workflow factory doesn't exist
-            self.controller = ProjectMCPController(self.mock_facade_factory)
+        # Create controller directly - no need to patch non-existent factory
+        self.controller = ProjectMCPController(self.mock_facade_factory)
     
     def test_init(self):
         """Test controller initialization."""
@@ -70,36 +65,37 @@ class TestProjectMCPController:
             assert call_kwargs["name"] == "manage_project"
             assert call_kwargs["description"] == "Test description"
     
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id')
-    def test_get_facade_for_request_with_user_context(self, mock_get_user_id):
+    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_authenticated_user_id')
+    def test_get_facade_for_request_with_user_context(self, mock_get_auth_user_id):
         """Test getting facade with user context from JWT."""
-        mock_get_user_id.return_value = "jwt-user-123"
+        mock_get_auth_user_id.return_value = "jwt-user-123"
         
-        with patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id') as mock_validate:
-            mock_validate.return_value = "jwt-user-123"
-            
-            result = self.controller._get_facade_for_request()
-            
-            assert result == self.mock_facade
-            mock_validate.assert_called_once_with("jwt-user-123", "Project facade creation")
-            self.mock_facade_factory.create_project_facade.assert_called_once_with(
-                user_id="jwt-user-123"
-            )
+        result = self.controller._get_facade_for_request()
+        
+        assert result == self.mock_facade
+        mock_get_auth_user_id.assert_called_once_with(None, "Project facade creation")
+        self.mock_facade_factory.create_project_facade.assert_called_once_with(
+            user_id="jwt-user-123"
+        )
     
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id')
-    def test_get_facade_for_request_no_auth_raises_error(self, mock_get_user_id):
+    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_authenticated_user_id')
+    def test_get_facade_for_request_no_auth_raises_error(self, mock_get_auth_user_id):
         """Test getting facade without authentication raises error."""
-        mock_get_user_id.return_value = None
+        mock_get_auth_user_id.side_effect = UserAuthenticationRequiredError("Project facade creation")
         
         with pytest.raises(UserAuthenticationRequiredError) as exc_info:
             self.controller._get_facade_for_request()
         
         assert "Project facade creation" in str(exc_info.value)
     
+    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id')
     @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id')
-    def test_manage_project_create_action(self, mock_get_user_id):
+    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_authenticated_user_id')
+    def test_manage_project_create_action(self, mock_get_auth_user_id, mock_get_current_user_id, mock_validate_user_id):
         """Test manage_project with create action."""
-        mock_get_user_id.return_value = "test-user-123"
+        mock_get_auth_user_id.return_value = "test-user-123"
+        mock_get_current_user_id.return_value = "test-user-123"
+        mock_validate_user_id.return_value = "test-user-123"
         
         with patch.object(self.controller, 'handle_crud_operations') as mock_crud:
             mock_crud.return_value = {"success": True}
@@ -115,10 +111,14 @@ class TestProjectMCPController:
                 "create", None, "test-project", "Test project description", "test-user-123", False
             )
     
+    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id')
     @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id')
-    def test_manage_project_health_check_action(self, mock_get_user_id):
+    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_authenticated_user_id')
+    def test_manage_project_health_check_action(self, mock_get_auth_user_id, mock_get_current_user_id, mock_validate_user_id):
         """Test manage_project with project_health_check action."""
-        mock_get_user_id.return_value = "test-user-123"
+        mock_get_auth_user_id.return_value = "test-user-123"
+        mock_get_current_user_id.return_value = "test-user-123"
+        mock_validate_user_id.return_value = "test-user-123"
         
         with patch.object(self.controller, 'handle_maintenance_operations') as mock_maintenance:
             mock_maintenance.return_value = {"success": True}
@@ -133,10 +133,14 @@ class TestProjectMCPController:
                 "project_health_check", "test-project", False, "test-user-123"
             )
     
+    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id')
     @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id')
-    def test_manage_project_unknown_action(self, mock_get_user_id):
+    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_authenticated_user_id')
+    def test_manage_project_unknown_action(self, mock_get_auth_user_id, mock_get_current_user_id, mock_validate_user_id):
         """Test manage_project with unknown action."""
-        mock_get_user_id.return_value = "test-user-123"
+        mock_get_auth_user_id.return_value = "test-user-123"
+        mock_get_current_user_id.return_value = "test-user-123"
+        mock_validate_user_id.return_value = "test-user-123"
         
         result = self.controller.manage_project(
             action="invalid_action",
@@ -160,8 +164,11 @@ class TestProjectMCPController:
             assert result == {"success": True, "project": {"id": "project-123"}}
             mock_create.assert_called_once()
     
-    def test_handle_crud_operations_create_missing_name(self):
+    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_authenticated_user_id')
+    def test_handle_crud_operations_create_missing_name(self, mock_get_auth_user_id):
         """Test create operation with missing name."""
+        mock_get_auth_user_id.return_value = "test-user-123"
+        
         result = self.controller.handle_crud_operations(
             "create", None, None, "Test description"
         )
@@ -411,63 +418,60 @@ class TestProjectMCPControllerIntegration:
         self.mock_facade = Mock(spec=ProjectApplicationFacade)
         self.mock_facade_factory.create_project_facade.return_value = self.mock_facade
         
-        # Mock workflow guidance factory if it exists  
-        try:
-            with patch('fastmcp.task_management.interface.controllers.project_mcp_controller.ProjectWorkflowFactory'):
-                self.controller = ProjectMCPController(self.mock_facade_factory)
-        except ImportError:
-            # Fallback if workflow factory doesn't exist
-            self.controller = ProjectMCPController(self.mock_facade_factory)
+        # Create controller directly - no need to patch non-existent factory
+        self.controller = ProjectMCPController(self.mock_facade_factory)
     
+    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id')
     @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id')
-    def test_complete_create_workflow(self, mock_get_user_id):
+    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_authenticated_user_id')
+    def test_complete_create_workflow(self, mock_get_auth_user_id, mock_get_current_user_id, mock_validate_user_id):
         """Test complete project creation workflow."""
-        mock_get_user_id.return_value = "test-user"
+        mock_get_auth_user_id.return_value = "test-user"
+        mock_get_current_user_id.return_value = "test-user"
+        mock_validate_user_id.return_value = "test-user"
         
-        with patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id') as mock_validate:
-            mock_validate.return_value = "test-user"
+        with patch.object(self.controller, '_handle_create_project') as mock_create:
+            mock_create.return_value = {
+                "success": True,
+                "project": {"id": "project-123", "name": "test-project"}
+            }
             
-            with patch.object(self.controller, '_handle_create_project') as mock_create:
-                mock_create.return_value = {
-                    "success": True,
-                    "project": {"id": "project-123", "name": "test-project"}
-                }
-                
-                result = self.controller.manage_project(
-                    action="create",
-                    name="test-project",
-                    description="Test project description"
-                )
-                
-                # Verify successful creation
-                assert result["success"] is True
-                assert result["project"]["id"] == "project-123"
-                mock_create.assert_called_once()
+            result = self.controller.manage_project(
+                action="create",
+                name="test-project",
+                description="Test project description"
+            )
+            
+            # Verify successful creation
+            assert result["success"] is True
+            assert result["project"]["id"] == "project-123"
+            mock_create.assert_called_once()
     
+    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id')
     @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id')
-    def test_complete_health_check_workflow(self, mock_get_user_id):
+    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_authenticated_user_id')
+    def test_complete_health_check_workflow(self, mock_get_auth_user_id, mock_get_current_user_id, mock_validate_user_id):
         """Test complete project health check workflow."""
-        mock_get_user_id.return_value = "test-user"
+        mock_get_auth_user_id.return_value = "test-user"
+        mock_get_current_user_id.return_value = "test-user"
+        mock_validate_user_id.return_value = "test-user"
         
-        with patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id') as mock_validate:
-            mock_validate.return_value = "test-user"
+        with patch.object(self.controller, '_handle_maintenance_action') as mock_maintenance:
+            mock_maintenance.return_value = {
+                "success": True,
+                "health_score": 75,
+                "issues": ["Low task completion rate"]
+            }
             
-            with patch.object(self.controller, '_handle_maintenance_action') as mock_maintenance:
-                mock_maintenance.return_value = {
-                    "success": True,
-                    "health_score": 75,
-                    "issues": ["Low task completion rate"]
-                }
-                
-                result = self.controller.manage_project(
-                    action="project_health_check",
-                    project_id="project-123"
-                )
-                
-                # Verify successful health check
-                assert result["success"] is True
-                assert result["health_score"] == 75
-                mock_maintenance.assert_called_once()
+            result = self.controller.manage_project(
+                action="project_health_check",
+                project_id="project-123"
+            )
+            
+            # Verify successful health check
+            assert result["success"] is True
+            assert result["health_score"] == 75
+            mock_maintenance.assert_called_once()
 
 
 if __name__ == "__main__":

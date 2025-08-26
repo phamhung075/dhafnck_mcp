@@ -75,7 +75,7 @@ def test_object_creation():
     hint = WorkflowHint.create(
         task_id=uuid4(),
         hint_type=HintType.NEXT_ACTION,
-        priority=HintPriority.MEDIUM,
+        priority=HintPriority.medium(),
         message="Test hint",
         suggested_action="Test action",
         metadata=metadata

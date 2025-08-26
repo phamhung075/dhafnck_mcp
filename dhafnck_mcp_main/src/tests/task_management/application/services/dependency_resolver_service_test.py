@@ -35,7 +35,7 @@ class TestDependencyResolverService:
         task.id = TaskId("task-1")
         task.title = "Test Task"
         task.status = TaskStatus.TODO
-        task.priority = Priority.MEDIUM
+        task.priority = Priority.medium()
         task.overall_progress = 0
         task.estimated_effort = "2 hours"
         task.assignees = ["user1"]
@@ -114,7 +114,7 @@ class TestDependencyResolverService:
         dep1.id = TaskId("dep-1")
         dep1.title = "Dependency 1"
         dep1.status = TaskStatus.DONE
-        dep1.priority = Priority.HIGH
+        dep1.priority = Priority.high()
         dep1.overall_progress = 100
         dep1.estimated_effort = "1 hour"
         dep1.assignees = ["user1"]
@@ -125,7 +125,7 @@ class TestDependencyResolverService:
         dep2.id = TaskId("dep-2")
         dep2.title = "Dependency 2"
         dep2.status = TaskStatus.IN_PROGRESS
-        dep2.priority = Priority.MEDIUM
+        dep2.priority = Priority.medium()
         dep2.overall_progress = 50
         dep2.estimated_effort = "3 hours"
         dep2.assignees = ["user2"]
@@ -168,7 +168,7 @@ class TestDependencyResolverService:
         blocked_task.id = TaskId("blocked-1")
         blocked_task.title = "Blocked Task"
         blocked_task.status = TaskStatus.TODO
-        blocked_task.priority = Priority.HIGH
+        blocked_task.priority = Priority.high()
         blocked_task.overall_progress = 0
         blocked_task.estimated_effort = "4 hours"
         blocked_task.assignees = ["user3"]
@@ -372,7 +372,7 @@ class TestDependencyResolverService:
         task1.id = TaskId("task-1")
         task1.title = "Main Task"
         task1.status = TaskStatus.TODO
-        task1.priority = Priority.HIGH
+        task1.priority = Priority.high()
         task1.overall_progress = 0
         task1.estimated_effort = "2 hours"
         task1.assignees = []
@@ -383,7 +383,7 @@ class TestDependencyResolverService:
         dep1.id = TaskId("dep-1")
         dep1.title = "Dependency 1"
         dep1.status = TaskStatus.DONE
-        dep1.priority = Priority.MEDIUM
+        dep1.priority = Priority.medium()
         dep1.overall_progress = 100
         dep1.estimated_effort = "1 hour"
         dep1.assignees = ["user1"]
@@ -418,7 +418,7 @@ class TestDependencyResolverService:
         task1.id = TaskId("task-1")
         task1.title = "Main Task"
         task1.status = TaskStatus.TODO
-        task1.priority = Priority.HIGH
+        task1.priority = Priority.high()
         task1.overall_progress = 0
         task1.estimated_effort = "2 hours"
         task1.assignees = []
@@ -429,7 +429,7 @@ class TestDependencyResolverService:
         blocked_task.id = TaskId("blocked-1")
         blocked_task.title = "Blocked Task"
         blocked_task.status = TaskStatus.TODO
-        blocked_task.priority = Priority.MEDIUM
+        blocked_task.priority = Priority.medium()
         blocked_task.overall_progress = 0
         blocked_task.estimated_effort = "3 hours"
         blocked_task.assignees = ["user2"]

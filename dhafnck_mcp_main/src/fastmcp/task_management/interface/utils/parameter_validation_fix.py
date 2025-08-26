@@ -179,6 +179,20 @@ class ParameterTypeCoercer:
             # No coercion needed, return as-is
             return value
     
+    @classmethod
+    def coerce_parameter_types(cls, params: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Coerce parameter types using a new instance.
+        
+        Args:
+            params: Dictionary of parameters to coerce
+            
+        Returns:
+            Dict[str, Any]: Dictionary with coerced parameters
+        """
+        instance = cls()
+        return instance.coerce_parameters(params)
+    
     def coerce_parameters(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
         Coerce all parameters in a dictionary.

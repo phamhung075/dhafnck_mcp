@@ -129,7 +129,8 @@ class GitBranchMCPController(ContextPropagationMixin):
         git_branch_name: Optional[str] = None,
         git_branch_id: Optional[str] = None,
         git_branch_description: Optional[str] = None,
-        agent_id: Optional[str] = None
+        agent_id: Optional[str] = None,
+        user_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Manage git branch operations by routing to appropriate handlers.
@@ -145,15 +146,15 @@ class GitBranchMCPController(ContextPropagationMixin):
         if action in ["create", "update", "get", "delete", "list"]:
             return self.handle_crud_operations(
                 action, project_id, git_branch_name, git_branch_id, 
-                git_branch_description
+                git_branch_description, user_id
             )
         elif action in ["assign_agent", "unassign_agent"]:
             return self.handle_agent_operations(
-                action, project_id, git_branch_name, git_branch_id, agent_id
+                action, project_id, git_branch_name, git_branch_id, agent_id, user_id
             )
         elif action in ["get_statistics", "archive", "restore"]:
             return self.handle_advanced_operations(
-                action, project_id, git_branch_id
+                action, project_id, git_branch_id, user_id
             )
         else:
             return {
@@ -174,7 +175,8 @@ class GitBranchMCPController(ContextPropagationMixin):
         project_id: str,
         git_branch_name: Optional[str] = None,
         git_branch_id: Optional[str] = None,
-        git_branch_description: Optional[str] = None
+        git_branch_description: Optional[str] = None,
+        user_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Handle core CRUD operations by converting MCP parameters 
@@ -182,8 +184,8 @@ class GitBranchMCPController(ContextPropagationMixin):
         """
         try:
             # Get facade for this request
-            print(f"DEBUG: About to call _get_facade_for_request with project_id={project_id}")
-            facade = self._get_facade_for_request(project_id)
+            print(f"DEBUG: About to call _get_facade_for_request with project_id={project_id}, user_id={user_id}")
+            facade = self._get_facade_for_request(project_id, user_id)
             print(f"DEBUG: Successfully created facade: {facade}")
             
             if action == "create":
@@ -231,7 +233,8 @@ class GitBranchMCPController(ContextPropagationMixin):
         project_id: str,
         git_branch_name: Optional[str] = None,
         git_branch_id: Optional[str] = None,
-        agent_id: Optional[str] = None
+        agent_id: Optional[str] = None,
+        user_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Handle agent-related operations by converting MCP parameters 
@@ -239,7 +242,7 @@ class GitBranchMCPController(ContextPropagationMixin):
         """
         try:
             # Get facade for this request
-            facade = self._get_facade_for_request(project_id)
+            facade = self._get_facade_for_request(project_id, user_id)
             
             # Validate required fields - now accepts either git_branch_id or git_branch_name
             if not git_branch_id and not git_branch_name:
@@ -273,7 +276,8 @@ class GitBranchMCPController(ContextPropagationMixin):
         self,
         action: str,
         project_id: str,
-        git_branch_id: Optional[str] = None
+        git_branch_id: Optional[str] = None,
+        user_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Handle advanced operations by converting MCP parameters 
@@ -281,7 +285,7 @@ class GitBranchMCPController(ContextPropagationMixin):
         """
         try:
             # Get facade for this request
-            facade = self._get_facade_for_request(project_id)
+            facade = self._get_facade_for_request(project_id, user_id)
             
             # All advanced operations require git_branch_id
             if not git_branch_id:

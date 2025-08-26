@@ -20,6 +20,11 @@ from fastmcp.task_management.domain.entities.agent import Agent
 class TestAgentApplicationFacade:
     """Test suite for AgentApplicationFacade"""
     
+    # Use a constant UUID for all tests
+    AGENT_ID = "550e8400-e29b-41d4-a716-446655440000"
+    AGENT_ID_2 = "550e8400-e29b-41d4-a716-446655440002"
+    PROJECT_ID = "550e8400-e29b-41d4-a716-446655440001"
+    
     @pytest.fixture
     def mock_agent_repository(self):
         """Create a mock agent repository"""
@@ -33,12 +38,14 @@ class TestAgentApplicationFacade:
     @pytest.fixture
     def sample_agent(self):
         """Create a sample agent for testing"""
-        return Agent(
-            id="agent-123",
+        agent = Agent(
+            id=self.AGENT_ID,
             name="test_agent",
-            project_id="project-123",
-            call_agent="test_call_agent"
+            description="Test agent for testing purposes"
         )
+        # Assign to project using the proper method
+        agent.assigned_projects.add(self.PROJECT_ID)
+        return agent
     
     def test_init(self, mock_agent_repository):
         """Test facade initialization"""
@@ -63,16 +70,15 @@ class TestAgentApplicationFacade:
         
         # Call register_agent
         result = facade.register_agent(
-            project_id="project-123",
-            agent_id="agent-123",
-            name="test_agent",
-            call_agent="test_call_agent"
+            project_id=self.PROJECT_ID,
+            agent_id=self.AGENT_ID,
+            name="test_agent"
         )
         
         # Verify result
         assert result["success"] is True
         assert result["action"] == "register"
-        assert result["agent"]["id"] == "agent-123"
+        assert result["agent"]["id"] == self.AGENT_ID
         assert result["agent"]["name"] == "test_agent"
         assert "hint" in result
         assert "successfully registered" in result["hint"]
@@ -89,8 +95,8 @@ class TestAgentApplicationFacade:
         
         # Call register_agent
         result = facade.register_agent(
-            project_id="project-123",
-            agent_id="agent-123",
+            project_id=self.PROJECT_ID,
+            agent_id=self.AGENT_ID,
             name="test_agent"
         )
         
@@ -114,7 +120,7 @@ class TestAgentApplicationFacade:
         # Call register_agent
         result = facade.register_agent(
             project_id="nonexistent-project",
-            agent_id="agent-123",
+            agent_id=self.AGENT_ID,
             name="test_agent"
         )
         
@@ -133,8 +139,8 @@ class TestAgentApplicationFacade:
         
         # Call register_agent
         result = facade.register_agent(
-            project_id="project-123",
-            agent_id="agent-123",
+            project_id=self.PROJECT_ID,
+            agent_id=self.AGENT_ID,
             name="existing_agent"
         )
         
@@ -153,8 +159,8 @@ class TestAgentApplicationFacade:
         
         # Call register_agent
         result = facade.register_agent(
-            project_id="project-123",
-            agent_id="agent-123"
+            project_id=self.PROJECT_ID,
+            agent_id=self.AGENT_ID
         )
         
         # Verify error response
@@ -172,8 +178,8 @@ class TestAgentApplicationFacade:
         
         # Call register_agent
         result = facade.register_agent(
-            project_id="project-123",
-            agent_id="agent-123",
+            project_id=self.PROJECT_ID,
+            agent_id=self.AGENT_ID,
             name="test_agent"
         )
         
@@ -188,7 +194,7 @@ class TestAgentApplicationFacade:
         # Mock the use case response
         mock_response = UnregisterAgentResponse(
             success=True,
-            agent_id="agent-123",
+            agent_id=self.AGENT_ID,
             agent_data={"name": "test_agent"},
             removed_assignments=["branch-1", "branch-2"],
             message="Agent unregistered successfully"
@@ -197,14 +203,14 @@ class TestAgentApplicationFacade:
         
         # Call unregister_agent
         result = facade.unregister_agent(
-            project_id="project-123",
-            agent_id="agent-123"
+            project_id=self.PROJECT_ID,
+            agent_id=self.AGENT_ID
         )
         
         # Verify result
         assert result["success"] is True
         assert result["action"] == "unregister"
-        assert result["agent_id"] == "agent-123"
+        assert result["agent_id"] == self.AGENT_ID
         assert result["removed_assignments"] == ["branch-1", "branch-2"]
     
     def test_unregister_agent_failure(self, facade):
@@ -212,15 +218,15 @@ class TestAgentApplicationFacade:
         # Mock the use case response
         mock_response = UnregisterAgentResponse(
             success=False,
-            agent_id="agent-123",
+            agent_id=self.AGENT_ID,
             error="Agent not found"
         )
         facade._unregister_agent_use_case.execute = Mock(return_value=mock_response)
         
         # Call unregister_agent
         result = facade.unregister_agent(
-            project_id="project-123",
-            agent_id="agent-123"
+            project_id=self.PROJECT_ID,
+            agent_id=self.AGENT_ID
         )
         
         # Verify result
@@ -237,8 +243,8 @@ class TestAgentApplicationFacade:
         
         # Call unregister_agent
         result = facade.unregister_agent(
-            project_id="project-123",
-            agent_id="agent-123"
+            project_id=self.PROJECT_ID,
+            agent_id=self.AGENT_ID
         )
         
         # Verify result
@@ -256,7 +262,7 @@ class TestAgentApplicationFacade:
         # Mock the use case response
         mock_response = AssignAgentResponse(
             success=True,
-            agent_id="agent-123",
+            agent_id=self.AGENT_ID,
             git_branch_id="branch-456",
             message="Agent assigned successfully"
         )
@@ -264,17 +270,17 @@ class TestAgentApplicationFacade:
         
         # Call assign_agent
         result = facade.assign_agent(
-            project_id="project-123",
-            agent_id="agent-123",
+            project_id=self.PROJECT_ID,
+            agent_id=self.AGENT_ID,
             git_branch_id="branch-456"
         )
         
         # Verify result
         assert result["success"] is True
         assert result["action"] == "assign"
-        assert result["agent_id"] == "agent-123"
+        assert result["agent_id"] == self.AGENT_ID
         assert result["git_branch_id"] == "branch-456"
-        assert result["metadata"]["project_id"] == "project-123"
+        assert result["metadata"]["project_id"] == self.PROJECT_ID
         assert result["metadata"]["timestamp"] == mock_now.isoformat()
     
     def test_assign_agent_failure(self, facade):
@@ -282,7 +288,7 @@ class TestAgentApplicationFacade:
         # Mock the use case response
         mock_response = AssignAgentResponse(
             success=False,
-            agent_id="agent-123",
+            agent_id=self.AGENT_ID,
             git_branch_id="branch-456",
             error="Branch not found"
         )
@@ -290,8 +296,8 @@ class TestAgentApplicationFacade:
         
         # Call assign_agent
         result = facade.assign_agent(
-            project_id="project-123",
-            agent_id="agent-123",
+            project_id=self.PROJECT_ID,
+            agent_id=self.AGENT_ID,
             git_branch_id="branch-456"
         )
         
@@ -299,7 +305,7 @@ class TestAgentApplicationFacade:
         assert result["success"] is False
         assert result["action"] == "assign"
         assert result["error"] == "Branch not found"
-        assert result["metadata"]["agent_id"] == "agent-123"
+        assert result["metadata"]["agent_id"] == self.AGENT_ID
         assert result["metadata"]["git_branch_id"] == "branch-456"
     
     def test_assign_agent_exception(self, facade):
@@ -311,8 +317,8 @@ class TestAgentApplicationFacade:
         
         # Call assign_agent
         result = facade.assign_agent(
-            project_id="project-123",
-            agent_id="agent-123",
+            project_id=self.PROJECT_ID,
+            agent_id=self.AGENT_ID,
             git_branch_id="branch-456"
         )
         
@@ -320,7 +326,7 @@ class TestAgentApplicationFacade:
         assert result["success"] is False
         assert result["action"] == "assign"
         assert "Unexpected error" in result["error"]
-        assert result["metadata"]["project_id"] == "project-123"
+        assert result["metadata"]["project_id"] == self.PROJECT_ID
     
     def test_unassign_agent_success(self, facade):
         """Test successful agent unassignment"""
@@ -334,8 +340,8 @@ class TestAgentApplicationFacade:
         
         # Call unassign_agent
         result = facade.unassign_agent(
-            project_id="project-123",
-            agent_id="agent-123",
+            project_id=self.PROJECT_ID,
+            agent_id=self.AGENT_ID,
             git_branch_id="branch-456"
         )
         
@@ -352,8 +358,8 @@ class TestAgentApplicationFacade:
         
         # Call unassign_agent
         result = facade.unassign_agent(
-            project_id="project-123",
-            agent_id="agent-123",
+            project_id=self.PROJECT_ID,
+            agent_id=self.AGENT_ID,
             git_branch_id="branch-456"
         )
         
@@ -378,14 +384,14 @@ class TestAgentApplicationFacade:
         
         # Call get_agent
         result = facade.get_agent(
-            project_id="project-123",
-            agent_id="agent-123"
+            project_id=self.PROJECT_ID,
+            agent_id=self.AGENT_ID
         )
         
         # Verify result
         assert result["success"] is True
         assert result["action"] == "get"
-        assert result["agent"]["id"] == "agent-123"
+        assert result["agent"]["id"] == self.AGENT_ID
         assert result["workload_status"]["tasks"] == 5
         assert result["metadata"]["timestamp"] == mock_now.isoformat()
     
@@ -401,7 +407,7 @@ class TestAgentApplicationFacade:
         
         # Call get_agent
         result = facade.get_agent(
-            project_id="project-123",
+            project_id=self.PROJECT_ID,
             agent_id="nonexistent-agent"
         )
         
@@ -420,8 +426,8 @@ class TestAgentApplicationFacade:
         
         # Call get_agent
         result = facade.get_agent(
-            project_id="project-123",
-            agent_id="agent-123"
+            project_id=self.PROJECT_ID,
+            agent_id=self.AGENT_ID
         )
         
         # Verify result
@@ -438,11 +444,12 @@ class TestAgentApplicationFacade:
         
         # Create multiple agents
         agent2 = Agent(
-            id="agent-456",
+            id=self.AGENT_ID_2,
             name="test_agent_2",
-            project_id="project-123",
-            call_agent="test_call_agent_2"
+            description="Second test agent for testing purposes"
         )
+        # Assign to project using the proper method
+        agent2.assigned_projects.add(self.PROJECT_ID)
         
         # Mock the use case response
         mock_response = ListAgentsResponse(
@@ -452,14 +459,14 @@ class TestAgentApplicationFacade:
         facade._list_agents_use_case.execute = Mock(return_value=mock_response)
         
         # Call list_agents
-        result = facade.list_agents(project_id="project-123")
+        result = facade.list_agents(project_id=self.PROJECT_ID)
         
         # Verify result
         assert result["success"] is True
         assert result["action"] == "list"
         assert len(result["agents"]) == 2
-        assert result["agents"][0]["id"] == "agent-123"
-        assert result["agents"][1]["id"] == "agent-456"
+        assert result["agents"][0]["id"] == self.AGENT_ID
+        assert result["agents"][1]["id"] == self.AGENT_ID_2
         assert result["metadata"]["count"] == 2
         assert result["metadata"]["timestamp"] == mock_now.isoformat()
     
@@ -473,7 +480,7 @@ class TestAgentApplicationFacade:
         facade._list_agents_use_case.execute = Mock(return_value=mock_response)
         
         # Call list_agents
-        result = facade.list_agents(project_id="project-123")
+        result = facade.list_agents(project_id=self.PROJECT_ID)
         
         # Verify result
         assert result["success"] is True
@@ -507,7 +514,7 @@ class TestAgentApplicationFacade:
         )
         
         # Call list_agents
-        result = facade.list_agents(project_id="project-123")
+        result = facade.list_agents(project_id=self.PROJECT_ID)
         
         # Verify result
         assert result["success"] is False
@@ -523,7 +530,7 @@ class TestAgentApplicationFacade:
         
         # Mock repository response
         updated_agent = {
-            "id": "agent-123",
+            "id": self.AGENT_ID,
             "name": "updated_agent",
             "call_agent": "updated_call_agent"
         }
@@ -531,8 +538,8 @@ class TestAgentApplicationFacade:
         
         # Call update_agent
         result = facade.update_agent(
-            project_id="project-123",
-            agent_id="agent-123",
+            project_id=self.PROJECT_ID,
+            agent_id=self.AGENT_ID,
             name="updated_agent",
             call_agent="updated_call_agent"
         )
@@ -541,7 +548,7 @@ class TestAgentApplicationFacade:
         assert result["success"] is True
         assert result["action"] == "update"
         assert result["agent"]["name"] == "updated_agent"
-        assert result["message"] == "Agent agent-123 updated successfully"
+        assert result["message"] == f"Agent {self.AGENT_ID} updated successfully"
         assert result["metadata"]["timestamp"] == mock_now.isoformat()
     
     def test_update_agent_not_found(self, facade):
@@ -553,7 +560,7 @@ class TestAgentApplicationFacade:
         
         # Call update_agent
         result = facade.update_agent(
-            project_id="project-123",
+            project_id=self.PROJECT_ID,
             agent_id="nonexistent-agent",
             name="updated_agent"
         )
@@ -573,7 +580,7 @@ class TestAgentApplicationFacade:
         # Call update_agent
         result = facade.update_agent(
             project_id="nonexistent-project",
-            agent_id="agent-123",
+            agent_id=self.AGENT_ID,
             name="updated_agent"
         )
         
@@ -591,8 +598,8 @@ class TestAgentApplicationFacade:
         
         # Call update_agent
         result = facade.update_agent(
-            project_id="project-123",
-            agent_id="agent-123",
+            project_id=self.PROJECT_ID,
+            agent_id=self.AGENT_ID,
             name="updated_agent"
         )
         
@@ -618,13 +625,13 @@ class TestAgentApplicationFacade:
         facade._agent_repository.rebalance_agents = Mock(return_value=rebalance_result)
         
         # Call rebalance_agents
-        result = facade.rebalance_agents(project_id="project-123")
+        result = facade.rebalance_agents(project_id=self.PROJECT_ID)
         
         # Verify result
         assert result["success"] is True
         assert result["action"] == "rebalance"
         assert result["rebalance_result"]["agents_reassigned"] == 3
-        assert result["message"] == "Agent rebalancing completed for project project-123"
+        assert result["message"] == f"Agent rebalancing completed for project {self.PROJECT_ID}"
         assert result["metadata"]["timestamp"] == mock_now.isoformat()
     
     def test_rebalance_agents_project_not_found(self, facade):
@@ -650,7 +657,7 @@ class TestAgentApplicationFacade:
         )
         
         # Call rebalance_agents
-        result = facade.rebalance_agents(project_id="project-123")
+        result = facade.rebalance_agents(project_id=self.PROJECT_ID)
         
         # Verify result
         assert result["success"] is False

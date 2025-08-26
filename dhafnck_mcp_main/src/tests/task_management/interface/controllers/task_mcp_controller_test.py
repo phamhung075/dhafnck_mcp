@@ -298,7 +298,7 @@ class TestTaskMCPController:
             )
             
             assert result["success"] is False
-            assert "Operation failed" in result["error"]
+            assert "could not be completed" in result["error"]
             assert result["error_code"] == "INTERNAL_ERROR"
     
     def test_handle_search_operations_success(self):
@@ -339,7 +339,7 @@ class TestTaskMCPController:
             )
             
             assert result["success"] is False
-            assert "Operation failed" in result["error"]
+            assert "could not be completed" in result["error"]
             assert result["error_code"] == "INTERNAL_ERROR"
     
     def test_handle_recommendation_operations_success(self):
@@ -370,7 +370,7 @@ class TestTaskMCPController:
             )
             
             assert result["success"] is False
-            assert "Operation failed" in result["error"]
+            assert "could not be completed" in result["error"]
             assert result["error_code"] == "INTERNAL_ERROR"
     
     def test_handle_dependency_operations_success(self):

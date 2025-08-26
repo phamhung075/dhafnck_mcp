@@ -98,7 +98,7 @@ def test_vision_objects():
     hint = WorkflowHint.create(
         task_id=uuid4(),
         hint_type=HintType.NEXT_ACTION,
-        priority=HintPriority.MEDIUM,
+        priority=HintPriority.medium(),
         message="Test hint",
         suggested_action="Test action",
         metadata=hint_metadata
@@ -125,7 +125,7 @@ def test_vision_domain_events():
         hint_id=uuid4(),
         task_id=uuid4(),
         hint_type=HintType.NEXT_ACTION,
-        priority=HintPriority.HIGH,
+        priority=HintPriority.high(),
         message="Test hint",
         suggested_action="Test action",
         source_rule="test_rule",

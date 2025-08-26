@@ -40,7 +40,7 @@ class TestListTasksUseCase:
             description="Test description",
             git_branch_id="branch-123",
             status=TaskStatus.TODO,
-            priority=Priority.HIGH,
+            priority=Priority.high(),
             assignees=["user-1", "user-2"],
             labels=["bug", "urgent"],
             subtasks=[],
@@ -142,7 +142,7 @@ class TestListTasksUseCase:
         mock_task_repository.find_by_criteria.assert_called_once_with(
             {
                 "git_branch_id": "branch-123",
-                "priority": Priority.HIGH
+                "priority": Priority.high()
             }, 
             limit=None
         )
@@ -264,7 +264,7 @@ class TestListTasksUseCase:
             {
                 "git_branch_id": "branch-123",
                 "status": TaskStatus.TODO,
-                "priority": Priority.HIGH,
+                "priority": Priority.high(),
                 "assignees": ["user-1"],
                 "labels": ["bug"]
             }, 
@@ -301,7 +301,7 @@ class TestListTasksUseCase:
             description="Description 1",
             git_branch_id="branch-123",
             status=TaskStatus.TODO,
-            priority=Priority.HIGH,
+            priority=Priority.high(),
             created_at=datetime.now(),
             updated_at=datetime.now()
         )
@@ -311,7 +311,7 @@ class TestListTasksUseCase:
             description="Description 2",
             git_branch_id="branch-123",
             status=TaskStatus.IN_PROGRESS,
-            priority=Priority.MEDIUM,
+            priority=Priority.medium(),
             created_at=datetime.now(),
             updated_at=datetime.now()
         )

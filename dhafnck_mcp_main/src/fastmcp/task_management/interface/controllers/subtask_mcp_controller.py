@@ -785,105 +785,105 @@ class SubtaskMCPController(ContextPropagationMixin):
                             agent="subtask_controller"
                         )
                     
-                        # Add deliverables
-                        if deliverables:
-                            deliverables_str = ", ".join(deliverables)
-                            self._context_facade.add_progress(
-                                task_id=task_id,
-                                content=f"Deliverables: {deliverables_str}",
-                                agent="subtask_controller"
-                            )
-                    
-                        # Add quality and verification info
-                        if completion_quality or verification_status:
-                            quality_info = []
-                            if completion_quality:
-                                quality_info.append(f"Quality: {completion_quality}")
-                            if verification_status:
-                                quality_info.append(f"Verification: {verification_status}")
-                            
-                            self._context_facade.add_progress(
-                                task_id=task_id,
-                                content=f"Quality Assessment: {' | '.join(quality_info)}",
-                                agent="subtask_controller"
-                            )
-                    
-                        # Add insights and learnings
-                        if insights_found:
-                            for insight in insights_found:
-                                insight_data = {
-                                    "insights": [{
-                                        "content": f"Subtask insight: {insight}",
-                                        "agent": "subtask_controller",
-                                        "category": "subtask_completion",
-                                        "importance": "high",
-                                        "timestamp": datetime.now(timezone.utc).isoformat()
-                                    }]
-                                }
-                                self._context_facade.merge_context("task", task_id, insight_data)
-                    
-                        # Add skills learned
-                        if skills_learned:
-                            for skill in skills_learned:
-                                skill_data = {
-                                    "insights": [{
-                                        "content": f"Skill learned: {skill}",
-                                        "agent": "subtask_controller",
-                                        "category": "skill_development",
-                                        "importance": "medium",
-                                        "timestamp": datetime.now(timezone.utc).isoformat()
-                                    }]
-                                }
-                                self._context_facade.merge_context("task", task_id, skill_data)
-                    
-                        # Add challenges overcome
-                        if challenges_overcome:
-                            for challenge in challenges_overcome:
-                                challenge_data = {
-                                    "insights": [{
-                                        "content": f"Challenge overcome: {challenge}",
-                                        "agent": "subtask_controller",
-                                        "category": "problem_solving",
-                                        "importance": "high",
-                                        "timestamp": datetime.now(timezone.utc).isoformat()
-                                    }]
-                                }
-                                self._context_facade.merge_context("task", task_id, challenge_data)
-                    
-                        # Add next recommendations
-                        if next_recommendations:
-                            for recommendation in next_recommendations:
-                                rec_data = {
-                                    "insights": [{
-                                        "content": f"Recommendation: {recommendation}",
-                                        "agent": "subtask_controller",
-                                        "category": "future_work",
-                                        "importance": "medium",
-                                        "timestamp": datetime.now(timezone.utc).isoformat()
-                                    }]
-                                }
-                                self._context_facade.merge_context("task", task_id, rec_data)
-                    
-                        # Add comprehensive completion context
-                        self._context_facade.merge_context(
-                            "task", task_id, {"completion_context": completion_context}
+                    # Add deliverables
+                    if deliverables:
+                        deliverables_str = ", ".join(deliverables)
+                        self._context_facade.add_progress(
+                            task_id=task_id,
+                            content=f"Deliverables: {deliverables_str}",
+                            agent="subtask_controller"
                         )
                     
-                        result["context_updated"] = True
-                        result["completion_context"] = completion_context
-                        result["parent_progress"] = self._get_parent_progress(facade, task_id)
-                    
-                        # Check if all subtasks are complete
-                        list_result = facade.handle_manage_subtask(
-                            action="list",
-                            task_id=task_id
+                    # Add quality and verification info
+                    if completion_quality or verification_status:
+                        quality_info = []
+                        if completion_quality:
+                            quality_info.append(f"Quality: {completion_quality}")
+                        if verification_status:
+                            quality_info.append(f"Verification: {verification_status}")
+                        
+                        self._context_facade.add_progress(
+                            task_id=task_id,
+                            content=f"Quality Assessment: {' | '.join(quality_info)}",
+                            agent="subtask_controller"
                         )
-                        if list_result.get("success"):
-                            subtasks = list_result.get("subtasks", [])
-                            all_complete = all(s.get("status") == "done" for s in subtasks)
-                            if all_complete and subtasks:
-                                result["hint"] = "🎉 All subtasks complete! Parent task ready for completion with comprehensive context."
-                                result["parent_completion_ready"] = True
+                    
+                    # Add insights and learnings
+                    if insights_found:
+                        for insight in insights_found:
+                            insight_data = {
+                                "insights": [{
+                                    "content": f"Subtask insight: {insight}",
+                                    "agent": "subtask_controller",
+                                    "category": "subtask_completion",
+                                    "importance": "high",
+                                    "timestamp": datetime.now(timezone.utc).isoformat()
+                                }]
+                            }
+                            self._context_facade.merge_context("task", task_id, insight_data)
+                    
+                    # Add skills learned
+                    if skills_learned:
+                        for skill in skills_learned:
+                            skill_data = {
+                                "insights": [{
+                                    "content": f"Skill learned: {skill}",
+                                    "agent": "subtask_controller",
+                                    "category": "skill_development",
+                                    "importance": "medium",
+                                    "timestamp": datetime.now(timezone.utc).isoformat()
+                                }]
+                            }
+                            self._context_facade.merge_context("task", task_id, skill_data)
+                    
+                    # Add challenges overcome
+                    if challenges_overcome:
+                        for challenge in challenges_overcome:
+                            challenge_data = {
+                                "insights": [{
+                                    "content": f"Challenge overcome: {challenge}",
+                                    "agent": "subtask_controller",
+                                    "category": "problem_solving",
+                                    "importance": "high",
+                                    "timestamp": datetime.now(timezone.utc).isoformat()
+                                }]
+                            }
+                            self._context_facade.merge_context("task", task_id, challenge_data)
+                    
+                    # Add next recommendations
+                    if next_recommendations:
+                        for recommendation in next_recommendations:
+                            rec_data = {
+                                "insights": [{
+                                    "content": f"Recommendation: {recommendation}",
+                                    "agent": "subtask_controller",
+                                    "category": "future_work",
+                                    "importance": "medium",
+                                    "timestamp": datetime.now(timezone.utc).isoformat()
+                                }]
+                            }
+                            self._context_facade.merge_context("task", task_id, rec_data)
+                    
+                    # Add comprehensive completion context
+                    self._context_facade.merge_context(
+                        "task", task_id, {"completion_context": completion_context}
+                    )
+                    
+                    result["context_updated"] = True
+                    result["completion_context"] = completion_context
+                    result["parent_progress"] = self._get_parent_progress(facade, task_id)
+                    
+                    # Check if all subtasks are complete
+                    list_result = facade.handle_manage_subtask(
+                        action="list",
+                        task_id=task_id
+                    )
+                    if list_result.get("success"):
+                        subtasks = list_result.get("subtasks", [])
+                        all_complete = all(s.get("status") == "done" for s in subtasks)
+                        if all_complete and subtasks:
+                            result["hint"] = "🎉 All subtasks complete! Parent task ready for completion with comprehensive context."
+                            result["parent_completion_ready"] = True
                     
                 except Exception as e:
                     logger.error(f"Failed to update enhanced parent context: {e}")
@@ -1352,3 +1352,43 @@ class SubtaskMCPController(ContextPropagationMixin):
             if len(uuid_string) == 32 and re.match(r'^[0-9a-fA-F]{32}$', uuid_string):
                 return True
             return False
+    
+    def _parse_array_parameter(self, value: Union[List[str], str, None]) -> Optional[List[str]]:
+        """
+        Parse array parameter that can be provided in multiple formats.
+        
+        Args:
+            value: The parameter value to parse
+            
+        Returns:
+            Optional[List[str]]: Parsed array or None
+        """
+        if value is None:
+            return None
+        
+        if isinstance(value, list):
+            return value
+        
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:  # Empty string
+                return None
+            
+            # Try to parse as JSON first
+            try:
+                import json
+                parsed = json.loads(value)
+                if isinstance(parsed, list):
+                    return parsed
+            except (json.JSONDecodeError, ValueError):
+                pass
+            
+            # Parse as comma-separated values
+            if ',' in value:
+                return [item.strip() for item in value.split(',') if item.strip()]
+            else:
+                # Single string item
+                return [value]
+        
+        # For other types, return None
+        return None

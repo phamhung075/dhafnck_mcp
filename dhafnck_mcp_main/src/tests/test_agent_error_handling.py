@@ -47,7 +47,7 @@ def test_agent_error_handling():
         db_config = get_db_config()
         if not db_config:
             logger.error("Could not get database configuration")
-            return False
+            assert False, "Could not get database configuration"
         
         # Create repository and facade
         agent_repo = ORMAgentRepository(project_id="test_project")
@@ -98,7 +98,7 @@ def test_agent_error_handling():
                 call_agent="@another"
             )
             logger.error("Should have raised ValidationException for duplicate name")
-            return False
+            assert False, "Should have raised ValidationException for duplicate name"
         except ValidationException as e:
             logger.info(f"✓ Got expected ValidationException: {e}")
             error_msg = str(e)
@@ -173,11 +173,11 @@ def test_agent_error_handling():
         logger.info("✅ ALL ERROR HANDLING TESTS COMPLETED")
         logger.info("=" * 60)
         
-        return True
+        # Test completed successfully
         
     except Exception as e:
         logger.error(f"Test failed with error: {e}", exc_info=True)
-        return False
+        assert False, f"Test failed with error: {e}"
 
 
 def main():

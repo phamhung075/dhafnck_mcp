@@ -13,18 +13,8 @@ class TestTaskCreateAutoContext:
     
     def setup_method(self, method):
         """Clean up before each test"""
-        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
-        from sqlalchemy import text
-        
-        db_config = get_db_config()
-        with db_config.get_session() as session:
-            # Clean test data but preserve defaults
-            try:
-                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
-                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
-                session.commit()
-            except:
-                session.rollback()
+        # This is a unit test that doesn't need database setup
+        pass
 
     """Test auto-context creation for tasks"""
     
@@ -46,7 +36,8 @@ class TestTaskCreateAutoContext:
             description="Test Description",
             git_branch_id=git_branch_id,
             status="todo",
-            priority="medium"
+            priority="medium",
+            user_id="test_user_123"
         )
         
         # Create use case
@@ -70,7 +61,7 @@ class TestTaskCreateAutoContext:
         
         # Verify context creation was attempted
         mock_factory.create_facade.assert_called_once_with(
-            user_id="default_id",
+            user_id="test_user_123",
             git_branch_id=git_branch_id
         )
         
@@ -100,7 +91,8 @@ class TestTaskCreateAutoContext:
             description="Test Description",
             git_branch_id=git_branch_id,
             status="todo",
-            priority="medium"
+            priority="medium",
+            user_id="test_user_123"
         )
         
         # Create use case
@@ -144,7 +136,8 @@ class TestTaskCreateAutoContext:
             description="Test Description",
             git_branch_id=git_branch_id,
             status="todo",
-            priority="medium"
+            priority="medium",
+            user_id="test_user_123"
         )
         
         # Create use case
@@ -181,7 +174,8 @@ class TestTaskCreateAutoContext:
             git_branch_id=git_branch_id,
             status="todo",
             priority="medium",
-            dependencies=[dependency_id]
+            dependencies=[dependency_id],
+            user_id="test_user_123"
         )
         
         # Create use case
@@ -204,5 +198,8 @@ class TestTaskCreateAutoContext:
         assert result.task.id == task_id
         
         # Verify context creation was attempted
-        mock_factory.create_facade.assert_called_once()
+        mock_factory.create_facade.assert_called_once_with(
+            user_id="test_user_123",
+            git_branch_id=git_branch_id
+        )
         mock_facade.create_context.assert_called_once()

@@ -12,7 +12,7 @@ from typing import Dict, Any, List, Optional
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlalchemy import and_, func
+from sqlalchemy import and_, func, case
 
 from ....domain.repositories.git_branch_repository import GitBranchRepository
 from ....domain.entities.git_branch import GitBranch
@@ -72,11 +72,8 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectGitBranch], GitBranchRepos
         git_branch.priority = Priority(model.priority)
         git_branch.status = TaskStatus(model.status)
         
-        # Set task counts from model
-        if hasattr(git_branch, '_task_count'):
-            git_branch._task_count = model.task_count
-        if hasattr(git_branch, '_completed_task_count'):
-            git_branch._completed_task_count = model.completed_task_count
+        # Note: Task counts are calculated dynamically by the entity's get_task_count() 
+        # and get_completed_task_count() methods, so we don't set private attributes here
         
         return git_branch
     
@@ -481,9 +478,9 @@ class ORMGitBranchRepository(BaseORMRepository[ProjectGitBranch], GitBranchRepos
                 # Get basic stats using aggregate functions
                 stats = session.query(
                     func.count(ProjectGitBranch.id).label('total_branches'),
-                    func.sum(func.case((ProjectGitBranch.status == 'done', 1), else_=0)).label('completed_branches'),
-                    func.sum(func.case((ProjectGitBranch.status == 'in_progress', 1), else_=0)).label('active_branches'),
-                    func.sum(func.case((ProjectGitBranch.assigned_agent_id.isnot(None), 1), else_=0)).label('assigned_branches'),
+                    func.sum(case((ProjectGitBranch.status == 'done', 1), else_=0)).label('completed_branches'),
+                    func.sum(case((ProjectGitBranch.status == 'in_progress', 1), else_=0)).label('active_branches'),
+                    func.sum(case((ProjectGitBranch.assigned_agent_id.isnot(None), 1), else_=0)).label('assigned_branches'),
                     func.sum(ProjectGitBranch.task_count).label('total_tasks'),
                     func.sum(ProjectGitBranch.completed_task_count).label('total_completed_tasks')
                 ).filter(ProjectGitBranch.project_id == project_id).first()

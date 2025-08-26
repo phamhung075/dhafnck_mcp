@@ -60,8 +60,11 @@ class TestORMAgentRepository:
     
     def test_init(self, agent_repository):
         """Test repository initialization"""
+        import uuid
         assert agent_repository.project_id == "test_project"
-        assert agent_repository.user_id == "test_user"
+        # The user_id gets converted to UUID format for database consistency
+        expected_user_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, "test_user"))
+        assert agent_repository.user_id == expected_user_id
         assert agent_repository.model_class == Agent
     
     def test_model_to_entity(self, agent_repository, mock_agent_model):

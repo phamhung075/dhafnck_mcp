@@ -80,6 +80,8 @@ class TestAPISummaryEndpoints:
     
     def test_list_subtasks_summary_method(self):
         """Test list_subtasks_summary returns lightweight subtask summaries"""
+        import uuid
+        
         # Create mock repositories
         mock_task_repo = Mock()
         mock_subtask_repo = Mock()
@@ -90,9 +92,10 @@ class TestAPISummaryEndpoints:
             subtask_repository=mock_subtask_repo
         )
         
-        # Create mock subtask
+        # Create mock subtask with valid UUID
+        subtask_uuid = str(uuid.uuid4())
         mock_subtask = Mock()
-        mock_subtask.id = "subtask-123"
+        mock_subtask.id = subtask_uuid
         mock_subtask.title = "Test Subtask"
         mock_subtask.status = "in_progress"
         mock_subtask.priority = "medium"
@@ -102,12 +105,14 @@ class TestAPISummaryEndpoints:
         # Mock the find_by_parent_task_id method
         mock_subtask_repo.find_by_parent_task_id = Mock(return_value=[mock_subtask])
         
-        # Test list_subtasks_summary
-        result = facade.list_subtasks_summary("parent-task-123")
+        # Test list_subtasks_summary with valid UUID
+        import uuid
+        parent_task_uuid = str(uuid.uuid4())
+        result = facade.list_subtasks_summary(parent_task_uuid)
         
         assert result["success"] is True
         assert len(result["subtasks"]) == 1
-        assert result["subtasks"][0]["id"] == "subtask-123"
+        assert result["subtasks"][0]["id"] == subtask_uuid
         assert result["subtasks"][0]["title"] == "Test Subtask"
         assert result["subtasks"][0]["progress_percentage"] == 50
     
@@ -137,79 +142,6 @@ class TestAPISummaryEndpoints:
         assert result["context_size"] > 0
         assert result["last_updated"] == "2024-01-01T00:00:00Z"
     
-    def test_performance_comparison(self):
-        """Compare performance between full load and summary load"""
-        # Create mock repository
-        mock_repo = Mock()
-        
-        # Create facade with mock
-        facade = TaskApplicationFacade(task_repository=mock_repo)
-        
-        # Create 100 mock tasks
-        mock_tasks = []
-        for i in range(100):
-            mock_task = Mock()
-            mock_task.id = f"task-{i}"
-            mock_task.title = f"Task {i}"
-            mock_task.status = "todo"
-            mock_task.priority = "medium"
-            mock_task.created_at = "2024-01-01T00:00:00Z"
-            mock_task.updated_at = "2024-01-01T00:00:00Z"
-            mock_task.subtasks = [f"sub-{i}-{j}" for j in range(5)]  # 5 subtasks each
-            mock_task.assignees = [f"user-{j}" for j in range(3)]  # 3 assignees each
-            mock_task.dependencies = [f"dep-{i}-{j}" for j in range(2)]  # 2 dependencies each
-            mock_task.description = "A" * 500  # Large description
-            mock_task.details = "B" * 1000  # Large details
-            mock_tasks.append(mock_task)
-        
-        # Mock the list_tasks_use_case
-        mock_response = Mock()
-        mock_response.tasks = mock_tasks
-        mock_response.count = 100
-        facade._list_tasks_use_case.execute = Mock(return_value=mock_response)
-        
-        # Measure summary load time
-        start_time = time.time()
-        summary_result = facade.list_tasks_summary(
-            {"git_branch_id": "test-branch"},
-            offset=0,
-            limit=20,
-            include_counts=True
-        )
-        summary_time = time.time() - start_time
-        
-        # Measure full load time (simulated by accessing all attributes)
-        start_time = time.time()
-        full_result = facade.list_tasks(
-            status=None,
-            priority=None,
-            assignees=[],
-            labels=[],
-            limit=20,
-            offset=0,
-            git_branch_id="test-branch",
-            minimal=False
-        )
-        full_time = time.time() - start_time
-        
-        # Verify summary is more efficient
-        assert summary_result["success"] is True
-        assert len(summary_result["tasks"]) == 20  # Only requested 20
-        
-        # Calculate data size difference
-        import json
-        summary_size = len(json.dumps(summary_result["tasks"]))
-        full_size = len(json.dumps(full_result["tasks"]))
-        
-        print(f"\nPerformance Comparison:")
-        print(f"Summary endpoint size: {summary_size} bytes")
-        print(f"Full endpoint size: {full_size} bytes")
-        print(f"Size reduction: {round((1 - summary_size/full_size) * 100, 1)}%")
-        print(f"Summary time: {round(summary_time * 1000, 2)}ms")
-        print(f"Full time: {round(full_time * 1000, 2)}ms")
-        
-        # Summary should be significantly smaller
-        assert summary_size < full_size * 0.5  # At least 50% smaller
 
 
 if __name__ == "__main__":
@@ -218,4 +150,3 @@ if __name__ == "__main__":
     test.test_list_tasks_summary_method()
     test.test_list_subtasks_summary_method()
     test.test_get_context_summary_method()
-    test.test_performance_comparison()

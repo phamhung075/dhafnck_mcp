@@ -203,9 +203,10 @@ class TestMCPAuthMiddleware:
         
         await middleware(scope, receive, send)
         
-        # Verify context was reset to initial value
-        # Note: In actual implementation, the context should be reset after the request
-        # This is handled by the finally block in the middleware
+        # Verify app was called with correct scope
+        mock_app.assert_called_once_with(scope, receive, send)
+        # Verify user context was set in scope
+        assert scope.get("state", {}).get("user_id") == "test-user-789"
     
     @pytest.mark.asyncio
     async def test_middleware_error_handling(self, middleware, mock_app):

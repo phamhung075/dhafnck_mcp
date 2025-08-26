@@ -14,6 +14,7 @@ from fastmcp.auth.interface.fastapi_auth import (
     get_optional_user
 )
 from fastmcp.auth.domain.entities.user import User, UserRole
+from fastmcp.task_management.infrastructure.database.database_config import get_session
 
 
 class TestFastAPIAuth:

@@ -76,10 +76,10 @@ class TestSubtaskMCPController:
     def test_get_facade_for_request_with_user_context(self, mock_get_auth_user_id):
         """Test getting facade with user context from JWT."""
         mock_get_auth_user_id.return_value = "jwt-user-123"
-        task_id = "task-123"
+        task_id = "550e8400-e29b-41d4-a716-446655440000"
         
         # Mock database lookups for project context
-        with patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_session_manager'):
+        with patch('fastmcp.task_management.infrastructure.database.session_manager.get_session_manager'):
             result = self.controller._get_facade_for_request(task_id)
             
             assert result == self.mock_facade
@@ -90,10 +90,10 @@ class TestSubtaskMCPController:
     def test_get_facade_for_request_compatibility_mode(self, mock_get_auth_user_id):
         """Test getting facade with compatibility mode."""
         mock_get_auth_user_id.return_value = "compatibility-user"
-        task_id = "task-123"
+        task_id = "550e8400-e29b-41d4-a716-446655440000"
         
         # Mock database lookups for project context
-        with patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_session_manager'):
+        with patch('fastmcp.task_management.infrastructure.database.session_manager.get_session_manager'):
             result = self.controller._get_facade_for_request(task_id)
             
             assert result == self.mock_facade
@@ -104,7 +104,7 @@ class TestSubtaskMCPController:
         """Test manage_subtask with create action."""
         self.mock_facade.handle_manage_subtask.return_value = {
             "success": True,
-            "subtask": {"id": "subtask-123", "title": "Test subtask"}
+            "subtask": {"id": "sub550e8400-e29b-41d4-a716-446655440000", "title": "Test subtask"}
         }
         
         with patch.object(self.controller, '_get_facade_for_request') as mock_get_facade:
@@ -112,7 +112,7 @@ class TestSubtaskMCPController:
             
             result = self.controller.manage_subtask(
                 action="create",
-                task_id="task-123",
+                task_id="550e8400-e29b-41d4-a716-446655440000",
                 title="Test subtask"
             )
             
@@ -123,7 +123,7 @@ class TestSubtaskMCPController:
         """Test manage_subtask with update action."""
         self.mock_facade.handle_manage_subtask.return_value = {
             "success": True,
-            "subtask": {"id": "subtask-456", "status": "in_progress"}
+            "subtask": {"id": "550e8400-e29b-41d4-a716-446655440001", "status": "in_progress"}
         }
         
         with patch.object(self.controller, '_get_facade_for_request') as mock_get_facade:
@@ -131,8 +131,8 @@ class TestSubtaskMCPController:
             
             result = self.controller.manage_subtask(
                 action="update",
-                task_id="task-123",
-                subtask_id="subtask-456",
+                task_id="550e8400-e29b-41d4-a716-446655440000",
+                subtask_id="550e8400-e29b-41d4-a716-446655440001",
                 progress_percentage=50
             )
             
@@ -144,11 +144,11 @@ class TestSubtaskMCPController:
         # Mock the get and update operations for completion
         self.mock_facade.handle_manage_subtask.side_effect = [
             # First call: get subtask info
-            {"success": True, "subtask": {"id": "subtask-456", "title": "Test subtask"}},
+            {"success": True, "subtask": {"id": "550e8400-e29b-41d4-a716-446655440001", "title": "Test subtask"}},
             # Second call: update status to done
-            {"success": True, "subtask": {"id": "subtask-456", "status": "done"}},
+            {"success": True, "subtask": {"id": "550e8400-e29b-41d4-a716-446655440001", "status": "done"}},
             # Third call: list subtasks for progress
-            {"success": True, "subtasks": [{"id": "subtask-456", "status": "done"}]}
+            {"success": True, "subtasks": [{"id": "550e8400-e29b-41d4-a716-446655440001", "status": "done"}]}
         ]
         
         with patch.object(self.controller, '_get_facade_for_request') as mock_get_facade:
@@ -156,8 +156,8 @@ class TestSubtaskMCPController:
             
             result = self.controller.manage_subtask(
                 action="complete",
-                task_id="task-123",
-                subtask_id="subtask-456",
+                task_id="550e8400-e29b-41d4-a716-446655440000",
+                subtask_id="550e8400-e29b-41d4-a716-446655440001",
                 completion_summary="Task completed successfully"
             )
             
@@ -169,7 +169,7 @@ class TestSubtaskMCPController:
         """Test manage_subtask with unknown action."""
         result = self.controller.manage_subtask(
             action="invalid_action",
-            task_id="task-123"
+            task_id="550e8400-e29b-41d4-a716-446655440000"
         )
         
         assert result["success"] is False
@@ -180,7 +180,7 @@ class TestSubtaskMCPController:
         """Test handling create operation successfully."""
         self.mock_facade.handle_manage_subtask.return_value = {
             "success": True,
-            "subtask": {"id": "subtask-123", "title": "Test subtask"}
+            "subtask": {"id": "sub550e8400-e29b-41d4-a716-446655440000", "title": "Test subtask"}
         }
         
         with patch.object(self.controller, '_get_facade_for_request') as mock_get_facade:
@@ -188,7 +188,7 @@ class TestSubtaskMCPController:
             
             result = self.controller.manage_subtask(
                 action="create",
-                task_id="task-123",
+                task_id="550e8400-e29b-41d4-a716-446655440000",
                 title="Test subtask",
                 description="Test description"
             )
@@ -200,7 +200,7 @@ class TestSubtaskMCPController:
         """Test create operation with missing title."""
         result = self.controller.manage_subtask(
             action="create",
-            task_id="task-123",
+            task_id="550e8400-e29b-41d4-a716-446655440000",
             title=None,
             description="Test description"
         )
@@ -212,7 +212,7 @@ class TestSubtaskMCPController:
         """Test handling get operation successfully."""
         self.mock_facade.handle_manage_subtask.return_value = {
             "success": True,
-            "subtask": {"id": "subtask-123", "title": "Test subtask"}
+            "subtask": {"id": "sub550e8400-e29b-41d4-a716-446655440000", "title": "Test subtask"}
         }
         
         with patch.object(self.controller, '_get_facade_for_request') as mock_get_facade:
@@ -220,8 +220,8 @@ class TestSubtaskMCPController:
             
             result = self.controller.manage_subtask(
                 action="get",
-                task_id="task-123",
-                subtask_id="subtask-456"
+                task_id="550e8400-e29b-41d4-a716-446655440000",
+                subtask_id="550e8400-e29b-41d4-a716-446655440001"
             )
             
             assert result["success"] is True
@@ -231,7 +231,7 @@ class TestSubtaskMCPController:
         """Test get operation with missing subtask_id."""
         result = self.controller.manage_subtask(
             action="get",
-            task_id="task-123",
+            task_id="550e8400-e29b-41d4-a716-446655440000",
             subtask_id=None
         )
         
@@ -243,8 +243,8 @@ class TestSubtaskMCPController:
         self.mock_facade.handle_manage_subtask.return_value = {
             "success": True,
             "subtasks": [
-                {"id": "subtask-1", "status": "done"},
-                {"id": "subtask-2", "status": "in_progress"}
+                {"id": "550e8400-e29b-41d4-a716-446655440003", "status": "done"},
+                {"id": "550e8400-e29b-41d4-a716-446655440004", "status": "in_progress"}
             ]
         }
         
@@ -253,7 +253,7 @@ class TestSubtaskMCPController:
             
             result = self.controller.manage_subtask(
                 action="list",
-                task_id="task-123"
+                task_id="550e8400-e29b-41d4-a716-446655440000"
             )
             
             assert result["success"] is True
@@ -271,8 +271,8 @@ class TestSubtaskMCPController:
             
             result = self.controller.manage_subtask(
                 action="update",
-                task_id="task-123",
-                subtask_id="subtask-456",
+                task_id="550e8400-e29b-41d4-a716-446655440000",
+                subtask_id="550e8400-e29b-41d4-a716-446655440001",
                 title="New title",
                 description="New description",
                 progress_percentage=75,
@@ -287,7 +287,7 @@ class TestSubtaskMCPController:
         """Test update operation with missing subtask_id."""
         result = self.controller.manage_subtask(
             action="update",
-            task_id="task-123",
+            task_id="550e8400-e29b-41d4-a716-446655440000",
             subtask_id=None,
             title="New title"
         )
@@ -300,7 +300,7 @@ class TestSubtaskMCPController:
         """Test handling delete operation successfully."""
         self.mock_facade.handle_manage_subtask.side_effect = [
             # First call: get subtask info
-            {"success": True, "subtask": {"id": "subtask-456", "title": "Test subtask"}},
+            {"success": True, "subtask": {"id": "550e8400-e29b-41d4-a716-446655440001", "title": "Test subtask"}},
             # Second call: delete subtask
             {"success": True}
         ]
@@ -310,8 +310,8 @@ class TestSubtaskMCPController:
             
             result = self.controller.manage_subtask(
                 action="delete",
-                task_id="task-123",
-                subtask_id="subtask-456"
+                task_id="550e8400-e29b-41d4-a716-446655440000",
+                subtask_id="550e8400-e29b-41d4-a716-446655440001"
             )
             
             assert result["success"] is True
@@ -324,7 +324,7 @@ class TestSubtaskMCPController:
             
             result = self.controller.manage_subtask(
                 action="create",
-                task_id="task-123",
+                task_id="550e8400-e29b-41d4-a716-446655440000",
                 title="Test subtask",
                 description="description"
             )
@@ -337,11 +337,11 @@ class TestSubtaskMCPController:
         # Mock the get and update operations for completion
         self.mock_facade.handle_manage_subtask.side_effect = [
             # First call: get subtask info
-            {"success": True, "subtask": {"id": "subtask-456", "title": "Test subtask"}},
+            {"success": True, "subtask": {"id": "550e8400-e29b-41d4-a716-446655440001", "title": "Test subtask"}},
             # Second call: update status to done
-            {"success": True, "subtask": {"id": "subtask-456", "status": "done"}},
+            {"success": True, "subtask": {"id": "550e8400-e29b-41d4-a716-446655440001", "status": "done"}},
             # Third call: list subtasks for progress
-            {"success": True, "subtasks": [{"id": "subtask-456", "status": "done"}]}
+            {"success": True, "subtasks": [{"id": "550e8400-e29b-41d4-a716-446655440001", "status": "done"}]}
         ]
         
         with patch.object(self.controller, '_get_facade_for_request') as mock_get_facade:
@@ -349,8 +349,8 @@ class TestSubtaskMCPController:
             
             result = self.controller.manage_subtask(
                 action="complete",
-                task_id="task-123",
-                subtask_id="subtask-456",
+                task_id="550e8400-e29b-41d4-a716-446655440000",
+                subtask_id="550e8400-e29b-41d4-a716-446655440001",
                 completion_summary="Task completed",
                 impact_on_parent="Significant progress made",
                 insights_found=["Insight 1", "Insight 2"],
@@ -371,8 +371,8 @@ class TestSubtaskMCPController:
         """Test completion operation with missing completion_summary."""
         result = self.controller.manage_subtask(
             action="complete",
-            task_id="task-123",
-            subtask_id="subtask-456",
+            task_id="550e8400-e29b-41d4-a716-446655440000",
+            subtask_id="550e8400-e29b-41d4-a716-446655440001",
             completion_summary=None
         )
         
@@ -384,7 +384,7 @@ class TestSubtaskMCPController:
         """Test completion operation with missing subtask_id."""
         result = self.controller.manage_subtask(
             action="complete",
-            task_id="task-123",
+            task_id="550e8400-e29b-41d4-a716-446655440000",
             subtask_id=None,
             completion_summary="Task completed"
         )
@@ -436,19 +436,21 @@ class TestSubtaskMCPController:
     
     def test_enhance_with_workflow_hints_success(self):
         """Test enhancing successful response with workflow hints."""
-        response = {"success": True, "subtask": {"id": "subtask-123"}}
+        response = {"success": True, "subtask": {"id": "sub550e8400-e29b-41d4-a716-446655440000"}}
         
         mock_guidance = {"next_steps": ["Continue work"], "hints": ["Test hint"]}
-        self.controller._workflow_guidance.generate_guidance.return_value = mock_guidance
+        enhanced_response = response.copy()
+        enhanced_response["workflow_guidance"] = mock_guidance
+        self.controller._workflow_guidance.enhance_response.return_value = enhanced_response
         
         result = self.controller._enhance_with_workflow_hints(
-            response, "create", "task-123", "subtask-123"
+            response, "create", "550e8400-e29b-41d4-a716-446655440000", "sub550e8400-e29b-41d4-a716-446655440000"
         )
         
         assert result["success"] is True
         assert result["workflow_guidance"] == mock_guidance
-        self.controller._workflow_guidance.generate_guidance.assert_called_once_with(
-            "create", {"task_id": "task-123", "subtask_id": "subtask-123"}
+        self.controller._workflow_guidance.enhance_response.assert_called_once_with(
+            response, "create", {"task_id": "550e8400-e29b-41d4-a716-446655440000", "subtask_id": "sub550e8400-e29b-41d4-a716-446655440000"}
         )
     
     def test_enhance_with_workflow_hints_failure(self):
@@ -466,20 +468,25 @@ class TestSubtaskMCPController:
         response = {
             "success": True,
             "subtasks": [
-                {"id": "subtask-1", "status": "done"},
-                {"id": "subtask-2", "status": "in_progress"}
+                {"id": "550e8400-e29b-41d4-a716-446655440003", "status": "done"},
+                {"id": "550e8400-e29b-41d4-a716-446655440004", "status": "in_progress"}
             ]
         }
         
         mock_guidance = {"next_steps": ["Complete remaining subtasks"]}
-        self.controller._workflow_guidance.generate_guidance.return_value = mock_guidance
+        enhanced_response = response.copy()
+        enhanced_response["workflow_guidance"] = mock_guidance
+        self.controller._workflow_guidance.enhance_response.return_value = enhanced_response
         
         result = self.controller._enhance_with_workflow_hints(
-            response, "list", "task-123", None, response["subtasks"]
+            response, "list", "550e8400-e29b-41d4-a716-446655440000", None, response["subtasks"]
         )
         
         assert result["success"] is True
         assert result["workflow_guidance"] == mock_guidance
+        self.controller._workflow_guidance.enhance_response.assert_called_once_with(
+            response, "list", {"task_id": "550e8400-e29b-41d4-a716-446655440000", "subtask_id": None}
+        )
     
     def test_parse_array_parameter_json_string(self):
         """Test parsing array parameter from JSON string."""
@@ -520,16 +527,18 @@ class TestSubtaskMCPController:
         """Test completion with context facade integration for enhanced tracking."""
         # Mock context facade
         mock_context_facade = Mock()
+        mock_context_facade.add_progress.return_value = {"success": True}
+        mock_context_facade.merge_context.return_value = {"success": True}
         self.controller._context_facade = mock_context_facade
         
         # Mock facade responses
         self.mock_facade.handle_manage_subtask.side_effect = [
             # First call: get subtask info
-            {"success": True, "subtask": {"id": "subtask-456", "title": "Test subtask"}},
+            {"success": True, "subtask": {"id": "550e8400-e29b-41d4-a716-446655440001", "title": "Test subtask"}},
             # Second call: update status to done
-            {"success": True, "subtask": {"id": "subtask-456", "status": "done", "title": "Test subtask"}},
+            {"success": True, "subtask": {"id": "550e8400-e29b-41d4-a716-446655440001", "status": "done", "title": "Test subtask"}},
             # Third call: list subtasks for progress
-            {"success": True, "subtasks": [{"id": "subtask-456", "status": "done"}]}
+            {"success": True, "subtasks": [{"id": "550e8400-e29b-41d4-a716-446655440001", "status": "done"}]}
         ]
         
         with patch.object(self.controller, '_get_facade_for_request') as mock_get_facade:
@@ -537,8 +546,8 @@ class TestSubtaskMCPController:
             
             result = self.controller.manage_subtask(
                 action="complete",
-                task_id="task-123",
-                subtask_id="subtask-456",
+                task_id="550e8400-e29b-41d4-a716-446655440000",
+                subtask_id="550e8400-e29b-41d4-a716-446655440001",
                 completion_summary="Task completed",
                 impact_on_parent="Parent task 50% complete",
                 insights_found=["Found optimization opportunity"],
@@ -587,19 +596,20 @@ class TestSubtaskMCPControllerIntegration:
         # Mock facade response
         self.mock_facade.handle_manage_subtask.return_value = {
             "success": True,
-            "subtask": {"id": "subtask-123", "title": "test-subtask"}
+            "subtask": {"id": "sub550e8400-e29b-41d4-a716-446655440000", "title": "test-subtask"}
         }
         
         # Mock workflow guidance
         mock_guidance = {"next_steps": ["Start working on subtask"]}
-        self.controller._workflow_guidance.generate_guidance.return_value = mock_guidance
+        enhanced_response = {"success": True, "subtask": mock_subtask, "workflow_guidance": mock_guidance}
+        self.controller._workflow_guidance.enhance_response.return_value = enhanced_response
         
         with patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.validate_user_id') as mock_validate:
             mock_validate.return_value = "test-user"
             
             result = self.controller.manage_subtask(
                 action="create",
-                task_id="task-123",
+                task_id="550e8400-e29b-41d4-a716-446655440000",
                 title="test-subtask",
                 description="Test subtask description"
             )
@@ -609,7 +619,7 @@ class TestSubtaskMCPControllerIntegration:
             
             # Verify facade was called correctly
             self.mock_facade_factory.create_subtask_facade.assert_called_once_with(
-                task_id="task-123",
+                task_id="550e8400-e29b-41d4-a716-446655440000",
                 user_id="test-user"
             )
             
@@ -623,28 +633,33 @@ class TestSubtaskMCPControllerIntegration:
         # Mock facade responses for completion flow
         self.mock_facade.handle_manage_subtask.side_effect = [
             # First call: get subtask info
-            {"success": True, "subtask": {"id": "subtask-456", "title": "test-subtask"}},
+            {"success": True, "subtask": {"id": "550e8400-e29b-41d4-a716-446655440001", "title": "test-subtask"}},
             # Second call: update status to done
-            {"success": True, "subtask": {"id": "subtask-456", "status": "done"}},
+            {"success": True, "subtask": {"id": "550e8400-e29b-41d4-a716-446655440001", "status": "done"}},
             # Third call: list subtasks for progress
             {"success": True, "subtasks": [
-                {"id": "subtask-456", "status": "done"},
-                {"id": "subtask-457", "status": "done"},
-                {"id": "subtask-458", "status": "done"}
+                {"id": "550e8400-e29b-41d4-a716-446655440001", "status": "done"},
+                {"id": "550e8400-e29b-41d4-a716-446655440005", "status": "done"},
+                {"id": "550e8400-e29b-41d4-a716-446655440006", "status": "done"}
             ]}
         ]
         
         # Mock workflow guidance
         mock_guidance = {"next_steps": ["All subtasks complete! Consider completing parent task."]}
-        self.controller._workflow_guidance.generate_guidance.return_value = mock_guidance
+        enhanced_response = {
+            "success": True, 
+            "subtask": {"id": "550e8400-e29b-41d4-a716-446655440001", "status": "done"},
+            "workflow_guidance": mock_guidance
+        }
+        self.controller._workflow_guidance.enhance_response.return_value = enhanced_response
         
         with patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.validate_user_id') as mock_validate:
             mock_validate.return_value = "test-user"
             
             result = self.controller.manage_subtask(
                 action="complete",
-                task_id="task-123",
-                subtask_id="subtask-456",
+                task_id="550e8400-e29b-41d4-a716-446655440000",
+                subtask_id="550e8400-e29b-41d4-a716-446655440001",
                 completion_summary="Subtask completed successfully"
             )
             

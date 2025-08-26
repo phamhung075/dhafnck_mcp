@@ -51,8 +51,10 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
         """
         # Initialize BaseORMRepository
         BaseORMRepository.__init__(self, Task)
-        # Initialize BaseUserScopedRepository with user isolation
-        BaseUserScopedRepository.__init__(self, session or self.get_db_session(), user_id)
+        # Initialize BaseUserScopedRepository with proper session handling
+        from ..database.database_config import get_session
+        actual_session = session or get_session()
+        BaseUserScopedRepository.__init__(self, actual_session, user_id)
         
         self.git_branch_id = git_branch_id
         self.project_id = project_id

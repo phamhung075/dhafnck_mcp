@@ -47,10 +47,11 @@ class TestTokenValidator:
         return MCPToken(
             token="mcp_test123",
             user_id="mcp-user-456",
+            email="test@example.com",
             created_at=datetime.now(UTC),
             expires_at=datetime.now(UTC) + timedelta(hours=1),
-            source_type="test",
-            metadata={}
+            metadata={},
+            is_active=True
         )
     
     @pytest.fixture

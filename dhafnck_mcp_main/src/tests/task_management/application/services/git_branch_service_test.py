@@ -35,11 +35,14 @@ class TestGitBranchService:
         # Create test data
         self.test_user_id = "test-user-123"
         self.test_project_id = str(uuid.uuid4())
+        # Create Project without user_id (not supported in domain model)
+        from datetime import datetime, timezone
         self.test_project = Project(
             id=self.test_project_id,
             name="Test Project",
             description="Test project description",
-            user_id=self.test_user_id
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
         
         # Setup async methods

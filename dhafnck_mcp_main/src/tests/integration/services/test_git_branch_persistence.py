@@ -37,7 +37,7 @@ class TestGitBranchPersistence:
     @pytest.fixture
     def service(self):
         """Create GitBranchApplicationService instance"""
-        return GitBranchApplicationService()
+        return GitBranchApplicationService(user_id="test-user-123")
     
     def test_service_has_repository(self, service):
         """Test that GitBranchService has the ORM repository"""

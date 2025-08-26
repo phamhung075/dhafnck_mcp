@@ -27,11 +27,13 @@ class TestAgentAssignmentMCPIntegration:
     @pytest.fixture
     def project_and_branch(self, mcp_tools):
         """Create test project and branch, return their details"""
-        # Create project
+        # Create project with test user ID (valid UUID format)
+        test_user_id = "550e8400-e29b-41d4-a716-446655440000"
         project_result = mcp_tools.manage_project(
             action="create",
             name="test-agent-mcp",
-            description="Test project for agent MCP integration"
+            description="Test project for agent MCP integration",
+            user_id=test_user_id
         )
         assert project_result["success"], f"Failed to create project: {project_result.get('error')}"
         project_id = project_result["project"]["id"]
@@ -41,7 +43,8 @@ class TestAgentAssignmentMCPIntegration:
             action="create",
             project_id=project_id,
             git_branch_name="test-agent-branch",
-            git_branch_description="Test branch for agent assignment"
+            git_branch_description="Test branch for agent assignment",
+            user_id=test_user_id
         )
         assert branch_result["success"], f"Failed to create branch: {branch_result.get('error')}"
         branch_id = branch_result["git_branch"]["id"]

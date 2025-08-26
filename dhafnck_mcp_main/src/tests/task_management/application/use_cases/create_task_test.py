@@ -423,6 +423,7 @@ class TestCreateTaskUseCase:
         for status in TaskStatusEnum:
             request = CreateTaskRequest(
                 title=f"Task with {status.value} status",
+                description="Test description",  # Added required field
                 git_branch_id=str(uuid4()),
                 status=status.value,
                 user_id="test-user-123"
@@ -438,6 +439,7 @@ class TestCreateTaskUseCase:
         for priority in PriorityLevel:
             request = CreateTaskRequest(
                 title=f"Task with {priority.label} priority",
+                description="Test description",  # Added required field
                 git_branch_id=str(uuid4()),
                 priority=priority.label,
                 user_id="test-user-123"

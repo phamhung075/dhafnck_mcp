@@ -427,7 +427,7 @@ class TaskMCPController(ContextPropagationMixin):
         return self._get_task_facade(project_id, git_branch_name, user_id, effective_git_branch_id)
 
 
-    def handle_crud_operations(self, facade: TaskApplicationFacade, action: str, git_branch_id: Optional[str] = None,
+    def handle_crud_operations(self, action: str, git_branch_id: Optional[str] = None,
                               task_id: Optional[str] = None, title: Optional[str] = None, 
                               description: Optional[str] = None, status: Optional[str] = None, 
                               priority: Optional[str] = None, details: Optional[str] = None, 
@@ -463,6 +463,8 @@ class TaskMCPController(ContextPropagationMixin):
         # (These are now part of the method signature)
         
         try:
+            facade = self._get_facade_for_request(git_branch_id)
+            
             if action == "create":
                 if not title:
                     return StandardResponseFormatter.create_validation_error_response(
@@ -733,7 +735,7 @@ class TaskMCPController(ContextPropagationMixin):
                 {"action": action}
             )
     
-    def handle_list_search_next(self, facade: TaskApplicationFacade, action: str, git_branch_id: Optional[str] = None,
+    def handle_list_search_next(self, action: str, git_branch_id: Optional[str] = None,
                                status: Optional[str] = None, priority: Optional[str] = None, 
                                assignees: Optional[List[str]] = None, 
                                labels: Optional[List[str]] = None, 
@@ -746,6 +748,8 @@ class TaskMCPController(ContextPropagationMixin):
         """
         
         try:
+            facade = self._get_facade_for_request(git_branch_id)
+            
             if action == "list":
                 return self._handle_list_tasks(
                     facade, status, priority, assignees, labels, limit, git_branch_id, include_context
@@ -1440,9 +1444,23 @@ class TaskMCPController(ContextPropagationMixin):
                 "error_code": "UNKNOWN_ACTION",
             }
 
-    def handle_dependency_operations(self, facade: TaskApplicationFacade, action: str, task_id: str, dependency_id: str = None) -> dict:
+    def handle_dependency_operations(self, action: str, git_branch_id: str, task_id: str = None, dependency_id: str = None) -> dict:
         """Handle dependency operations with parameter validation before delegation."""
         try:
+            # Validate task_id
+            if not task_id:
+                return {
+                    "success": False,
+                    "error": "Missing required field: task_id",
+                    "error_code": "MISSING_FIELD",
+                    "field": "task_id",
+                    "expected": "A valid task ID string",
+                    "hint": "Include 'task_id' in your request body"
+                }
+            
+            # Get facade
+            facade = self._get_facade_for_request(git_branch_id)
+            
             if action == "add_dependency":
                 if not dependency_id:
                     return {
@@ -2288,3 +2306,61 @@ class TaskMCPController(ContextPropagationMixin):
             if len(uuid_string) == 32 and re.match(r'^[0-9a-fA-F]{32}$', uuid_string):
                 return True
             return False
+
+    def handle_search_operations(self, action: str, 
+                               query: Optional[str] = None, limit: Optional[int] = None,
+                               git_branch_id: Optional[str] = None, 
+                               include_context: bool = False) -> Dict[str, Any]:
+        """Handle search-related operations."""
+        try:
+            facade = self._get_facade_for_request(git_branch_id)
+            
+            if action == "search":
+                if not query:
+                    return self._create_missing_field_error("query", "search")
+                return self._handle_search_tasks(facade, query, limit, git_branch_id, include_context)
+            else:
+                return {"success": False, "error": f"Unknown search operation: {action}"}
+        except Exception as e:
+            return UserFriendlyErrorHandler.handle_error(
+                e, 
+                f"search {action} operation",
+                {"action": action, "query": query}
+            )
+
+    def handle_recommendation_operations(self, action: str,
+                                       git_branch_id: Optional[str] = None,
+                                       include_context: bool = False) -> Dict[str, Any]:
+        """Handle recommendation-related operations."""
+        try:
+            facade = self._get_facade_for_request(git_branch_id)
+            
+            if action == "next":
+                return self._handle_next_task(facade, git_branch_id, include_context)
+            else:
+                return {"success": False, "error": f"Unknown recommendation operation: {action}"}
+        except Exception as e:
+            return UserFriendlyErrorHandler.handle_error(
+                e, 
+                f"recommendation {action} operation",
+                {"action": action, "git_branch_id": git_branch_id}
+            )
+
+    def _create_missing_field_error(self, field: str, action: str) -> Dict[str, Any]:
+        """Create a standardized missing field error response."""
+        return StandardResponseFormatter.create_validation_error_response(
+            operation=action,
+            field=field,
+            expected=f"A valid {field} parameter",
+            hint=f"Missing required field: {field}"
+        )
+
+    def _create_invalid_action_error(self, action: str) -> Dict[str, Any]:
+        """Create a standardized invalid action error response."""
+        valid_actions = ["create", "get", "update", "delete", "complete", "list", "search", "next", "add_dependency", "remove_dependency"]
+        return StandardResponseFormatter.create_validation_error_response(
+            operation="unknown_action",
+            field="action",
+            expected=f"One of: {', '.join(valid_actions)}",
+            hint=f"Invalid action: {action}"
+        )

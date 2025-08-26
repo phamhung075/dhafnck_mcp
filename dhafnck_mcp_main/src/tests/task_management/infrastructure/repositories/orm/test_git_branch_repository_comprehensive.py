@@ -1,7 +1,7 @@
 """Comprehensive test suite for ORM Git Branch Repository"""
 
 import pytest
-from unittest.mock import Mock, MagicMock, patch, PropertyMock
+from unittest.mock import Mock, MagicMock, patch, PropertyMock, AsyncMock
 from datetime import datetime, timezone
 import uuid
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -91,8 +91,10 @@ class TestORMGitBranchRepository:
         assert git_branch.assigned_agent_id == sample_model.assigned_agent_id
         assert git_branch.priority == Priority.high()
         assert git_branch.status == TaskStatus.in_progress()
-        assert git_branch._task_count == 10
-        assert git_branch._completed_task_count == 3
+        # Note: Task counts are calculated dynamically by the entity,
+        # not stored as private attributes from the model
+        assert git_branch.get_task_count() == 0  # No tasks added to the branch yet
+        assert git_branch.get_completed_task_count() == 0
     
     def test_git_branch_to_model_data(self, repository, sample_git_branch):
         """Test converting domain entity to model data"""
@@ -181,8 +183,8 @@ class TestORMGitBranchRepository:
             await repository.save(sample_git_branch)
         
         assert "Failed to save git branch" in str(exc_info.value)
-        assert exc_info.value.operation == "save"
-        assert exc_info.value.table == "project_git_branchs"
+        assert exc_info.value.context["operation"] == "save"
+        assert exc_info.value.context["table"] == "project_git_branchs"
     
     @pytest.mark.asyncio
     async def test_find_by_id_found(self, repository, mock_session, sample_model):
@@ -228,7 +230,7 @@ class TestORMGitBranchRepository:
             await repository.find_by_id("project-456", "branch-123")
         
         assert "Failed to find git branch" in str(exc_info.value)
-        assert exc_info.value.operation == "find_by_id"
+        assert exc_info.value.context["operation"] == "find_by_id"
     
     @pytest.mark.asyncio
     async def test_find_by_name_found(self, repository, mock_session, sample_model):
@@ -412,7 +414,7 @@ class TestORMGitBranchRepository:
     async def test_update(self, repository, sample_git_branch):
         """Test updating a branch"""
         # Mock save method
-        repository.save = Mock()
+        repository.save = AsyncMock()
         
         original_updated_at = sample_git_branch.updated_at
         
@@ -625,7 +627,7 @@ class TestORMGitBranchRepository:
         mock_datetime.now.return_value = mock_now
         
         # Mock save method
-        repository.save = Mock()
+        repository.save = AsyncMock()
         
         # Create branch
         result = await repository.create_branch("project-456", "feature/new", "New feature branch")

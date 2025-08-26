@@ -50,7 +50,10 @@ class BaseORMRepository(Generic[ModelType]):
         If a session is already active (from a transaction),
         use it. Otherwise, create a new session.
         """
-        if self._session:
+        # Check for session attribute from BaseUserScopedRepository first
+        if hasattr(self, 'session') and self.session:
+            yield self.session
+        elif hasattr(self, '_session') and self._session:
             # Use existing session from transaction
             yield self._session
         else:

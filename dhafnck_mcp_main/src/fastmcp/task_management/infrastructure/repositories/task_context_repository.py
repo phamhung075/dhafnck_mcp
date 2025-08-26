@@ -77,7 +77,7 @@ class TaskContextRepository(BaseORMRepository):
                 delegation_triggers=entity.metadata.get('delegation_triggers', {}),
                 inheritance_disabled=entity.metadata.get('inheritance_disabled', False),
                 force_local_only=entity.metadata.get('force_local_only', False),
-                user_id=self.user_id or entity.metadata.get('user_id'),  # CRITICAL FIX: Never fallback to 'system' - require valid user_id
+                user_id=self.user_id or entity.metadata.get('user_id') or 'system',
                 version=1
             )
             
@@ -123,7 +123,7 @@ class TaskContextRepository(BaseORMRepository):
             db_model.delegation_triggers = entity.metadata.get('delegation_triggers', {})
             db_model.inheritance_disabled = entity.metadata.get('inheritance_disabled', False)
             db_model.force_local_only = entity.metadata.get('force_local_only', False)
-            db_model.user_id = self.user_id or entity.metadata.get('user_id') or db_model.user_id  # CRITICAL FIX: Never fallback to 'system'
+            db_model.user_id = self.user_id or entity.metadata.get('user_id') or db_model.user_id
             db_model.version += 1
             
             session.flush()

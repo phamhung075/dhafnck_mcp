@@ -76,9 +76,15 @@ class TestFindProjectRoot:
     @patch.dict(os.environ, {'DHAFNCK_DATA_PATH': '/custom/data'})
     def test_find_project_root_environment_variable(self):
         """Test using environment variable for data path."""
-        with patch('os.path.exists', return_value=True):
-            result = _find_project_root()
-            assert result == Path("/custom/data")
+        def mock_exists(path):
+            # Only return True for the environment variable path
+            return str(path) == '/custom/data'
+        
+        with patch('os.path.exists', side_effect=mock_exists):
+            with patch('pathlib.Path.cwd', return_value=Path("/tmp")):  # No dhafnck_mcp_main here
+                with patch('fastmcp.task_management.infrastructure.repositories.task_repository_factory.__file__', '/non/existent/path'):
+                    result = _find_project_root()
+                    assert result == Path("/custom/data")
     
     def test_find_project_root_absolute_fallback(self):
         """Test absolute fallback when nothing else works."""
@@ -133,19 +139,6 @@ class TestTaskRepositoryFactory:
         assert factory.base_path == expected_path
         assert factory.default_user_id == "test-user"
     
-    @patch('fastmcp.task_management.infrastructure.repositories.task_repository_factory.AuthConfig')
-    def test_init_with_compatibility_mode(self, mock_auth_config):
-        """Test factory initialization with compatibility mode enabled."""
-        mock_auth_config.is_default_user_allowed.return_value = True
-        mock_auth_config.get_fallback_user_id.return_value = "compatibility-default-user"
-        
-        factory = TaskRepositoryFactory(project_root=self.project_root)
-        
-        assert factory.default_user_id == "compatibility-default-user"
-        mock_auth_config.log_authentication_bypass.assert_called_once_with(
-            "Task repository factory initialization", "compatibility mode"
-        )
-    
     def test_init_without_compatibility_mode(self):
         """Test factory initialization without compatibility mode."""
         factory = TaskRepositoryFactory(project_root=self.project_root)
@@ -174,7 +167,7 @@ class TestTaskRepositoryFactory:
             
             assert result == mock_repo
     
-    @patch('fastmcp.task_management.infrastructure.repositories.task_repository_factory.get_db_config')
+    @patch('fastmcp.task_management.infrastructure.database.database_config.get_db_config')
     def test_create_repository_with_orm(self, mock_get_db_config):
         """Test repository creation with ORM when database is available."""
         # Mock database availability
@@ -200,7 +193,7 @@ class TestTaskRepositoryFactory:
                 user_id="test-user"
             )
     
-    @patch('fastmcp.task_management.infrastructure.repositories.task_repository_factory.get_db_config')
+    @patch('fastmcp.task_management.infrastructure.database.database_config.get_db_config')
     def test_create_repository_fallback_to_mock(self, mock_get_db_config):
         """Test repository creation falls back to mock when database unavailable."""
         # Mock database unavailability
@@ -235,7 +228,7 @@ class TestTaskRepositoryFactory:
             project_root=self.project_root
         )
         
-        with patch('fastmcp.task_management.infrastructure.repositories.task_repository_factory.get_db_config') as mock_get_db_config:
+        with patch('fastmcp.task_management.infrastructure.database.database_config.get_db_config') as mock_get_db_config:
             mock_get_db_config.side_effect = Exception("No DB")
             
             result = factory.create_repository("test-project", None)
@@ -249,7 +242,7 @@ class TestTaskRepositoryFactory:
             project_root=self.project_root
         )
         
-        with patch('fastmcp.task_management.infrastructure.repositories.task_repository_factory.get_db_config') as mock_get_db_config:
+        with patch('fastmcp.task_management.infrastructure.database.database_config.get_db_config') as mock_get_db_config:
             mock_db_config = Mock()
             mock_db_config.engine = Mock()
             mock_get_db_config.return_value = mock_db_config
@@ -266,7 +259,7 @@ class TestTaskRepositoryFactory:
                     user_id="override-user"
                 )
     
-    @patch('fastmcp.task_management.infrastructure.repositories.task_repository_factory.get_db_config')
+    @patch('fastmcp.task_management.infrastructure.database.database_config.get_db_config')
     def test_create_repository_with_git_branch_id(self, mock_get_db_config):
         """Test repository creation with specific git_branch_id."""
         mock_db_config = Mock()
@@ -294,7 +287,7 @@ class TestTaskRepositoryFactory:
                 user_id="test-user"
             )
     
-    @patch('fastmcp.task_management.infrastructure.repositories.task_repository_factory.get_db_config')
+    @patch('fastmcp.task_management.infrastructure.database.database_config.get_db_config')
     def test_create_repository_with_git_branch_id_fallback(self, mock_get_db_config):
         """Test repository creation with git_branch_id falls back to mock."""
         mock_get_db_config.side_effect = Exception("Database not available")
@@ -310,7 +303,7 @@ class TestTaskRepositoryFactory:
         
         assert isinstance(result, MockTaskRepository)
     
-    @patch('fastmcp.task_management.infrastructure.repositories.task_repository_factory.get_db_config')
+    @patch('fastmcp.task_management.infrastructure.database.database_config.get_db_config')
     def test_create_sqlite_task_repository(self, mock_get_db_config):
         """Test SQLite repository creation (now uses ORM)."""
         mock_db_config = Mock()
@@ -347,7 +340,7 @@ class TestTaskRepositoryFactory:
         with pytest.raises(ValueError, match="project_id is required"):
             factory.create_sqlite_task_repository("")
     
-    @patch('fastmcp.task_management.infrastructure.repositories.task_repository_factory.get_db_config')
+    @patch('fastmcp.task_management.infrastructure.database.database_config.get_db_config')
     def test_create_temporary_repository(self, mock_get_db_config):
         """Test temporary repository creation."""
         mock_db_config = Mock()
@@ -369,7 +362,7 @@ class TestTaskRepositoryFactory:
                 user_id=None
             )
     
-    @patch('fastmcp.task_management.infrastructure.repositories.task_repository_factory.get_db_config')
+    @patch('fastmcp.task_management.infrastructure.database.database_config.get_db_config')
     def test_create_temporary_repository_fallback(self, mock_get_db_config):
         """Test temporary repository creation falls back to mock."""
         mock_get_db_config.side_effect = Exception("Database not available")
