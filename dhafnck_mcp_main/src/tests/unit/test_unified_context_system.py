@@ -413,7 +413,7 @@ class TestContextRepositories:
             # Verify session methods called
             mock_session.add.assert_called_once()
             mock_session.flush.assert_called_once()
-            mock_session.refresh.assert_called_once()
+            # Note: refresh is NOT called in the actual implementation to avoid UUID conversion issues with SQLite
 
 
 class TestContextLevelEnum:

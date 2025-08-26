@@ -99,11 +99,13 @@ class TestORMAgentRepository:
         assert "testing" in model_dict["capabilities"]
         assert model_dict["availability_score"] == 1.0
     
+    @patch('fastmcp.task_management.infrastructure.repositories.orm.agent_repository.ORMAgentRepository.find_by_name')
     @patch('fastmcp.task_management.infrastructure.repositories.base_orm_repository.BaseORMRepository.exists')
     @patch('fastmcp.task_management.infrastructure.repositories.base_orm_repository.BaseORMRepository.create')
-    def test_register_agent_success(self, mock_create, mock_exists, agent_repository, mock_agent_model):
+    def test_register_agent_success(self, mock_create, mock_exists, mock_find_by_name, agent_repository, mock_agent_model):
         """Test successful agent registration"""
         mock_exists.return_value = False
+        mock_find_by_name.return_value = None  # No existing agent with same name
         mock_create.return_value = mock_agent_model
         
         result = agent_repository.register_agent(

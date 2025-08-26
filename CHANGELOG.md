@@ -33,6 +33,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
   - `test_user_scoped_project_routes.py`
   - `token_router_test.py` 
   - `user_scoped_project_routes_test.py`
+- **Agent Repository Test Mock Configuration Fixed** (2025-08-26)
+  - Fixed failing assertion in `test_agent_repository.py::test_register_agent_success`
+  - **Root Cause**: Missing mock for `find_by_name` method causing ValidationException
+  - **Solution**: Added `@patch` decorator for `ORMAgentRepository.find_by_name` returning `None`
+  - **Files Modified**: `dhafnck_mcp_main/src/tests/integration/repositories/test_agent_repository.py`
+  - **Impact**: All 21 agent repository tests now pass successfully
+- **Global Context Repository Test Cleanup** (2025-08-26)
+  - Resolved missing test file issue: `global_context_repository_test.py` was already deleted from filesystem
+  - Confirmed test failures were due to file deletion (git status: `D` deleted file)
+  - No further action required as file removal was intentional cleanup
 
 ### Added
 - **Authentication Standardization Across MCP Tools** (2025-08-26)

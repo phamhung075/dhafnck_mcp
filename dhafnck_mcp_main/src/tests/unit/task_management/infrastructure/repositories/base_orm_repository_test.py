@@ -113,7 +113,7 @@ class TestBaseORMRepository:
 
     def test_create_success(self):
         """Test successful record creation."""
-        self.repo.get_db_session = self._mock_session_context()
+        self.repo.get_db_session = self._mock_session_context
         
         result = self.repo.create(id=1, name="test")
         
@@ -126,7 +126,7 @@ class TestBaseORMRepository:
 
     def test_create_integrity_error(self):
         """Test creation with integrity constraint violation."""
-        self.repo.get_db_session = self._mock_session_context()
+        self.repo.get_db_session = self._mock_session_context
         self.mock_session.add.side_effect = IntegrityError("", "", "")
         
         with pytest.raises(ValidationException) as exc_info:
@@ -140,7 +140,7 @@ class TestBaseORMRepository:
         query_mock = Mock()
         query_mock.filter.return_value.first.return_value = mock_instance
         self.mock_session.query.return_value = query_mock
-        self.repo.get_db_session = self._mock_session_context()
+        self.repo.get_db_session = self._mock_session_context
         
         result = self.repo.get_by_id(1)
         
@@ -152,7 +152,7 @@ class TestBaseORMRepository:
         query_mock = Mock()
         query_mock.filter.return_value.first.return_value = None
         self.mock_session.query.return_value = query_mock
-        self.repo.get_db_session = self._mock_session_context()
+        self.repo.get_db_session = self._mock_session_context
         
         result = self.repo.get_by_id(999)
         
@@ -164,7 +164,7 @@ class TestBaseORMRepository:
         query_mock = Mock()
         query_mock.all.return_value = mock_instances
         self.mock_session.query.return_value = query_mock
-        self.repo.get_db_session = self._mock_session_context()
+        self.repo.get_db_session = self._mock_session_context
         
         result = self.repo.get_all()
         
@@ -178,7 +178,7 @@ class TestBaseORMRepository:
         query_mock = Mock()
         query_mock.offset.return_value.limit.return_value.all.return_value = mock_instances
         self.mock_session.query.return_value = query_mock
-        self.repo.get_db_session = self._mock_session_context()
+        self.repo.get_db_session = self._mock_session_context
         
         result = self.repo.get_all(limit=10, offset=5)
         
@@ -192,7 +192,7 @@ class TestBaseORMRepository:
         query_mock = Mock()
         query_mock.filter.return_value.first.return_value = mock_instance
         self.mock_session.query.return_value = query_mock
-        self.repo.get_db_session = self._mock_session_context()
+        self.repo.get_db_session = self._mock_session_context
         
         result = self.repo.update(1, name="new")
         
@@ -205,7 +205,7 @@ class TestBaseORMRepository:
         query_mock = Mock()
         query_mock.filter.return_value.first.return_value = None
         self.mock_session.query.return_value = query_mock
-        self.repo.get_db_session = self._mock_session_context()
+        self.repo.get_db_session = self._mock_session_context
         
         result = self.repo.update(999, name="new")
         
@@ -217,7 +217,7 @@ class TestBaseORMRepository:
         query_mock = Mock()
         query_mock.filter.return_value.first.return_value = mock_instance
         self.mock_session.query.return_value = query_mock
-        self.repo.get_db_session = self._mock_session_context()
+        self.repo.get_db_session = self._mock_session_context
         
         result = self.repo.delete(1)
         
@@ -229,7 +229,7 @@ class TestBaseORMRepository:
         query_mock = Mock()
         query_mock.filter.return_value.first.return_value = None
         self.mock_session.query.return_value = query_mock
-        self.repo.get_db_session = self._mock_session_context()
+        self.repo.get_db_session = self._mock_session_context
         
         result = self.repo.delete(999)
         
@@ -240,7 +240,7 @@ class TestBaseORMRepository:
         query_mock = Mock()
         query_mock.filter.return_value.first.return_value = MockModel(id=1)
         self.mock_session.query.return_value = query_mock
-        self.repo.get_db_session = self._mock_session_context()
+        self.repo.get_db_session = self._mock_session_context
         
         result = self.repo.exists(name="test")
         
@@ -249,9 +249,11 @@ class TestBaseORMRepository:
     def test_exists_false(self):
         """Test exists method when record doesn't exist."""
         query_mock = Mock()
-        query_mock.filter.return_value.first.return_value = None
+        # Set up filter to return itself for chaining, then first() returns None
+        query_mock.filter.return_value = query_mock
+        query_mock.first.return_value = None
         self.mock_session.query.return_value = query_mock
-        self.repo.get_db_session = self._mock_session_context()
+        self.repo.get_db_session = self._mock_session_context
         
         result = self.repo.exists(name="nonexistent")
         
@@ -260,9 +262,11 @@ class TestBaseORMRepository:
     def test_count_with_filters(self):
         """Test count method with filters."""
         query_mock = Mock()
-        query_mock.filter.return_value.count.return_value = 5
+        # Set up filter to return itself for chaining, then count() returns 5
+        query_mock.filter.return_value = query_mock
+        query_mock.count.return_value = 5
         self.mock_session.query.return_value = query_mock
-        self.repo.get_db_session = self._mock_session_context()
+        self.repo.get_db_session = self._mock_session_context
         
         result = self.repo.count(status="active")
         
@@ -272,9 +276,11 @@ class TestBaseORMRepository:
         """Test find_by method with filters."""
         mock_instances = [MockModel(id=1), MockModel(id=2)]
         query_mock = Mock()
-        query_mock.filter.return_value.all.return_value = mock_instances
+        # Set up filter to return itself for chaining, then all() returns mock_instances
+        query_mock.filter.return_value = query_mock
+        query_mock.all.return_value = mock_instances
         self.mock_session.query.return_value = query_mock
-        self.repo.get_db_session = self._mock_session_context()
+        self.repo.get_db_session = self._mock_session_context
         
         result = self.repo.find_by(status="active")
         
@@ -284,9 +290,11 @@ class TestBaseORMRepository:
         """Test find_one_by method with filters."""
         mock_instance = MockModel(id=1)
         query_mock = Mock()
-        query_mock.filter.return_value.first.return_value = mock_instance
+        # Set up filter to return itself for chaining, then first() returns mock_instance
+        query_mock.filter.return_value = query_mock
+        query_mock.first.return_value = mock_instance
         self.mock_session.query.return_value = query_mock
-        self.repo.get_db_session = self._mock_session_context()
+        self.repo.get_db_session = self._mock_session_context
         
         result = self.repo.find_one_by(name="test")
         
@@ -295,7 +303,7 @@ class TestBaseORMRepository:
     def test_bulk_create_success(self):
         """Test bulk creation of records."""
         records = [{"id": 1, "name": "test1"}, {"id": 2, "name": "test2"}]
-        self.repo.get_db_session = self._mock_session_context()
+        self.repo.get_db_session = self._mock_session_context
         
         result = self.repo.bulk_create(records)
         
@@ -309,7 +317,7 @@ class TestBaseORMRepository:
         def query_func(session, param=None):
             return f"query result with {param}"
         
-        self.repo.get_db_session = self._mock_session_context()
+        self.repo.get_db_session = self._mock_session_context
         
         result = self.repo.execute_query(query_func, param="test")
         

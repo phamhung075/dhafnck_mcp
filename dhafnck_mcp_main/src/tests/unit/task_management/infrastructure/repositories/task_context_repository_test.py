@@ -131,6 +131,9 @@ class TestTaskContextRepository:
     def test_update_success(self):
         """Test successful task context update."""
         mock_model = Mock(spec=TaskContextModel)
+        # Set up mock attributes that will be modified
+        mock_model.version = 1  # Set initial version as integer, not Mock
+        mock_model.user_id = "test-user"
         self.mock_session.get.return_value = mock_model
         
         updated_entity = TaskContext(
@@ -148,6 +151,8 @@ class TestTaskContextRepository:
             result = self.repository.update(self.test_context_id, updated_entity)
             
             assert result == updated_entity
+            # Verify version was incremented
+            assert mock_model.version == 2
             # Verify model attributes were updated
             expected_task_data = updated_entity.task_data.copy()
             expected_task_data.update({
@@ -206,18 +211,27 @@ class TestTaskContextRepositoryErrorHandling:
 
     def test_session_rollback_on_error(self):
         """Test proper session rollback on database errors."""
-        # Mock session context manager to raise error and test rollback
+        # Mock session that will fail on add
         mock_session = Mock()
         mock_session.get.return_value = None  # No existing record
         mock_session.add.side_effect = SQLAlchemyError("Database error")
         mock_session.rollback = Mock()
         mock_session.close = Mock()
         
-        # Mock the context manager to return our failing session
-        with patch.object(self.repository, 'get_db_session') as mock_get_db:
-            mock_get_db.return_value.__enter__ = Mock(return_value=mock_session)
-            mock_get_db.return_value.__exit__ = Mock(return_value=None)
-            
+        # Create proper context manager mock
+        @contextmanager
+        def mock_session_context():
+            try:
+                yield mock_session
+                mock_session.commit()
+            except SQLAlchemyError:
+                mock_session.rollback()
+                raise
+            finally:
+                mock_session.close()
+        
+        # Mock the get_db_session context manager
+        with patch.object(self.repository, 'get_db_session', side_effect=mock_session_context):
             # Act & Assert
             with pytest.raises(SQLAlchemyError):
                 self.repository.create(self.test_entity)

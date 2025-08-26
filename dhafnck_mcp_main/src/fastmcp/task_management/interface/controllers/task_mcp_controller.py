@@ -438,7 +438,7 @@ class TaskMCPController(ContextPropagationMixin):
         return self._get_task_facade(project_id, git_branch_name, effective_user_id, effective_git_branch_id)
 
 
-    def handle_crud_operations(self, action: str, git_branch_id: Optional[str] = None,
+    def handle_crud_operations(self, facade: TaskApplicationFacade, action: str, git_branch_id: Optional[str] = None,
                               task_id: Optional[str] = None, title: Optional[str] = None, 
                               description: Optional[str] = None, status: Optional[str] = None, 
                               priority: Optional[str] = None, details: Optional[str] = None, 
@@ -474,7 +474,7 @@ class TaskMCPController(ContextPropagationMixin):
         # (These are now part of the method signature)
         
         try:
-            facade = self._get_facade_for_request(git_branch_id)
+            facade = self._get_facade_for_request(git_branch_id=git_branch_id, user_id=user_id)
             
             if action == "create":
                 if not title:
@@ -2329,11 +2329,13 @@ class TaskMCPController(ContextPropagationMixin):
                                include_context: bool = False) -> Dict[str, Any]:
         """Handle search-related operations."""
         try:
-            facade = self._get_facade_for_request(git_branch_id)
-            
             if action == "search":
+                # Validate query parameter before authentication
                 if not query:
                     return self._create_missing_field_error("query", "search")
+                
+                # Get facade after parameter validation
+                facade = self._get_facade_for_request(git_branch_id)
                 return self._handle_search_tasks(facade, query, limit, git_branch_id, include_context)
             else:
                 return {"success": False, "error": f"Unknown search operation: {action}"}

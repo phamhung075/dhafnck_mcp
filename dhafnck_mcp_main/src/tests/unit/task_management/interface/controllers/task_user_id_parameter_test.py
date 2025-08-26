@@ -52,10 +52,10 @@ class TestTaskUserIdParameter:
                 "task": {"id": "task-123", "title": "Test Task"}
             }
             
-            # Call manage_task with user_id
+            # Call manage_task with user_id (using valid UUID for git_branch_id)
             result = controller.manage_task(
                 action="create",
-                git_branch_id="branch-123",
+                git_branch_id="550e8400-e29b-41d4-a716-446655440000",
                 title="Test Task",
                 user_id="test-user-001"
             )
@@ -72,7 +72,7 @@ class TestTaskUserIdParameter:
             # When user_id is provided, get_authenticated_user_id should NOT be called
             project_id, git_branch_name, user_id = controller._derive_context_from_identifiers(
                 task_id=None,
-                git_branch_id="branch-123", 
+                git_branch_id="550e8400-e29b-41d4-a716-446655440001", 
                 user_id="test-user-001"
             )
             
@@ -88,7 +88,7 @@ class TestTaskUserIdParameter:
                 
                 project_id, git_branch_name, user_id = controller._derive_context_from_identifiers(
                     task_id=None,
-                    git_branch_id="branch-123", 
+                    git_branch_id="550e8400-e29b-41d4-a716-446655440001", 
                     user_id=None
                 )
                 
@@ -106,12 +106,12 @@ class TestTaskUserIdParameter:
                 
                 result = controller._get_facade_for_request(
                     task_id="task-123",
-                    git_branch_id="branch-123", 
+                    git_branch_id="550e8400-e29b-41d4-a716-446655440001", 
                     user_id="provided-user-001"
                 )
                 
                 # Verify derive_context_from_identifiers was called with user_id
-                mock_derive.assert_called_once_with("task-123", "branch-123", "provided-user-001")
+                mock_derive.assert_called_once_with("task-123", "550e8400-e29b-41d4-a716-446655440001", "provided-user-001")
                 
                 # Verify _get_task_facade was called with effective user_id
                 mock_get_task_facade.assert_called_once()
@@ -136,7 +136,7 @@ class TestTaskUserIdParameter:
                 # This should NOT raise UserAuthenticationRequiredError
                 result = controller.manage_task(
                     action="create",
-                    git_branch_id="branch-123",
+                    git_branch_id="550e8400-e29b-41d4-a716-446655440001",
                     title="Test Task", 
                     user_id="test-user-001"
                 )
