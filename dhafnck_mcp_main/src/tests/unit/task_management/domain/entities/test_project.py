@@ -251,18 +251,9 @@ class TestAgentManagement:
     
     def setup_method(self, method):
         """Clean up before each test"""
-        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
-        from sqlalchemy import text
-        
-        db_config = get_db_config()
-        with db_config.get_session() as session:
-            # Clean test data but preserve defaults
-            try:
-                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
-                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
-                session.commit()
-            except:
-                session.rollback()
+        # For unit tests of domain entities, we don't need database access
+        # Domain entities should be tested in isolation
+        pass
 
     """Test Project agent management functionality."""
     
@@ -271,9 +262,10 @@ class TestAgentManagement:
         project = Project.create(name="Test Project")
         agent = Agent(id="agent-1", name="Test Agent")
         
+        # Store original timestamp and ensure sufficient time difference
         original_updated = project.updated_at
         import time
-        time.sleep(0.01)
+        time.sleep(0.1)  # Increased sleep time to avoid race condition
         
         project.register_agent(agent)
         

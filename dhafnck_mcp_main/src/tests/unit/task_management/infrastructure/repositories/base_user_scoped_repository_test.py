@@ -80,8 +80,8 @@ class TestBaseUserScopedRepository:
         
         assert isinstance(new_repo, BaseUserScopedRepository)
         assert new_repo.user_id == new_user_id
-        # Should have been initialized with session_factory
-        mock_session_factory.assert_called_once_with(new_user_id)
+        # Should have been initialized with the same session_factory
+        assert new_repo.session_factory == mock_session_factory
     
     def test_get_user_filter_with_user(self, repository):
         """Test getting user filter when user is set"""

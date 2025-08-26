@@ -47,12 +47,18 @@ class BaseUserScopedRepository:
         Returns:
             New repository instance scoped to the user
         """
-        # For repositories that expect session_factory, call the session factory and pass user_id to constructor
+        # For repositories that expect session_factory as first parameter, use it
         if hasattr(self, 'session_factory') and self.session_factory:
-            return self.__class__(self.session_factory, user_id)
+            new_repo = self.__class__(self.session_factory, user_id)
         else:
-            # Fallback: create with session directly (may not work for all repo types)
-            return self.__class__(self.session, user_id)
+            # For repositories that expect session as first parameter
+            new_repo = self.__class__(self.session, user_id)
+        
+        # Preserve session_factory if it exists
+        if hasattr(self, 'session_factory'):
+            new_repo.session_factory = self.session_factory
+            
+        return new_repo
     
     def get_user_filter(self) -> Dict[str, Any]:
         """
