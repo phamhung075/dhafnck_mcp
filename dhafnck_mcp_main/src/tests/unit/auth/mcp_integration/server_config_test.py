@@ -363,8 +363,13 @@ class TestIntegrationScenarios:
     @patch.dict(os.environ, {
         'JWT_SECRET_KEY': 'a-very-long-secret-key-that-is-at-least-32-characters'
     })
-    def test_http_server_kwargs_integration(self):
+    @patch('fastmcp.auth.mcp_integration.server_config.create_jwt_auth_backend')
+    def test_http_server_kwargs_integration(self, mock_create_jwt):
         """Test HTTP server kwargs integration."""
+        # Setup mocks
+        mock_backend = Mock(spec=JWTAuthBackend)
+        mock_create_jwt.return_value = mock_backend
+        
         # Start with basic kwargs
         kwargs = {
             'debug': True,

@@ -47,9 +47,10 @@ class BaseUserScopedRepository:
         Returns:
             New repository instance scoped to the user
         """
-        # For repositories that expect session_factory, pass the session factory if available
+        # For repositories that expect session_factory, call the session factory with user_id
         if hasattr(self, 'session_factory') and self.session_factory:
-            return self.__class__(self.session_factory, user_id)
+            session = self.session_factory(user_id)
+            return self.__class__(session, user_id)
         else:
             # Fallback: create with session directly (may not work for all repo types)
             return self.__class__(self.session, user_id)

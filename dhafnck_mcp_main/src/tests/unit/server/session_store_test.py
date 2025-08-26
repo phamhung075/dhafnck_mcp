@@ -365,30 +365,28 @@ class TestRedisEventStore:
     
     def test_serialize_message_dict_object(self, event_store):
         """Test message serialization for dict-like objects"""
-        # Mock object with __dict__
-        mock_obj = Mock()
-        mock_obj.__dict__ = {
-            "name": "test",
-            "value": 42,
-            "json_serializable": "yes",
-            "non_serializable": Mock()  # This should be converted to string
-        }
+        # Real object with __dict__ instead of Mock
+        class TestObj:
+            def __init__(self):
+                self.name = "test"
+                self.value = 42
+                self.json_serializable = "yes"
+                # Use a lambda instead of Mock to create a non-serializable object
+                self.non_serializable = lambda x: x
         
-        with patch('json.dumps') as mock_json_dumps:
-            # Mock json.dumps to raise TypeError for non_serializable
-            def json_dumps_side_effect(value):
-                if isinstance(value, Mock):
-                    raise TypeError("Mock not serializable")
-                return "valid_json"
-            
-            mock_json_dumps.side_effect = json_dumps_side_effect
-            
-            result = event_store._serialize_message(mock_obj)
-            
-            assert "name" in result
-            assert "value" in result
-            assert "json_serializable" in result
-            assert "non_serializable" in result
+        obj = TestObj()
+        result = event_store._serialize_message(obj)
+        
+        # Should contain the serializable fields
+        assert "name" in result
+        assert "value" in result
+        assert "json_serializable" in result
+        assert "non_serializable" in result
+        assert result["name"] == "test"
+        assert result["value"] == 42
+        assert result["json_serializable"] == "yes"
+        # non_serializable should be converted to string
+        assert isinstance(result["non_serializable"], str)
     
     def test_serialize_message_fallback(self, event_store):
         """Test message serialization fallback"""

@@ -245,6 +245,12 @@ class FixtureManager:
             fixture = {'id': fixture_id, 'type': fixture_type, **kwargs}
         
         self.fixtures[fixture_id] = fixture
+        
+        # Also store by actual ID if provided and different from fixture_id
+        actual_id = getattr(fixture, 'id', None)
+        if actual_id and actual_id != fixture_id:
+            self.fixtures[actual_id] = fixture
+        
         return fixture
     
     def _create_task_fixture(self, fixture_id: str, **kwargs) -> Dict[str, Any]:

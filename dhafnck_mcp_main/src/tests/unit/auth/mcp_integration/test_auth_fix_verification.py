@@ -161,7 +161,7 @@ class TestAuthenticationFixVerification:
         require_auth.app = mock_next_app
         
         # Call RequireAuthMiddleware - this should NOT return 401
-        await require_auth(scope, Mock(), Mock())
+        await require_auth(scope, AsyncMock(), AsyncMock())
         
         # Verify the middleware passed the request through (authentication succeeded)
         assert next_app_was_called, "RequireAuthMiddleware should have called the next app - authentication should have passed!"
@@ -180,10 +180,10 @@ class TestAuthenticationFixVerification:
             # No "user" key - this should be rejected  
         }
         
-        send_mock = Mock()
+        send_mock = AsyncMock()
         
         # Call RequireAuthMiddleware - this SHOULD return 401
-        await require_auth(scope, Mock(), send_mock)
+        await require_auth(scope, AsyncMock(), send_mock)
         
         # Verify error response was sent
         assert send_mock.called, "RequireAuthMiddleware should have sent an error response"
@@ -252,7 +252,7 @@ class TestAuthenticationFixVerification:
         require_auth.app = mock_protected_endpoint
         
         # THE MOMENT OF TRUTH - this should NOT fail with 401
-        await require_auth(scope, Mock(), Mock())
+        await require_auth(scope, AsyncMock(), AsyncMock())
         
         # VERIFICATION: Authentication should have passed completely
         assert authentication_passed, "🚨 AUTHENTICATION FAILED - RequireAuthMiddleware should have passed the request!"
@@ -278,10 +278,10 @@ class TestPreviousBugReproduction:
             "user": None  # ❌ This was the bug - should be AuthenticatedUser
         }
         
-        send_mock = Mock()
+        send_mock = AsyncMock()
         
         # This should fail with 401 (demonstrates the old bug)
-        await require_auth(broken_scope, Mock(), send_mock)
+        await require_auth(broken_scope, AsyncMock(), send_mock)
         
         # Verify it returns 401 invalid_token (the old error)
         assert send_mock.called

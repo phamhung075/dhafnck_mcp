@@ -219,7 +219,7 @@ class TestMCPAuthMiddleware:
         receive = AsyncMock()
         send = AsyncMock()
         
-        with patch.object(middleware.__class__.__module__ + '.logger', 'error') as mock_logger:
+        with patch('fastmcp.auth.mcp_integration.mcp_auth_middleware.logger.error') as mock_logger:
             await middleware(scope, receive, send)
             
             # Verify error was logged
@@ -241,7 +241,7 @@ class TestMCPAuthMiddleware:
         receive = AsyncMock()
         send = AsyncMock()
         
-        with patch.object(middleware.__class__.__module__ + '.logger', 'debug') as mock_logger:
+        with patch('fastmcp.auth.mcp_integration.mcp_auth_middleware.logger.debug') as mock_logger:
             await middleware(scope, receive, send)
             
             # Verify debug message about no Bearer token

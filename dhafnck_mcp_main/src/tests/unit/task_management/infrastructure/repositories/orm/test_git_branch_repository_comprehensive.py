@@ -656,7 +656,7 @@ class TestORMGitBranchRepository:
         mock_branch.created_at = datetime.now(timezone.utc)
         mock_branch.updated_at = datetime.now(timezone.utc)
         
-        repository.create_branch = Mock(return_value=mock_branch)
+        repository.create_branch = AsyncMock(return_value=mock_branch)
         
         # Create branch
         result = await repository.create_git_branch("project-456", "feature/test", "Test branch")
@@ -727,7 +727,7 @@ class TestORMGitBranchRepository:
         branch1.status = TaskStatus.todo()
         branch1.priority = Priority.medium()
         
-        repository.find_all_by_project = Mock(return_value=[branch1])
+        repository.find_all_by_project = AsyncMock(return_value=[branch1])
         
         # List branches
         result = await repository.list_git_branchs("project-456")
@@ -766,7 +766,7 @@ class TestORMGitBranchRepository:
     async def test_delete_git_branch(self, repository):
         """Test deleting git branch"""
         # Mock delete method
-        repository.delete = Mock(return_value=True)
+        repository.delete = AsyncMock(return_value=True)
         
         # Delete branch
         result = await repository.delete_git_branch("project-456", "branch-123")
@@ -781,8 +781,8 @@ class TestORMGitBranchRepository:
         # Mock find_by_name and assign_agent
         mock_branch = Mock(spec=GitBranch)
         mock_branch.id = "branch-123"
-        repository.find_by_name = Mock(return_value=mock_branch)
-        repository.assign_agent = Mock(return_value=True)
+        repository.find_by_name = AsyncMock(return_value=mock_branch)
+        repository.assign_agent = AsyncMock(return_value=True)
         
         # Assign agent
         result = await repository.assign_agent_to_branch("project-456", "agent-789", "feature/test")
@@ -797,8 +797,8 @@ class TestORMGitBranchRepository:
         # Mock find_by_name and unassign_agent
         mock_branch = Mock(spec=GitBranch)
         mock_branch.id = "branch-123"
-        repository.find_by_name = Mock(return_value=mock_branch)
-        repository.unassign_agent = Mock(return_value=True)
+        repository.find_by_name = AsyncMock(return_value=mock_branch)
+        repository.unassign_agent = AsyncMock(return_value=True)
         
         # Unassign agent
         result = await repository.unassign_agent_from_branch("project-456", "agent-789", "feature/test")
