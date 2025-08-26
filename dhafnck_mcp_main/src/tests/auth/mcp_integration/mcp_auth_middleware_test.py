@@ -82,7 +82,8 @@ class TestMCPAuthMiddleware:
             user_id="test-user-123",
             email="test@example.com",
             username="testuser",
-            roles=["user", "developer"]
+            roles=["user", "developer"],
+            scopes=["read", "write"]
         )
         
         mock_jwt_backend.load_access_token.return_value = mock_access_token
@@ -130,7 +131,7 @@ class TestMCPAuthMiddleware:
         receive = AsyncMock()
         send = AsyncMock()
         
-        with patch.object(middleware.__class__.__module__ + '.logger', 'warning') as mock_logger:
+        with patch('fastmcp.auth.mcp_integration.mcp_auth_middleware.logger.warning') as mock_logger:
             await middleware(scope, receive, send)
             
             # Verify warning was logged
@@ -160,7 +161,7 @@ class TestMCPAuthMiddleware:
         receive = AsyncMock()
         send = AsyncMock()
         
-        with patch.object(middleware.__class__.__module__ + '.logger', 'warning') as mock_logger:
+        with patch('fastmcp.auth.mcp_integration.mcp_auth_middleware.logger.warning') as mock_logger:
             await middleware(scope, receive, send)
             
             # Verify warning was logged

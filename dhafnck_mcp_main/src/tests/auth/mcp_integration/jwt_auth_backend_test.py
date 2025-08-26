@@ -31,14 +31,14 @@ class TestMCPUserContext:
     def test_user_context_creation(self):
         """Test creating user context with all fields"""
         context = MCPUserContext(
-            user_id="user123",
+            user_id="12345678-1234-1234-1234-123456789abc",
             email="test@example.com",
             username="testuser",
             roles=["admin", "user"],
             scopes=["read", "write"]
         )
         
-        assert context.user_id == "user123"
+        assert context.user_id == "12345678-1234-1234-1234-123456789abc"
         assert context.email == "test@example.com"
         assert context.username == "testuser"
         assert context.roles == ["admin", "user"]
@@ -52,7 +52,7 @@ class TestJWTAuthBackend:
     async def test_validate_token_dual_auth_local_success(self, auth_backend, jwt_service):
         """Test dual auth validation with local JWT success"""
         payload = {
-            "sub": "user123",
+            "sub": "12345678-1234-1234-1234-123456789abc",
             "type": "access",
             "exp": int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
         }
@@ -74,7 +74,7 @@ class TestJWTAuthBackend:
         
         # Create a valid Supabase token with authenticated audience
         payload = {
-            "sub": "user123",
+            "sub": "12345678-1234-1234-1234-123456789abc",
             "email": "test@example.com",
             "aud": "authenticated",  # Required for Supabase tokens
             "exp": int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp()),
@@ -86,7 +86,7 @@ class TestJWTAuthBackend:
         result = await auth_backend._validate_token_dual_auth(supabase_token)
         
         assert result is not None
-        assert result["sub"] == "user123"
+        assert result["sub"] == "12345678-1234-1234-1234-123456789abc"
         assert result["type"] == "supabase_access"  # Added by the method
     
     @pytest.mark.asyncio
@@ -174,7 +174,7 @@ class TestJWTAuthBackend:
         """Test verifying valid access token"""
         # Mock JWT service to return valid payload
         payload = {
-            "sub": "user123",
+            "sub": "12345678-1234-1234-1234-123456789abc",
             "email": "test@example.com",
             "scopes": ["read", "write"],
             "exp": int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
@@ -188,7 +188,7 @@ class TestJWTAuthBackend:
         
         assert result is not None
         assert isinstance(result, AccessToken)
-        assert result.client_id == "user123"
+        assert result.client_id == "12345678-1234-1234-1234-123456789abc"
         assert "mcp:access" in result.scopes  # Base scope added
         assert "mcp:read" in result.scopes  # Default user scope
         assert result.expires_at == payload["exp"]
@@ -201,7 +201,7 @@ class TestJWTAuthBackend:
         """Test verifying api_token type as fallback"""
         # First call returns None (access type), second returns payload (api_token type)
         payload = {
-            "sub": "user123",
+            "sub": "12345678-1234-1234-1234-123456789abc",
             "type": "api_token",
             "exp": int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
         }
@@ -213,14 +213,14 @@ class TestJWTAuthBackend:
         result = await auth_backend.verify_token("api.token.here")
         
         assert result is not None
-        assert result.client_id == "user123"
+        assert result.client_id == "12345678-1234-1234-1234-123456789abc"
         auth_backend._validate_token_dual_auth.assert_called_once_with("api.token.here")
     
     @pytest.mark.asyncio
     async def test_verify_token_user_id_fallback(self, auth_backend, jwt_service):
         """Test using user_id field when sub is not present"""
         payload = {
-            "user_id": "user123",  # Using user_id instead of sub
+            "user_id": "12345678-1234-1234-1234-123456789abc",  # Using user_id instead of sub
             "exp": int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
         }
         jwt_service.verify_token.return_value = payload
@@ -231,7 +231,7 @@ class TestJWTAuthBackend:
         result = await auth_backend.verify_token("valid.token.here")
         
         assert result is not None
-        assert result.client_id == "user123"
+        assert result.client_id == "12345678-1234-1234-1234-123456789abc"
     
     @pytest.mark.asyncio
     async def test_verify_token_invalid(self, auth_backend, jwt_service):
@@ -265,7 +265,7 @@ class TestJWTAuthBackend:
     async def test_verify_token_string_scopes(self, auth_backend, jwt_service):
         """Test handling scopes as string instead of array"""
         payload = {
-            "sub": "user123",
+            "sub": "12345678-1234-1234-1234-123456789abc",
             "scopes": "read write admin",  # String instead of array
             "exp": int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
         }
@@ -286,17 +286,17 @@ class TestJWTAuthBackend:
         """Test getting user context from repository"""
         # Mock user entity
         user = Mock(spec=User)
-        user.id = UserId("user123")
+        user.id = UserId("12345678-1234-1234-1234-123456789abc")
         user.email = "test@example.com"
         user.username = "testuser"
         user.roles = [UserRole.ADMIN, UserRole.USER]
         
         user_repository.find_by_id.return_value = user
         
-        context = await auth_backend._get_user_context("user123")
+        context = await auth_backend._get_user_context("12345678-1234-1234-1234-123456789abc")
         
         assert context is not None
-        assert context.user_id == "user123"
+        assert context.user_id == "12345678-1234-1234-1234-123456789abc"
         assert context.email == "test@example.com"
         assert context.username == "testuser"
         assert "admin" in context.roles
@@ -307,7 +307,7 @@ class TestJWTAuthBackend:
         """Test user context caching"""
         # Mock user entity
         user = Mock(spec=User)
-        user.id = UserId("user123")
+        user.id = UserId("12345678-1234-1234-1234-123456789abc")
         user.email = "test@example.com"
         user.username = "testuser"
         user.roles = [UserRole.USER]
@@ -315,11 +315,11 @@ class TestJWTAuthBackend:
         user_repository.find_by_id.return_value = user
         
         # First call should hit repository
-        context1 = await auth_backend._get_user_context("user123")
+        context1 = await auth_backend._get_user_context("12345678-1234-1234-1234-123456789abc")
         assert user_repository.find_by_id.call_count == 1
         
         # Second call should use cache
-        context2 = await auth_backend._get_user_context("user123")
+        context2 = await auth_backend._get_user_context("12345678-1234-1234-1234-123456789abc")
         assert user_repository.find_by_id.call_count == 1  # Still 1
         assert context1 == context2
     
@@ -327,7 +327,7 @@ class TestJWTAuthBackend:
     async def test_get_user_context_cache_expiry(self, auth_backend, user_repository):
         """Test user context cache expiration"""
         user = Mock(spec=User)
-        user.id = UserId("user123")
+        user.id = UserId("12345678-1234-1234-1234-123456789abc")
         user.email = "test@example.com"
         user.username = "testuser"
         user.roles = [UserRole.USER]
@@ -335,13 +335,13 @@ class TestJWTAuthBackend:
         user_repository.find_by_id.return_value = user
         
         # First call
-        await auth_backend._get_user_context("user123")
+        await auth_backend._get_user_context("12345678-1234-1234-1234-123456789abc")
         
         # Simulate cache expiry
-        auth_backend._cache_timestamps["user123"] = time.time() - 400  # Expired
+        auth_backend._cache_timestamps["12345678-1234-1234-1234-123456789abc"] = time.time() - 400  # Expired
         
         # Should hit repository again
-        await auth_backend._get_user_context("user123")
+        await auth_backend._get_user_context("12345678-1234-1234-1234-123456789abc")
         assert user_repository.find_by_id.call_count == 2
     
     @pytest.mark.asyncio
@@ -349,12 +349,12 @@ class TestJWTAuthBackend:
         """Test user context fallback when repository is None"""
         auth_backend._user_repository = None
         
-        context = await auth_backend._get_user_context("user123")
+        context = await auth_backend._get_user_context("12345678-1234-1234-1234-123456789abc")
         
         assert context is not None
-        assert context.user_id == "user123"
+        assert context.user_id == "12345678-1234-1234-1234-123456789abc"
         assert context.email == ""
-        assert context.username == "user123"
+        assert context.username == "12345678-1234-1234-1234-123456789abc"
         assert context.roles == ["user"]
         assert context.scopes == []
     
@@ -363,11 +363,11 @@ class TestJWTAuthBackend:
         """Test handling repository errors gracefully"""
         user_repository.find_by_id.side_effect = Exception("DB error")
         
-        context = await auth_backend._get_user_context("user123")
+        context = await auth_backend._get_user_context("12345678-1234-1234-1234-123456789abc")
         
         # Should return fallback context
         assert context is not None
-        assert context.user_id == "user123"
+        assert context.user_id == "12345678-1234-1234-1234-123456789abc"
         assert context.roles == ["user"]
     
     def test_map_roles_to_scopes(self, auth_backend):
@@ -410,15 +410,112 @@ class TestJWTAuthBackend:
     def test_get_current_user_id(self, auth_backend):
         """Test extracting user ID without full validation"""
         # Create a test token
-        payload = {"sub": "user123"}
+        payload = {"sub": "12345678-1234-1234-1234-123456789abc"}
         token = jwt.encode(payload, "any-secret", algorithm="HS256")
         
         user_id = auth_backend.get_current_user_id(token)
-        assert user_id == "user123"
+        assert user_id == "12345678-1234-1234-1234-123456789abc"
         
         # Invalid token
         user_id = auth_backend.get_current_user_id("invalid.token")
         assert user_id is None
+    
+    @pytest.mark.asyncio
+    async def test_load_access_token_delegates_to_verify_token(self, auth_backend, jwt_service):
+        """Test that load_access_token delegates to verify_token for backward compatibility"""
+        # Mock verify_token to return a test AccessToken
+        mock_access_token = Mock(spec=AccessToken)
+        mock_access_token.client_id = "12345678-1234-1234-1234-123456789abc"
+        auth_backend.verify_token = AsyncMock(return_value=mock_access_token)
+        
+        # Call load_access_token
+        result = await auth_backend.load_access_token("test.token")
+        
+        # Should delegate to verify_token
+        auth_backend.verify_token.assert_called_once_with("test.token")
+        assert result == mock_access_token
+    
+    @pytest.mark.asyncio
+    async def test_user_context_middleware_integration(self, auth_backend, jwt_service):
+        """Test integration with user context middleware"""
+        # Mock JWT service to return valid payload
+        payload = {
+            "sub": "12345678-1234-1234-1234-123456789abc",
+            "email": "test@example.com",
+            "scopes": ["read", "write"],
+            "exp": int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
+        }
+        jwt_service.verify_token.return_value = payload
+        
+        # Mock _validate_token_dual_auth to return the payload
+        auth_backend._validate_token_dual_auth = AsyncMock(return_value=payload)
+        
+        # Load access token (this should work with user context middleware)
+        result = await auth_backend.verify_token("valid.token.here")
+        
+        assert result is not None
+        assert result.client_id == "12345678-1234-1234-1234-123456789abc"
+        
+        # Verify user context can be retrieved
+        user_context = await auth_backend._get_user_context("12345678-1234-1234-1234-123456789abc")
+        assert user_context is not None
+        assert user_context.user_id == "12345678-1234-1234-1234-123456789abc"
+    
+    @pytest.mark.asyncio
+    async def test_enhanced_error_handling(self, auth_backend, jwt_service):
+        """Test enhanced error handling and logging"""
+        # Test various error scenarios
+        scenarios = [
+            (None, "None payload"),
+            ({}, "Empty payload"),
+            ({"exp": "invalid"}, "Invalid expiration"),
+            ({"sub": None}, "None user_id"),
+        ]
+        
+        for payload, description in scenarios:
+            jwt_service.verify_token.return_value = payload
+            
+            # Mock _validate_token_dual_auth to return the payload
+            auth_backend._validate_token_dual_auth = AsyncMock(return_value=payload)
+            
+            result = await auth_backend.verify_token(f"token.for.{description}")
+            
+            # Should handle errors gracefully
+            if payload is None or not payload.get("sub"):
+                assert result is None
+            else:
+                # Some payloads might still work with fallback logic
+                pass
+    
+    @pytest.mark.asyncio 
+    async def test_cache_performance(self, auth_backend, user_repository):
+        """Test user context cache performance"""
+        # Mock user entity
+        user = Mock(spec=User)
+        user.id = UserId("12345678-1234-1234-1234-123456789abc")
+        user.email = "test@example.com"
+        user.username = "testuser"
+        user.roles = [UserRole.USER]
+        
+        user_repository.find_by_id.return_value = user
+        
+        # First call - should hit repository
+        start_time = time.time()
+        context1 = await auth_backend._get_user_context("12345678-1234-1234-1234-123456789abc")
+        first_call_time = time.time() - start_time
+        
+        # Second call - should use cache (much faster)
+        start_time = time.time()
+        context2 = await auth_backend._get_user_context("12345678-1234-1234-1234-123456789abc")
+        second_call_time = time.time() - start_time
+        
+        # Verify cache was used
+        assert user_repository.find_by_id.call_count == 1
+        assert context1 == context2
+        
+        # Cache should be significantly faster (this is a rough check)
+        # In real scenarios, cache would be much faster than DB lookup
+        assert second_call_time <= first_call_time * 2  # Allow some variance
 
 
 class TestCreateJWTAuthBackend:
@@ -456,21 +553,6 @@ class TestCreateJWTAuthBackend:
         assert backend._user_repository is not None
     
     @pytest.mark.asyncio
-    async def test_load_access_token_delegates_to_verify_token(self, auth_backend, jwt_service):
-        """Test that load_access_token delegates to verify_token for backward compatibility"""
-        # Mock verify_token to return a test AccessToken
-        mock_access_token = Mock(spec=AccessToken)
-        mock_access_token.client_id = "user123"
-        auth_backend.verify_token = AsyncMock(return_value=mock_access_token)
-        
-        # Call load_access_token
-        result = await auth_backend.load_access_token("test.token")
-        
-        # Should delegate to verify_token
-        auth_backend.verify_token.assert_called_once_with("test.token")
-        assert result == mock_access_token
-    
-    @pytest.mark.asyncio
     async def test_integration_full_flow(self, monkeypatch):
         """Test full integration flow with real JWT tokens"""
         monkeypatch.setenv("JWT_SECRET_KEY", "test-secret-key")
@@ -481,7 +563,7 @@ class TestCreateJWTAuthBackend:
         # Create a real JWT token
         jwt_service = JWTService(secret_key="test-secret-key")
         token = jwt_service.create_access_token(
-            user_id="user123",
+            user_id="12345678-1234-1234-1234-123456789abc",
             email="test@example.com",
             roles=["developer"],
             additional_claims={"scopes": ["custom:read"], "aud": "mcp-server"}  # Add audience for MCP
@@ -491,90 +573,8 @@ class TestCreateJWTAuthBackend:
         access_token = await backend.verify_token(token)
         
         assert access_token is not None
-        assert access_token.client_id == "user123"
+        assert access_token.client_id == "12345678-1234-1234-1234-123456789abc"
         assert "mcp:access" in access_token.scopes
         assert "mcp:write" in access_token.scopes
         assert "mcp:read" in access_token.scopes
         assert "custom:read" in access_token.scopes
-    
-    @pytest.mark.asyncio
-    async def test_user_context_middleware_integration(self, auth_backend, jwt_service):
-        """Test integration with user context middleware"""
-        # Mock JWT service to return valid payload
-        payload = {
-            "sub": "user123",
-            "email": "test@example.com",
-            "scopes": ["read", "write"],
-            "exp": int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
-        }
-        jwt_service.verify_token.return_value = payload
-        
-        # Mock _validate_token_dual_auth to return the payload
-        auth_backend._validate_token_dual_auth = AsyncMock(return_value=payload)
-        
-        # Load access token (this should work with user context middleware)
-        result = await auth_backend.verify_token("valid.token.here")
-        
-        assert result is not None
-        assert result.client_id == "user123"
-        
-        # Verify user context can be retrieved
-        user_context = await auth_backend._get_user_context("user123")
-        assert user_context is not None
-        assert user_context.user_id == "user123"
-    
-    @pytest.mark.asyncio
-    async def test_enhanced_error_handling(self, auth_backend, jwt_service):
-        """Test enhanced error handling and logging"""
-        # Test various error scenarios
-        scenarios = [
-            (None, "None payload"),
-            ({}, "Empty payload"),
-            ({"exp": "invalid"}, "Invalid expiration"),
-            ({"sub": None}, "None user_id"),
-        ]
-        
-        for payload, description in scenarios:
-            jwt_service.verify_token.return_value = payload
-            
-            # Mock _validate_token_dual_auth to return the payload
-            auth_backend._validate_token_dual_auth = AsyncMock(return_value=payload)
-            
-            result = await auth_backend.verify_token(f"token.for.{description}")
-            
-            # Should handle errors gracefully
-            if payload is None or not payload.get("sub"):
-                assert result is None
-            else:
-                # Some payloads might still work with fallback logic
-                pass
-    
-    @pytest.mark.asyncio 
-    async def test_cache_performance(self, auth_backend, user_repository):
-        """Test user context cache performance"""
-        # Mock user entity
-        user = Mock(spec=User)
-        user.id = UserId("user123")
-        user.email = "test@example.com"
-        user.username = "testuser"
-        user.roles = [UserRole.USER]
-        
-        user_repository.find_by_id.return_value = user
-        
-        # First call - should hit repository
-        start_time = time.time()
-        context1 = await auth_backend._get_user_context("user123")
-        first_call_time = time.time() - start_time
-        
-        # Second call - should use cache (much faster)
-        start_time = time.time()
-        context2 = await auth_backend._get_user_context("user123")
-        second_call_time = time.time() - start_time
-        
-        # Verify cache was used
-        assert user_repository.find_by_id.call_count == 1
-        assert context1 == context2
-        
-        # Cache should be significantly faster (this is a rough check)
-        # In real scenarios, cache would be much faster than DB lookup
-        assert second_call_time <= first_call_time * 2  # Allow some variance

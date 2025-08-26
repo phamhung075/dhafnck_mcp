@@ -43,7 +43,8 @@ class ORMProjectRepository(BaseORMRepository[Project], BaseUserScopedRepository,
         # Initialize BaseORMRepository
         BaseORMRepository.__init__(self, Project)
         # Initialize BaseUserScopedRepository with user isolation
-        BaseUserScopedRepository.__init__(self, session or self.get_db_session(), user_id)
+        # If no session provided, use None - the BaseUserScopedRepository will handle it
+        BaseUserScopedRepository.__init__(self, session, user_id)
     
     def _model_to_entity(self, project: Project) -> ProjectEntity:
         """Convert SQLAlchemy model to domain entity"""

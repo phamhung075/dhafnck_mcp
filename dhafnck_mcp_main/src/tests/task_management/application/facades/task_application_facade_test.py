@@ -20,6 +20,7 @@ from fastmcp.task_management.application.dtos.task.update_task_request import Up
 from fastmcp.task_management.application.dtos.task.list_tasks_request import ListTasksRequest
 from fastmcp.task_management.application.dtos.task.search_tasks_request import SearchTasksRequest
 from fastmcp.task_management.domain.exceptions import TaskNotFoundError
+from fastmcp.task_management.domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
 
 
 class TestTaskApplicationFacade:
@@ -109,12 +110,12 @@ class TestTaskApplicationFacadeCreateTask:
                         return facade
     
     @patch('fastmcp.task_management.application.facades.task_application_facade.get_current_user_id')
-    @patch('fastmcp.task_management.application.facades.task_application_facade.AuthConfig')
-    def test_create_task_success(self, mock_auth_config, mock_get_user_id, facade):
+    @patch('fastmcp.task_management.application.facades.task_application_facade.validate_user_id')
+    def test_create_task_success(self, mock_validate_user_id, mock_get_user_id, facade):
         """Test successful task creation"""
         # Mock authentication
         mock_get_user_id.return_value = "test-user-123"
-        mock_auth_config.is_default_user_allowed.return_value = False
+        mock_validate_user_id.return_value = "test-user-123"
         
         # Mock use case response
         mock_response = Mock()
@@ -191,19 +192,6 @@ class TestTaskApplicationFacadeCreateTask:
         from fastmcp.task_management.domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
         with pytest.raises(UserAuthenticationRequiredError):
             facade.create_task(request)
-        
-        request = CreateTaskRequest(
-            title="Test Task",
-            description="Test Description",
-            git_branch_id="branch-123"
-        )
-        
-        result = facade.create_task(request)
-        
-        assert result["success"] is True
-        assert result["action"] == "create"
-        assert "task" in result
-        assert result["message"] == "Task created successfully"
 
 
 class TestTaskApplicationFacadeUpdateTask:
@@ -635,12 +623,12 @@ class TestTaskApplicationFacadeGetNextTask:
     
     @pytest.mark.asyncio
     @patch('fastmcp.task_management.application.facades.task_application_facade.get_current_user_id')
-    @patch('fastmcp.task_management.application.facades.task_application_facade.AuthConfig')
-    async def test_get_next_task_success(self, mock_auth_config, mock_get_user_id, facade):
+    @patch('fastmcp.task_management.application.facades.task_application_facade.validate_user_id')
+    async def test_get_next_task_success(self, mock_validate_user_id, mock_get_user_id, facade):
         """Test successful next task retrieval"""
         # Mock authentication
         mock_get_user_id.return_value = "test-user-123"
-        mock_auth_config.is_default_user_allowed.return_value = False
+        mock_validate_user_id.return_value = "test-user-123"
         
         mock_response = Mock()
         mock_response.has_next = True

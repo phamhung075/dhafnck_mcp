@@ -35,6 +35,7 @@ class CreateTaskRequest:
     labels: List[str] = None
     due_date: Optional[str] = None
     dependencies: List[str] = field(default_factory=list)  # List of task IDs this task depends on
+    user_id: Optional[str] = None  # User identifier for task ownership
     
     def __post_init__(self):
         if self.labels is None:

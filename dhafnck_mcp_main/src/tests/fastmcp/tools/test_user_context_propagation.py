@@ -8,7 +8,7 @@ properly propagates to MCP tool execution.
 import pytest
 from unittest.mock import Mock, patch
 from fastmcp.tools.tool import FunctionTool
-from fastmcp.auth.mcp_integration.user_context_middleware import MCPUserContext
+from fastmcp.auth.mcp_integration.jwt_auth_backend import MCPUserContext
 
 
 class TestUserContextPropagation:

@@ -74,7 +74,7 @@ class TestCreateTaskUseCase:
         response = self.use_case.execute(request)
         
         assert response.success is True
-        assert response.error is None
+        assert response.message == "Task created successfully"
         assert response.task is not None
         assert response.task.title == "Complete Feature"
         assert response.task.description == "Implement new feature"
@@ -109,8 +109,8 @@ class TestCreateTaskUseCase:
         response = self.use_case.execute(self.default_request)
         
         assert response.success is False
-        assert "does not exist" in response.error
-        assert "git_branch_id" in response.error
+        assert "does not exist" in response.message
+        assert "git_branch_id" in response.message
         
         # Verify save was not called
         self.mock_repository.save.assert_not_called()
@@ -171,6 +171,7 @@ class TestCreateTaskUseCase:
         
         request = CreateTaskRequest(
             title=long_title,
+            description="Test description",  # Added required description
             git_branch_id=str(uuid4()),
             user_id="test-user-123"
         )
@@ -229,7 +230,7 @@ class TestCreateTaskUseCase:
         response = self.use_case.execute(self.default_request)
         
         assert response.success is False
-        assert "Failed to save task" in response.error
+        assert "Failed to save task" in response.message
     
     @patch('fastmcp.task_management.infrastructure.database.database_config.get_db_session')
     def test_create_task_branch_task_count_update(self, mock_get_session):
@@ -414,7 +415,7 @@ class TestCreateTaskUseCase:
             response = self.use_case.execute(self.default_request)
         
         assert response.success is False
-        assert "Failed to create task" in response.error
+        assert "Failed to create task" in response.message
         assert mock_error.called
     
     def test_create_task_all_status_values(self):

@@ -663,21 +663,6 @@ class TestTaskProgress:
         with pytest.raises(ValueError, match="percentage must be between 0 and 100"):
             task.update_progress(ProgressType.IMPLEMENTATION, 110)
     
-    @pytest.mark.skip(reason="Task now only stores subtask IDs - progress calculation should use SubtaskRepository")
-    def test_calculate_progress_from_subtasks(self):
-        """Test calculating progress from subtasks - DEPRECATED."""
-        task = Task(title="Test", description="Test")
-        # In new architecture, task.subtasks only contains IDs
-        # Progress calculation should be done via a service that has access to SubtaskRepository
-        task.subtasks = [
-            {"id": "sub-1", "status": "done"},
-            {"id": "sub-2", "status": "in_progress"},
-            {"id": "sub-3", "status": "todo"}
-        ]
-        
-        progress = task.calculate_progress_from_subtasks()
-        # Progress is based on completed subtasks
-        assert progress >= 0  # At least one subtask is done
     
     def test_is_milestone_reached(self):
         """Test milestone detection."""

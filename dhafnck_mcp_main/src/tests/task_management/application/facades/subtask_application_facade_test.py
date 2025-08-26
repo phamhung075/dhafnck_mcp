@@ -150,7 +150,7 @@ class TestSubtaskApplicationFacadeStaticRepositories:
             "priority": "high"
         }
         
-        result = facade.handle_manage_subtask("create", "task-123", subtask_data)
+        result = facade.handle_manage_subtask("create", "12345678-1234-1234-1234-123456789abc", subtask_data)
         
         assert result["success"] is True
         assert result["action"] == "create"
@@ -328,7 +328,7 @@ class TestSubtaskApplicationFacadeFactoryRepositories:
                 
                 subtask_data = {"title": "Test Subtask"}
                 
-                result = facade.handle_manage_subtask("create", "task-123", subtask_data)
+                result = facade.handle_manage_subtask("create", "12345678-1234-1234-1234-123456789abc", subtask_data)
                 
                 # Verify context was derived and repositories were created
                 mock_task_repository_factory.create_repository.assert_called_once_with(
@@ -402,7 +402,7 @@ class TestSubtaskApplicationFacadeParameterHandling:
             
             # Legacy call style: (action, task_id, subtask_data)
             # Should be detected and handled correctly
-            result = facade.handle_manage_subtask("create", "task-123", subtask_data)
+            result = facade.handle_manage_subtask("create", "12345678-1234-1234-1234-123456789abc", subtask_data)
             assert result["action"] == "create"
 
 

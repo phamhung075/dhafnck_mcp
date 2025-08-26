@@ -7,7 +7,7 @@
 
 ## Overview
 
-This migration addresses critical database schema validation errors identified between the SQLAlchemy model definitions and the actual database schema in the Docker container `dhafnck-mcp-server-opt`.
+This migration addresses critical database schema validation errors identified between the SQLAlchemy model definitions and the actual database schema in the Docker container `dhafnck-mcp-server`.
 
 ## Issues Identified & Resolved
 
@@ -149,7 +149,7 @@ If rollback is needed, the following backup tables were created:
 ## Environment Details
 
 - **Database:** Supabase PostgreSQL
-- **Container:** dhafnck-mcp-server-opt
+- **Container:** dhafnck-mcp-server
 - **Migration Tool:** Custom Python script with SQLAlchemy
 - **Transaction Mode:** ACID compliant with full rollback capability
 

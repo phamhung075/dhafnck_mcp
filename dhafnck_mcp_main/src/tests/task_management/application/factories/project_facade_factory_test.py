@@ -338,33 +338,6 @@ class TestProjectFacadeFactoryEdgeCases:
                 cached = factory.get_cached_facade(user)
                 assert cached is not None
 
-
-if __name__ == "__main__":
-    pytest.main([__file__])
-        user_id = "valid-user-123"
-        
-        facade = self.factory.create_project_facade(user_id=user_id)
-        
-        assert isinstance(facade, ProjectApplicationFacade)
-        # Verify repository factory was called with correct parameters
-        self.mock_project_repository_factory.create.assert_called_once_with(user_id=user_id)
-        # Verify facade is cached
-        assert f"{user_id}" in self.factory._facades_cache
-    
-    def test_create_project_facade_no_user_id(self):
-        """Test facade creation without user ID raises error."""
-        with pytest.raises(UserAuthenticationRequiredError) as exc_info:
-            self.factory.create_project_facade(user_id=None)
-        
-        assert "Project facade creation" in str(exc_info.value)
-    
-    def test_create_project_facade_empty_user_id(self):
-        """Test facade creation with empty user ID raises error."""
-        with pytest.raises(UserAuthenticationRequiredError) as exc_info:
-            self.factory.create_project_facade(user_id="")
-        
-        assert "Project facade creation" in str(exc_info.value)
-    
     def test_create_project_facade_default_user_prohibited(self):
         """Test facade creation with prohibited default user ID."""
         with pytest.raises(DefaultUserProhibitedError):
@@ -560,3 +533,7 @@ if __name__ == "__main__":
             facade = self.factory.create_project_facade(user_id=user_id)
             assert isinstance(facade, ProjectApplicationFacade)
             assert user_id in self.factory._facades_cache
+
+
+if __name__ == "__main__":
+    pytest.main([__file__])

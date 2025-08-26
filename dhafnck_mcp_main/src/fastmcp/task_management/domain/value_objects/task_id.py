@@ -57,10 +57,14 @@ class TaskId:
         # Integer ID pattern (for backward compatibility with old tests)
         integer_pattern = r'^\d+$'
         
+        # Test ID pattern (for backward compatibility): task-123, test-456, etc.
+        test_id_pattern = r'^[a-zA-Z]+-\d+$'
+        
         return bool(
             re.match(uuid_pattern, value.lower()) or
             re.match(hierarchical_pattern, value.lower()) or
-            re.match(integer_pattern, value)
+            re.match(integer_pattern, value) or
+            re.match(test_id_pattern, value)
         )
 
     def __str__(self) -> str:

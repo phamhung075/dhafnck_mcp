@@ -23,6 +23,16 @@ class TaskStatus:
     
     value: str
     
+    # Class attributes for backward compatibility 
+    TODO = "todo"
+    IN_PROGRESS = "in_progress"
+    BLOCKED = "blocked"
+    REVIEW = "review" 
+    TESTING = "testing"
+    DONE = "done"
+    CANCELLED = "cancelled"
+    ARCHIVED = "archived"
+    
     def __post_init__(self):
         if not self.value:
             raise ValueError("Task status cannot be empty")

@@ -35,6 +35,8 @@ dependencies = [
     "uvicorn>=0.34.3",
     "python-multipart>=0.0.20",
     "supabase>=2.18.1",
+    "docker>=7.1.0",
+    "aiohttp>=3.12.15",
 ]
 requires-python = ">=3.10"
 readme = "README.md"
@@ -126,6 +128,15 @@ markers = [
     "e2e: End-to-end tests", 
     "slow: Tests that take more than 2 seconds",
     "fast: Tests that take less than 0.1 seconds",
+    "vision: Vision System tests",
+    "context: Hierarchical context tests",
+    "database: Tests requiring database",
+    "postgresql: Tests requiring PostgreSQL",
+    "isolated: Tests requiring isolated environment",
+    "mcp: MCP protocol integration tests",
+    "memory: Memory usage tests",
+    "stress: Stress tests",
+    "load: Load tests",
 ]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"

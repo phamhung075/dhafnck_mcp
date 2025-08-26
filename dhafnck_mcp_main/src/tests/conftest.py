@@ -56,6 +56,10 @@ class MockAPIRouter:
         def decorator(func):
             return func
         return decorator
+    def patch(self, *args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator
 
 class MockHTTPException(Exception):
     def __init__(self, status_code, detail):
@@ -81,14 +85,31 @@ class MockResponse:
     def __init__(self):
         pass
 
+class MockJSONResponse:
+    def __init__(self, content=None, status_code=200, headers=None):
+        self.content = content
+        self.status_code = status_code
+        self.headers = headers or {}
+
 # Mock FastAPI security module
 class MockOAuth2PasswordRequestForm:
     def __init__(self):
         self.username = "test_user"
         self.password = "test_password"
 
+class MockHTTPBearer:
+    def __init__(self, *args, **kwargs):
+        pass
+
+class MockHTTPAuthorizationCredentials:
+    def __init__(self, scheme="Bearer", credentials="test-token"):
+        self.scheme = scheme
+        self.credentials = credentials
+
 mock_fastapi_security = type(sys)('fastapi.security')
 mock_fastapi_security.OAuth2PasswordRequestForm = MockOAuth2PasswordRequestForm
+mock_fastapi_security.HTTPBearer = MockHTTPBearer
+mock_fastapi_security.HTTPAuthorizationCredentials = MockHTTPAuthorizationCredentials
 sys.modules['fastapi.security'] = mock_fastapi_security
 
 # Create fastapi module mock
@@ -99,8 +120,11 @@ mock_fastapi.Depends = MockDepends
 mock_fastapi.status = MockStatus
 mock_fastapi.Request = MockRequest
 mock_fastapi.Response = MockResponse
+mock_fastapi.responses = type(sys)('fastapi.responses')
+mock_fastapi.responses.JSONResponse = MockJSONResponse
 mock_fastapi.security = mock_fastapi_security
 sys.modules['fastapi'] = mock_fastapi
+sys.modules['fastapi.responses'] = mock_fastapi.responses
 
 # Ensure src directory is on sys.path for fastmcp imports
 src_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -368,8 +392,8 @@ def _initialize_test_database_with_basic_data():
                 # Create main git branch for default project
                 main_branch_id = str(uuid.uuid4())
                 session.execute(text("""
-                    INSERT INTO project_git_branchs (id, project_id, name, description, created_at, updated_at, priority, status, metadata, task_count, completed_task_count) 
-                    VALUES (:id, :project_id, :name, :description, :created_at, :updated_at, :priority, :status, :metadata, :task_count, :completed_task_count)
+                    INSERT INTO project_git_branchs (id, project_id, name, description, created_at, updated_at, priority, status, metadata, task_count, completed_task_count, user_id) 
+                    VALUES (:id, :project_id, :name, :description, :created_at, :updated_at, :priority, :status, :metadata, :task_count, :completed_task_count, :user_id)
                     ON CONFLICT (id) DO UPDATE SET
                         name = EXCLUDED.name,
                         description = EXCLUDED.description,
@@ -385,7 +409,8 @@ def _initialize_test_database_with_basic_data():
                     'status': 'todo',
                     'metadata': '{}',
                     'task_count': 0,
-                    'completed_task_count': 0
+                    'completed_task_count': 0,
+                    'user_id': 'system'
                 })
                 
                 session.commit()

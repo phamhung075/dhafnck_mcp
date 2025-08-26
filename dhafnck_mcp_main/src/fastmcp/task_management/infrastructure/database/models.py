@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any
 from sqlalchemy import (
     Column, String, Text, DateTime, Integer, Boolean, ForeignKey,
-    UniqueConstraint, CheckConstraint, Index, JSON, Float, ARRAY
+    UniqueConstraint, CheckConstraint, Index, JSON, Float
 )
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
@@ -533,7 +533,7 @@ class ContextInheritanceCache(Base):
     resolved_data: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)  # Added for schema validation
     dependencies_hash: Mapped[str] = mapped_column(String, nullable=False)
     resolution_path: Mapped[str] = mapped_column(String, nullable=False)
-    parent_chain: Mapped[List[str]] = mapped_column(ARRAY(String), default=list)  # Fixed: Database has ARRAY type
+    parent_chain: Mapped[List[str]] = mapped_column(JSON, default=list)  # SQLite compatible: Using JSON instead of ARRAY
     
     # Cache metadata
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

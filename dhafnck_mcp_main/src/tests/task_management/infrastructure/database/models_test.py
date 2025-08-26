@@ -8,14 +8,18 @@ This module tests the database models including:
 - JSON field handling
 - Cascade behaviors
 - Global singleton UUID handling
+- User isolation and authentication context
+- Model serialization and deserialization
+- Database migrations compatibility
 """
 
 import pytest
-from datetime import datetime
+from datetime import datetime, timedelta
 from uuid import uuid4
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError
+from unittest.mock import patch
 
 import json
 from fastmcp.task_management.infrastructure.database.models import (

@@ -66,7 +66,7 @@ class TestTaskApplicationService:
     @pytest.fixture
     def service(self, mock_task_repository, mock_context_service, mock_hierarchical_context_service, mock_use_cases):
         """Create service instance with mocked dependencies"""
-        with patch('fastmcp.task_management.application.services.task_application_service.UnifiedContextFacadeFactory') as MockFactory:
+        with patch('fastmcp.task_management.application.factories.unified_context_facade_factory.UnifiedContextFacadeFactory') as MockFactory:
             MockFactory.return_value.create_unified_service.return_value = mock_hierarchical_context_service
             
             service = TaskApplicationService(
@@ -153,7 +153,7 @@ class TestTaskApplicationService:
     async def test_get_task_success(self, service, mock_use_cases):
         """Test successful task retrieval"""
         task_id = "task-123"
-        expected_response = TaskResponse(success=True, task=Mock())
+        expected_response = Mock()  # Use Mock for expected response
         mock_use_cases['get'].execute.return_value = expected_response
         
         result = await service.get_task(
@@ -190,7 +190,7 @@ class TestTaskApplicationService:
             status="in_progress"
         )
         
-        response = TaskResponse(success=True, task=mock_task)
+        response = Mock(success=True, task=mock_task)  # Use Mock for response
         mock_use_cases['update'].execute.return_value = response
         
         result = await service.update_task(request)
@@ -210,7 +210,7 @@ class TestTaskApplicationService:
     async def test_list_tasks(self, service, mock_use_cases):
         """Test listing tasks"""
         request = ListTasksRequest(status="todo", limit=10)
-        expected_response = TaskListResponse(tasks=[Mock(), Mock()], total=2)
+        expected_response = TaskListResponse(tasks=[Mock(), Mock()], count=2)
         mock_use_cases['list'].execute.return_value = expected_response
         
         result = await service.list_tasks(request)
@@ -222,7 +222,7 @@ class TestTaskApplicationService:
     async def test_search_tasks(self, service, mock_use_cases):
         """Test searching tasks"""
         request = SearchTasksRequest(query="authentication", limit=5)
-        expected_response = TaskListResponse(tasks=[Mock()], total=1)
+        expected_response = TaskListResponse(tasks=[Mock()], count=1)
         mock_use_cases['search'].execute.return_value = expected_response
         
         result = await service.search_tasks(request)
@@ -274,7 +274,7 @@ class TestTaskApplicationService:
     @pytest.mark.asyncio
     async def test_get_all_tasks(self, service, mock_use_cases):
         """Test getting all tasks"""
-        expected_response = TaskListResponse(tasks=[Mock(), Mock()], total=2)
+        expected_response = TaskListResponse(tasks=[Mock(), Mock()], count=2)
         mock_use_cases['list'].execute.return_value = expected_response
         
         result = await service.get_all_tasks()
@@ -289,7 +289,7 @@ class TestTaskApplicationService:
     async def test_get_tasks_by_status(self, service, mock_use_cases):
         """Test getting tasks by status"""
         status = "in_progress"
-        expected_response = TaskListResponse(tasks=[Mock()], total=1)
+        expected_response = TaskListResponse(tasks=[Mock()], count=1)
         mock_use_cases['list'].execute.return_value = expected_response
         
         result = await service.get_tasks_by_status(status)
@@ -305,7 +305,7 @@ class TestTaskApplicationService:
     async def test_get_tasks_by_assignee(self, service, mock_use_cases):
         """Test getting tasks by assignee"""
         assignee = "user-123"
-        expected_response = TaskListResponse(tasks=[Mock()], total=1)
+        expected_response = TaskListResponse(tasks=[Mock()], count=1)
         mock_use_cases['list'].execute.return_value = expected_response
         
         result = await service.get_tasks_by_assignee(assignee)
@@ -328,6 +328,9 @@ class TestTaskApplicationService:
     
     def test_get_user_scoped_repository(self, service, mock_task_repository):
         """Test getting user-scoped repository"""
+        # Reset the mock to clear calls from initialization
+        mock_task_repository.with_user.reset_mock()
+        
         # Test repository with with_user method
         scoped_repo = service._get_user_scoped_repository()
         

@@ -35,6 +35,16 @@ except ImportError as e:
     get_authentication_context = lambda: {}
     REQUEST_CONTEXT_AVAILABLE = False
 
+# Try to import custom user context middleware
+try:
+    from fastmcp.auth.middleware.user_context_middleware import get_current_user_id
+    USER_CONTEXT_AVAILABLE = True
+    logger.info("✅ User context middleware functions imported successfully")
+except ImportError as e:
+    logger.warning(f"User context middleware functions not available: {e}")
+    get_current_user_id = lambda: None
+    USER_CONTEXT_AVAILABLE = False
+
 # Try to import Starlette request context for dual auth
 try:
     from starlette.requests import Request

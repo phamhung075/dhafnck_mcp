@@ -23,7 +23,8 @@ def get_current_user() -> User:
     return User(
         id="default-user",
         email="user@example.com",
-        username="user"
+        username="user",
+        password_hash="stub-password-hash"
     )
 
 def get_current_active_user() -> User:

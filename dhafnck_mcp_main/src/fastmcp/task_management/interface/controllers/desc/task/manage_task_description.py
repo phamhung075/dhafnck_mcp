@@ -5,6 +5,10 @@ This module contains the comprehensive documentation for the manage_task MCP too
 Separated from the controller logic for better maintainability and organization.
 """
 
+TOOL_NAME = "manage_task"
+
+TOOL_DESCRIPTION = "Comprehensive task management with CRUD operations and dependency support"
+
 MANAGE_TASK_DESCRIPTION = """
 📋 TASK MANAGEMENT SYSTEM - Complete task lifecycle operations with Vision System Integration
 
@@ -167,4 +171,21 @@ MANAGE_TASK_PARAMETERS = {
     "dependency_id": "UUID of task that must be completed first. Required for: add_dependency, remove_dependency. Use to establish task order.",
     "force_full_generation": "Force vision system regeneration. Optional. Default: false. Use if insights seem stale."
 }
+
+
+MANAGE_TASK_PARAMS = {
+    "type": "object",
+    "properties": {
+        "action": {
+            "type": "string",
+            "description": "Task management action. Required. Valid: 'create', 'update', 'get', 'delete', 'complete', 'list', 'search', 'next', 'add_dependency', 'remove_dependency'."
+        }
+    },
+    "required": ["action"]
+}
+
+
+def get_manage_task_description():
+    """Get the complete task management tool description."""
+    return MANAGE_TASK_DESCRIPTION
 

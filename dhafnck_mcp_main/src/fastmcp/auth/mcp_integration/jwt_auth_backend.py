@@ -204,7 +204,7 @@ class JWTAuthBackend(TokenVerifier):
                 return None
             
             # Get or cache user context
-            user_context = await self._get_user_context(user_id)
+            user_context = await self._get_user_context(user_id, payload)
             if not user_context:
                 logger.error(f"❌ Could not get user context for user_id: {user_id}")
                 return None
@@ -252,12 +252,13 @@ class JWTAuthBackend(TokenVerifier):
         """
         return await self.verify_token(token)
     
-    async def _get_user_context(self, user_id: str) -> Optional[MCPUserContext]:
+    async def _get_user_context(self, user_id: str, payload: Dict[str, Any] = None) -> Optional[MCPUserContext]:
         """
         Get user context, using cache if available.
         
         Args:
             user_id: User ID to get context for
+            payload: JWT payload containing user data
             
         Returns:
             User context or None if user not found
@@ -308,11 +309,19 @@ class JWTAuthBackend(TokenVerifier):
         
         # Fallback: Create minimal context from token data
         # This allows the system to work even without database access
+        fallback_roles = ["user"]  # Default role
+        fallback_email = ""
+        
+        # Extract data from JWT payload if available
+        if payload:
+            fallback_roles = payload.get("roles", ["user"])
+            fallback_email = payload.get("email", "")
+        
         return MCPUserContext(
             user_id=user_id,
-            email="",
+            email=fallback_email,
             username=user_id,
-            roles=["user"],
+            roles=fallback_roles,
             scopes=[]
         )
     

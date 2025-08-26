@@ -128,7 +128,7 @@ services:
         provenance: false
         sbom: false
     image: dhafnck/mcp-server:optimized
-    container_name: dhafnck-mcp-server-opt
+    container_name: dhafnck-mcp-server
     env_file:
       - ../.env
     environment:
@@ -238,7 +238,7 @@ services:
         provenance: false
         sbom: false
     image: dhafnck/frontend:optimized
-    container_name: dhafnck-frontend-opt
+    container_name: dhafnck-frontend
     environment:
       - VITE_API_URL=${BACKEND_URL:-http://localhost:8000}
       - VITE_WS_URL=${WS_URL:-ws://localhost:8000}

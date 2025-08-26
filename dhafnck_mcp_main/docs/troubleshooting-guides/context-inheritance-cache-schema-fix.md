@@ -25,7 +25,7 @@ The following 9 columns were missing from the database table:
 ### Database Environment
 
 - **Database Type:** PostgreSQL (Supabase Cloud)
-- **Container:** `dhafnck-mcp-server-opt`
+- **Container:** `dhafnck-mcp-server`
 - **Schema:** Production database with existing data
 
 ## Solution Implemented
@@ -90,7 +90,7 @@ The migration was executed directly in the Docker container using the database c
 
 ```bash
 # Execute migration in Docker container
-docker exec dhafnck-mcp-server-opt python -c "migration_script"
+docker exec dhafnck-mcp-server python -c "migration_script"
 
 # Restart backend to apply changes
 docker-compose restart backend

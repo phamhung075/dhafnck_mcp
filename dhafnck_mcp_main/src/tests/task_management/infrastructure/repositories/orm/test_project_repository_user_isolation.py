@@ -10,8 +10,8 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from fastmcp.task_management.infrastructure.repositories.orm.project_repository import ProjectRepository
-from fastmcp.task_management.infrastructure.database.models import ProjectORM
-from fastmcp.task_management.domain.entities.project import Project
+from fastmcp.task_management.infrastructure.database.models import Project as ProjectORM
+from fastmcp.task_management.domain.entities.project import Project as ProjectEntity
 
 
 class TestProjectRepositoryUserIsolation:
