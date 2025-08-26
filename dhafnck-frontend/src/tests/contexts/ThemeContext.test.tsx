@@ -1,27 +1,28 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { vi } from 'vitest';
 import '@testing-library/jest-dom';
 import { ThemeContext, ThemeProvider } from '../../contexts/ThemeContext';
 import { applyThemeToRoot } from '../../theme/themeConfig';
 
 // Mock the theme config module
-jest.mock('../../theme/themeConfig', () => ({
-  applyThemeToRoot: jest.fn(),
+vi.mock('../../theme/themeConfig', () => ({
+  applyThemeToRoot: vi.fn(),
 }));
 
 // Mock localStorage
 const localStorageMock = {
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-  clear: jest.fn(),
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
 };
 Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
 });
 
 // Mock matchMedia
-const matchMediaMock = jest.fn();
+const matchMediaMock = vi.fn();
 Object.defineProperty(window, 'matchMedia', {
   value: matchMediaMock,
 });
@@ -43,20 +44,20 @@ const TestComponent = () => {
 };
 
 describe('ThemeContext', () => {
-  const mockApplyThemeToRoot = applyThemeToRoot as jest.MockedFunction<typeof applyThemeToRoot>;
+  const mockApplyThemeToRoot = applyThemeToRoot as ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     document.documentElement.classList.remove('light', 'dark');
     
     // Default matchMedia mock
     matchMediaMock.mockImplementation((query) => ({
       matches: false,
       media: query,
-      addEventListener: jest.fn(),
-      removeEventListener: jest.fn(),
-      addListener: jest.fn(),
-      removeListener: jest.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
     }));
   });
 
@@ -103,8 +104,8 @@ describe('ThemeContext', () => {
       matchMediaMock.mockImplementation((query) => ({
         matches: query === '(prefers-color-scheme: dark)',
         media: query,
-        addEventListener: jest.fn(),
-        removeEventListener: jest.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
       }));
       
       render(
@@ -206,8 +207,8 @@ describe('ThemeContext', () => {
     });
 
     it('listens to system theme changes', () => {
-      const addEventListener = jest.fn();
-      const removeEventListener = jest.fn();
+      const addEventListener = vi.fn();
+      const removeEventListener = vi.fn();
       
       localStorageMock.getItem.mockReturnValue(null);
       matchMediaMock.mockImplementation(() => ({
@@ -230,8 +231,8 @@ describe('ThemeContext', () => {
     });
 
     it('uses fallback listeners for older browsers', () => {
-      const addListener = jest.fn();
-      const removeListener = jest.fn();
+      const addListener = vi.fn();
+      const removeListener = vi.fn();
       
       localStorageMock.getItem.mockReturnValue(null);
       matchMediaMock.mockImplementation(() => ({
@@ -255,7 +256,7 @@ describe('ThemeContext', () => {
 
     it('responds to system theme change when no saved preference', () => {
       let changeHandler: any;
-      const addEventListener = jest.fn((event, handler) => {
+      const addEventListener = vi.fn((event, handler) => {
         if (event === 'change') changeHandler = handler;
       });
       
@@ -263,7 +264,7 @@ describe('ThemeContext', () => {
       matchMediaMock.mockImplementation(() => ({
         matches: false,
         addEventListener,
-        removeEventListener: jest.fn(),
+        removeEventListener: vi.fn(),
       }));
       
       render(
@@ -285,7 +286,7 @@ describe('ThemeContext', () => {
 
     it('ignores system theme change when there is saved preference', () => {
       let changeHandler: any;
-      const addEventListener = jest.fn((event, handler) => {
+      const addEventListener = vi.fn((event, handler) => {
         if (event === 'change') changeHandler = handler;
       });
       
@@ -293,7 +294,7 @@ describe('ThemeContext', () => {
       matchMediaMock.mockImplementation(() => ({
         matches: false,
         addEventListener,
-        removeEventListener: jest.fn(),
+        removeEventListener: vi.fn(),
       }));
       
       render(

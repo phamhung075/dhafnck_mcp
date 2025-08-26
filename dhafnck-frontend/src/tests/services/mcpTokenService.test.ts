@@ -7,9 +7,9 @@ jest.mock('js-cookie', () => ({
   get: jest.fn(),
 }));
 
-// Mock environment variable
+// Mock import.meta.env
 const mockApiUrl = 'http://localhost:8000';
-process.env.REACT_APP_API_URL = mockApiUrl;
+(import.meta as any).env = { VITE_API_URL: mockApiUrl };
 
 // Global fetch mock
 global.fetch = jest.fn();

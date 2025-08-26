@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { vi } from 'vitest';
 import '@testing-library/jest-dom';
 import { TokenManagement } from '../../pages/TokenManagement';
 import { tokenService } from '../../services/tokenService';
@@ -8,17 +9,17 @@ import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from '../../contexts/AuthContext';
 
 // Mock dependencies
-jest.mock('../../services/tokenService');
-jest.mock('../../hooks/useAuth', () => ({
+vi.mock('../../services/tokenService');
+vi.mock('../../hooks/useAuth', () => ({
   useAuth: () => ({
     user: { id: 'test-user', email: 'test@example.com' }
   })
 }));
-jest.mock('date-fns', () => ({
-  format: jest.fn((date) => 'formatted-date'),
+vi.mock('date-fns', () => ({
+  format: vi.fn((date) => 'formatted-date'),
 }));
 
-const mockTokenService = jest.mocked(tokenService);
+const mockTokenService = vi.mocked(tokenService);
 
 interface APIToken {
   id: string;
@@ -70,7 +71,7 @@ const renderWithProviders = (component: React.ReactElement) => {
 
 describe('TokenManagement', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockTokenService.listTokens.mockResolvedValue({ data: mockTokens, total: mockTokens.length });
   });
 
@@ -204,7 +205,7 @@ describe('TokenManagement', () => {
 
   it('copies token to clipboard when copy button is clicked', async () => {
     const mockClipboard = {
-      writeText: jest.fn().mockResolvedValue(undefined),
+      writeText: vi.fn().mockResolvedValue(undefined),
     };
     Object.assign(navigator, { clipboard: mockClipboard });
 
@@ -323,7 +324,7 @@ describe('TokenManagement', () => {
   });
 
   it('displays error message when token generation fails', async () => {
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     mockTokenService.generateToken.mockRejectedValue(new Error('Generation failed'));
     
     renderWithProviders(<TokenManagement />);
@@ -352,7 +353,7 @@ describe('TokenManagement', () => {
   });
 
   it('displays error message when loading tokens fails', async () => {
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     mockTokenService.listTokens.mockRejectedValue(new Error('Load failed'));
     
     renderWithProviders(<TokenManagement />);

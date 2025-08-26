@@ -29,6 +29,7 @@ COPY dhafnck-frontend/public/ ./public/
 COPY dhafnck-frontend/src/ ./src/
 COPY dhafnck-frontend/index.html dhafnck-frontend/vite.config.ts dhafnck-frontend/tsconfig.json ./
 COPY dhafnck-frontend/tailwind.config.* ./
+COPY dhafnck-frontend/postcss.config.js ./
 
 # Set development optimizations
 ENV NODE_OPTIONS="--max-old-space-size=2048" \

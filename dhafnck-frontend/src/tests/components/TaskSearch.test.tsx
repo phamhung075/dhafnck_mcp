@@ -1,24 +1,25 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { vi } from 'vitest';
 import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
 import { TaskSearch } from '../../components/TaskSearch';
 import * as api from '../../api';
 
 // Mock the api module
-jest.mock('../../api');
+vi.mock('../../api');
 
 // Mock debounce to execute immediately in tests
-jest.mock('../../lib/utils', () => ({
-  ...jest.requireActual('../../lib/utils'),
+vi.mock('../../lib/utils', () => ({
+  ...vi.importActual('../../lib/utils'),
   debounce: (fn: any) => fn
 }));
 
 describe('TaskSearch', () => {
   const mockProjectId = 'project-123';
   const mockTaskTreeId = 'branch-123';
-  const mockOnTaskSelect = jest.fn();
-  const mockOnSubtaskSelect = jest.fn();
+  const mockOnTaskSelect = vi.fn();
+  const mockOnSubtaskSelect = vi.fn();
 
   const mockTasks = [
     {
@@ -53,7 +54,7 @@ describe('TaskSearch', () => {
   ];
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Component Rendering', () => {
@@ -103,8 +104,8 @@ describe('TaskSearch', () => {
 
   describe('Search Functionality', () => {
     it('should search tasks when typing', async () => {
-      (api.searchTasks as jest.Mock).mockResolvedValue(mockTasks);
-      (api.listTasks as jest.Mock).mockResolvedValue([]);
+      (api.searchTasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockTasks);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       render(
         <TaskSearch
@@ -127,9 +128,9 @@ describe('TaskSearch', () => {
     });
 
     it('should search subtasks when typing', async () => {
-      (api.searchTasks as jest.Mock).mockResolvedValue([]);
-      (api.listTasks as jest.Mock).mockResolvedValue([mockTasks[0]]);
-      (api.listSubtasks as jest.Mock).mockResolvedValue(mockSubtasks);
+      (api.searchTasks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue([mockTasks[0]]);
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockSubtasks);
 
       render(
         <TaskSearch
@@ -153,8 +154,8 @@ describe('TaskSearch', () => {
     });
 
     it('should show "No results found" when search returns empty', async () => {
-      (api.searchTasks as jest.Mock).mockResolvedValue([]);
-      (api.listTasks as jest.Mock).mockResolvedValue([]);
+      (api.searchTasks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       render(
         <TaskSearch
@@ -203,8 +204,8 @@ describe('TaskSearch', () => {
         resolveSearch = resolve;
       });
 
-      (api.searchTasks as jest.Mock).mockReturnValue(searchPromise);
-      (api.listTasks as jest.Mock).mockResolvedValue([]);
+      (api.searchTasks as ReturnType<typeof vi.fn>).mockReturnValue(searchPromise);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       render(
         <TaskSearch
@@ -232,10 +233,10 @@ describe('TaskSearch', () => {
     });
 
     it('should handle search errors gracefully', async () => {
-      (api.searchTasks as jest.Mock).mockRejectedValue(new Error('Search failed'));
-      (api.listTasks as jest.Mock).mockRejectedValue(new Error('List failed'));
+      (api.searchTasks as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Search failed'));
+      (api.listTasks as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('List failed'));
 
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation();
 
       render(
         <TaskSearch
@@ -283,8 +284,8 @@ describe('TaskSearch', () => {
     });
 
     it('should clear search when clear button is clicked', async () => {
-      (api.searchTasks as jest.Mock).mockResolvedValue(mockTasks);
-      (api.listTasks as jest.Mock).mockResolvedValue([]);
+      (api.searchTasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockTasks);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       render(
         <TaskSearch
@@ -314,8 +315,8 @@ describe('TaskSearch', () => {
 
   describe('Task Selection', () => {
     beforeEach(async () => {
-      (api.searchTasks as jest.Mock).mockResolvedValue(mockTasks);
-      (api.listTasks as jest.Mock).mockResolvedValue([]);
+      (api.searchTasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockTasks);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
     });
 
     it('should call onTaskSelect when task is clicked', async () => {
@@ -369,9 +370,9 @@ describe('TaskSearch', () => {
 
   describe('Subtask Selection', () => {
     beforeEach(async () => {
-      (api.searchTasks as jest.Mock).mockResolvedValue([]);
-      (api.listTasks as jest.Mock).mockResolvedValue([mockTasks[0]]);
-      (api.listSubtasks as jest.Mock).mockResolvedValue(mockSubtasks);
+      (api.searchTasks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue([mockTasks[0]]);
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockSubtasks);
     });
 
     it('should call onSubtaskSelect when subtask is clicked', async () => {
@@ -424,9 +425,9 @@ describe('TaskSearch', () => {
     });
 
     it('should handle subtask loading errors', async () => {
-      (api.listSubtasks as jest.Mock).mockRejectedValue(new Error('Failed to load subtasks'));
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Failed to load subtasks'));
 
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation();
 
       render(
         <TaskSearch
@@ -496,8 +497,8 @@ describe('TaskSearch', () => {
     });
 
     it('should clear search when Escape is pressed', async () => {
-      (api.searchTasks as jest.Mock).mockResolvedValue(mockTasks);
-      (api.listTasks as jest.Mock).mockResolvedValue([]);
+      (api.searchTasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockTasks);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       render(
         <TaskSearch
@@ -551,9 +552,9 @@ describe('TaskSearch', () => {
         { ...mockTasks[1], title: 'fix Login BUG' }
       ];
 
-      (api.searchTasks as jest.Mock).mockResolvedValue([]);
-      (api.listTasks as jest.Mock).mockResolvedValue(tasksWithMixedCase);
-      (api.listSubtasks as jest.Mock).mockImplementation(() => Promise.resolve([]));
+      (api.searchTasks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue(tasksWithMixedCase);
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockImplementation(() => Promise.resolve([]));
 
       render(
         <TaskSearch
@@ -574,9 +575,9 @@ describe('TaskSearch', () => {
     });
 
     it('should search by ID', async () => {
-      (api.searchTasks as jest.Mock).mockResolvedValue([]);
-      (api.listTasks as jest.Mock).mockResolvedValue(mockTasks);
-      (api.listSubtasks as jest.Mock).mockResolvedValue(mockSubtasks);
+      (api.searchTasks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockTasks);
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockSubtasks);
 
       render(
         <TaskSearch
@@ -604,9 +605,9 @@ describe('TaskSearch', () => {
     });
 
     it('should search in descriptions', async () => {
-      (api.searchTasks as jest.Mock).mockResolvedValue([]);
-      (api.listTasks as jest.Mock).mockResolvedValue(mockTasks);
-      (api.listSubtasks as jest.Mock).mockResolvedValue(mockSubtasks);
+      (api.searchTasks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockTasks);
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockSubtasks);
 
       render(
         <TaskSearch
@@ -629,9 +630,9 @@ describe('TaskSearch', () => {
 
   describe('Results Display', () => {
     it('should display correct counts for tasks and subtasks', async () => {
-      (api.searchTasks as jest.Mock).mockResolvedValue(mockTasks);
-      (api.listTasks as jest.Mock).mockResolvedValue([mockTasks[0]]);
-      (api.listSubtasks as jest.Mock).mockResolvedValue(mockSubtasks);
+      (api.searchTasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockTasks);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue([mockTasks[0]]);
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockSubtasks);
 
       render(
         <TaskSearch
@@ -653,8 +654,8 @@ describe('TaskSearch', () => {
     });
 
     it('should maintain result panel position', async () => {
-      (api.searchTasks as jest.Mock).mockResolvedValue(mockTasks);
-      (api.listTasks as jest.Mock).mockResolvedValue([]);
+      (api.searchTasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockTasks);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       render(
         <TaskSearch
@@ -686,8 +687,8 @@ describe('TaskSearch', () => {
         priority: 'medium'
       }));
 
-      (api.searchTasks as jest.Mock).mockResolvedValue(manyTasks);
-      (api.listTasks as jest.Mock).mockResolvedValue([]);
+      (api.searchTasks as ReturnType<typeof vi.fn>).mockResolvedValue(manyTasks);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       render(
         <TaskSearch
@@ -714,8 +715,8 @@ describe('TaskSearch', () => {
     it('should handle tasks without subtasks', async () => {
       const taskWithoutSubtasks = { ...mockTasks[1], subtasks: undefined };
       
-      (api.searchTasks as jest.Mock).mockResolvedValue([]);
-      (api.listTasks as jest.Mock).mockResolvedValue([taskWithoutSubtasks]);
+      (api.searchTasks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue([taskWithoutSubtasks]);
 
       render(
         <TaskSearch
@@ -739,8 +740,8 @@ describe('TaskSearch', () => {
     it('should handle empty subtask array', async () => {
       const taskWithEmptySubtasks = { ...mockTasks[0], subtasks: [] };
       
-      (api.searchTasks as jest.Mock).mockResolvedValue([]);
-      (api.listTasks as jest.Mock).mockResolvedValue([taskWithEmptySubtasks]);
+      (api.searchTasks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue([taskWithEmptySubtasks]);
 
       render(
         <TaskSearch
@@ -762,8 +763,8 @@ describe('TaskSearch', () => {
     });
 
     it('should handle special characters in search', async () => {
-      (api.searchTasks as jest.Mock).mockResolvedValue([]);
-      (api.listTasks as jest.Mock).mockResolvedValue([]);
+      (api.searchTasks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       render(
         <TaskSearch
@@ -786,8 +787,8 @@ describe('TaskSearch', () => {
     it('should handle very long search queries', async () => {
       const longQuery = 'a'.repeat(100);
       
-      (api.searchTasks as jest.Mock).mockResolvedValue([]);
-      (api.listTasks as jest.Mock).mockResolvedValue([]);
+      (api.searchTasks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       render(
         <TaskSearch
@@ -810,7 +811,7 @@ describe('TaskSearch', () => {
 
   describe('Component Cleanup', () => {
     it('should remove keyboard event listeners on unmount', () => {
-      const removeEventListenerSpy = jest.spyOn(window, 'removeEventListener');
+      const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
 
       const { unmount } = render(
         <TaskSearch

@@ -1,32 +1,33 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { vi } from 'vitest';
 import '@testing-library/jest-dom';
 import { GlobalContextDialog } from '../../components/GlobalContextDialog';
 import { api } from '../../api';
 
 // Mock the API module
-jest.mock('../../api', () => ({
+vi.mock('../../api', () => ({
   api: {
-    updateGlobalContext: jest.fn(),
-    fetchGlobalContext: jest.fn(),
+    updateGlobalContext: vi.fn(),
+    fetchGlobalContext: vi.fn(),
   },
 }));
 
 // Mock shadcn/ui components
-jest.mock('../../components/ui/dialog', () => ({
+vi.mock('../../components/ui/dialog', () => ({
   Dialog: ({ open, children }: any) => open ? <div data-testid="dialog">{children}</div> : null,
   DialogContent: ({ children, className }: any) => <div className={className}>{children}</div>,
   DialogHeader: ({ children }: any) => <div>{children}</div>,
   DialogTitle: ({ children }: any) => <h2>{children}</h2>,
 }));
 
-jest.mock('../../components/ui/button', () => ({
+vi.mock('../../components/ui/button', () => ({
   Button: ({ onClick, children, disabled, variant, size }: any) => (
     <button onClick={onClick} disabled={disabled} data-variant={variant} data-size={size}>{children}</button>
   ),
 }));
 
-jest.mock('../../components/ui/tabs', () => ({
+vi.mock('../../components/ui/tabs', () => ({
   Tabs: ({ children, defaultValue, value, onValueChange }: any) => {
     const [currentValue, setCurrentValue] = React.useState(value || defaultValue || 'rules');
     
@@ -67,7 +68,7 @@ jest.mock('../../components/ui/tabs', () => ({
   ),
 }));
 
-jest.mock('../../components/ui/textarea', () => ({
+vi.mock('../../components/ui/textarea', () => ({
   Textarea: ({ placeholder, value, onChange, className, rows }: any) => (
     <textarea
       placeholder={placeholder}
@@ -80,22 +81,22 @@ jest.mock('../../components/ui/textarea', () => ({
   ),
 }));
 
-jest.mock('../../components/ui/alert', () => ({
+vi.mock('../../components/ui/alert', () => ({
   Alert: ({ children, className }: any) => <div className={className} data-testid="alert">{children}</div>,
   AlertDescription: ({ children }: any) => <div>{children}</div>,
 }));
 
 // Mock lucide-react icons
-jest.mock('lucide-react', () => ({
+vi.mock('lucide-react', () => ({
   Info: () => <span>Info Icon</span>,
 }));
 
 describe('GlobalContextDialog', () => {
-  const mockOnClose = jest.fn();
-  const mockOnUpdate = jest.fn();
+  const mockOnClose = vi.fn();
+  const mockOnUpdate = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('renders nothing when closed', () => {
@@ -204,7 +205,7 @@ describe('GlobalContextDialog', () => {
 
   it('calls API and callbacks on save', async () => {
     const mockApiResponse = { success: true };
-    (api.updateGlobalContext as jest.Mock).mockResolvedValue(mockApiResponse);
+    (api.updateGlobalContext as ReturnType<typeof vi.fn>).mockResolvedValue(mockApiResponse);
 
     render(
       <GlobalContextDialog
@@ -250,7 +251,7 @@ describe('GlobalContextDialog', () => {
   });
 
   it('shows loading state while saving', async () => {
-    (api.updateGlobalContext as jest.Mock).mockImplementation(
+    (api.updateGlobalContext as ReturnType<typeof vi.fn>).mockImplementation(
       () => new Promise(resolve => setTimeout(resolve, 100))
     );
 
@@ -275,7 +276,7 @@ describe('GlobalContextDialog', () => {
 
   it('handles API errors gracefully', async () => {
     const errorMessage = 'Failed to update context';
-    (api.updateGlobalContext as jest.Mock).mockRejectedValue(new Error(errorMessage));
+    (api.updateGlobalContext as ReturnType<typeof vi.fn>).mockRejectedValue(new Error(errorMessage));
 
     render(
       <GlobalContextDialog
@@ -337,7 +338,7 @@ describe('GlobalContextDialog', () => {
   });
 
   it('filters empty lines when saving', async () => {
-    (api.updateGlobalContext as jest.Mock).mockResolvedValue({ success: true });
+    (api.updateGlobalContext as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
 
     render(
       <GlobalContextDialog

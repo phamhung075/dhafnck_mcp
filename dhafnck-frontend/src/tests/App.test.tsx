@@ -1,34 +1,35 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
+import { vi } from 'vitest';
 import App from '../App';
 
 // Mock react-router-dom
-jest.mock('react-router-dom', () => ({
-  ...jest.requireActual('react-router-dom'),
+vi.mock('react-router-dom', () => ({
+  ...vi.importActual('react-router-dom'),
   BrowserRouter: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   Routes: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   Route: ({ element }: { element: React.ReactNode }) => <>{element}</>,
   Navigate: ({ to }: { to: string }) => <div>Navigate to {to}</div>,
-  useNavigate: () => jest.fn(),
+  useNavigate: () => vi.fn(),
   useLocation: () => ({ pathname: '/' }),
   useParams: () => ({})
 }));
 
 // Mock the auth context
-jest.mock('../contexts/AuthContext', () => ({
+vi.mock('../contexts/AuthContext', () => ({
   AuthContext: {
     Provider: ({ children }: { children: React.ReactNode }) => children,
     Consumer: ({ children }: any) => children({
       user: { id: '123', username: 'testuser', email: 'test@example.com', roles: ['user'] },
       isAuthenticated: true,
-      login: jest.fn(),
-      logout: jest.fn(),
+      login: vi.fn(),
+      logout: vi.fn(),
     })
   }
 }));
 
 // Mock the auth components
-jest.mock('../components/auth', () => ({
+vi.mock('../components/auth', () => ({
   AuthWrapper: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   LoginForm: () => <div>Login Form</div>,
   SignupForm: () => <div>Signup Form</div>,
@@ -37,29 +38,29 @@ jest.mock('../components/auth', () => ({
 }));
 
 // Mock the components
-jest.mock('../components/Header', () => ({
+vi.mock('../components/Header', () => ({
   Header: () => <header>Test Header</header>
 }));
 
-jest.mock('../components/AppLayout', () => ({
+vi.mock('../components/AppLayout', () => ({
   AppLayout: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="app-layout">{children}</div>
   )
 }));
 
-jest.mock('../pages/Profile', () => ({
+vi.mock('../pages/Profile', () => ({
   Profile: () => <div>Profile Page</div>
 }));
 
-jest.mock('../pages/TokenManagement', () => ({
+vi.mock('../pages/TokenManagement', () => ({
   TokenManagement: () => <div>Token Management Page</div>
 }));
 
-jest.mock('../contexts/ThemeContext', () => ({
+vi.mock('../contexts/ThemeContext', () => ({
   ThemeProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>
 }));
 
-jest.mock('../components/ProjectList', () => ({
+vi.mock('../components/ProjectList', () => ({
   default: ({ onSelect }: any) => (
     <div data-testid="project-list">
       <button onClick={() => onSelect('project1', 'branch1')}>Select Project</button>
@@ -67,7 +68,7 @@ jest.mock('../components/ProjectList', () => ({
   )
 }));
 
-jest.mock('../components/LazyTaskList', () => ({
+vi.mock('../components/LazyTaskList', () => ({
   default: ({ projectId, taskTreeId }: any) => (
     <div data-testid="task-list">
       Task List for {projectId} - {taskTreeId}

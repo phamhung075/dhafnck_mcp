@@ -1,25 +1,26 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { vi } from 'vitest';
 import '@testing-library/jest-dom';
 import { ThemeToggle } from '../../components/ThemeToggle';
 import { useTheme } from '../../hooks/useTheme';
 
 // Mock the useTheme hook
-jest.mock('../../hooks/useTheme');
+vi.mock('../../hooks/useTheme');
 
 describe('ThemeToggle', () => {
-  const mockToggleTheme = jest.fn();
-  const mockedUseTheme = useTheme as jest.MockedFunction<typeof useTheme>;
+  const mockToggleTheme = vi.fn();
+  const mockedUseTheme = useTheme as ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('renders correctly in light mode', () => {
     mockedUseTheme.mockReturnValue({
       theme: 'light',
       toggleTheme: mockToggleTheme,
-      setTheme: jest.fn(),
+      setTheme: vi.fn(),
     });
 
     render(<ThemeToggle />);
@@ -38,7 +39,7 @@ describe('ThemeToggle', () => {
     mockedUseTheme.mockReturnValue({
       theme: 'dark',
       toggleTheme: mockToggleTheme,
-      setTheme: jest.fn(),
+      setTheme: vi.fn(),
     });
 
     render(<ThemeToggle />);
@@ -57,7 +58,7 @@ describe('ThemeToggle', () => {
     mockedUseTheme.mockReturnValue({
       theme: 'light',
       toggleTheme: mockToggleTheme,
-      setTheme: jest.fn(),
+      setTheme: vi.fn(),
     });
 
     render(<ThemeToggle />);
@@ -72,7 +73,7 @@ describe('ThemeToggle', () => {
     mockedUseTheme.mockReturnValue({
       theme: 'light',
       toggleTheme: mockToggleTheme,
-      setTheme: jest.fn(),
+      setTheme: vi.fn(),
     });
 
     render(<ThemeToggle />);
@@ -89,7 +90,7 @@ describe('ThemeToggle', () => {
     mockedUseTheme.mockReturnValue({
       theme: 'light',
       toggleTheme: mockToggleTheme,
-      setTheme: jest.fn(),
+      setTheme: vi.fn(),
     });
     const { rerender } = render(<ThemeToggle />);
     
@@ -101,7 +102,7 @@ describe('ThemeToggle', () => {
     mockedUseTheme.mockReturnValue({
       theme: 'dark',
       toggleTheme: mockToggleTheme,
-      setTheme: jest.fn(),
+      setTheme: vi.fn(),
     });
     rerender(<ThemeToggle />);
     

@@ -1,34 +1,35 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { vi } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import App from '../App';
 import reportWebVitals from '../reportWebVitals';
 
 // Mock dependencies
-jest.mock('react-dom/client');
-jest.mock('../App', () => ({
+vi.mock('react-dom/client');
+vi.mock('../App', () => ({
   __esModule: true,
   default: () => <div>Mocked App</div>,
 }));
-jest.mock('../reportWebVitals');
-jest.mock('react-router-dom', () => ({
-  ...jest.requireActual('react-router-dom'),
+vi.mock('../reportWebVitals');
+vi.mock('react-router-dom', () => ({
+  ...vi.importActual('react-router-dom'),
   BrowserRouter: ({ children }: { children: React.ReactNode }) => <div data-testid="browser-router">{children}</div>,
 }));
 
 // Mock CSS imports
-jest.mock('../index.css', () => ({}));
-jest.mock('../styles/theme.css', () => ({}));
-jest.mock('../theme/global.scss', () => ({}));
+vi.mock('../index.css', () => ({}));
+vi.mock('../styles/theme.css', () => ({}));
+vi.mock('../theme/global.scss', () => ({}));
 
 describe('index.tsx', () => {
   let mockRoot: any;
-  let mockRender: jest.Mock;
+  let mockRender: ReturnType<typeof vi.fn>;
   let container: HTMLElement;
 
   beforeEach(() => {
     // Clear all mocks
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Create a mock container
     container = document.createElement('div');
@@ -36,11 +37,11 @@ describe('index.tsx', () => {
     document.body.appendChild(container);
 
     // Mock ReactDOM.createRoot
-    mockRender = jest.fn();
+    mockRender = vi.fn();
     mockRoot = {
       render: mockRender,
     };
-    (ReactDOM.createRoot as jest.Mock).mockReturnValue(mockRoot);
+    (ReactDOM.createRoot as ReturnType<typeof vi.fn>).mockReturnValue(mockRoot);
   });
 
   afterEach(() => {
@@ -82,7 +83,7 @@ describe('index.tsx', () => {
 
     // Mock getElementById to return null
     const originalGetElementById = document.getElementById;
-    document.getElementById = jest.fn().mockReturnValue(null);
+    document.getElementById = vi.fn().mockReturnValue(null);
 
     // Should throw when trying to create root with null
     expect(() => {

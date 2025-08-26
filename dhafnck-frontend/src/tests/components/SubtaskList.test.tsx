@@ -1,19 +1,20 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { SubtaskList } from '../../components/SubtaskList';
 import * as api from '../../api';
 
 // Mock API functions
-jest.mock('../../api');
+vi.mock('../../api');
 
 // Mock UI components
-jest.mock('../../components/ui/badge', () => ({
+vi.mock('../../components/ui/badge', () => ({
   Badge: ({ children, variant, className }: any) => 
     <span className={`badge ${variant} ${className}`}>{children}</span>
 }));
 
-jest.mock('../../components/ui/button', () => ({
+vi.mock('../../components/ui/button', () => ({
   Button: ({ children, onClick, disabled, size, variant, className, title }: any) => (
     <button 
       onClick={onClick} 
@@ -26,7 +27,7 @@ jest.mock('../../components/ui/button', () => ({
   )
 }));
 
-jest.mock('../../components/ui/dialog', () => ({
+vi.mock('../../components/ui/dialog', () => ({
   Dialog: ({ children, open }: any) => open ? <div className="dialog">{children}</div> : null,
   DialogContent: ({ children }: any) => <div className="dialog-content">{children}</div>,
   DialogHeader: ({ children }: any) => <div className="dialog-header">{children}</div>,
@@ -34,7 +35,7 @@ jest.mock('../../components/ui/dialog', () => ({
   DialogFooter: ({ children }: any) => <div className="dialog-footer">{children}</div>
 }));
 
-jest.mock('../../components/ui/input', () => ({
+vi.mock('../../components/ui/input', () => ({
   Input: ({ placeholder, value, onChange, disabled, autoFocus }: any) => (
     <input
       placeholder={placeholder}
@@ -46,11 +47,11 @@ jest.mock('../../components/ui/input', () => ({
   )
 }));
 
-jest.mock('../../components/ui/separator', () => ({
+vi.mock('../../components/ui/separator', () => ({
   Separator: () => <hr />
 }));
 
-jest.mock('../../components/ui/table', () => ({
+vi.mock('../../components/ui/table', () => ({
   Table: ({ children }: any) => <table>{children}</table>,
   TableHeader: ({ children }: any) => <thead>{children}</thead>,
   TableBody: ({ children }: any) => <tbody>{children}</tbody>,
@@ -59,7 +60,7 @@ jest.mock('../../components/ui/table', () => ({
   TableCell: ({ children, colSpan }: any) => <td colSpan={colSpan}>{children}</td>
 }));
 
-jest.mock('../../components/ui/checkbox', () => ({
+vi.mock('../../components/ui/checkbox', () => ({
   Checkbox: ({ checked, onCheckedChange, id }: any) => (
     <input
       type="checkbox"
@@ -70,7 +71,7 @@ jest.mock('../../components/ui/checkbox', () => ({
   )
 }));
 
-jest.mock('../../components/ui/refresh-button', () => ({
+vi.mock('../../components/ui/refresh-button', () => ({
   RefreshButton: ({ onClick, loading, size }: any) => (
     <button onClick={onClick} disabled={loading} className={`refresh-button ${size}`}>
       {loading ? 'Loading...' : 'Refresh'}
@@ -78,7 +79,7 @@ jest.mock('../../components/ui/refresh-button', () => ({
   )
 }));
 
-jest.mock('../../components/ClickableAssignees', () => ({
+vi.mock('../../components/ClickableAssignees', () => ({
   __esModule: true,
   default: ({ assignees, onAgentClick }: any) => (
     <div className="clickable-assignees">
@@ -91,13 +92,13 @@ jest.mock('../../components/ClickableAssignees', () => ({
   )
 }));
 
-jest.mock('../../components/AgentResponseDialog', () => ({
+vi.mock('../../components/AgentResponseDialog', () => ({
   __esModule: true,
   default: ({ open, agentResponse }: any) => 
     open ? <div className="agent-response-dialog">{JSON.stringify(agentResponse)}</div> : null
 }));
 
-jest.mock('../../components/SubtaskCompleteDialog', () => ({
+vi.mock('../../components/SubtaskCompleteDialog', () => ({
   __esModule: true,
   default: ({ open, subtask, onComplete }: any) => 
     open ? (
@@ -153,10 +154,10 @@ describe('SubtaskList', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    (api.listSubtasks as jest.Mock).mockResolvedValue(mockSubtasks);
-    (api.listAgents as jest.Mock).mockResolvedValue(mockAgents);
-    (api.getAvailableAgents as jest.Mock).mockResolvedValue(mockAvailableAgents);
+    vi.clearAllMocks();
+    (api.listSubtasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockSubtasks);
+    (api.listAgents as ReturnType<typeof vi.fn>).mockResolvedValue(mockAgents);
+    (api.getAvailableAgents as ReturnType<typeof vi.fn>).mockResolvedValue(mockAvailableAgents);
   });
 
   describe('Rendering', () => {
@@ -175,7 +176,7 @@ describe('SubtaskList', () => {
     });
 
     it('renders empty state when no subtasks', async () => {
-      (api.listSubtasks as jest.Mock).mockResolvedValue([]);
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
       
       render(<SubtaskList {...defaultProps} />);
       
@@ -186,7 +187,7 @@ describe('SubtaskList', () => {
 
     it('renders error state when API fails', async () => {
       const errorMessage = 'Failed to load subtasks';
-      (api.listSubtasks as jest.Mock).mockRejectedValue(new Error(errorMessage));
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockRejectedValue(new Error(errorMessage));
       
       render(<SubtaskList {...defaultProps} />);
       
@@ -230,7 +231,7 @@ describe('SubtaskList', () => {
 
     it('creates new subtask with form data', async () => {
       const user = userEvent.setup();
-      (api.createSubtask as jest.Mock).mockResolvedValue({ id: '3', title: 'New Subtask' });
+      (api.createSubtask as ReturnType<typeof vi.fn>).mockResolvedValue({ id: '3', title: 'New Subtask' });
       
       render(<SubtaskList {...defaultProps} />);
       
@@ -293,7 +294,7 @@ describe('SubtaskList', () => {
 
     it('updates subtask with new data', async () => {
       const user = userEvent.setup();
-      (api.updateSubtask as jest.Mock).mockResolvedValue({ ...mockSubtasks[0], title: 'Updated Title' });
+      (api.updateSubtask as ReturnType<typeof vi.fn>).mockResolvedValue({ ...mockSubtasks[0], title: 'Updated Title' });
       
       render(<SubtaskList {...defaultProps} />);
       
@@ -338,7 +339,7 @@ describe('SubtaskList', () => {
     });
 
     it('deletes subtask when confirmed', async () => {
-      (api.deleteSubtask as jest.Mock).mockResolvedValue({});
+      (api.deleteSubtask as ReturnType<typeof vi.fn>).mockResolvedValue({});
       
       render(<SubtaskList {...defaultProps} />);
       
@@ -391,7 +392,7 @@ describe('SubtaskList', () => {
     });
 
     it('assigns selected agents', async () => {
-      (api.updateSubtask as jest.Mock).mockResolvedValue({ 
+      (api.updateSubtask as ReturnType<typeof vi.fn>).mockResolvedValue({ 
         ...mockSubtasks[0], 
         assignees: ['agent1', '@coding_agent'] 
       });
@@ -429,8 +430,8 @@ describe('SubtaskList', () => {
         assignees: ['agent1', '[]', '', '  ', '[', ']']
       };
       
-      (api.listSubtasks as jest.Mock).mockResolvedValue([subtaskWithInvalidAssignees]);
-      (api.updateSubtask as jest.Mock).mockResolvedValue({ 
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockResolvedValue([subtaskWithInvalidAssignees]);
+      (api.updateSubtask as ReturnType<typeof vi.fn>).mockResolvedValue({ 
         ...subtaskWithInvalidAssignees, 
         assignees: ['agent1'] 
       });
@@ -548,7 +549,7 @@ describe('SubtaskList', () => {
         resolvePromise = resolve;
       });
       
-      (api.listSubtasks as jest.Mock)
+      (api.listSubtasks as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce(mockSubtasks)
         .mockReturnValueOnce(promise);
       
@@ -586,7 +587,7 @@ describe('SubtaskList', () => {
         parent_task_id: 'parent-123'
       };
       
-      (api.listSubtasks as jest.Mock).mockResolvedValue([subtaskWithObjectValues]);
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockResolvedValue([subtaskWithObjectValues]);
       
       render(<SubtaskList {...defaultProps} />);
       
@@ -602,8 +603,8 @@ describe('SubtaskList', () => {
 
   describe('Error Handling', () => {
     it('handles API errors gracefully', async () => {
-      const consoleError = jest.spyOn(console, 'error').mockImplementation();
-      (api.listAgents as jest.Mock).mockRejectedValue(new Error('Network error'));
+      const consoleError = vi.spyOn(console, 'error').mockImplementation();
+      (api.listAgents as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Network error'));
       
       render(<SubtaskList {...defaultProps} />);
       
@@ -622,8 +623,8 @@ describe('SubtaskList', () => {
     });
 
     it('shows error alert when agent assignment fails', async () => {
-      window.alert = jest.fn();
-      (api.updateSubtask as jest.Mock).mockRejectedValue(new Error('Assignment failed'));
+      window.alert = vi.fn();
+      (api.updateSubtask as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Assignment failed'));
       
       render(<SubtaskList {...defaultProps} />);
       

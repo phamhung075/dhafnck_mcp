@@ -1,5 +1,101 @@
 # Test Changelog
 
+## Test Updates - 2025-08-26 (Jest to Vitest Migration)
+
+### Jest to Vitest Migration Completed
+Converted all Jest mock and function calls to Vitest syntax across 17 test files:
+
+**Updated Files:**
+- **src/tests/App.test.tsx** - Converted jest.mock() to vi.mock(), jest.fn() to vi.fn(), jest.requireActual() to vi.importActual()
+- **src/tests/index.test.tsx** - Converted Jest mocks and function calls, updated mock type annotations
+- **src/tests/components/AppLayout.test.tsx** - Migrated Jest mocks to Vitest syntax
+- **src/tests/components/GlobalContextDialog.test.tsx** - Complete Jest to Vitest conversion with proper typing
+- **src/tests/components/Header.test.tsx** - Updated all Jest calls to Vitest equivalents
+- **src/tests/components/LazySubtaskList.test.tsx** - Large file with extensive mock conversions completed
+- **src/tests/components/LazyTaskList.test.tsx** - Converted all Jest mocks and function calls
+- **src/tests/components/MCPTokenManager.test.tsx** - Migrated Jest service mocks to Vitest
+- **src/tests/components/ProjectList.test.tsx** - Updated API and component mocks
+- **src/tests/components/SubtaskList.test.tsx** - Complete Jest to Vitest migration
+- **src/tests/components/TaskSearch.test.tsx** - Converted mocks and utility functions
+- **src/tests/components/ThemeToggle.test.tsx** - Updated hook mocks to Vitest syntax
+- **src/tests/contexts/MuiThemeProvider.test.tsx** - Migrated Material-UI component mocks
+- **src/tests/contexts/ThemeContext.test.tsx** - Updated theme and localStorage mocks
+- **src/tests/pages/Profile.test.tsx** - Converted router and authentication mocks
+- **src/tests/pages/TokenManagement.test.tsx** - Updated service and date mocks
+- **src/components/LazyTaskList.test.tsx** - Migrated component test to Vitest syntax
+
+**Changes Made:**
+- Replaced `jest.mock()` with `vi.mock()`
+- Converted `jest.fn()` to `vi.fn()`
+- Updated `jest.requireActual()` to `vi.importActual()`
+- Changed `jest.spyOn()` to `vi.spyOn()`
+- Replaced `as jest.Mock` with `as ReturnType<typeof vi.fn>`
+- Updated `jest.clearAllMocks()` to `vi.clearAllMocks()`
+- Added proper Vitest imports (`import { vi } from 'vitest'`)
+- Fixed empty `mockImplementation()` calls to include empty functions
+
+**Note:** The test file `src/components/__tests__/LazySubtaskList.test.tsx` was already using Vitest syntax correctly and required no changes.
+
+## Test Updates - 2025-08-26 (Frontend Test Updates)
+
+### Updated Stale Test Files
+- **EmailVerification.test.tsx** - Updated to match Vite environment variables
+  - Fixed React Router mock to remove unnecessary BrowserRouter wrapping
+  - Updated environment variable usage from process.env.REACT_APP_API_URL to import.meta.env.VITE_API_URL
+  - 6 days stale - test now matches current implementation
+
+- **apiV2.test.ts** - Updated to use Vite environment and fixed test coverage
+  - Changed from process.env.REACT_APP_API_URL to import.meta.env.VITE_API_URL mock setup
+  - Added test for git_branch_id filter parameter in getTasks method
+  - Updated environment configuration test to use import.meta instead of process.env
+  - 3 days stale - test now matches current implementation
+
+- **mcpTokenService.test.ts** - Updated environment variable mocking
+  - Changed from process.env.REACT_APP_API_URL to import.meta.env.VITE_API_URL
+  - Removed obsolete Environment Configuration test section
+  - 3 days stale - test now matches current implementation
+
+### Created Missing Test Files
+- **AuthContext.test.tsx** - Created comprehensive test coverage for AuthContext
+  - 912 lines covering authentication provider, login, signup, logout, and token refresh
+  - Tests initial state restoration from cookies and automatic token refresh
+  - Covers email verification requirements and error handling
+  - Tests secure cookie handling in production vs development modes
+  - Validates token decoding and user extraction from JWT
+  - Tests context access errors and all authentication edge cases
+
+## Test Updates - 2025-08-26 (Automated Test Creation & Updates)
+
+### Automated Test Creation for Missing Test Files
+- **api-lazy.test.ts** - Created comprehensive tests for lazy API module
+  - 972 lines covering all API endpoints with lazy loading and caching
+  - Tests auth headers, fallback mechanisms, cache invalidation
+  - Covers error handling and all edge cases
+
+- **LazySubtaskList.test.tsx** - Created tests for lazy subtask management component  
+  - 915 lines covering lazy loading, CRUD operations, progress tracking
+  - Tests V2 endpoint and fallback to regular API
+  - Covers all UI interactions and dialog components
+
+- **ProjectList.test.tsx** - Created tests for project and branch management
+  - 1058 lines covering project/branch expansion and lazy loading
+  - Tests all CRUD operations and dialog interactions
+  - Covers lazy branch summary loading and caching
+
+- **TaskSearch.test.tsx** - Created tests for search functionality
+  - 829 lines covering search with debouncing and keyboard shortcuts
+  - Tests Ctrl+K and Escape key handling
+  - Covers task/subtask selection and error scenarios
+
+- **AuthContext.tsx** - Verified existing test coverage
+  - Already covered in App.test.tsx with authentication flow testing
+  - No additional tests needed
+
+- **SimpleApp.tsx** - Component was deleted in last commit
+  - No test file needed as component no longer exists
+
+### Automated Updates for Stale Test Files
+
 ## Test Updates - 2025-08-26
 
 ### Frontend Test Updates

@@ -1,20 +1,21 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { vi } from 'vitest';
 import '@testing-library/jest-dom';
 import LazyTaskList from '../../components/LazyTaskList';
 import * as api from '../../api';
 import { act } from 'react-dom/test-utils';
 
 // Mock the api module
-jest.mock('../../api');
+vi.mock('../../api');
 
 // Mock lazy-loaded components
-jest.mock('../../components/LazySubtaskList', () => ({
+vi.mock('../../components/LazySubtaskList', () => ({
   __esModule: true,
   default: () => <div data-testid="lazy-subtask-list">Subtask List</div>
 }));
 
-jest.mock('../../components/TaskDetailsDialog', () => ({
+vi.mock('../../components/TaskDetailsDialog', () => ({
   __esModule: true,
   default: ({ open, onClose, task }: any) => open ? (
     <div data-testid="task-details-dialog">
@@ -24,7 +25,7 @@ jest.mock('../../components/TaskDetailsDialog', () => ({
   ) : null
 }));
 
-jest.mock('../../components/TaskEditDialog', () => ({
+vi.mock('../../components/TaskEditDialog', () => ({
   __esModule: true,
   default: ({ open, onClose, task }: any) => open ? (
     <div data-testid="task-edit-dialog">
@@ -34,7 +35,7 @@ jest.mock('../../components/TaskEditDialog', () => ({
   ) : null
 }));
 
-jest.mock('../../components/AgentAssignmentDialog', () => ({
+vi.mock('../../components/AgentAssignmentDialog', () => ({
   __esModule: true,
   default: ({ open, onClose }: any) => open ? (
     <div data-testid="agent-assignment-dialog">
@@ -44,7 +45,7 @@ jest.mock('../../components/AgentAssignmentDialog', () => ({
   ) : null
 }));
 
-jest.mock('../../components/TaskContextDialog', () => ({
+vi.mock('../../components/TaskContextDialog', () => ({
   __esModule: true,
   default: ({ open, onClose }: any) => open ? (
     <div data-testid="task-context-dialog">
@@ -54,7 +55,7 @@ jest.mock('../../components/TaskContextDialog', () => ({
   ) : null
 }));
 
-jest.mock('../../components/RefreshButton', () => ({
+vi.mock('../../components/RefreshButton', () => ({
   __esModule: true,
   default: ({ onRefresh, isRefreshing }: any) => (
     <button 
@@ -68,7 +69,7 @@ jest.mock('../../components/RefreshButton', () => ({
   )
 }));
 
-jest.mock('../../components/DeleteConfirmDialog', () => ({
+vi.mock('../../components/DeleteConfirmDialog', () => ({
   __esModule: true,
   default: ({ open, onOpenChange, onConfirm, itemName }: any) => open ? (
     <div data-testid="delete-confirm-dialog">
@@ -79,7 +80,7 @@ jest.mock('../../components/DeleteConfirmDialog', () => ({
   ) : null
 }));
 
-jest.mock('../../components/AgentResponseDialog', () => ({
+vi.mock('../../components/AgentResponseDialog', () => ({
   __esModule: true,
   default: ({ open, onClose }: any) => open ? (
     <div data-testid="agent-response-dialog">
@@ -89,7 +90,7 @@ jest.mock('../../components/AgentResponseDialog', () => ({
   ) : null
 }));
 
-jest.mock('../../components/TaskSearch', () => ({
+vi.mock('../../components/TaskSearch', () => ({
   __esModule: true,
   default: ({ onTaskSelect, onSubtaskSelect }: any) => (
     <div data-testid="task-search">
@@ -104,7 +105,7 @@ jest.mock('../../components/TaskSearch', () => ({
 describe('LazyTaskList', () => {
   const mockProjectId = 'project-123';
   const mockTaskTreeId = 'branch-123';
-  const mockOnTasksChanged = jest.fn();
+  const mockOnTasksChanged = vi.fn();
 
   const mockTasks = [
     {
@@ -130,7 +131,7 @@ describe('LazyTaskList', () => {
   ];
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Mock window dimensions for responsive testing
     Object.defineProperty(window, 'innerWidth', {
       writable: true,
@@ -142,7 +143,7 @@ describe('LazyTaskList', () => {
 
   describe('Initial Loading', () => {
     it('should show loading state initially', () => {
-      (api.listTasks as jest.Mock).mockImplementation(() => new Promise(() => {}));
+      (api.listTasks as ReturnType<typeof vi.fn>).mockImplementation(() => new Promise(() => {}));
       
       render(
         <LazyTaskList
@@ -156,7 +157,7 @@ describe('LazyTaskList', () => {
     });
 
     it('should load and display tasks', async () => {
-      (api.listTasks as jest.Mock).mockResolvedValue(mockTasks);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockTasks);
 
       render(
         <LazyTaskList
@@ -176,7 +177,7 @@ describe('LazyTaskList', () => {
 
     it('should display error state', async () => {
       const errorMessage = 'Failed to load tasks';
-      (api.listTasks as jest.Mock).mockRejectedValue(new Error(errorMessage));
+      (api.listTasks as ReturnType<typeof vi.fn>).mockRejectedValue(new Error(errorMessage));
 
       render(
         <LazyTaskList
@@ -192,7 +193,7 @@ describe('LazyTaskList', () => {
     });
 
     it('should handle empty task list', async () => {
-      (api.listTasks as jest.Mock).mockResolvedValue([]);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       render(
         <LazyTaskList
@@ -208,7 +209,7 @@ describe('LazyTaskList', () => {
     });
 
     it('should handle non-array task response gracefully', async () => {
-      (api.listTasks as jest.Mock).mockResolvedValue(null);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue(null);
 
       render(
         <LazyTaskList
@@ -226,7 +227,7 @@ describe('LazyTaskList', () => {
 
   describe('Task Display', () => {
     beforeEach(async () => {
-      (api.listTasks as jest.Mock).mockResolvedValue(mockTasks);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockTasks);
     });
 
     it('should display task information correctly', async () => {
@@ -265,7 +266,7 @@ describe('LazyTaskList', () => {
 
   describe('Task Expansion', () => {
     beforeEach(async () => {
-      (api.listTasks as jest.Mock).mockResolvedValue(mockTasks);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockTasks);
     });
 
     it('should expand and collapse tasks', async () => {
@@ -305,9 +306,9 @@ describe('LazyTaskList', () => {
 
   describe('Dialog Operations', () => {
     beforeEach(async () => {
-      (api.listTasks as jest.Mock).mockResolvedValue(mockTasks);
-      (api.listAgents as jest.Mock).mockResolvedValue([]);
-      (api.getAvailableAgents as jest.Mock).mockResolvedValue([]);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockTasks);
+      (api.listAgents as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+      (api.getAvailableAgents as ReturnType<typeof vi.fn>).mockResolvedValue([]);
     });
 
     it('should open task details dialog', async () => {
@@ -409,7 +410,7 @@ describe('LazyTaskList', () => {
     });
 
     it('should open delete confirmation dialog', async () => {
-      (api.deleteTask as jest.Mock).mockResolvedValue(true);
+      (api.deleteTask as ReturnType<typeof vi.fn>).mockResolvedValue(true);
 
       render(
         <LazyTaskList
@@ -443,7 +444,7 @@ describe('LazyTaskList', () => {
     });
 
     it('should handle delete failure', async () => {
-      (api.deleteTask as jest.Mock).mockResolvedValue(false);
+      (api.deleteTask as ReturnType<typeof vi.fn>).mockResolvedValue(false);
 
       render(
         <LazyTaskList
@@ -505,7 +506,7 @@ describe('LazyTaskList', () => {
 
   describe('Create Task', () => {
     beforeEach(async () => {
-      (api.listTasks as jest.Mock).mockResolvedValue(mockTasks);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockTasks);
     });
 
     it('should open create task dialog', async () => {
@@ -532,7 +533,7 @@ describe('LazyTaskList', () => {
 
   describe('Refresh Functionality', () => {
     beforeEach(async () => {
-      (api.listTasks as jest.Mock)
+      (api.listTasks as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce(mockTasks)
         .mockResolvedValueOnce([...mockTasks, {
           id: 'task-3',
@@ -573,7 +574,7 @@ describe('LazyTaskList', () => {
 
   describe('Search Integration', () => {
     beforeEach(async () => {
-      (api.listTasks as jest.Mock).mockResolvedValue(mockTasks);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockTasks);
     });
 
     it('should render search component', async () => {
@@ -619,7 +620,7 @@ describe('LazyTaskList', () => {
       window.innerWidth = 500;
       window.dispatchEvent(new Event('resize'));
 
-      (api.listTasks as jest.Mock).mockResolvedValue(mockTasks);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockTasks);
 
       render(
         <LazyTaskList
@@ -648,7 +649,7 @@ describe('LazyTaskList', () => {
       window.innerWidth = 1024;
       window.dispatchEvent(new Event('resize'));
 
-      (api.listTasks as jest.Mock).mockResolvedValue(mockTasks);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockTasks);
 
       render(
         <LazyTaskList
@@ -680,7 +681,7 @@ describe('LazyTaskList', () => {
     }));
 
     beforeEach(() => {
-      (api.listTasks as jest.Mock).mockResolvedValue(manyTasks);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue(manyTasks);
     });
 
     it('should show load more button when there are more tasks', async () => {
@@ -720,13 +721,13 @@ describe('LazyTaskList', () => {
 
   describe('Lazy Loading', () => {
     beforeEach(() => {
-      (api.listTasks as jest.Mock).mockResolvedValue(mockTasks);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockTasks);
     });
 
     it('should load full task data on demand when expanding', async () => {
       // Mock fetch for individual task loading
-      global.fetch = jest.fn().mockResolvedValue({
-        json: jest.fn().mockResolvedValue({
+      global.fetch = vi.fn().mockResolvedValue({
+        json: vi.fn().mockResolvedValue({
           id: 'task-1',
           title: 'Test Task 1',
           description: 'Full task description',
@@ -772,7 +773,7 @@ describe('LazyTaskList', () => {
         resolvePromise = resolve;
       });
 
-      (api.listTasks as jest.Mock).mockResolvedValue([{
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue([{
         ...mockTasks[0],
         _delayed: true // Flag to simulate loading
       }]);
@@ -796,10 +797,10 @@ describe('LazyTaskList', () => {
 
   describe('Error Handling', () => {
     it('should handle task context loading errors', async () => {
-      (api.listTasks as jest.Mock).mockResolvedValue(mockTasks);
-      (api.getTaskContext as jest.Mock).mockRejectedValue(new Error('Context load failed'));
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockTasks);
+      (api.getTaskContext as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Context load failed'));
 
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       render(
         <LazyTaskList
@@ -825,11 +826,11 @@ describe('LazyTaskList', () => {
     });
 
     it('should handle agent loading errors', async () => {
-      (api.listTasks as jest.Mock).mockResolvedValue(mockTasks);
-      (api.listAgents as jest.Mock).mockRejectedValue(new Error('Agents load failed'));
-      (api.getAvailableAgents as jest.Mock).mockRejectedValue(new Error('Available agents load failed'));
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockTasks);
+      (api.listAgents as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Agents load failed'));
+      (api.getAvailableAgents as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Available agents load failed'));
 
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       render(
         <LazyTaskList
@@ -854,10 +855,10 @@ describe('LazyTaskList', () => {
     });
 
     it('should handle delete task errors gracefully', async () => {
-      (api.listTasks as jest.Mock).mockResolvedValue(mockTasks);
-      (api.deleteTask as jest.Mock).mockRejectedValue(new Error('Delete failed'));
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockTasks);
+      (api.deleteTask as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Delete failed'));
 
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       render(
         <LazyTaskList
@@ -892,7 +893,7 @@ describe('LazyTaskList', () => {
 
   describe('Component Lifecycle', () => {
     it('should reload tasks when projectId or taskTreeId changes', async () => {
-      (api.listTasks as jest.Mock).mockResolvedValue(mockTasks);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockTasks);
 
       const { rerender } = render(
         <LazyTaskList
@@ -935,7 +936,7 @@ describe('LazyTaskList', () => {
     });
 
     it('should cleanup on unmount', async () => {
-      (api.listTasks as jest.Mock).mockResolvedValue(mockTasks);
+      (api.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockTasks);
 
       const { unmount } = render(
         <LazyTaskList

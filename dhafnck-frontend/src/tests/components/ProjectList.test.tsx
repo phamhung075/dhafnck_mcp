@@ -1,16 +1,17 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { vi } from 'vitest';
 import '@testing-library/jest-dom';
 import ProjectList from '../../components/ProjectList';
 import * as api from '../../api';
 import * as apiLazy from '../../api-lazy';
 
 // Mock the api modules
-jest.mock('../../api');
-jest.mock('../../api-lazy');
+vi.mock('../../api');
+vi.mock('../../api-lazy');
 
 // Mock dialog components
-jest.mock('../../components/BranchDetailsDialog', () => ({
+vi.mock('../../components/BranchDetailsDialog', () => ({
   __esModule: true,
   default: ({ open, onOpenChange, project, branch }: any) => open ? (
     <div data-testid="branch-details-dialog">
@@ -20,7 +21,7 @@ jest.mock('../../components/BranchDetailsDialog', () => ({
   ) : null
 }));
 
-jest.mock('../../components/ProjectDetailsDialog', () => ({
+vi.mock('../../components/ProjectDetailsDialog', () => ({
   __esModule: true,
   default: ({ open, onOpenChange, project }: any) => open ? (
     <div data-testid="project-details-dialog">
@@ -30,7 +31,7 @@ jest.mock('../../components/ProjectDetailsDialog', () => ({
   ) : null
 }));
 
-jest.mock('../../components/GlobalContextDialog', () => ({
+vi.mock('../../components/GlobalContextDialog', () => ({
   __esModule: true,
   default: ({ open, onOpenChange }: any) => open ? (
     <div data-testid="global-context-dialog">
@@ -41,7 +42,7 @@ jest.mock('../../components/GlobalContextDialog', () => ({
 }));
 
 describe('ProjectList', () => {
-  const mockOnSelect = jest.fn();
+  const mockOnSelect = vi.fn();
   const refreshKey = 0;
 
   const mockProjects = [
@@ -71,12 +72,12 @@ describe('ProjectList', () => {
   ];
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Initial Loading', () => {
     it('should show loading state initially', () => {
-      (api.listProjects as jest.Mock).mockImplementation(() => new Promise(() => {}));
+      (api.listProjects as ReturnType<typeof vi.fn>).mockImplementation(() => new Promise(() => {}));
 
       render(
         <ProjectList onSelect={mockOnSelect} refreshKey={refreshKey} />
@@ -86,7 +87,7 @@ describe('ProjectList', () => {
     });
 
     it('should load and display projects', async () => {
-      (api.listProjects as jest.Mock).mockResolvedValue(mockProjects);
+      (api.listProjects as ReturnType<typeof vi.fn>).mockResolvedValue(mockProjects);
 
       render(
         <ProjectList onSelect={mockOnSelect} refreshKey={refreshKey} />
@@ -103,7 +104,7 @@ describe('ProjectList', () => {
 
     it('should display error state', async () => {
       const errorMessage = 'Failed to load projects';
-      (api.listProjects as jest.Mock).mockRejectedValue(new Error(errorMessage));
+      (api.listProjects as ReturnType<typeof vi.fn>).mockRejectedValue(new Error(errorMessage));
 
       render(
         <ProjectList onSelect={mockOnSelect} refreshKey={refreshKey} />
@@ -115,7 +116,7 @@ describe('ProjectList', () => {
     });
 
     it('should handle empty project list', async () => {
-      (api.listProjects as jest.Mock).mockResolvedValue([]);
+      (api.listProjects as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       render(
         <ProjectList onSelect={mockOnSelect} refreshKey={refreshKey} />
@@ -129,7 +130,7 @@ describe('ProjectList', () => {
 
   describe('Project Display', () => {
     beforeEach(async () => {
-      (api.listProjects as jest.Mock).mockResolvedValue(mockProjects);
+      (api.listProjects as ReturnType<typeof vi.fn>).mockResolvedValue(mockProjects);
     });
 
     it('should display project information with badges', async () => {
@@ -179,7 +180,7 @@ describe('ProjectList', () => {
 
   describe('Project Expansion', () => {
     beforeEach(async () => {
-      (api.listProjects as jest.Mock).mockResolvedValue(mockProjects);
+      (api.listProjects as ReturnType<typeof vi.fn>).mockResolvedValue(mockProjects);
     });
 
     it('should expand project to show branches', async () => {
@@ -216,7 +217,7 @@ describe('ProjectList', () => {
         }
       ];
 
-      (apiLazy.getBranchSummaries as jest.Mock).mockResolvedValue({
+      (apiLazy.getBranchSummaries as ReturnType<typeof vi.fn>).mockResolvedValue({
         branches: mockBranchSummaries,
         project_summary: {
           branches: { total: 2, active: 2, inactive: 0 },
@@ -261,7 +262,7 @@ describe('ProjectList', () => {
         resolvePromise = resolve;
       });
 
-      (apiLazy.getBranchSummaries as jest.Mock).mockReturnValue(delayedPromise);
+      (apiLazy.getBranchSummaries as ReturnType<typeof vi.fn>).mockReturnValue(delayedPromise);
 
       render(
         <ProjectList onSelect={mockOnSelect} refreshKey={refreshKey} />
@@ -294,9 +295,9 @@ describe('ProjectList', () => {
     });
 
     it('should handle branch summary loading error', async () => {
-      (apiLazy.getBranchSummaries as jest.Mock).mockRejectedValue(new Error('Failed to load branches'));
+      (apiLazy.getBranchSummaries as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Failed to load branches'));
 
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation();
 
       render(
         <ProjectList onSelect={mockOnSelect} refreshKey={refreshKey} />
@@ -344,7 +345,7 @@ describe('ProjectList', () => {
 
   describe('Branch Selection', () => {
     beforeEach(async () => {
-      (api.listProjects as jest.Mock).mockResolvedValue(mockProjects);
+      (api.listProjects as ReturnType<typeof vi.fn>).mockResolvedValue(mockProjects);
     });
 
     it('should call onSelect when branch is clicked', async () => {
@@ -399,7 +400,7 @@ describe('ProjectList', () => {
 
   describe('Create Project', () => {
     beforeEach(async () => {
-      (api.listProjects as jest.Mock).mockResolvedValue(mockProjects);
+      (api.listProjects as ReturnType<typeof vi.fn>).mockResolvedValue(mockProjects);
     });
 
     it('should open create project dialog', async () => {
@@ -421,7 +422,7 @@ describe('ProjectList', () => {
     });
 
     it('should create new project', async () => {
-      (api.createProject as jest.Mock).mockResolvedValue({ success: true });
+      (api.createProject as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
 
       render(
         <ProjectList onSelect={mockOnSelect} refreshKey={refreshKey} />
@@ -473,7 +474,7 @@ describe('ProjectList', () => {
 
   describe('Edit Project', () => {
     beforeEach(async () => {
-      (api.listProjects as jest.Mock).mockResolvedValue(mockProjects);
+      (api.listProjects as ReturnType<typeof vi.fn>).mockResolvedValue(mockProjects);
     });
 
     it('should open edit dialog with existing values', async () => {
@@ -496,7 +497,7 @@ describe('ProjectList', () => {
     });
 
     it('should update project', async () => {
-      (api.updateProject as jest.Mock).mockResolvedValue({ success: true });
+      (api.updateProject as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
 
       render(
         <ProjectList onSelect={mockOnSelect} refreshKey={refreshKey} />
@@ -525,7 +526,7 @@ describe('ProjectList', () => {
 
   describe('Delete Project', () => {
     beforeEach(async () => {
-      (api.listProjects as jest.Mock).mockResolvedValue(mockProjects);
+      (api.listProjects as ReturnType<typeof vi.fn>).mockResolvedValue(mockProjects);
     });
 
     it('should open delete confirmation dialog', async () => {
@@ -547,7 +548,7 @@ describe('ProjectList', () => {
     });
 
     it('should delete project successfully', async () => {
-      (api.deleteProject as jest.Mock).mockResolvedValue({
+      (api.deleteProject as ReturnType<typeof vi.fn>).mockResolvedValue({
         success: true,
         message: 'Project deleted'
       });
@@ -573,7 +574,7 @@ describe('ProjectList', () => {
     });
 
     it('should show error when delete fails', async () => {
-      (api.deleteProject as jest.Mock).mockResolvedValue({
+      (api.deleteProject as ReturnType<typeof vi.fn>).mockResolvedValue({
         success: false,
         error: 'Project has active tasks'
       });
@@ -599,7 +600,7 @@ describe('ProjectList', () => {
 
   describe('Create Branch', () => {
     beforeEach(async () => {
-      (api.listProjects as jest.Mock).mockResolvedValue(mockProjects);
+      (api.listProjects as ReturnType<typeof vi.fn>).mockResolvedValue(mockProjects);
     });
 
     it('should open create branch dialog', async () => {
@@ -621,7 +622,7 @@ describe('ProjectList', () => {
     });
 
     it('should create new branch', async () => {
-      (api.createBranch as jest.Mock).mockResolvedValue({ success: true });
+      (api.createBranch as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
 
       render(
         <ProjectList onSelect={mockOnSelect} refreshKey={refreshKey} />
@@ -650,8 +651,8 @@ describe('ProjectList', () => {
 
   describe('Delete Branch', () => {
     beforeEach(async () => {
-      (api.listProjects as jest.Mock).mockResolvedValue(mockProjects);
-      (apiLazy.getBranchSummaries as jest.Mock).mockResolvedValue({
+      (api.listProjects as ReturnType<typeof vi.fn>).mockResolvedValue(mockProjects);
+      (apiLazy.getBranchSummaries as ReturnType<typeof vi.fn>).mockResolvedValue({
         branches: [
           {
             id: 'branch-2',
@@ -722,7 +723,7 @@ describe('ProjectList', () => {
     });
 
     it('should delete branch successfully', async () => {
-      (api.deleteBranch as jest.Mock).mockResolvedValue(true);
+      (api.deleteBranch as ReturnType<typeof vi.fn>).mockResolvedValue(true);
 
       render(
         <ProjectList onSelect={mockOnSelect} refreshKey={refreshKey} />
@@ -754,7 +755,7 @@ describe('ProjectList', () => {
     });
 
     it('should handle delete branch failure', async () => {
-      (api.deleteBranch as jest.Mock).mockResolvedValue(false);
+      (api.deleteBranch as ReturnType<typeof vi.fn>).mockResolvedValue(false);
 
       render(
         <ProjectList onSelect={mockOnSelect} refreshKey={refreshKey} />
@@ -787,7 +788,7 @@ describe('ProjectList', () => {
 
   describe('Dialog Operations', () => {
     beforeEach(async () => {
-      (api.listProjects as jest.Mock).mockResolvedValue(mockProjects);
+      (api.listProjects as ReturnType<typeof vi.fn>).mockResolvedValue(mockProjects);
     });
 
     it('should open project details dialog', async () => {
@@ -863,7 +864,7 @@ describe('ProjectList', () => {
 
   describe('Refresh Functionality', () => {
     it('should refresh when refreshKey changes', async () => {
-      (api.listProjects as jest.Mock).mockResolvedValue(mockProjects);
+      (api.listProjects as ReturnType<typeof vi.fn>).mockResolvedValue(mockProjects);
 
       const { rerender } = render(
         <ProjectList onSelect={mockOnSelect} refreshKey={0} />
@@ -884,7 +885,7 @@ describe('ProjectList', () => {
     });
 
     it('should refresh when refresh button is clicked', async () => {
-      (api.listProjects as jest.Mock).mockResolvedValue(mockProjects);
+      (api.listProjects as ReturnType<typeof vi.fn>).mockResolvedValue(mockProjects);
 
       render(
         <ProjectList onSelect={mockOnSelect} refreshKey={refreshKey} />
@@ -920,7 +921,7 @@ describe('ProjectList', () => {
         }
       ];
 
-      (api.listProjects as jest.Mock).mockResolvedValue(projectsWithTaskCounts);
+      (api.listProjects as ReturnType<typeof vi.fn>).mockResolvedValue(projectsWithTaskCounts);
 
       render(
         <ProjectList onSelect={mockOnSelect} refreshKey={refreshKey} />
@@ -947,7 +948,7 @@ describe('ProjectList', () => {
         }
       ];
 
-      (api.listProjects as jest.Mock).mockResolvedValue(projectsWithoutTaskCount);
+      (api.listProjects as ReturnType<typeof vi.fn>).mockResolvedValue(projectsWithoutTaskCount);
 
       render(
         <ProjectList onSelect={mockOnSelect} refreshKey={refreshKey} />
@@ -961,7 +962,7 @@ describe('ProjectList', () => {
 
   describe('Branch Summary Features', () => {
     beforeEach(async () => {
-      (api.listProjects as jest.Mock).mockResolvedValue(mockProjects);
+      (api.listProjects as ReturnType<typeof vi.fn>).mockResolvedValue(mockProjects);
     });
 
     it('should display branch completion indicator', async () => {
@@ -980,7 +981,7 @@ describe('ProjectList', () => {
         is_completed: true
       };
 
-      (apiLazy.getBranchSummaries as jest.Mock).mockResolvedValue({
+      (apiLazy.getBranchSummaries as ReturnType<typeof vi.fn>).mockResolvedValue({
         branches: [completedBranch],
         project_summary: {},
         total_branches: 1,
@@ -1030,7 +1031,7 @@ describe('ProjectList', () => {
 
   describe('Header and Layout', () => {
     it('should display header with correct title', async () => {
-      (api.listProjects as jest.Mock).mockResolvedValue(mockProjects);
+      (api.listProjects as ReturnType<typeof vi.fn>).mockResolvedValue(mockProjects);
 
       render(
         <ProjectList onSelect={mockOnSelect} refreshKey={refreshKey} />
@@ -1042,7 +1043,7 @@ describe('ProjectList', () => {
     });
 
     it('should display all header buttons', async () => {
-      (api.listProjects as jest.Mock).mockResolvedValue(mockProjects);
+      (api.listProjects as ReturnType<typeof vi.fn>).mockResolvedValue(mockProjects);
 
       render(
         <ProjectList onSelect={mockOnSelect} refreshKey={refreshKey} />

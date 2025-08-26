@@ -1,18 +1,19 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { vi } from 'vitest';
 import '@testing-library/jest-dom';
 import LazySubtaskList from '../../components/LazySubtaskList';
 import * as api from '../../api';
 import Cookies from 'js-cookie';
 
 // Mock the api module
-jest.mock('../../api');
+vi.mock('../../api');
 
 // Mock js-cookie
-jest.mock('js-cookie');
+vi.mock('js-cookie');
 
 // Mock lazy-loaded components
-jest.mock('../../components/DeleteConfirmDialog', () => ({
+vi.mock('../../components/DeleteConfirmDialog', () => ({
   __esModule: true,
   default: ({ open, onOpenChange, onConfirm, itemName }: any) => open ? (
     <div data-testid="delete-confirm-dialog">
@@ -23,7 +24,7 @@ jest.mock('../../components/DeleteConfirmDialog', () => ({
   ) : null
 }));
 
-jest.mock('../../components/SubtaskCompleteDialog', () => ({
+vi.mock('../../components/SubtaskCompleteDialog', () => ({
   __esModule: true,
   default: ({ open, onOpenChange, subtask, onComplete }: any) => open ? (
     <div data-testid="subtask-complete-dialog">
@@ -38,7 +39,7 @@ jest.mock('../../components/SubtaskCompleteDialog', () => ({
 }));
 
 // Mock global fetch
-global.fetch = jest.fn();
+global.fetch = vi.fn();
 
 describe('LazySubtaskList', () => {
   const mockProjectId = 'project-123';
@@ -76,14 +77,14 @@ describe('LazySubtaskList', () => {
   ];
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    (Cookies.get as jest.Mock).mockReturnValue('test-token');
-    (global.fetch as jest.Mock).mockReset();
+    vi.clearAllMocks();
+    (Cookies.get as ReturnType<typeof vi.fn>).mockReturnValue('test-token');
+    (global.fetch as ReturnType<typeof vi.fn>).mockReset();
   });
 
   describe('Initial Loading', () => {
     it('should show loading state initially', () => {
-      (api.listSubtasks as jest.Mock).mockImplementation(() => new Promise(() => {}));
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockImplementation(() => new Promise(() => {}));
 
       render(
         <LazySubtaskList
@@ -118,9 +119,9 @@ describe('LazySubtaskList', () => {
         }
       };
 
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: true,
-        json: jest.fn().mockResolvedValue(mockV2Response)
+        json: vi.fn().mockResolvedValue(mockV2Response)
       });
 
       render(
@@ -151,12 +152,12 @@ describe('LazySubtaskList', () => {
     });
 
     it('should fallback to regular API when V2 fails', async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: false,
-        json: jest.fn().mockResolvedValue({})
+        json: vi.fn().mockResolvedValue({})
       });
 
-      (api.listSubtasks as jest.Mock).mockResolvedValue(mockSubtasks);
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockSubtasks);
 
       render(
         <LazySubtaskList
@@ -176,12 +177,12 @@ describe('LazySubtaskList', () => {
     });
 
     it('should handle authorization header when no token', async () => {
-      (Cookies.get as jest.Mock).mockReturnValue(null);
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (Cookies.get as ReturnType<typeof vi.fn>).mockReturnValue(null);
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: false,
-        json: jest.fn().mockResolvedValue({})
+        json: vi.fn().mockResolvedValue({})
       });
-      (api.listSubtasks as jest.Mock).mockResolvedValue([]);
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       render(
         <LazySubtaskList
@@ -207,8 +208,8 @@ describe('LazySubtaskList', () => {
 
     it('should display error state', async () => {
       const errorMessage = 'Failed to load subtasks';
-      (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
-      (api.listSubtasks as jest.Mock).mockRejectedValue(new Error(errorMessage));
+      (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Network error'));
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockRejectedValue(new Error(errorMessage));
 
       render(
         <LazySubtaskList
@@ -224,7 +225,7 @@ describe('LazySubtaskList', () => {
     });
 
     it('should handle empty subtask list', async () => {
-      (api.listSubtasks as jest.Mock).mockResolvedValue([]);
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       render(
         <LazySubtaskList
@@ -243,7 +244,7 @@ describe('LazySubtaskList', () => {
 
   describe('Subtask Display', () => {
     beforeEach(async () => {
-      (api.listSubtasks as jest.Mock).mockResolvedValue(mockSubtasks);
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockSubtasks);
     });
 
     it('should display subtask information correctly', async () => {
@@ -323,7 +324,7 @@ describe('LazySubtaskList', () => {
 
   describe('Subtask Details', () => {
     beforeEach(async () => {
-      (api.listSubtasks as jest.Mock).mockResolvedValue(mockSubtasks);
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockSubtasks);
     });
 
     it('should expand and show subtask details', async () => {
@@ -380,11 +381,11 @@ describe('LazySubtaskList', () => {
 
   describe('Subtask Actions', () => {
     beforeEach(async () => {
-      (api.listSubtasks as jest.Mock).mockResolvedValue(mockSubtasks);
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockSubtasks);
     });
 
     it('should handle subtask deletion', async () => {
-      (api.deleteSubtask as jest.Mock).mockResolvedValue(true);
+      (api.deleteSubtask as ReturnType<typeof vi.fn>).mockResolvedValue(true);
 
       render(
         <LazySubtaskList
@@ -417,7 +418,7 @@ describe('LazySubtaskList', () => {
     });
 
     it('should handle delete failure', async () => {
-      (api.deleteSubtask as jest.Mock).mockResolvedValue(false);
+      (api.deleteSubtask as ReturnType<typeof vi.fn>).mockResolvedValue(false);
 
       render(
         <LazySubtaskList
@@ -577,7 +578,7 @@ describe('LazySubtaskList', () => {
 
   describe('Progress Bar', () => {
     it('should show correct progress percentage', async () => {
-      (api.listSubtasks as jest.Mock).mockResolvedValue(mockSubtasks);
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockSubtasks);
 
       render(
         <LazySubtaskList
@@ -598,7 +599,7 @@ describe('LazySubtaskList', () => {
 
     it('should handle 100% completion', async () => {
       const allDoneSubtasks = mockSubtasks.map(sub => ({ ...sub, status: 'done' }));
-      (api.listSubtasks as jest.Mock).mockResolvedValue(allDoneSubtasks);
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockResolvedValue(allDoneSubtasks);
 
       render(
         <LazySubtaskList
@@ -618,7 +619,7 @@ describe('LazySubtaskList', () => {
 
     it('should handle 0% completion', async () => {
       const allTodoSubtasks = mockSubtasks.map(sub => ({ ...sub, status: 'todo' }));
-      (api.listSubtasks as jest.Mock).mockResolvedValue(allTodoSubtasks);
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockResolvedValue(allTodoSubtasks);
 
       render(
         <LazySubtaskList
@@ -639,7 +640,7 @@ describe('LazySubtaskList', () => {
 
   describe('Add Subtask', () => {
     it('should show add subtask button when subtasks exist', async () => {
-      (api.listSubtasks as jest.Mock).mockResolvedValue(mockSubtasks);
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockSubtasks);
 
       render(
         <LazySubtaskList
@@ -657,7 +658,7 @@ describe('LazySubtaskList', () => {
     });
 
     it('should show add subtask button when no subtasks', async () => {
-      (api.listSubtasks as jest.Mock).mockResolvedValue([]);
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       render(
         <LazySubtaskList
@@ -677,7 +678,7 @@ describe('LazySubtaskList', () => {
 
   describe('Lazy Loading', () => {
     it('should only load once when component mounts', async () => {
-      (api.listSubtasks as jest.Mock).mockResolvedValue(mockSubtasks);
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockSubtasks);
 
       const { rerender } = render(
         <LazySubtaskList
@@ -707,7 +708,7 @@ describe('LazySubtaskList', () => {
     });
 
     it('should reload when parent task changes', async () => {
-      (api.listSubtasks as jest.Mock).mockResolvedValue(mockSubtasks);
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockSubtasks);
 
       const { rerender } = render(
         <LazySubtaskList
@@ -741,10 +742,10 @@ describe('LazySubtaskList', () => {
 
   describe('Error Handling', () => {
     it('should handle delete subtask errors gracefully', async () => {
-      (api.listSubtasks as jest.Mock).mockResolvedValue(mockSubtasks);
-      (api.deleteSubtask as jest.Mock).mockRejectedValue(new Error('Delete failed'));
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockSubtasks);
+      (api.deleteSubtask as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Delete failed'));
 
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       render(
         <LazySubtaskList
@@ -787,12 +788,12 @@ describe('LazySubtaskList', () => {
         }]
       };
 
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: true,
-        json: jest.fn().mockResolvedValue(summaryResponse)
+        json: vi.fn().mockResolvedValue(summaryResponse)
       });
 
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       render(
         <LazySubtaskList
@@ -807,7 +808,7 @@ describe('LazySubtaskList', () => {
       });
 
       // Simulate error when loading full subtask
-      (api.listSubtasks as jest.Mock).mockRejectedValue(new Error('Load failed'));
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Load failed'));
 
       const viewButtons = screen.getAllByTitle('View details');
       fireEvent.click(viewButtons[0]);
@@ -822,7 +823,7 @@ describe('LazySubtaskList', () => {
 
   describe('Status and Priority Colors', () => {
     it('should apply correct status colors', async () => {
-      (api.listSubtasks as jest.Mock).mockResolvedValue([
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockResolvedValue([
         { ...mockSubtasks[0], status: 'done' },
         { ...mockSubtasks[1], status: 'in_progress' },
         { ...mockSubtasks[2], status: 'todo' },
@@ -849,7 +850,7 @@ describe('LazySubtaskList', () => {
     });
 
     it('should apply correct priority colors', async () => {
-      (api.listSubtasks as jest.Mock).mockResolvedValue([
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockResolvedValue([
         { ...mockSubtasks[0], priority: 'urgent' },
         { ...mockSubtasks[1], priority: 'high' },
         { ...mockSubtasks[2], priority: 'medium' },
@@ -875,7 +876,7 @@ describe('LazySubtaskList', () => {
 
   describe('Subtask Section Styling', () => {
     it('should render section header with gradient lines', async () => {
-      (api.listSubtasks as jest.Mock).mockResolvedValue(mockSubtasks);
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockSubtasks);
 
       render(
         <LazySubtaskList
@@ -896,7 +897,7 @@ describe('LazySubtaskList', () => {
     });
 
     it('should have gradient background', async () => {
-      (api.listSubtasks as jest.Mock).mockResolvedValue(mockSubtasks);
+      (api.listSubtasks as ReturnType<typeof vi.fn>).mockResolvedValue(mockSubtasks);
 
       const { container } = render(
         <LazySubtaskList

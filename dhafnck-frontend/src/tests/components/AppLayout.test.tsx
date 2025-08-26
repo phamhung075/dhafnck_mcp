@@ -1,9 +1,10 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import { vi } from 'vitest';
 import { AppLayout } from '../../components/AppLayout';
 
 // Mock the Header component
-jest.mock('../../components/Header', () => ({
+vi.mock('../../components/Header', () => ({
   Header: () => <header data-testid="mock-header">Mock Header</header>
 }));
 

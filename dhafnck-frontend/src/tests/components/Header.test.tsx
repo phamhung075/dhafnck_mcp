@@ -1,18 +1,19 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { vi } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import { Header } from '../../components/Header';
 import { AuthContext } from '../../contexts/AuthContext';
 
 // Mock useNavigate
-const mockNavigate = jest.fn();
-jest.mock('react-router-dom', () => ({
-  ...jest.requireActual('react-router-dom'),
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', () => ({
+  ...vi.importActual('react-router-dom'),
   useNavigate: () => mockNavigate,
 }));
 
 // Mock ThemeToggle component
-jest.mock('../../components/ThemeToggle', () => ({
+vi.mock('../../components/ThemeToggle', () => ({
   ThemeToggle: () => <div data-testid="theme-toggle">Theme Toggle</div>
 }));
 
@@ -24,7 +25,7 @@ describe('Header', () => {
     roles: ['user']
   };
 
-  const mockLogout = jest.fn();
+  const mockLogout = vi.fn();
 
   const renderWithAuth = (user = mockUser) => {
     return render(
@@ -32,10 +33,10 @@ describe('Header', () => {
         <AuthContext.Provider value={{
           user,
           isAuthenticated: !!user,
-          login: jest.fn(),
+          login: vi.fn(),
           logout: mockLogout,
           loading: false,
-          refreshUser: jest.fn(),
+          refreshUser: vi.fn(),
         }}>
           <Header />
         </AuthContext.Provider>
@@ -44,7 +45,7 @@ describe('Header', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('renders without crashing when authenticated', () => {
@@ -178,10 +179,10 @@ describe('Header', () => {
         <AuthContext.Provider value={{
           user: null,
           isAuthenticated: false,
-          login: jest.fn(),
+          login: vi.fn(),
           logout: mockLogout,
           loading: false,
-          refreshUser: jest.fn(),
+          refreshUser: vi.fn(),
         }}>
           <Header />
         </AuthContext.Provider>
@@ -204,10 +205,10 @@ describe('Header', () => {
         <AuthContext.Provider value={{
           user: null,
           isAuthenticated: false,
-          login: jest.fn(),
+          login: vi.fn(),
           logout: mockLogout,
           loading: false,
-          refreshUser: jest.fn(),
+          refreshUser: vi.fn(),
         }}>
           <Header />
         </AuthContext.Provider>

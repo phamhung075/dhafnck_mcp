@@ -1,24 +1,25 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { vi } from 'vitest';
 import { Profile } from '../../pages/Profile';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 // Mock react-router-dom
-jest.mock('react-router-dom');
-const mockNavigate = jest.fn();
+vi.mock('react-router-dom');
+const mockNavigate = vi.fn();
 
 // Mock useTheme hook
-jest.mock('../../hooks/useTheme', () => ({
+vi.mock('../../hooks/useTheme', () => ({
   useTheme: () => ({
     theme: 'light',
-    setTheme: jest.fn(),
-    toggleTheme: jest.fn(),
+    setTheme: vi.fn(),
+    toggleTheme: vi.fn(),
   }),
 }));
 
 // Mock window.alert
-global.alert = jest.fn();
+global.alert = vi.fn();
 
 describe('Profile', () => {
   const mockUser = {
@@ -33,10 +34,10 @@ describe('Profile', () => {
       <AuthContext.Provider value={{
         user,
         isAuthenticated: !!user,
-        login: jest.fn(),
-        logout: jest.fn(),
+        login: vi.fn(),
+        logout: vi.fn(),
         loading: false,
-        refreshUser: jest.fn(),
+        refreshUser: vi.fn(),
       }}>
         <Profile />
       </AuthContext.Provider>
@@ -44,9 +45,9 @@ describe('Profile', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockNavigate.mockClear();
-    (useNavigate as jest.Mock).mockReturnValue(mockNavigate);
+    (useNavigate as ReturnType<typeof vi.fn>).mockReturnValue(mockNavigate);
   });
 
   it('renders loading state when context is not available', () => {
@@ -241,11 +242,11 @@ describe('Profile', () => {
   });
 
   it('allows switching between light and dark theme', () => {
-    const mockSetTheme = jest.fn();
-    jest.mocked(require('../../hooks/useTheme').useTheme).mockReturnValue({
+    const mockSetTheme = vi.fn();
+    vi.mocked(require('../../hooks/useTheme').useTheme).mockReturnValue({
       theme: 'light',
       setTheme: mockSetTheme,
-      toggleTheme: jest.fn(),
+      toggleTheme: vi.fn(),
     });
 
     renderWithAuth();

@@ -17,8 +17,8 @@ jest.mock('js-cookie', () => ({
 // Mock fetch globally
 global.fetch = jest.fn();
 
-// Mock process.env
-process.env.REACT_APP_API_URL = 'http://test-api.com';
+// Mock import.meta.env
+(import.meta as any).env = { VITE_API_URL: 'http://test-api.com' };
 
 describe('apiV2.ts', () => {
   const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTEyMyIsInVzZXJfaWQiOiJ1c2VyLTEyMyIsIm5hbWUiOiJUZXN0IFVzZXIiLCJpYXQiOjE1MTYyMzkwMjJ9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
@@ -117,6 +117,28 @@ describe('apiV2.ts', () => {
 
         expect(global.fetch).toHaveBeenCalledWith(
           'http://test-api.com/api/v2/tasks/',
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${mockToken}`
+            }
+          }
+        );
+        expect(result).toEqual(mockTasks);
+      });
+
+      it('should fetch tasks with git_branch_id filter', async () => {
+        const mockTasks = [{ id: '1', title: 'Branch Task' }];
+        (global.fetch as any).mockResolvedValue({
+          ok: true,
+          json: jest.fn().mockResolvedValue(mockTasks)
+        });
+
+        const result = await taskApiV2.getTasks({ git_branch_id: 'branch-123' });
+
+        expect(global.fetch).toHaveBeenCalledWith(
+          'http://test-api.com/api/v2/tasks/?git_branch_id=branch-123',
           {
             method: 'GET',
             headers: {
@@ -603,12 +625,15 @@ describe('apiV2.ts', () => {
 
   describe('Environment Configuration', () => {
     it('should use default API URL when env variable not set', async () => {
+      // Save original value
+      const originalEnv = (import.meta as any).env;
+      
       // Clear the mocked env variable
-      delete process.env.REACT_APP_API_URL;
+      (import.meta as any).env = {};
       
       // Re-import the module to test default value
       jest.resetModules();
-      const { taskApiV2: freshTaskApiV2 } = await require('../../services/apiV2');
+      const { taskApiV2: freshTaskApiV2 } = await import('../../services/apiV2');
       
       (Cookies.get as jest.Mock).mockReturnValue(mockToken);
       (global.fetch as any).mockResolvedValue({
@@ -622,6 +647,9 @@ describe('apiV2.ts', () => {
         'http://localhost:8000/api/v2/tasks/',
         expect.any(Object)
       );
+      
+      // Restore original env
+      (import.meta as any).env = originalEnv;
     });
   });
 });

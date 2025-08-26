@@ -1,20 +1,21 @@
 // MCPTokenManager Component Tests
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { vi } from 'vitest';
 import '@testing-library/jest-dom';
 import MCPTokenManager from '../../components/MCPTokenManager';
 import { mcpTokenService } from '../../services/mcpTokenService';
 
 // Mock the mcpTokenService
-jest.mock('../../services/mcpTokenService', () => ({
+vi.mock('../../services/mcpTokenService', () => ({
   mcpTokenService: {
-    isAuthenticated: jest.fn(),
-    getTokenStats: jest.fn(),
-    generateMCPToken: jest.fn(),
-    testMCPToken: jest.fn(),
-    revokeTokens: jest.fn(),
-    getMCPToken: jest.fn(),
-    clearCache: jest.fn(),
+    isAuthenticated: vi.fn(),
+    getTokenStats: vi.fn(),
+    generateMCPToken: vi.fn(),
+    testMCPToken: vi.fn(),
+    revokeTokens: vi.fn(),
+    getMCPToken: vi.fn(),
+    clearCache: vi.fn(),
   },
 }));
 
@@ -29,19 +30,19 @@ describe('MCPTokenManager', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Default to authenticated state
-    (mcpTokenService.isAuthenticated as jest.Mock).mockReturnValue(true);
-    (mcpTokenService.getTokenStats as jest.Mock).mockResolvedValue({
+    (mcpTokenService.isAuthenticated as ReturnType<typeof vi.fn>).mockReturnValue(true);
+    (mcpTokenService.getTokenStats as ReturnType<typeof vi.fn>).mockResolvedValue({
       success: true,
       stats: mockStats,
     });
-    (mcpTokenService.getMCPToken as jest.Mock).mockResolvedValue(null);
+    (mcpTokenService.getMCPToken as ReturnType<typeof vi.fn>).mockResolvedValue(null);
   });
 
   describe('Authentication Check', () => {
     it('should show authentication required message when not authenticated', () => {
-      (mcpTokenService.isAuthenticated as jest.Mock).mockReturnValue(false);
+      (mcpTokenService.isAuthenticated as ReturnType<typeof vi.fn>).mockReturnValue(false);
       
       render(<MCPTokenManager />);
       
@@ -86,7 +87,7 @@ describe('MCPTokenManager', () => {
     });
 
     it('should display current token if exists', async () => {
-      (mcpTokenService.getMCPToken as jest.Mock).mockResolvedValue(mockToken);
+      (mcpTokenService.getMCPToken as ReturnType<typeof vi.fn>).mockResolvedValue(mockToken);
       
       render(<MCPTokenManager />);
       
@@ -99,7 +100,7 @@ describe('MCPTokenManager', () => {
 
   describe('Generate Token', () => {
     it('should generate token successfully', async () => {
-      (mcpTokenService.generateMCPToken as jest.Mock).mockResolvedValue({
+      (mcpTokenService.generateMCPToken as ReturnType<typeof vi.fn>).mockResolvedValue({
         success: true,
         token: mockToken,
         expires_at: mockExpiry,
@@ -124,7 +125,7 @@ describe('MCPTokenManager', () => {
     });
 
     it('should show error message when token generation fails', async () => {
-      (mcpTokenService.generateMCPToken as jest.Mock).mockResolvedValue({
+      (mcpTokenService.generateMCPToken as ReturnType<typeof vi.fn>).mockResolvedValue({
         success: false,
         message: 'Generation failed',
       });
@@ -139,7 +140,7 @@ describe('MCPTokenManager', () => {
     });
 
     it('should handle generation errors', async () => {
-      (mcpTokenService.generateMCPToken as jest.Mock).mockRejectedValue(new Error('Network error'));
+      (mcpTokenService.generateMCPToken as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Network error'));
       
       render(<MCPTokenManager />);
       
@@ -153,7 +154,7 @@ describe('MCPTokenManager', () => {
 
   describe('Test Token', () => {
     beforeEach(async () => {
-      (mcpTokenService.getMCPToken as jest.Mock).mockResolvedValue(mockToken);
+      (mcpTokenService.getMCPToken as ReturnType<typeof vi.fn>).mockResolvedValue(mockToken);
       render(<MCPTokenManager />);
       await waitFor(() => {
         expect(screen.getByText(mockToken)).toBeInTheDocument();
@@ -161,7 +162,7 @@ describe('MCPTokenManager', () => {
     });
 
     it('should test token successfully', async () => {
-      (mcpTokenService.testMCPToken as jest.Mock).mockResolvedValue({
+      (mcpTokenService.testMCPToken as ReturnType<typeof vi.fn>).mockResolvedValue({
         success: true,
         message: 'Token is valid',
       });
@@ -181,7 +182,7 @@ describe('MCPTokenManager', () => {
     });
 
     it('should show error message when test fails', async () => {
-      (mcpTokenService.testMCPToken as jest.Mock).mockResolvedValue({
+      (mcpTokenService.testMCPToken as ReturnType<typeof vi.fn>).mockResolvedValue({
         success: false,
         message: 'Token is invalid',
       });
@@ -194,7 +195,7 @@ describe('MCPTokenManager', () => {
     });
 
     it('should handle test errors', async () => {
-      (mcpTokenService.testMCPToken as jest.Mock).mockRejectedValue(new Error('Test failed'));
+      (mcpTokenService.testMCPToken as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Test failed'));
       
       fireEvent.click(screen.getByRole('button', { name: 'Test Token' }));
       
@@ -204,7 +205,7 @@ describe('MCPTokenManager', () => {
     });
 
     it('should be disabled when no token exists', async () => {
-      (mcpTokenService.getMCPToken as jest.Mock).mockResolvedValue(null);
+      (mcpTokenService.getMCPToken as ReturnType<typeof vi.fn>).mockResolvedValue(null);
       render(<MCPTokenManager />);
       
       await waitFor(() => {
@@ -216,8 +217,8 @@ describe('MCPTokenManager', () => {
 
   describe('Revoke Tokens', () => {
     it('should revoke tokens successfully', async () => {
-      (mcpTokenService.revokeTokens as jest.Mock).mockResolvedValue(true);
-      (mcpTokenService.getMCPToken as jest.Mock).mockResolvedValue(mockToken);
+      (mcpTokenService.revokeTokens as ReturnType<typeof vi.fn>).mockResolvedValue(true);
+      (mcpTokenService.getMCPToken as ReturnType<typeof vi.fn>).mockResolvedValue(mockToken);
       
       render(<MCPTokenManager />);
       
@@ -241,7 +242,7 @@ describe('MCPTokenManager', () => {
     });
 
     it('should show error when revoke fails', async () => {
-      (mcpTokenService.revokeTokens as jest.Mock).mockResolvedValue(false);
+      (mcpTokenService.revokeTokens as ReturnType<typeof vi.fn>).mockResolvedValue(false);
       
       render(<MCPTokenManager />);
       
@@ -253,7 +254,7 @@ describe('MCPTokenManager', () => {
     });
 
     it('should handle revoke errors', async () => {
-      (mcpTokenService.revokeTokens as jest.Mock).mockRejectedValue(new Error('Revoke error'));
+      (mcpTokenService.revokeTokens as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Revoke error'));
       
       render(<MCPTokenManager />);
       
@@ -267,7 +268,7 @@ describe('MCPTokenManager', () => {
 
   describe('Get Current Token', () => {
     it('should get current token successfully', async () => {
-      (mcpTokenService.getMCPToken as jest.Mock)
+      (mcpTokenService.getMCPToken as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce(null) // Initial load
         .mockResolvedValueOnce(mockToken); // Get current token click
       
@@ -292,7 +293,7 @@ describe('MCPTokenManager', () => {
     });
 
     it('should show info message when no token found', async () => {
-      (mcpTokenService.getMCPToken as jest.Mock).mockResolvedValue(null);
+      (mcpTokenService.getMCPToken as ReturnType<typeof vi.fn>).mockResolvedValue(null);
       
       render(<MCPTokenManager />);
       
@@ -304,7 +305,7 @@ describe('MCPTokenManager', () => {
     });
 
     it('should handle get current token errors', async () => {
-      (mcpTokenService.getMCPToken as jest.Mock)
+      (mcpTokenService.getMCPToken as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce(null)
         .mockRejectedValueOnce(new Error('Fetch error'));
       
@@ -320,7 +321,7 @@ describe('MCPTokenManager', () => {
 
   describe('Clear Cache', () => {
     it('should clear cache and reset token state', async () => {
-      (mcpTokenService.getMCPToken as jest.Mock).mockResolvedValue(mockToken);
+      (mcpTokenService.getMCPToken as ReturnType<typeof vi.fn>).mockResolvedValue(mockToken);
       
       render(<MCPTokenManager />);
       
@@ -342,7 +343,7 @@ describe('MCPTokenManager', () => {
       render(<MCPTokenManager />);
       
       // Clear the initial call
-      (mcpTokenService.getTokenStats as jest.Mock).mockClear();
+      (mcpTokenService.getTokenStats as ReturnType<typeof vi.fn>).mockClear();
       
       const refreshButton = screen.getByRole('button', { name: 'Refresh Stats' });
       fireEvent.click(refreshButton);
@@ -355,7 +356,7 @@ describe('MCPTokenManager', () => {
 
   describe('Message Display', () => {
     it('should display success messages with correct styling', async () => {
-      (mcpTokenService.generateMCPToken as jest.Mock).mockResolvedValue({
+      (mcpTokenService.generateMCPToken as ReturnType<typeof vi.fn>).mockResolvedValue({
         success: true,
         token: mockToken,
         expires_at: mockExpiry,
@@ -373,7 +374,7 @@ describe('MCPTokenManager', () => {
     });
 
     it('should display error messages with correct styling', async () => {
-      (mcpTokenService.generateMCPToken as jest.Mock).mockRejectedValue(new Error('Test error'));
+      (mcpTokenService.generateMCPToken as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Test error'));
       
       render(<MCPTokenManager />);
       
@@ -397,7 +398,7 @@ describe('MCPTokenManager', () => {
     });
 
     it('should auto-hide messages after 5 seconds', async () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       
       render(<MCPTokenManager />);
       
@@ -405,13 +406,13 @@ describe('MCPTokenManager', () => {
       
       expect(screen.getByText('Token cache cleared')).toBeInTheDocument();
       
-      jest.advanceTimersByTime(5000);
+      vi.advanceTimersByTime(5000);
       
       await waitFor(() => {
         expect(screen.queryByText('Token cache cleared')).not.toBeInTheDocument();
       });
       
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
   });
 
@@ -461,7 +462,7 @@ describe('MCPTokenManager', () => {
 
   describe('Edge Cases', () => {
     it('should handle missing stats gracefully', async () => {
-      (mcpTokenService.getTokenStats as jest.Mock).mockResolvedValue({
+      (mcpTokenService.getTokenStats as ReturnType<typeof vi.fn>).mockResolvedValue({
         success: false,
       });
       
@@ -473,7 +474,7 @@ describe('MCPTokenManager', () => {
     });
 
     it('should handle unknown errors', async () => {
-      (mcpTokenService.generateMCPToken as jest.Mock).mockRejectedValue('String error');
+      (mcpTokenService.generateMCPToken as ReturnType<typeof vi.fn>).mockRejectedValue('String error');
       
       render(<MCPTokenManager />);
       
@@ -485,7 +486,7 @@ describe('MCPTokenManager', () => {
     });
 
     it('should handle missing token expiry', async () => {
-      (mcpTokenService.generateMCPToken as jest.Mock).mockResolvedValue({
+      (mcpTokenService.generateMCPToken as ReturnType<typeof vi.fn>).mockResolvedValue({
         success: true,
         token: mockToken,
         expires_at: null,

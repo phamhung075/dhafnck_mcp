@@ -7,7 +7,6 @@ import { useAuth } from '../../../hooks/useAuth';
 // Mock dependencies
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
-  BrowserRouter: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useNavigate: jest.fn(),
 }));
 
@@ -268,8 +267,9 @@ describe('EmailVerification', () => {
     });
 
     it('uses custom API URL from environment variable', async () => {
-      const originalEnv = process.env.REACT_APP_API_URL;
-      process.env.REACT_APP_API_URL = 'https://api.example.com';
+      // Mock import.meta.env
+      const originalViteApiUrl = (import.meta as any).env.VITE_API_URL;
+      (import.meta as any).env = { VITE_API_URL: 'https://api.example.com' };
 
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
@@ -293,7 +293,8 @@ describe('EmailVerification', () => {
         );
       });
 
-      process.env.REACT_APP_API_URL = originalEnv;
+      // Restore original
+      (import.meta as any).env.VITE_API_URL = originalViteApiUrl;
     });
   });
 

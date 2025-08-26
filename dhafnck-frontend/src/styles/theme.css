@@ -1,8 +1,5 @@
 /* Global Theme CSS Variables and Styles */
 
-/* Import Tailwind configuration for @apply directives */
-@import 'tailwindcss/theme' reference;
-
 /* Root CSS Variables - Will be dynamically updated by JavaScript */
 :root {
   /* Default Light Theme Variables */

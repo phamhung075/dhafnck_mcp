@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import { vi } from 'vitest';
 import '@testing-library/jest-dom';
 import { MuiThemeWrapper } from '../../contexts/MuiThemeProvider';
 import { useTheme } from '../../hooks/useTheme';
@@ -7,11 +8,11 @@ import { getTheme } from '../../theme/muiTheme';
 import { ThemeProvider as MuiThemeProvider, CssBaseline } from '@mui/material';
 
 // Mock dependencies
-jest.mock('../../hooks/useTheme');
-jest.mock('../../theme/muiTheme');
+vi.mock('../../hooks/useTheme');
+vi.mock('../../theme/muiTheme');
 
 // Mock Material-UI components
-jest.mock('@mui/material', () => ({
+vi.mock('@mui/material', () => ({
   ThemeProvider: ({ theme, children }: any) => (
     <div data-testid="mui-theme-provider" data-theme={JSON.stringify(theme)}>
       {children}
@@ -21,18 +22,18 @@ jest.mock('@mui/material', () => ({
 }));
 
 describe('MuiThemeWrapper', () => {
-  const mockUseTheme = useTheme as jest.MockedFunction<typeof useTheme>;
-  const mockGetTheme = getTheme as jest.MockedFunction<typeof getTheme>;
+  const mockUseTheme = useTheme as ReturnType<typeof vi.fn>;
+  const mockGetTheme = getTheme as ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('renders children correctly', () => {
     mockUseTheme.mockReturnValue({
       theme: 'light',
-      toggleTheme: jest.fn(),
-      setTheme: jest.fn(),
+      toggleTheme: vi.fn(),
+      setTheme: vi.fn(),
     });
     mockGetTheme.mockReturnValue({ palette: { mode: 'light' } } as any);
 
@@ -49,8 +50,8 @@ describe('MuiThemeWrapper', () => {
     const lightTheme = { palette: { mode: 'light' }, custom: 'light-value' };
     mockUseTheme.mockReturnValue({
       theme: 'light',
-      toggleTheme: jest.fn(),
-      setTheme: jest.fn(),
+      toggleTheme: vi.fn(),
+      setTheme: vi.fn(),
     });
     mockGetTheme.mockReturnValue(lightTheme as any);
 
@@ -70,8 +71,8 @@ describe('MuiThemeWrapper', () => {
     const darkTheme = { palette: { mode: 'dark' }, custom: 'dark-value' };
     mockUseTheme.mockReturnValue({
       theme: 'dark',
-      toggleTheme: jest.fn(),
-      setTheme: jest.fn(),
+      toggleTheme: vi.fn(),
+      setTheme: vi.fn(),
     });
     mockGetTheme.mockReturnValue(darkTheme as any);
 
@@ -90,8 +91,8 @@ describe('MuiThemeWrapper', () => {
   it('includes CssBaseline component', () => {
     mockUseTheme.mockReturnValue({
       theme: 'light',
-      toggleTheme: jest.fn(),
-      setTheme: jest.fn(),
+      toggleTheme: vi.fn(),
+      setTheme: vi.fn(),
     });
     mockGetTheme.mockReturnValue({ palette: { mode: 'light' } } as any);
 
@@ -110,8 +111,8 @@ describe('MuiThemeWrapper', () => {
     
     mockUseTheme.mockReturnValue({
       theme: 'light',
-      toggleTheme: jest.fn(),
-      setTheme: jest.fn(),
+      toggleTheme: vi.fn(),
+      setTheme: vi.fn(),
     });
     mockGetTheme.mockReturnValue(lightTheme as any);
 
@@ -126,8 +127,8 @@ describe('MuiThemeWrapper', () => {
     // Change to dark theme
     mockUseTheme.mockReturnValue({
       theme: 'dark',
-      toggleTheme: jest.fn(),
-      setTheme: jest.fn(),
+      toggleTheme: vi.fn(),
+      setTheme: vi.fn(),
     });
     mockGetTheme.mockReturnValue(darkTheme as any);
 
@@ -143,8 +144,8 @@ describe('MuiThemeWrapper', () => {
   it('renders multiple children correctly', () => {
     mockUseTheme.mockReturnValue({
       theme: 'light',
-      toggleTheme: jest.fn(),
-      setTheme: jest.fn(),
+      toggleTheme: vi.fn(),
+      setTheme: vi.fn(),
     });
     mockGetTheme.mockReturnValue({ palette: { mode: 'light' } } as any);
 
@@ -164,8 +165,8 @@ describe('MuiThemeWrapper', () => {
   it('handles null children gracefully', () => {
     mockUseTheme.mockReturnValue({
       theme: 'light',
-      toggleTheme: jest.fn(),
-      setTheme: jest.fn(),
+      toggleTheme: vi.fn(),
+      setTheme: vi.fn(),
     });
     mockGetTheme.mockReturnValue({ palette: { mode: 'light' } } as any);
 
@@ -182,8 +183,8 @@ describe('MuiThemeWrapper', () => {
   it('passes through complex React elements', () => {
     mockUseTheme.mockReturnValue({
       theme: 'light',
-      toggleTheme: jest.fn(),
-      setTheme: jest.fn(),
+      toggleTheme: vi.fn(),
+      setTheme: vi.fn(),
     });
     mockGetTheme.mockReturnValue({ palette: { mode: 'light' } } as any);
 
@@ -210,8 +211,8 @@ describe('MuiThemeWrapper', () => {
     const theme = { palette: { mode: 'light' }, typography: {} };
     mockUseTheme.mockReturnValue({
       theme: 'light',
-      toggleTheme: jest.fn(),
-      setTheme: jest.fn(),
+      toggleTheme: vi.fn(),
+      setTheme: vi.fn(),
     });
     mockGetTheme.mockReturnValue(theme as any);
 
@@ -228,8 +229,8 @@ describe('MuiThemeWrapper', () => {
   it('renders CssBaseline component', () => {
     mockUseTheme.mockReturnValue({
       theme: 'light',
-      toggleTheme: jest.fn(),
-      setTheme: jest.fn(),
+      toggleTheme: vi.fn(),
+      setTheme: vi.fn(),
     });
     mockGetTheme.mockReturnValue({ palette: { mode: 'light' } } as any);
 

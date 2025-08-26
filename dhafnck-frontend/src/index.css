@@ -1,4 +1,9 @@
-@import "tailwindcss";
+/* Import theme CSS variables first */
+@import './styles/theme.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* Custom utility classes for the theme system */
 @layer utilities {
