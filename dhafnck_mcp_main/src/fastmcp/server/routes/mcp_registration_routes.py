@@ -218,6 +218,7 @@ mcp_registration_routes = [
     
     # Unregister endpoint
     Route("/unregister", endpoint=unregister_client, methods=["POST"]),
+    Route("/unregister", endpoint=handle_options, methods=["OPTIONS"]),
     
     # Debug endpoint to list registrations
     Route("/registrations", endpoint=list_registrations, methods=["GET"]),

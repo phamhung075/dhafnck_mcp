@@ -40,11 +40,14 @@ class TestSubtaskApplicationService:
         response.success = True
         response.subtask_id = "subtask-123"
         response.message = "Subtask added successfully"
-        response.__dict__ = {
+        
+        # Create a separate dict for __dict__ access without interfering with Mock attributes
+        response_dict = {
             "success": True,
             "subtask_id": "subtask-123",
             "message": "Subtask added successfully"
         }
+        response.__dict__.update(response_dict)
         return response
 
     @pytest.fixture
@@ -54,11 +57,14 @@ class TestSubtaskApplicationService:
         response.success = True
         response.subtask_id = "subtask-123"
         response.message = "Subtask updated successfully"
-        response.__dict__ = {
+        
+        # Create a separate dict for __dict__ access without interfering with Mock attributes
+        response_dict = {
             "success": True,
             "subtask_id": "subtask-123",
             "message": "Subtask updated successfully"
         }
+        response.__dict__.update(response_dict)
         return response
 
     @pytest.fixture
@@ -132,7 +138,7 @@ class TestSubtaskApplicationService:
             task_id="task-123",
             title="Test Subtask",
             description="Test description",
-            assignee="user1"
+            assignees=["user1"]
         )
         service._add_subtask_use_case.execute.return_value = mock_add_subtask_response
 
@@ -148,8 +154,8 @@ class TestSubtaskApplicationService:
             id="subtask-456",
             title="Updated Subtask",
             description="Updated description",
-            completed=True,
-            assignee="user2"
+            status="completed",
+            assignees=["user2"]
         )
         service._update_subtask_use_case.execute.return_value = mock_update_subtask_response
 
@@ -218,7 +224,7 @@ class TestSubtaskApplicationService:
         assert call_args.task_id == "task-123"
         assert call_args.title == "New Subtask"
         assert call_args.description == "New description"
-        assert call_args.assignee == "user1"
+        assert call_args.assignees == ["user1"]
 
     def test_manage_subtasks_add_action_short(self, service, mock_add_subtask_response):
         """Test manage_subtasks with short add action"""
@@ -238,7 +244,7 @@ class TestSubtaskApplicationService:
         subtask_data = {
             "id": "subtask-456",
             "title": "Updated Subtask",
-            "completed": True
+            "status": "completed"
         }
 
         result = service.manage_subtasks("task-123", "update_subtask", subtask_data)
@@ -251,7 +257,7 @@ class TestSubtaskApplicationService:
         assert call_args.task_id == "task-123"
         assert call_args.id == "subtask-456"
         assert call_args.title == "Updated Subtask"
-        assert call_args.completed is True
+        assert call_args.status == "completed"
 
     def test_manage_subtasks_update_action_short(self, service, mock_update_subtask_response):
         """Test manage_subtasks with short update action"""
@@ -401,7 +407,7 @@ class TestSubtaskApplicationService:
         assert call_args.task_id == "task-123"
         assert call_args.title == "Test Title"
         assert call_args.description == "Test Description"
-        assert call_args.assignee == "test_user"
+        assert call_args.assignees == ["test_user"]
 
     def test_add_subtask_request_creation_with_defaults(self, service, mock_add_subtask_response):
         """Test that AddSubtaskRequest is created with default values when data is missing"""
@@ -416,7 +422,7 @@ class TestSubtaskApplicationService:
         assert call_args.task_id == "task-123"
         assert call_args.title == "Test Title"
         assert call_args.description == ""  # Default value
-        assert call_args.assignee == ""  # Default value
+        assert call_args.assignees == []  # Default value
 
     def test_update_subtask_request_creation(self, service, mock_update_subtask_response):
         """Test that UpdateSubtaskRequest is created correctly"""
@@ -426,8 +432,8 @@ class TestSubtaskApplicationService:
             "id": "subtask-123",
             "title": "Updated Title",
             "description": "Updated Description",
-            "completed": True,
-            "assignee": "updated_user"
+            "status": "completed",
+            "assignees": ["updated_user"]
         }
 
         service.manage_subtasks("task-123", "update", subtask_data)
@@ -439,8 +445,8 @@ class TestSubtaskApplicationService:
         assert call_args.id == "subtask-123"
         assert call_args.title == "Updated Title"
         assert call_args.description == "Updated Description"
-        assert call_args.completed is True
-        assert call_args.assignee == "updated_user"
+        assert call_args.status == "completed"
+        assert call_args.assignees == ["updated_user"]
 
     def test_update_subtask_request_creation_partial(self, service, mock_update_subtask_response):
         """Test that UpdateSubtaskRequest is created with partial data"""
@@ -459,5 +465,5 @@ class TestSubtaskApplicationService:
         assert call_args.id == "subtask-123"
         assert call_args.title == "Updated Title"
         assert call_args.description is None
-        assert call_args.completed is None
-        assert call_args.assignee is None
+        assert call_args.status is None
+        assert call_args.assignees is None

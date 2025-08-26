@@ -45,14 +45,10 @@ class TestAgentFacadeFactory:
         assert factory._agent_repository_factory is None
         assert factory._facades_cache == {}
     
-    @patch('fastmcp.task_management.application.factories.agent_facade_factory.get_default_user_id')
-    @patch('fastmcp.task_management.application.factories.agent_facade_factory.normalize_user_id')
     @patch('fastmcp.task_management.infrastructure.repositories.agent_repository_factory.AgentRepositoryFactory.create')
-    def test_create_agent_facade_with_default_user(self, mock_create_repo, mock_normalize, mock_get_default, factory):
+    def test_create_agent_facade_with_default_user(self, mock_create_repo, factory):
         """Test creating agent facade with default user ID"""
         # Setup mocks
-        mock_get_default.return_value = "00000000-0000-0000-0000-000000000000"
-        mock_normalize.return_value = "00000000-0000-0000-0000-000000000000"
         mock_repo = Mock()
         mock_create_repo.return_value = mock_repo
         
@@ -63,22 +59,18 @@ class TestAgentFacadeFactory:
             
             result = factory.create_agent_facade(project_id="test-project")
             
-            # Verify
-            mock_get_default.assert_called_once()
-            mock_normalize.assert_called_once_with("00000000-0000-0000-0000-000000000000")
-            mock_create_repo.assert_called_once_with(user_id="00000000-0000-0000-0000-000000000000")
+            # Verify - should use 'system' as default user_id
+            mock_create_repo.assert_called_once_with(user_id='system')
             mock_facade_class.assert_called_once_with(mock_repo)
             assert result == mock_facade
             
             # Check caching
             assert factory._facades_cache["test-project"] == mock_facade
     
-    @patch('fastmcp.task_management.application.factories.agent_facade_factory.normalize_user_id')
     @patch('fastmcp.task_management.infrastructure.repositories.agent_repository_factory.AgentRepositoryFactory.create')
-    def test_create_agent_facade_with_specific_user(self, mock_create_repo, mock_normalize, factory):
+    def test_create_agent_facade_with_specific_user(self, mock_create_repo, factory):
         """Test creating agent facade with specific user ID"""
         # Setup mocks
-        mock_normalize.return_value = "user-123-normalized"
         mock_repo = Mock()
         mock_create_repo.return_value = mock_repo
         
@@ -89,9 +81,8 @@ class TestAgentFacadeFactory:
             
             result = factory.create_agent_facade(project_id="test-project", user_id="user-123")
             
-            # Verify
-            mock_normalize.assert_called_once_with("user-123")
-            mock_create_repo.assert_called_once_with(user_id="user-123-normalized")
+            # Verify - should use the provided user_id directly
+            mock_create_repo.assert_called_once_with(user_id="user-123")
             assert result == mock_facade
     
     def test_create_agent_facade_cached(self, factory):
@@ -106,14 +97,12 @@ class TestAgentFacadeFactory:
         # Verify cached facade is returned
         assert result == mock_cached_facade
     
-    @patch('fastmcp.task_management.application.factories.agent_facade_factory.get_default_user_id')
-    @patch('fastmcp.task_management.application.factories.agent_facade_factory.get_default_agent_repository')
-    def test_create_agent_facade_without_repository_factory(self, mock_get_default_repo, mock_get_default_user):
+    @patch('fastmcp.task_management.infrastructure.repositories.agent_repository_factory.AgentRepositoryFactory.create')
+    def test_create_agent_facade_without_repository_factory(self, mock_create_repo):
         """Test creating facade without repository factory (uses default)"""
         # Setup mocks
-        mock_get_default_user.return_value = "00000000-0000-0000-0000-000000000000"
         mock_repo = Mock()
-        mock_get_default_repo.return_value = mock_repo
+        mock_create_repo.return_value = mock_repo
         
         # Create factory without repository factory
         factory = AgentFacadeFactory()
@@ -125,26 +114,24 @@ class TestAgentFacadeFactory:
             
             result = factory.create_agent_facade(project_id="test-project")
             
-            # Verify default repository is used
-            mock_get_default_repo.assert_called_once()
+            # Verify default repository factory is used with 'system' user_id
+            mock_create_repo.assert_called_once_with(user_id='system')
             mock_facade_class.assert_called_once_with(mock_repo)
             assert result == mock_facade
     
-    @patch('fastmcp.task_management.application.factories.agent_facade_factory.get_default_user_id')
     @patch('fastmcp.task_management.infrastructure.repositories.agent_repository_factory.AgentRepositoryFactory.create')
-    def test_create_agent_facade_with_exception(self, mock_create_repo, mock_get_default_user, factory):
+    def test_create_agent_facade_with_exception(self, mock_create_repo, factory):
         """Test creating facade when exception occurs (falls back to mock)"""
-        # Setup mocks
-        mock_get_default_user.return_value = "00000000-0000-0000-0000-000000000000"
+        # Setup mocks - make repository creation fail
         mock_create_repo.side_effect = Exception("Test error")
         
         # Create facade
-        with patch.object(factory.__class__.__module__ + '.logger', 'warning') as mock_logger:
+        with patch('fastmcp.task_management.application.factories.agent_facade_factory.logger') as mock_logger:
             result = factory.create_agent_facade(project_id="test-project")
             
             # Verify warning was logged
-            mock_logger.assert_called_once()
-            assert "Failed to create proper AgentApplicationFacade" in str(mock_logger.call_args)
+            mock_logger.warning.assert_called_once()
+            assert "Failed to create proper AgentApplicationFacade" in str(mock_logger.warning.call_args)
             
             # Verify mock facade is returned
             assert isinstance(result, MockAgentApplicationFacade)
@@ -203,9 +190,9 @@ class TestAgentFacadeFactory:
         # Call static method
         result = AgentFacadeFactory.create()
         
-        # Verify
+        # Verify - static method calls create_agent_facade with "default_project" and user_id=None
         mock_factory_class.assert_called_once_with()
-        mock_factory_instance.create_agent_facade.assert_called_once_with()
+        mock_factory_instance.create_agent_facade.assert_called_once_with("default_project", user_id=None)
         assert result == mock_facade
 
 

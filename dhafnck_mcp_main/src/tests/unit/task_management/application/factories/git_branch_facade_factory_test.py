@@ -163,8 +163,8 @@ class TestGitBranchFacadeFactory:
             # Create a facade
             created_facade = factory.create_git_branch_facade(project_id="test-project")
             
-            # Get cached facade
-            cached_facade = factory.get_cached_facade("test-project")
+            # Get cached facade with matching cache key (no user_id)
+            cached_facade = factory.get_cached_facade("test-project", user_id=None)
             
             # Should return the cached facade
             assert cached_facade is created_facade
@@ -200,7 +200,8 @@ class TestGitBranchFacadeFactory:
     def test_logging_messages(self, factory, caplog):
         """Test that appropriate log messages are generated."""
         import logging
-        caplog.set_level(logging.INFO)
+        # Set logging level for the specific logger
+        caplog.set_level(logging.DEBUG, logger="fastmcp.task_management.application.factories.git_branch_facade_factory")
         
         with patch('fastmcp.task_management.application.services.git_branch_service.GitBranchService'):
             # Create new facade

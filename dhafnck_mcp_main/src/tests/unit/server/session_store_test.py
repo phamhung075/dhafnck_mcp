@@ -506,8 +506,8 @@ class TestRedisEventStore:
         mock_redis_client.pipeline.return_value = mock_pipeline
         
         # Create mock JSONRPC message
-        from mcp.types import JSONRPCMessage
-        message = JSONRPCMessage(method="test", params={"data": "test"})
+        from mcp.types import JSONRPCNotification
+        message = JSONRPCNotification(jsonrpc="2.0", method="test", params={"data": "test"})
         
         # Store event
         event_id = await event_store.store_event("test-stream", message)
@@ -527,8 +527,8 @@ class TestRedisEventStore:
         mock_redis_client.pipeline.side_effect = Exception("Redis error")
         
         # Create mock message
-        from mcp.types import JSONRPCMessage
-        message = JSONRPCMessage(method="test", params={"data": "test"})
+        from mcp.types import JSONRPCNotification
+        message = JSONRPCNotification(jsonrpc="2.0", method="test", params={"data": "test"})
         
         # Store event
         event_id = await event_store.store_event("test-stream", message)
@@ -545,8 +545,8 @@ class TestRedisEventStore:
         event_store._using_fallback = True
         
         # Create mock message
-        from mcp.types import JSONRPCMessage
-        message = JSONRPCMessage(method="test", params={"data": "test"})
+        from mcp.types import JSONRPCNotification
+        message = JSONRPCNotification(jsonrpc="2.0", method="test", params={"data": "test"})
         
         # Store event
         event_id = await event_store.store_event("test-stream", message)
@@ -592,8 +592,8 @@ class TestRedisEventStore:
         event_store._using_fallback = True
         
         # Store an event in memory first
-        from mcp.types import JSONRPCMessage
-        message = JSONRPCMessage(method="test", params={"data": "test"})
+        from mcp.types import JSONRPCNotification
+        message = JSONRPCNotification(jsonrpc="2.0", method="test", params={"data": "test"})
         await event_store.store_event("test-stream", message)
         
         # Get events
@@ -735,8 +735,8 @@ class TestMemoryEventStore:
     @pytest.mark.asyncio
     async def test_store_event_memory(self, event_store):
         """Test event storage in memory"""
-        from mcp.types import JSONRPCMessage
-        message = JSONRPCMessage(method="test", params={"data": "test"})
+        from mcp.types import JSONRPCNotification
+        message = JSONRPCNotification(jsonrpc="2.0", method="test", params={"data": "test"})
         
         # Store event
         event_id = await event_store.store_event("test-stream", message)
@@ -748,8 +748,8 @@ class TestMemoryEventStore:
     @pytest.mark.asyncio
     async def test_get_events_memory(self, event_store):
         """Test getting events from memory"""
-        from mcp.types import JSONRPCMessage
-        message = JSONRPCMessage(method="test", params={"data": "test"})
+        from mcp.types import JSONRPCNotification
+        message = JSONRPCNotification(jsonrpc="2.0", method="test", params={"data": "test"})
         
         # Store event
         await event_store.store_event("test-stream", message)
@@ -763,8 +763,8 @@ class TestMemoryEventStore:
     @pytest.mark.asyncio
     async def test_delete_session_memory(self, event_store):
         """Test session deletion from memory"""
-        from mcp.types import JSONRPCMessage
-        message = JSONRPCMessage(method="test", params={"data": "test"})
+        from mcp.types import JSONRPCNotification
+        message = JSONRPCNotification(jsonrpc="2.0", method="test", params={"data": "test"})
         
         # Store events
         await event_store.store_event("session-123", message)
@@ -857,16 +857,16 @@ class TestEventStoreIntegration:
     @pytest.mark.asyncio
     async def test_full_session_lifecycle(self, memory_store):
         """Test complete session lifecycle"""
-        from mcp.types import JSONRPCMessage
+        from mcp.types import JSONRPCNotification
         
         session_id = "integration-session"
-        stream_id = "integration-stream"
+        stream_id = "integration-session:integration-stream"
         
         # Store multiple events
         messages = [
-            JSONRPCMessage(method="login", params={"user": "test"}),
-            JSONRPCMessage(method="action", params={"action": "click"}),
-            JSONRPCMessage(method="logout", params={"user": "test"})
+            JSONRPCNotification(jsonrpc="2.0", method="login", params={"user": "test"}),
+            JSONRPCNotification(jsonrpc="2.0", method="action", params={"action": "click"}),
+            JSONRPCNotification(jsonrpc="2.0", method="logout", params={"user": "test"})
         ]
         
         event_ids = []
@@ -875,7 +875,7 @@ class TestEventStoreIntegration:
             event_ids.append(event_id)
         
         # Retrieve events
-        events = await memory_store.get_events(session_id, stream_id, limit=10)
+        events = await memory_store.get_events(session_id, "integration-stream", limit=10)
         
         assert len(events) == 3
         assert events[0].event_data["message"]["method"] == "login"
@@ -897,7 +897,7 @@ class TestEventStoreIntegration:
     @pytest.mark.asyncio
     async def test_event_expiration_handling(self, memory_store):
         """Test event expiration and cleanup"""
-        from mcp.types import JSONRPCMessage
+        from mcp.types import JSONRPCNotification
         
         # Create events with different expiration times
         current_time = time.time()
@@ -905,7 +905,7 @@ class TestEventStoreIntegration:
         # Store event that will expire
         event_id1 = await memory_store.store_event(
             "expire-stream", 
-            JSONRPCMessage(method="expire", params={})
+            JSONRPCNotification(jsonrpc="2.0", method="expire", params={})
         )
         
         # Manually set expiration in the past
@@ -917,7 +917,7 @@ class TestEventStoreIntegration:
         # Store event that won't expire
         event_id2 = await memory_store.store_event(
             "active-stream",
-            JSONRPCMessage(method="active", params={})
+            JSONRPCNotification(jsonrpc="2.0", method="active", params={})
         )
         
         # Get events (should filter expired ones)
@@ -930,7 +930,7 @@ class TestEventStoreIntegration:
     @pytest.mark.asyncio
     async def test_max_events_per_session_limit(self, memory_store):
         """Test max events per session limit enforcement"""
-        from mcp.types import JSONRPCMessage
+        from mcp.types import JSONRPCNotification
         
         session_stream = "limit-test-stream"
         
@@ -938,7 +938,7 @@ class TestEventStoreIntegration:
         for i in range(15):
             await memory_store.store_event(
                 session_stream,
-                JSONRPCMessage(method="event", params={"index": i})
+                JSONRPCNotification(jsonrpc="2.0", method="event", params={"index": i})
             )
         
         # Should only keep the most recent 10 events
@@ -954,7 +954,7 @@ class TestEventStoreIntegration:
     @pytest.mark.asyncio
     async def test_concurrent_event_storage(self, memory_store):
         """Test concurrent event storage"""
-        from mcp.types import JSONRPCMessage
+        from mcp.types import JSONRPCNotification
         
         # Create multiple concurrent tasks
         async def store_events(stream_prefix, count):
@@ -962,7 +962,7 @@ class TestEventStoreIntegration:
             for i in range(count):
                 event_id = await memory_store.store_event(
                     f"{stream_prefix}-{i}",
-                    JSONRPCMessage(method="concurrent", params={"stream": stream_prefix, "index": i})
+                    JSONRPCNotification(jsonrpc="2.0", method="concurrent", params={"stream": stream_prefix, "index": i})
                 )
                 event_ids.append(event_id)
             return event_ids

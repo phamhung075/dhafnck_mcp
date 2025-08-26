@@ -62,7 +62,7 @@ class ContextHierarchyValidator:
             # The global_repo passed to this validator is already user-scoped if needed
             # So we can directly use it to check for global context existence
             # First try the standard singleton ID
-            global_context = self.global_repo.get("global_singleton")
+            global_context = self.global_repo.get(GLOBAL_SINGLETON_UUID)
             
             # If not found with singleton ID and we have a user_id, the user-scoped repo
             # will automatically handle the user filtering, so try listing contexts
@@ -109,6 +109,9 @@ class ContextHierarchyValidator:
     
     def _validate_branch_requirements(self, branch_id: str, data: Dict[str, Any]) -> Tuple[bool, Optional[str], Optional[Dict[str, Any]]]:
         """Validate branch context requirements."""
+        # Handle None data gracefully
+        if data is None:
+            data = {}
         # Branch needs project_id in data
         project_id = data.get("project_id") or data.get("parent_project_id")
         

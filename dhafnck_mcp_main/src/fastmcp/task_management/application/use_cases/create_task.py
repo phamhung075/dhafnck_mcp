@@ -87,10 +87,10 @@ class CreateTaskUseCase:
             
             # Update branch task count
             try:
-                from ...infrastructure.database.database_config import get_db_session
+                from ...infrastructure.database.database_config import get_session
                 from ...infrastructure.database.models import ProjectGitBranch
                 
-                with get_db_session() as session:
+                with get_session() as session:
                     branch = session.query(ProjectGitBranch).filter(
                         ProjectGitBranch.id == request.git_branch_id
                     ).first()

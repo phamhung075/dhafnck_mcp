@@ -51,8 +51,13 @@ class CreateGitBranchUseCase:
                     user_id = None
                 
                 if user_id is None:
-                    # NO FALLBACKS ALLOWED - user authentication is required
-                    raise UserAuthenticationRequiredError("Branch context creation")
+                    # Try fallback authentication through AuthConfig
+                    auth_config = AuthConfig()
+                    if auth_config.is_default_user_allowed():
+                        user_id = auth_config.get_fallback_user_id()
+                    else:
+                        # NO FALLBACKS ALLOWED - user authentication is required
+                        raise UserAuthenticationRequiredError("Branch context creation")
                 
                 user_id = validate_user_id(user_id, "Branch context creation")
                 

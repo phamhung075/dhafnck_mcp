@@ -34,6 +34,7 @@ class AgentProfile:
     consecutive_failures: int = 0
     last_escalation: Optional[datetime] = None
     compliance_history: List[bool] = field(default_factory=list)
+    manually_set_level: bool = False  # Track if level was manually set
     
     def should_escalate(self) -> bool:
         """Determine if agent should move to stricter enforcement"""
@@ -102,6 +103,7 @@ class AgentProfile:
         
         self.last_escalation = datetime.now(timezone.utc)
         self.consecutive_failures = 0  # Reset counter after escalation
+        self.manually_set_level = False  # Clear manual flag after automatic escalation
     
     def deescalate_level(self):
         """Move to less strict enforcement level"""
@@ -113,6 +115,7 @@ class AgentProfile:
             logger.info(f"Agent {self.agent_id} deescalated to SOFT level")
         
         self.consecutive_compliant = 0  # Reset counter after deescalation
+        self.manually_set_level = False  # Clear manual flag after automatic deescalation
 
 
 class ProgressiveEnforcementService:
@@ -160,18 +163,21 @@ class ProgressiveEnforcementService:
         # Get or create agent profile
         profile = self._get_or_create_profile(agent_id)
         
+        # Determine enforcement level for this operation
+        current_enforcement_level = profile.enforcement_level
+        
         # Check if agent is in learning phase
         if profile.operations_count < self.LEARNING_PHASE_OPERATIONS:
-            # More lenient during learning phase
-            if profile.enforcement_level == EnforcementLevel.STRICT:
-                profile.enforcement_level = EnforcementLevel.WARNING
+            # More lenient during learning phase - override even manually set STRICT levels
+            if current_enforcement_level == EnforcementLevel.STRICT:
+                current_enforcement_level = EnforcementLevel.WARNING
         
-        # Perform enforcement at agent's current level
+        # Perform enforcement at determined level
         result = self.enforcement_service.enforce(
             action=action,
             provided_params=provided_params,
             agent_id=agent_id,
-            enforcement_level=profile.enforcement_level
+            enforcement_level=current_enforcement_level
         )
         
         # Update agent profile based on result
@@ -255,6 +261,7 @@ class ProgressiveEnforcementService:
         profile = self._get_or_create_profile(agent_id)
         old_level = profile.enforcement_level
         profile.enforcement_level = level
+        profile.manually_set_level = True  # Mark as manually set
         logger.info(f"Manually changed agent {agent_id} from {old_level.value} to {level.value}")
     
     def get_enforcement_stats(self) -> Dict[str, any]:

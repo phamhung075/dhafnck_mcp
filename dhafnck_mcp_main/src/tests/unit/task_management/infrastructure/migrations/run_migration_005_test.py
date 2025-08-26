@@ -350,33 +350,42 @@ class TestMigration005Execution:
             conn.commit()
         
         # Simulate transaction with mixed success/failure
+        # In SQLite, DDL statements like ALTER TABLE are auto-committed even in transactions
+        # However, if an error occurs, the transaction context might affect this behavior
+        conn = None
         try:
-            with self.get_db_connection(temp_db) as conn:
-                # Start transaction
-                conn.execute("BEGIN TRANSACTION")
-                
-                # This should succeed
-                conn.execute("ALTER TABLE tasks ADD COLUMN user_id TEXT")
-                
-                # This should fail (table doesn't exist)
-                conn.execute("ALTER TABLE projects ADD COLUMN user_id TEXT")
-                
-                # This line won't be reached due to error
-                conn.execute("COMMIT")
+            conn = sqlite3.connect(str(temp_db))
+            conn.row_factory = sqlite3.Row
+            
+            # Start transaction
+            conn.execute("BEGIN TRANSACTION")
+            
+            # This should succeed and auto-commit in SQLite
+            conn.execute("ALTER TABLE tasks ADD COLUMN user_id TEXT")
+            
+            # This should fail (table doesn't exist) 
+            conn.execute("ALTER TABLE projects ADD COLUMN user_id TEXT")
+            
+            # This line won't be reached due to error
+            conn.execute("COMMIT")
                 
         except sqlite3.Error:
-            # Expected error, transaction should be rolled back
-            pass
+            # Expected error, but first ALTER should have auto-committed
+            if conn:
+                conn.rollback()  # Explicit rollback
+        finally:
+            if conn:
+                conn.close()
         
-        # Verify table was not modified due to rollback
+        # Verify table behavior - in SQLite, the first ALTER should have auto-committed
+        # but due to transaction rollback, the behavior might vary
         with self.get_db_connection(temp_db) as conn:
             cursor = conn.execute("PRAGMA table_info(tasks)")
             columns = {row['name']: row for row in cursor.fetchall()}
             
-            # user_id column should not exist due to rollback
-            # Note: In SQLite, DDL statements are auto-committed, 
-            # so this test demonstrates SQLite-specific behavior
-            assert 'user_id' in columns  # SQLite auto-commits DDL
+            # In most SQLite configurations, DDL in transactions can be rolled back
+            # So we expect the user_id column NOT to exist due to rollback
+            assert 'user_id' not in columns  # Transaction rollback should undo DDL
     
     def test_migration_005_version_tracking(self, temp_db, mock_migration_005):
         """Test migration version tracking and status"""

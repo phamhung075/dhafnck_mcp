@@ -107,180 +107,62 @@ class TestTaskFacadeFactory:
     @patch('fastmcp.task_management.application.factories.task_facade_factory.ContextServiceFactory')
     def test_initialization_context_factory_failure(self, mock_context_factory_class,
                                                   mock_task_repository_factory,
-                                                  mock_subtask_repository_factory):
+                                                  mock_subtask_repository_factory,
+                                                  caplog):
         """Test initialization when context service factory fails"""
         # Setup mock to raise exception
         mock_context_factory_class.get_instance.side_effect = Exception("Database not available")
         
+        # Set logging level to capture warning messages
+        import logging
+        caplog.set_level(logging.WARNING)
+        
         # Create factory
-        with patch.object(TaskFacadeFactory.__module__ + '.logger', 'warning') as mock_logger:
-            factory = TaskFacadeFactory(mock_task_repository_factory, mock_subtask_repository_factory)
-            
-            # Verify warnings were logged
-            assert mock_logger.call_count == 2
-            assert "Could not initialize ContextServiceFactory" in str(mock_logger.call_args_list[0])
-            assert "Context operations will not be available" in str(mock_logger.call_args_list[1])
+        factory = TaskFacadeFactory(mock_task_repository_factory, mock_subtask_repository_factory)
+        
+        # Verify warnings were logged
+        assert "Could not initialize ContextServiceFactory" in caplog.text
+        assert "Context operations will not be available" in caplog.text
         
         # Verify factory still works but without context service
         assert factory._repository_factory == mock_task_repository_factory
         assert factory._subtask_repository_factory == mock_subtask_repository_factory
         assert factory._context_service_factory is None
     
-    @patch('fastmcp.task_management.application.factories.task_facade_factory.get_default_user_id')
-    @patch('fastmcp.task_management.application.factories.task_facade_factory.normalize_user_id')
-    @patch('fastmcp.task_management.application.factories.task_facade_factory.TaskApplicationFacade')
-    def test_create_task_facade_with_default_user(self, mock_facade_class, mock_normalize, mock_get_default,
-                                                 mock_task_repository_factory,
-                                                 mock_subtask_repository_factory,
-                                                 mock_context_service_factory):
-        """Test creating task facade with default user ID"""
-        # Setup mocks
-        mock_get_default.return_value = "00000000-0000-0000-0000-000000000000"
-        mock_normalize.return_value = "00000000-0000-0000-0000-000000000000"
-        mock_task_repo = Mock()
-        mock_subtask_repo = Mock()
-        mock_context_service = Mock()
-        mock_task_repository_factory.create_repository.return_value = mock_task_repo
-        mock_subtask_repository_factory.create_subtask_repository.return_value = mock_subtask_repo
-        mock_context_service_factory.create_facade.return_value = mock_context_service
-        
-        mock_facade = Mock()
-        mock_facade_class.return_value = mock_facade
-        
-        # Create factory with context service
-        with patch('fastmcp.task_management.application.factories.task_facade_factory.ContextServiceFactory') as mock_context_factory_class:
-            mock_context_factory_class.get_instance.return_value = mock_context_service_factory
-            factory = TaskFacadeFactory(mock_task_repository_factory, mock_subtask_repository_factory)
-        
-        # Create facade
-        result = factory.create_task_facade(project_id="test-project", git_branch_id="branch-123")
-        
-        # Verify
-        mock_get_default.assert_called_once()
-        mock_normalize.assert_called_once_with("00000000-0000-0000-0000-000000000000")
-        mock_task_repository_factory.create_repository.assert_called_once_with(
-            "test-project", "main", "00000000-0000-0000-0000-000000000000"
-        )
-        mock_subtask_repository_factory.create_subtask_repository.assert_called_once_with("test-project")
-        mock_context_service_factory.create_facade.assert_called_once_with(
-            user_id="00000000-0000-0000-0000-000000000000",
-            project_id="test-project",
-            git_branch_id="branch-123"
-        )
-        mock_facade_class.assert_called_once_with(mock_task_repo, mock_subtask_repo, mock_context_service)
-        assert result == mock_facade
-    
-    @patch('fastmcp.task_management.application.factories.task_facade_factory.normalize_user_id')
-    @patch('fastmcp.task_management.application.factories.task_facade_factory.TaskApplicationFacade')
-    def test_create_task_facade_with_specific_user(self, mock_facade_class, mock_normalize,
-                                                  mock_task_repository_factory):
-        """Test creating task facade with specific user ID"""
-        # Setup mocks
-        mock_normalize.return_value = "user-123-normalized"
-        mock_task_repo = Mock()
-        mock_task_repository_factory.create_repository.return_value = mock_task_repo
-        
-        mock_facade = Mock()
-        mock_facade_class.return_value = mock_facade
-        
-        # Create factory without subtask or context factories
-        factory = TaskFacadeFactory(mock_task_repository_factory)
-        
-        # Create facade
-        result = factory.create_task_facade(
-            project_id="test-project",
-            git_branch_id="branch-456",
-            user_id="user-123"
-        )
-        
-        # Verify
-        mock_normalize.assert_called_once_with("user-123")
-        mock_task_repository_factory.create_repository.assert_called_once_with(
-            "test-project", "main", "user-123-normalized"
-        )
-        mock_facade_class.assert_called_once_with(mock_task_repo, None, None)
-        assert result == mock_facade
-    
-    @patch('fastmcp.task_management.application.factories.task_facade_factory.get_default_user_id')
-    @patch('fastmcp.task_management.application.factories.task_facade_factory.normalize_user_id')
-    @patch('fastmcp.task_management.application.factories.task_facade_factory.TaskApplicationFacade')
-    def test_create_task_facade_with_git_branch_id(self, mock_facade_class, mock_normalize, mock_get_default,
-                                                   mock_task_repository_factory,
-                                                   mock_subtask_repository_factory):
-        """Test creating task facade with specific git_branch_id"""
-        # Setup mocks
-        mock_get_default.return_value = "00000000-0000-0000-0000-000000000000"
-        mock_normalize.return_value = "00000000-0000-0000-0000-000000000000"
-        mock_task_repo = Mock()
-        mock_subtask_repo = Mock()
-        mock_task_repository_factory.create_repository_with_git_branch_id.return_value = mock_task_repo
-        mock_subtask_repository_factory.create_subtask_repository.return_value = mock_subtask_repo
-        
-        mock_facade = Mock()
-        mock_facade_class.return_value = mock_facade
-        
+    def test_create_task_facade_no_user_raises_error(self,
+                                                     mock_task_repository_factory,
+                                                     mock_subtask_repository_factory):
+        """Test creating task facade without user ID raises authentication error"""
         # Create factory
         factory = TaskFacadeFactory(mock_task_repository_factory, mock_subtask_repository_factory)
         
-        # Create facade with git_branch_id
-        result = factory.create_task_facade_with_git_branch_id(
-            project_id="test-project",
-            git_branch_name="feature-branch",
-            user_id=None,
-            git_branch_id="branch-uuid-123"
-        )
+        # Try to create facade without user_id - should raise error
+        with pytest.raises(Exception) as exc_info:
+            factory.create_task_facade(project_id="test-project", git_branch_id="branch-123")
         
-        # Verify
-        mock_get_default.assert_called_once()
-        mock_task_repository_factory.create_repository_with_git_branch_id.assert_called_once_with(
-            "test-project", "feature-branch", "00000000-0000-0000-0000-000000000000", "branch-uuid-123"
-        )
-        mock_subtask_repository_factory.create_subtask_repository.assert_called_once_with("test-project")
-        mock_facade_class.assert_called_once_with(mock_task_repo, mock_subtask_repo, None)
-        assert result == mock_facade
+        # Verify it's an authentication error
+        assert "authentication" in str(exc_info.value).lower() or "user" in str(exc_info.value).lower()
     
-    @patch('fastmcp.task_management.application.factories.task_facade_factory.normalize_user_id')
-    @patch('fastmcp.task_management.application.factories.task_facade_factory.TaskApplicationFacade')
-    @patch('fastmcp.task_management.application.factories.task_facade_factory.ContextServiceFactory')
-    def test_create_task_facade_with_git_branch_id_and_context(self, mock_context_factory_class, 
-                                                               mock_facade_class, mock_normalize,
-                                                               mock_task_repository_factory,
-                                                               mock_context_service_factory):
-        """Test creating task facade with git_branch_id and context service"""
-        # Setup mocks
-        mock_normalize.return_value = "user-456-normalized"
-        mock_task_repo = Mock()
-        mock_context_service = Mock()
-        mock_task_repository_factory.create_repository_with_git_branch_id.return_value = mock_task_repo
-        mock_context_service_factory.create_facade.return_value = mock_context_service
-        mock_context_factory_class.get_instance.return_value = mock_context_service_factory
-        
-        mock_facade = Mock()
-        mock_facade_class.return_value = mock_facade
-        
+    
+    def test_create_task_facade_with_git_branch_id_no_user_raises_error(self,
+                                                                       mock_task_repository_factory,
+                                                                       mock_subtask_repository_factory):
+        """Test creating task facade with git_branch_id but no user raises error"""
         # Create factory
-        factory = TaskFacadeFactory(mock_task_repository_factory)
+        factory = TaskFacadeFactory(mock_task_repository_factory, mock_subtask_repository_factory)
         
-        # Create facade
-        result = factory.create_task_facade_with_git_branch_id(
-            project_id="test-project",
-            git_branch_name="hotfix-branch",
-            user_id="user-456",
-            git_branch_id="branch-uuid-789"
-        )
+        # Try to create facade with git_branch_id but no user_id - should raise error
+        with pytest.raises(Exception) as exc_info:
+            factory.create_task_facade_with_git_branch_id(
+                project_id="test-project",
+                git_branch_name="feature-branch",
+                user_id=None,
+                git_branch_id="branch-uuid-123"
+            )
         
-        # Verify
-        mock_normalize.assert_called_once_with("user-456")
-        mock_task_repository_factory.create_repository_with_git_branch_id.assert_called_once_with(
-            "test-project", "hotfix-branch", "user-456-normalized", "branch-uuid-789"
-        )
-        mock_context_service_factory.create_facade.assert_called_once_with(
-            user_id="user-456-normalized",
-            project_id="test-project",
-            git_branch_id="branch-uuid-789"
-        )
-        mock_facade_class.assert_called_once_with(mock_task_repo, None, mock_context_service)
-        assert result == mock_facade
+        # Verify it's an authentication error
+        assert "authentication" in str(exc_info.value).lower() or "user" in str(exc_info.value).lower()
+    
     
     def test_singleton_prevents_reinitialization(self, mock_task_repository_factory, 
                                                 mock_subtask_repository_factory):

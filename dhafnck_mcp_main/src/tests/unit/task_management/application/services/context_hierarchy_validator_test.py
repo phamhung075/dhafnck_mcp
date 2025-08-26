@@ -89,7 +89,7 @@ class TestContextHierarchyValidator:
         
         # Assert
         assert is_valid is False
-        assert "Global context not found" in error_message
+        assert "Global context is required" in error_message
         assert guidance is not None
         assert guidance["error"] == "Cannot create project context without global context"
         assert "step_by_step" in guidance

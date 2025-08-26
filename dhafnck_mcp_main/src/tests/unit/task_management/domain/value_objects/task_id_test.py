@@ -179,10 +179,11 @@ class TestTaskId:
         subtask = TaskId.generate_subtask(parent_id, existing_ids)
         assert subtask.value == "550e8400-e29b-41d4-a716-446655440000.002"
         
-        # Malformed subtask IDs should be skipped
-        existing_ids_malformed = [
-            TaskId("550e8400-e29b-41d4-a716-446655440000.abc"),  # Non-numeric suffix
-            TaskId("550e8400-e29b-41d4-a716-446655440000."),     # Empty suffix
+        # Test with non-sequential subtask numbers
+        existing_ids_non_sequential = [
+            TaskId("550e8400-e29b-41d4-a716-446655440000.001"),
+            TaskId("550e8400-e29b-41d4-a716-446655440000.005"),  # Gap in sequence
+            TaskId("550e8400-e29b-41d4-a716-446655440000.003"),
         ]
-        subtask = TaskId.generate_subtask(parent_id, existing_ids_malformed)
-        assert subtask.value == "550e8400-e29b-41d4-a716-446655440000.001"
+        subtask = TaskId.generate_subtask(parent_id, existing_ids_non_sequential)
+        assert subtask.value == "550e8400-e29b-41d4-a716-446655440000.006"  # Should use max + 1

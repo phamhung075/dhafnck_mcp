@@ -34,7 +34,7 @@ class TestDependencyResolverService:
         task = Mock(spec=Task)
         task.id = TaskId("task-1")
         task.title = "Test Task"
-        task.status = TaskStatus.TODO
+        task.status = TaskStatus(TaskStatus.TODO)
         task.priority = Priority.medium()
         task.overall_progress = 0
         task.estimated_effort = "2 hours"
@@ -113,7 +113,7 @@ class TestDependencyResolverService:
         dep1 = Mock(spec=Task)
         dep1.id = TaskId("dep-1")
         dep1.title = "Dependency 1"
-        dep1.status = TaskStatus.DONE
+        dep1.status = TaskStatus(TaskStatus.DONE)
         dep1.priority = Priority.high()
         dep1.overall_progress = 100
         dep1.estimated_effort = "1 hour"
@@ -124,7 +124,7 @@ class TestDependencyResolverService:
         dep2 = Mock(spec=Task)
         dep2.id = TaskId("dep-2")
         dep2.title = "Dependency 2"
-        dep2.status = TaskStatus.IN_PROGRESS
+        dep2.status = TaskStatus(TaskStatus.IN_PROGRESS)
         dep2.priority = Priority.medium()
         dep2.overall_progress = 50
         dep2.estimated_effort = "3 hours"
@@ -167,7 +167,7 @@ class TestDependencyResolverService:
         blocked_task = Mock(spec=Task)
         blocked_task.id = TaskId("blocked-1")
         blocked_task.title = "Blocked Task"
-        blocked_task.status = TaskStatus.TODO
+        blocked_task.status = TaskStatus(TaskStatus.TODO)
         blocked_task.priority = Priority.high()
         blocked_task.overall_progress = 0
         blocked_task.estimated_effort = "4 hours"
@@ -371,7 +371,7 @@ class TestDependencyResolverService:
         task1 = Mock(spec=Task)
         task1.id = TaskId("task-1")
         task1.title = "Main Task"
-        task1.status = TaskStatus.TODO
+        task1.status = TaskStatus(TaskStatus.TODO)
         task1.priority = Priority.high()
         task1.overall_progress = 0
         task1.estimated_effort = "2 hours"
@@ -382,7 +382,7 @@ class TestDependencyResolverService:
         dep1 = Mock(spec=Task)
         dep1.id = TaskId("dep-1")
         dep1.title = "Dependency 1"
-        dep1.status = TaskStatus.DONE
+        dep1.status = TaskStatus(TaskStatus.DONE)
         dep1.priority = Priority.medium()
         dep1.overall_progress = 100
         dep1.estimated_effort = "1 hour"
@@ -417,7 +417,7 @@ class TestDependencyResolverService:
         task1 = Mock(spec=Task)
         task1.id = TaskId("task-1")
         task1.title = "Main Task"
-        task1.status = TaskStatus.TODO
+        task1.status = TaskStatus(TaskStatus.TODO)
         task1.priority = Priority.high()
         task1.overall_progress = 0
         task1.estimated_effort = "2 hours"
@@ -428,7 +428,7 @@ class TestDependencyResolverService:
         blocked_task = Mock(spec=Task)
         blocked_task.id = TaskId("blocked-1")
         blocked_task.title = "Blocked Task"
-        blocked_task.status = TaskStatus.TODO
+        blocked_task.status = TaskStatus(TaskStatus.TODO)
         blocked_task.priority = Priority.medium()
         blocked_task.overall_progress = 0
         blocked_task.estimated_effort = "3 hours"

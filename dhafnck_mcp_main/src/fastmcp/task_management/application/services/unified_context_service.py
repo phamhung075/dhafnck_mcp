@@ -320,6 +320,13 @@ class UnifiedContextService:
     ) -> Dict[str, Any]:
         """Get context with optional inheritance resolution."""
         try:
+            # Validate context_id is not None or empty
+            if not context_id:
+                return {
+                    "success": False,
+                    "error": "Context ID is required"
+                }
+            
             # Normalize context_id for backward compatibility
             context_id = self._normalize_context_id(level, context_id)
             

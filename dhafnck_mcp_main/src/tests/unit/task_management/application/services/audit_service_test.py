@@ -57,25 +57,6 @@ class TestAuditService:
         assert result == mock_user_scoped_repo
         mock_repo.with_user.assert_called_once_with("test_user")
 
-    def test_get_user_scoped_repository_with_user_id_property(self):
-        """Test _get_user_scoped_repository with repository that has user_id property."""
-        service = AuditService(user_id="test_user")
-        mock_repo = Mock()
-        mock_repo.user_id = "different_user"
-        mock_repo.session = Mock()
-        
-        # Mock the repository class constructor
-        with patch('type') as mock_type:
-            mock_repo_class = Mock()
-            mock_type.return_value = mock_repo_class
-            mock_new_repo = Mock()
-            mock_repo_class.return_value = mock_new_repo
-            
-            result = service._get_user_scoped_repository(mock_repo)
-            
-            # Should create new instance with correct user_id
-            mock_repo_class.assert_called_once_with(mock_repo.session, user_id="test_user")
-            assert result == mock_new_repo
 
     def test_get_user_scoped_repository_no_user_context(self):
         """Test _get_user_scoped_repository returns original repo when no user context."""
@@ -340,15 +321,15 @@ class TestAuditServiceReporting:
         """Test recommendations generation for poor compliance."""
         service = AuditService()
         
-        # Add non-compliant operations
-        for i in range(10):
+        # Add non-compliant operations (>10 to trigger high violations warning)
+        for i in range(11):
             service.log_operation(f"op_{i}", {"success": False, "compliance_score": 50}, ComplianceLevel.HIGH)
         
         recommendations = service._generate_recommendations()
         
         assert any("compliance below target" in rec for rec in recommendations)
-        assert any("High number of violations" in rec for rec in recommendations)
-        assert any("Frequent failures" in rec for rec in recommendations)
+        assert any("High number of violations detected" in rec for rec in recommendations)
+        assert any("Frequent failures detected" in rec for rec in recommendations)
 
 
 class TestAuditServiceManagement:

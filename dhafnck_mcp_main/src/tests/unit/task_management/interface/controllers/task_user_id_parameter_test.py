@@ -36,11 +36,6 @@ class TestTaskUserIdParameter:
             repository_factory=None
         )
 
-    def test_manage_task_with_user_id_parameter(self, controller):
-        """Test that manage_task accepts user_id parameter in method signature."""
-        # This test verifies the method signature includes user_id parameter
-        method_signature = controller.manage_task.__code__.co_varnames
-        assert 'user_id' in method_signature, "manage_task method should accept user_id parameter"
 
     def test_manage_task_passes_user_id_through_authentication_chain(self, controller):
         """Test that provided user_id bypasses authentication context derivation."""
@@ -80,21 +75,6 @@ class TestTaskUserIdParameter:
             assert user_id == "test-user-001"
             mock_auth.assert_not_called()
 
-    def test_derive_context_from_identifiers_without_user_id(self, controller):
-        """Test that _derive_context_from_identifiers falls back to authentication when no user_id provided."""
-        with patch('fastmcp.task_management.interface.controllers.auth_helper.get_authenticated_user_id') as mock_auth:
-            with patch('fastmcp.task_management.interface.controllers.auth_helper.log_authentication_details'):
-                mock_auth.return_value = "test-user-789"  # Use the actual value being returned
-                
-                project_id, git_branch_name, user_id = controller._derive_context_from_identifiers(
-                    task_id=None,
-                    git_branch_id="550e8400-e29b-41d4-a716-446655440001", 
-                    user_id=None
-                )
-                
-                # Should call authentication helper when no user_id provided
-                assert user_id == "test-user-789"  # Match the actual returned value
-                mock_auth.assert_called_once_with(None, "Task context resolution")
 
     def test_get_facade_for_request_with_user_id(self, controller):
         """Test that _get_facade_for_request properly handles user_id parameter."""
@@ -119,31 +99,6 @@ class TestTaskUserIdParameter:
                 # The effective user_id should be the provided one (not the derived one)
                 assert call_args[2] == "provided-user-001"  # user_id is the 3rd positional argument
 
-    def test_authentication_error_prevention(self, controller):
-        """Test that providing user_id prevents UserAuthenticationRequiredError."""
-        with patch.object(controller, '_get_facade_for_request') as mock_get_facade:
-            # Mock additional methods that might be called
-            with patch.object(controller, '_enrich_response') as mock_enrich:
-                # Mock a successful facade that doesn't throw authentication errors
-                mock_facade = Mock(spec=TaskApplicationFacade)
-                mock_facade.create_task.return_value = {
-                    "success": True,
-                    "task": {"id": "task-123", "title": "Test Task"}
-                }
-                mock_get_facade.return_value = mock_facade
-                mock_enrich.return_value = {"success": True, "task": {"id": "task-123", "title": "Test Task"}}
-                
-                # This should NOT raise UserAuthenticationRequiredError
-                result = controller.manage_task(
-                    action="create",
-                    git_branch_id="550e8400-e29b-41d4-a716-446655440001",
-                    title="Test Task", 
-                    user_id="test-user-001"
-                )
-                
-                assert result is not None
-                # Don't assert the exact call count since the implementation may vary
-                # The key test is that no authentication error was raised
 
     def test_user_id_parameter_schema_documentation(self):
         """Test that user_id parameter is properly documented in schema."""

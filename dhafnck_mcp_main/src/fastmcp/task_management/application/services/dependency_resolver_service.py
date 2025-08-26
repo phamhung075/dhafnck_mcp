@@ -97,9 +97,12 @@ class DependencyResolverService:
                 blocking_reasons=blocking_reasons
             )
             
+        except TaskNotFoundError:
+            # Re-raise TaskNotFoundError to caller
+            raise
         except Exception as e:
             logger.error(f"Error resolving dependencies for task {task_id}: {e}")
-            # Return empty relationships on error
+            # Return empty relationships on other errors
             return DependencyRelationships(
                 task_id=task_id,
                 depends_on=[],

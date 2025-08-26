@@ -109,14 +109,14 @@ class TestListTasksUseCase:
             "status": "todo"
         }
         
-        # Verify repository was called with status filter as TaskStatus enum
-        mock_task_repository.find_by_criteria.assert_called_once_with(
-            {
-                "git_branch_id": "branch-123",
-                "status": TaskStatus.TODO
-            }, 
-            limit=None
-        )
+        # Verify repository was called with status filter as TaskStatus instance
+        call_args, call_kwargs = mock_task_repository.find_by_criteria.call_args
+        filter_dict = call_args[0]
+        
+        assert filter_dict["git_branch_id"] == "branch-123" 
+        assert isinstance(filter_dict["status"], TaskStatus)
+        assert filter_dict["status"].value == "todo"
+        assert call_kwargs["limit"] is None
     
     def test_list_tasks_with_priority_filter(self, use_case, mock_task_repository, sample_task):
         """Test listing tasks with priority filter"""
@@ -259,17 +259,18 @@ class TestListTasksUseCase:
             "limit": 5
         }
         
-        # Verify repository was called with all filters
-        mock_task_repository.find_by_criteria.assert_called_once_with(
-            {
-                "git_branch_id": "branch-123",
-                "status": TaskStatus.TODO,
-                "priority": Priority.high(),
-                "assignees": ["user-1"],
-                "labels": ["bug"]
-            }, 
-            limit=5
-        )
+        # Verify repository was called with all filters converted to value objects
+        call_args, call_kwargs = mock_task_repository.find_by_criteria.call_args
+        filter_dict = call_args[0]
+        
+        assert filter_dict["git_branch_id"] == "branch-123"
+        assert isinstance(filter_dict["status"], TaskStatus)
+        assert filter_dict["status"].value == "todo"
+        assert isinstance(filter_dict["priority"], Priority)
+        assert filter_dict["priority"].value == "high"
+        assert filter_dict["assignees"] == ["user-1"]
+        assert filter_dict["labels"] == ["bug"]
+        assert call_kwargs["limit"] == 5
     
     def test_list_tasks_empty_result(self, use_case, mock_task_repository):
         """Test listing tasks when no tasks match filters"""

@@ -493,8 +493,9 @@ class TestUnifiedContextFacade:
         call_args = mock_service.list_contexts.call_args
         filters = call_args[0][1]
         assert "user_id" in filters
-        assert "project_id" in filters
-        assert "git_branch_id" in filters
+        # When listing projects, we don't filter by project_id or git_branch_id
+        assert "project_id" not in filters
+        assert "git_branch_id" not in filters
     
     def test_list_contexts_minimal_scope(self, minimal_facade, mock_service):
         """Test list_contexts with minimal facade scope"""

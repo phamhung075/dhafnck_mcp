@@ -34,6 +34,7 @@ class TestTaskMCPController:
         self.mock_facade_factory = Mock(spec=TaskFacadeFactory)
         self.mock_facade = Mock(spec=TaskApplicationFacade)
         self.mock_facade_factory.create_task_facade.return_value = self.mock_facade
+        self.mock_facade_factory.create_task_facade_with_git_branch_id.return_value = self.mock_facade
         
         self.controller = TaskMCPController(self.mock_facade_factory)
     
@@ -90,9 +91,8 @@ class TestTaskMCPController:
                 
                 assert result == self.mock_facade
                 mock_validate.assert_called_once_with("jwt-user-123", "Task facade creation")
-                self.mock_facade_factory.create_task_facade.assert_called_once_with(
-                    git_branch_id=git_branch_id,
-                    user_id="jwt-user-123"
+                self.mock_facade_factory.create_task_facade_with_git_branch_id.assert_called_once_with(
+                    "test-project-id", "feature/test-branch", "jwt-user-123", git_branch_id
                 )
     
     @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_authenticated_user_id')
@@ -173,15 +173,17 @@ class TestTaskMCPController:
         """Test manage_task with unknown action."""
         mock_get_user_id.return_value = "test-user-123"
         
-        result = self.controller.manage_task(
-            action="invalid_action",
-            git_branch_id="550e8400-e29b-41d4-a716-446655440000"
-        )
-        
-        assert result["success"] is False
-        assert result["error"] == "Unknown action: invalid_action"
-        assert result["error_code"] == "UNKNOWN_ACTION"
-        assert "valid_actions" in result
+        with patch.object(self.controller, '_get_facade_for_request') as mock_get_facade:
+            mock_get_facade.return_value = self.mock_facade
+            
+            result = self.controller.manage_task(
+                action="invalid_action",
+                git_branch_id="550e8400-e29b-41d4-a716-446655440000"
+            )
+            
+            assert result["success"] is False
+            assert result["error"] == "Unknown action: invalid_action"
+            assert result["error_code"] == "UNKNOWN_ACTION"
     
     def test_handle_crud_operations_create_success(self):
         """Test handling create operation successfully."""
@@ -194,23 +196,41 @@ class TestTaskMCPController:
             mock_get_facade.return_value = self.mock_facade
             
             result = self.controller.handle_crud_operations(
-                "create", "550e8400-e29b-41d4-a716-446655440000", None, "Test task", "Test description",
-                None, "medium", None, None, None, None, None, None, None
+                facade=self.mock_facade,
+                action="create",
+                git_branch_id="550e8400-e29b-41d4-a716-446655440000",
+                task_id=None,
+                title="Test task",
+                description="Test description",
+                status=None,
+                priority="medium",
+                details=None,
+                estimated_effort=None,
+                assignees=None,
+                labels=None,
+                due_date=None,
+                context_id=None
             )
             
+            # For non-validation operations, controller returns facade response directly
             assert result["success"] is True
-            assert result["task"]["id"] == "550e8400-e29b-41d4-a716-446655440001"
+            assert result["data"]["task"]["id"] == "550e8400-e29b-41d4-a716-446655440001"
             self.mock_facade.create_task.assert_called_once()
     
     def test_handle_crud_operations_create_missing_title(self):
         """Test create operation with missing title."""
         result = self.controller.handle_crud_operations(
-            "create", "550e8400-e29b-41d4-a716-446655440000", None, None, "Test description"
+            facade=self.mock_facade,
+            action="create",
+            git_branch_id="550e8400-e29b-41d4-a716-446655440000",
+            task_id=None,
+            title=None,
+            description="Test description"
         )
         
-        assert result["success"] is False
-        assert result["error"] == "Missing required field: title"
-        assert result["error_code"] == "MISSING_FIELD"
+        assert result["status"] == "failure"
+        assert result["error"]["message"] == "Validation failed for field: title"
+        assert result["error"]["code"] == "VALIDATION_ERROR"
     
     def test_handle_crud_operations_get_success(self):
         """Test handling get operation successfully."""
@@ -223,21 +243,30 @@ class TestTaskMCPController:
             mock_get_facade.return_value = self.mock_facade
             
             result = self.controller.handle_crud_operations(
-                "get", "550e8400-e29b-41d4-a716-446655440000", "550e8400-e29b-41d4-a716-446655440002"
+                facade=self.mock_facade,
+                action="get",
+                git_branch_id="550e8400-e29b-41d4-a716-446655440000",
+                task_id="550e8400-e29b-41d4-a716-446655440002"
             )
             
+            # For non-validation operations, controller returns facade response directly
             assert result["success"] is True
             assert result["task"]["id"] == "550e8400-e29b-41d4-a716-446655440001"
-            self.mock_facade.get_task.assert_called_once_with("550e8400-e29b-41d4-a716-446655440002", True)
+            # The controller calls get_task with include_context parameter
+            self.mock_facade.get_task.assert_called_with("550e8400-e29b-41d4-a716-446655440002", include_context=True)
     
     def test_handle_crud_operations_get_missing_task_id(self):
         """Test get operation with missing task_id."""
         result = self.controller.handle_crud_operations(
-            "get", "550e8400-e29b-41d4-a716-446655440000", None
+            facade=self.mock_facade,
+            action="get",
+            git_branch_id="550e8400-e29b-41d4-a716-446655440000",
+            task_id=None
         )
         
+        # This validation uses old simple error format, not StandardResponseFormatter
         assert result["success"] is False
-        assert result["error"] == "Missing required field: task_id"
+        assert result["error"] == "task_id is required for get"
         assert result["error_code"] == "MISSING_FIELD"
     
     def test_handle_crud_operations_list_success(self):
@@ -267,10 +296,23 @@ class TestTaskMCPController:
             mock_get_facade.return_value = self.mock_facade
             
             result = self.controller.handle_crud_operations(
-                "update", "550e8400-e29b-41d4-a716-446655440000", "550e8400-e29b-41d4-a716-446655440002", "New title", "New description",
-                "in_progress", "high", "Details", None, None, None, None, "context-123"
+                facade=self.mock_facade,
+                action="update",
+                git_branch_id="550e8400-e29b-41d4-a716-446655440000",
+                task_id="550e8400-e29b-41d4-a716-446655440002",
+                title="New title",
+                description="New description",
+                status="in_progress",
+                priority="high",
+                details="Details",
+                estimated_effort=None,
+                assignees=None,
+                labels=None,
+                due_date=None,
+                context_id="context-123"
             )
             
+            # For non-validation operations, controller returns facade response directly
             assert result["success"] is True
             self.mock_facade.update_task.assert_called_once()
     
@@ -278,23 +320,21 @@ class TestTaskMCPController:
         """Test handling complete operation successfully."""
         self.mock_facade.complete_task.return_value = {"success": True}
         
-        with patch.object(self.controller, '_get_facade_for_request') as mock_get_facade:
-            mock_get_facade.return_value = self.mock_facade
-            
-            result = self.controller.handle_crud_operations(
-                action="complete",
-                git_branch_id="550e8400-e29b-41d4-a716-446655440000",
-                task_id="550e8400-e29b-41d4-a716-446655440002",
-                completion_summary="Task completed successfully",
-                testing_notes="All tests passed"
-            )
-            
-            assert result["success"] is True
-            self.mock_facade.complete_task.assert_called_once_with(
-                task_id="550e8400-e29b-41d4-a716-446655440002", 
-                completion_summary="Task completed successfully", 
-                testing_notes="All tests passed"
-            )
+        result = self.controller.handle_crud_operations(
+            facade=self.mock_facade,
+            action="complete",
+            git_branch_id="550e8400-e29b-41d4-a716-446655440000",
+            task_id="550e8400-e29b-41d4-a716-446655440002",
+            completion_summary="Task completed successfully",
+            testing_notes="All tests passed"
+        )
+        
+        assert result["success"] is True
+        self.mock_facade.complete_task.assert_called_once_with(
+            task_id="550e8400-e29b-41d4-a716-446655440002", 
+            completion_summary="Task completed successfully", 
+            testing_notes="All tests passed"
+        )
     
     def test_handle_crud_operations_delete_success(self):
         """Test handling delete operation successfully."""
@@ -304,9 +344,13 @@ class TestTaskMCPController:
             mock_get_facade.return_value = self.mock_facade
             
             result = self.controller.handle_crud_operations(
-                "delete", "550e8400-e29b-41d4-a716-446655440000", "550e8400-e29b-41d4-a716-446655440002"
+                facade=self.mock_facade,
+                action="delete",
+                git_branch_id="550e8400-e29b-41d4-a716-446655440000",
+                task_id="550e8400-e29b-41d4-a716-446655440002"
             )
             
+            # For non-validation operations, controller returns facade response directly
             assert result["success"] is True
             self.mock_facade.delete_task.assert_called_once_with("550e8400-e29b-41d4-a716-446655440002")
     
@@ -316,9 +360,15 @@ class TestTaskMCPController:
             mock_get_facade.side_effect = Exception("Test exception")
             
             result = self.controller.handle_crud_operations(
-                "create", "550e8400-e29b-41d4-a716-446655440000", None, "Test task", "description"
+                facade=self.mock_facade,
+                action="create",
+                git_branch_id="550e8400-e29b-41d4-a716-446655440000",
+                task_id=None,
+                title="Test task",
+                description="description"
             )
             
+            # Exception handling uses old simple error format, not StandardResponseFormatter
             assert result["success"] is False
             assert "could not be completed" in result["error"]
             assert result["error_code"] == "INTERNAL_ERROR"
@@ -342,7 +392,12 @@ class TestTaskMCPController:
             
             assert result["success"] is True
             assert len(result["tasks"]) == 1
-            self.mock_facade.search_tasks.assert_called_once_with("test query", 10)
+            # Verify facade call - now uses DTO pattern
+            self.mock_facade.search_tasks.assert_called_once()
+            call_args = self.mock_facade.search_tasks.call_args[0]
+            assert call_args[0].query == "test query"
+            assert call_args[0].limit == 10
+            assert call_args[0].git_branch_id == "550e8400-e29b-41d4-a716-446655440000"
     
     def test_handle_search_operations_missing_query(self):
         """Test search operation with missing query."""
@@ -432,10 +487,17 @@ class TestTaskMCPController:
     
     def test_handle_dependency_operations_missing_dependency_id(self):
         """Test dependency operation with missing dependency_id."""
-        result = self.controller.handle_dependency_operations(
-            "add_dependency", "550e8400-e29b-41d4-a716-446655440000", "550e8400-e29b-41d4-a716-446655440001", None
-        )
-        
+        with patch.object(self.controller, '_get_facade_for_request') as mock_get_facade:
+            mock_get_facade.return_value = self.mock_facade
+            
+            result = self.controller.handle_dependency_operations(
+                "add_dependency", "550e8400-e29b-41d4-a716-446655440000", "550e8400-e29b-41d4-a716-446655440001", None
+            )
+            
+            # Facade will be called because task_id validation passes, but dependency_id validation happens after facade creation
+            mock_get_facade.assert_called_once()
+            
+        # Updated to match actual implementation error format
         assert result["success"] is False
         assert result["error"] == "Missing required field: dependency_id"
         assert result["error_code"] == "MISSING_FIELD"

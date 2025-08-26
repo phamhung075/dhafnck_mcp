@@ -204,7 +204,7 @@ class TestAgentMCPController:
     def test_handle_crud_operations_register_missing_name(self):
         """Test register operation with missing name."""
         result = self.controller.handle_crud_operations(
-            "register", "test-project", "agent-123", None, None
+            "register", "test-project", "agent-123", None, None, user_id="test-user"
         )
         
         assert result["success"] is False
@@ -235,7 +235,7 @@ class TestAgentMCPController:
     def test_handle_crud_operations_get_missing_agent_id(self):
         """Test get operation with missing agent_id."""
         result = self.controller.handle_crud_operations(
-            "get", "test-project", None
+            "get", "test-project", None, user_id="test-user"
         )
         
         assert result["success"] is False
@@ -296,7 +296,7 @@ class TestAgentMCPController:
     def test_handle_assignment_operations_missing_agent_id(self):
         """Test assignment operation with missing agent_id."""
         result = self.controller.handle_assignment_operations(
-            "assign", "test-project", None, "branch-456"
+            "assign", "test-project", None, "branch-456", user_id="test-user"
         )
         
         assert result["success"] is False
@@ -306,7 +306,7 @@ class TestAgentMCPController:
     def test_handle_assignment_operations_missing_git_branch_id(self):
         """Test assignment operation with missing git_branch_id."""
         result = self.controller.handle_assignment_operations(
-            "assign", "test-project", "agent-123", None
+            "assign", "test-project", "agent-123", None, user_id="test-user"
         )
         
         assert result["success"] is False

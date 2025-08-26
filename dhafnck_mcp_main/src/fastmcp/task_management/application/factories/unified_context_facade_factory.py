@@ -155,8 +155,8 @@ class UnifiedContextFacadeFactory:
         Returns:
             UnifiedContextFacade instance configured with the provided scope
         """
-        # CRITICAL FIX: Create user-scoped repositories if user_id is provided
-        if user_id:
+        # Check if we have real repositories or are using mock service
+        if user_id and hasattr(self, 'global_repo'):
             # Create new user-scoped repositories for this specific user
             user_global_repo = self.global_repo.with_user(user_id)
             user_project_repo = self.project_repo.with_user(user_id) 

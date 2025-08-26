@@ -371,13 +371,15 @@ def create_sse_app(
     except ImportError as e:
         logger.warning(f"Could not import MCP registration routes for SSE server: {e}")
     
+    # Import Mount outside try block to avoid UnboundLocalError
+    from starlette.routing import Mount
+    
     # Add user-scoped V2 routes using the same pattern as Supabase auth
     try:
+        from fastapi import FastAPI
         from .routes.user_scoped_project_routes import router as project_router
         from .routes.user_scoped_task_routes import router as task_router
         from .routes.task_summary_routes import task_summary_router
-        from fastapi import FastAPI
-        from starlette.routing import Mount
         
         # Create a minimal FastAPI app for V2 routes
         v2_app = FastAPI()

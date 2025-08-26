@@ -8,7 +8,7 @@ from typing import Dict, Any
 
 from fastmcp.task_management.application.facades.dependency_application_facade import DependencyApplicationFacade
 from fastmcp.task_management.application.dtos.dependency.add_dependency_request import AddDependencyRequest
-from fastmcp.task_management.application.services.task_application_service import TaskApplicationService
+from fastmcp.task_management.application.services.dependencie_application_service import DependencieApplicationService
 from fastmcp.task_management.domain.repositories.task_repository import TaskRepository
 from fastmcp.task_management.domain.exceptions import TaskNotFoundError
 
@@ -31,9 +31,9 @@ class TestDependencyApplicationFacade:
         return Mock(spec=TaskRepository)
     
     @pytest.fixture
-    def mock_task_app_service(self):
-        """Mock task application service"""
-        return Mock(spec=TaskApplicationService)
+    def mock_dependency_app_service(self):
+        """Mock dependency application service"""
+        return Mock(spec=DependencieApplicationService)
     
     @pytest.fixture
     def facade(self, mock_task_repository):
@@ -41,10 +41,10 @@ class TestDependencyApplicationFacade:
         return DependencyApplicationFacade(task_repository=mock_task_repository)
     
     @pytest.fixture
-    def facade_with_mocked_service(self, mock_task_repository, mock_task_app_service):
+    def facade_with_mocked_service(self, mock_task_repository, mock_dependency_app_service):
         """Create facade with mocked service"""
         facade = DependencyApplicationFacade(task_repository=mock_task_repository)
-        facade._task_app_service = mock_task_app_service
+        facade._dependency_app_service = mock_dependency_app_service
         return facade
     
     def test_facade_initialization(self, mock_task_repository):
@@ -52,9 +52,9 @@ class TestDependencyApplicationFacade:
         facade = DependencyApplicationFacade(task_repository=mock_task_repository)
         
         assert facade._task_repository == mock_task_repository
-        assert isinstance(facade._task_app_service, TaskApplicationService)
+        assert isinstance(facade._dependency_app_service, DependencieApplicationService)
     
-    def test_add_dependency_success(self, facade_with_mocked_service, mock_task_app_service):
+    def test_add_dependency_success(self, facade_with_mocked_service, mock_dependency_app_service):
         """Test successful dependency addition"""
         mock_response = MockDependencyResponse(
             success=True,
@@ -62,7 +62,7 @@ class TestDependencyApplicationFacade:
             dependencies=["dep-456"],
             message="Dependency added successfully"
         )
-        mock_task_app_service.add_dependency.return_value = mock_response
+        mock_dependency_app_service.add_dependency.return_value = mock_response
         
         result = facade_with_mocked_service.manage_dependencies(
             action="add_dependency",
@@ -77,11 +77,11 @@ class TestDependencyApplicationFacade:
         assert result["message"] == "Dependency added successfully"
         
         # Verify service was called correctly
-        mock_task_app_service.add_dependency.assert_called_once()
-        call_args = mock_task_app_service.add_dependency.call_args[0][0]
+        mock_dependency_app_service.add_dependency.assert_called_once()
+        call_args = mock_dependency_app_service.add_dependency.call_args[0][0]
         assert isinstance(call_args, AddDependencyRequest)
         assert call_args.task_id == "task-123"
-        assert call_args.dependency_id == "dep-456"
+        assert call_args.depends_on_task_id == "dep-456"
     
     def test_add_dependency_missing_task_id(self, facade_with_mocked_service):
         """Test add_dependency with missing task_id"""
@@ -116,7 +116,7 @@ class TestDependencyApplicationFacade:
         assert result["success"] is False
         assert "dependency_data with dependency_id is required" in result["error"]
     
-    def test_remove_dependency_success(self, facade_with_mocked_service, mock_task_app_service):
+    def test_remove_dependency_success(self, facade_with_mocked_service, mock_dependency_app_service):
         """Test successful dependency removal"""
         mock_response = MockDependencyResponse(
             success=True,
@@ -124,7 +124,7 @@ class TestDependencyApplicationFacade:
             dependencies=[],
             message="Dependency removed successfully"
         )
-        mock_task_app_service.remove_dependency.return_value = mock_response
+        mock_dependency_app_service.remove_dependency.return_value = mock_response
         
         result = facade_with_mocked_service.manage_dependencies(
             action="remove_dependency",
@@ -138,7 +138,7 @@ class TestDependencyApplicationFacade:
         assert result["dependencies"] == []
         assert result["message"] == "Dependency removed successfully"
         
-        mock_task_app_service.remove_dependency.assert_called_once_with("task-123", "dep-456")
+        mock_dependency_app_service.remove_dependency.assert_called_once_with("task-123", "dep-456")
     
     def test_remove_dependency_missing_dependency_data(self, facade_with_mocked_service):
         """Test remove_dependency with missing dependency_data"""
@@ -151,9 +151,9 @@ class TestDependencyApplicationFacade:
         assert result["success"] is False
         assert "dependency_data with dependency_id is required" in result["error"]
     
-    def test_get_dependencies_success(self, facade_with_mocked_service, mock_task_app_service):
+    def test_get_dependencies_success(self, facade_with_mocked_service, mock_dependency_app_service):
         """Test successful dependency retrieval"""
-        mock_task_app_service.get_dependencies.return_value = {
+        mock_dependency_app_service.get_dependencies.return_value = {
             "dependencies": ["dep-1", "dep-2"],
             "dependency_count": 2,
             "can_start": True
@@ -170,9 +170,9 @@ class TestDependencyApplicationFacade:
         assert result["dependency_count"] == 2
         assert result["can_start"] is True
         
-        mock_task_app_service.get_dependencies.assert_called_once_with("task-123")
+        mock_dependency_app_service.get_dependencies.assert_called_once_with("task-123")
     
-    def test_clear_dependencies_success(self, facade_with_mocked_service, mock_task_app_service):
+    def test_clear_dependencies_success(self, facade_with_mocked_service, mock_dependency_app_service):
         """Test successful dependency clearing"""
         mock_response = MockDependencyResponse(
             success=True,
@@ -180,7 +180,7 @@ class TestDependencyApplicationFacade:
             dependencies=[],
             message="All dependencies cleared"
         )
-        mock_task_app_service.clear_dependencies.return_value = mock_response
+        mock_dependency_app_service.clear_dependencies.return_value = mock_response
         
         result = facade_with_mocked_service.manage_dependencies(
             action="clear_dependencies",
@@ -193,11 +193,11 @@ class TestDependencyApplicationFacade:
         assert result["dependencies"] == []
         assert result["message"] == "All dependencies cleared"
         
-        mock_task_app_service.clear_dependencies.assert_called_once_with("task-123")
+        mock_dependency_app_service.clear_dependencies.assert_called_once_with("task-123")
     
-    def test_get_blocking_tasks_success(self, facade_with_mocked_service, mock_task_app_service):
+    def test_get_blocking_tasks_success(self, facade_with_mocked_service, mock_dependency_app_service):
         """Test successful blocking tasks retrieval"""
-        mock_task_app_service.get_blocking_tasks.return_value = {
+        mock_dependency_app_service.get_blocking_tasks.return_value = {
             "blocking_tasks": ["task-456", "task-789"],
             "blocking_count": 2,
             "is_blocking_others": True
@@ -214,7 +214,7 @@ class TestDependencyApplicationFacade:
         assert result["blocking_count"] == 2
         assert result["is_blocking_others"] is True
         
-        mock_task_app_service.get_blocking_tasks.assert_called_once_with("task-123")
+        mock_dependency_app_service.get_blocking_tasks.assert_called_once_with("task-123")
     
     def test_unknown_action(self, facade_with_mocked_service):
         """Test handling of unknown action"""
@@ -226,9 +226,9 @@ class TestDependencyApplicationFacade:
         assert result["success"] is False
         assert "Unknown dependency action: unknown_action" in result["error"]
     
-    def test_task_not_found_error(self, facade_with_mocked_service, mock_task_app_service):
+    def test_task_not_found_error(self, facade_with_mocked_service, mock_dependency_app_service):
         """Test handling of TaskNotFoundError"""
-        mock_task_app_service.get_dependencies.side_effect = TaskNotFoundError("Task not found")
+        mock_dependency_app_service.get_dependencies.side_effect = TaskNotFoundError("Task not found")
         
         result = facade_with_mocked_service.manage_dependencies(
             action="get_dependencies",
@@ -238,9 +238,9 @@ class TestDependencyApplicationFacade:
         assert result["success"] is False
         assert "Task not found" in result["error"]
     
-    def test_value_error_handling(self, facade_with_mocked_service, mock_task_app_service):
+    def test_value_error_handling(self, facade_with_mocked_service, mock_dependency_app_service):
         """Test handling of ValueError from service"""
-        mock_task_app_service.add_dependency.side_effect = ValueError("Invalid dependency")
+        mock_dependency_app_service.add_dependency.side_effect = ValueError("Invalid dependency")
         
         result = facade_with_mocked_service.manage_dependencies(
             action="add_dependency",
@@ -251,9 +251,9 @@ class TestDependencyApplicationFacade:
         assert result["success"] is False
         assert "Invalid dependency" in result["error"]
     
-    def test_unexpected_exception_handling(self, facade_with_mocked_service, mock_task_app_service):
+    def test_unexpected_exception_handling(self, facade_with_mocked_service, mock_dependency_app_service):
         """Test handling of unexpected exceptions"""
-        mock_task_app_service.get_dependencies.side_effect = Exception("Unexpected error")
+        mock_dependency_app_service.get_dependencies.side_effect = Exception("Unexpected error")
         
         with patch('fastmcp.task_management.application.facades.dependency_application_facade.logger') as mock_logger:
             result = facade_with_mocked_service.manage_dependencies(
@@ -278,18 +278,18 @@ class TestDependencyApplicationFacade:
         assert result["success"] is False
         assert "Task ID is required" in result["error"]
     
-    def test_all_actions_with_valid_data(self, facade_with_mocked_service, mock_task_app_service):
+    def test_all_actions_with_valid_data(self, facade_with_mocked_service, mock_dependency_app_service):
         """Test all actions with valid data to ensure coverage"""
         # Configure mock responses
         mock_add_response = MockDependencyResponse(True, "task-123", ["dep-1"], "Added")
         mock_remove_response = MockDependencyResponse(True, "task-123", [], "Removed")
         mock_clear_response = MockDependencyResponse(True, "task-123", [], "Cleared")
         
-        mock_task_app_service.add_dependency.return_value = mock_add_response
-        mock_task_app_service.remove_dependency.return_value = mock_remove_response
-        mock_task_app_service.clear_dependencies.return_value = mock_clear_response
-        mock_task_app_service.get_dependencies.return_value = {"dependencies": ["dep-1"]}
-        mock_task_app_service.get_blocking_tasks.return_value = {"blocking_tasks": ["task-2"]}
+        mock_dependency_app_service.add_dependency.return_value = mock_add_response
+        mock_dependency_app_service.remove_dependency.return_value = mock_remove_response
+        mock_dependency_app_service.clear_dependencies.return_value = mock_clear_response
+        mock_dependency_app_service.get_dependencies.return_value = {"dependencies": ["dep-1"]}
+        mock_dependency_app_service.get_blocking_tasks.return_value = {"blocking_tasks": ["task-2"]}
         
         actions_and_data = [
             ("add_dependency", {"dependency_id": "dep-1"}),
@@ -319,9 +319,9 @@ class TestDependencyApplicationFacadeIntegration:
         facade = DependencyApplicationFacade(task_repository=mock_repository)
         
         # Mock the service responses for a complete workflow
-        with patch.object(facade._task_app_service, 'add_dependency') as mock_add, \
-             patch.object(facade._task_app_service, 'get_dependencies') as mock_get, \
-             patch.object(facade._task_app_service, 'remove_dependency') as mock_remove:
+        with patch.object(facade._dependency_app_service, 'add_dependency') as mock_add, \
+             patch.object(facade._dependency_app_service, 'get_dependencies') as mock_get, \
+             patch.object(facade._dependency_app_service, 'remove_dependency') as mock_remove:
             
             # Configure responses
             mock_add.return_value = MockDependencyResponse(True, "task-1", ["dep-1"], "Added")
@@ -362,7 +362,7 @@ class TestDependencyApplicationFacadeIntegration:
         mock_repository = Mock(spec=TaskRepository)
         facade = DependencyApplicationFacade(task_repository=mock_repository)
         
-        with patch.object(facade._task_app_service, 'get_dependencies') as mock_get:
+        with patch.object(facade._dependency_app_service, 'get_dependencies') as mock_get:
             # First call fails
             mock_get.side_effect = Exception("Temporary error")
             

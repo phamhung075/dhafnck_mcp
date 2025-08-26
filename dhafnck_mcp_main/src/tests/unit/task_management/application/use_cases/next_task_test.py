@@ -38,7 +38,7 @@ class TestNextTaskResponse:
     
     def test_next_task_response_full_initialization(self):
         """Test NextTaskResponse initialization with all values"""
-        next_item = {"type": "task", "id": "task-123"}
+        next_item = {"type": "task", "id": "550e8400-e29b-41d4-a716-446655440123"}
         context = {"project": "test"}
         context_info = {"created": True}
         
@@ -60,13 +60,13 @@ class TestNextTaskResponse:
         """Test NextTaskResponse dictionary-like access"""
         response = NextTaskResponse(
             has_next=True,
-            next_item={"id": "task-123"},
+            next_item={"id": "550e8400-e29b-41d4-a716-446655440123"},
             message="Test"
         )
         
         assert response["success"] is True
         assert response["has_next"] is True
-        assert response["next_item"]["id"] == "task-123"
+        assert response["next_item"]["id"] == "550e8400-e29b-41d4-a716-446655440123"
         assert response["context"] is None
         assert response["context_info"] is None
         assert response["message"] == "Test"
@@ -126,25 +126,30 @@ class TestNextTaskUseCase:
     def mock_task_entity(self):
         """Create a mock task entity"""
         task = Mock(spec=Task)
-        task.id = TaskId.from_string("task-123")
+        task.id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440123")
         task.title = "Test Task"
         task.description = "Test Description"
-        task.status = TaskStatus.TODO
+        # Create mock status with value attribute for actionable task filtering
+        mock_status = Mock()
+        mock_status.value = "todo"
+        task.status = mock_status
         task.priority = Priority.medium()
         task.assignees = ["user-1"]
         task.labels = ["test"]
         task.dependencies = []
         task.subtasks = []
         task.context_id = "context-123"
-        task.to_dict.return_value = {
-            "id": "task-123",
+        # Create a real dictionary that can be modified
+        task_dict = {
+            "id": "550e8400-e29b-41d4-a716-446655440123",
             "title": "Test Task",
-            "description": "Test Description",
+            "description": "Test Description", 
             "status": "todo",
             "priority": "medium",
             "assignees": ["user-1"],
             "labels": ["test"]
         }
+        task.to_dict.return_value = task_dict
         task.get_subtask_progress.return_value = {"completed": 0, "total": 0, "percentage": 0}
         return task
     
@@ -221,23 +226,28 @@ class TestNextTaskUseCaseExecute:
     def mock_task_entity(self):
         """Create a mock task entity"""
         task = Mock(spec=Task)
-        task.id = TaskId.from_string("task-123")
+        task.id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440123")
         task.title = "Test Task"
         task.description = "Test Description"
-        task.status = TaskStatus.TODO
+        # Create mock status with value attribute for actionable task filtering
+        mock_status = Mock()
+        mock_status.value = "todo"
+        task.status = mock_status
         task.priority = Priority.medium()
         task.assignees = ["user-1"]
         task.labels = ["test"]
         task.dependencies = []
         task.subtasks = []
         task.context_id = "context-123"
-        task.to_dict.return_value = {
-            "id": "task-123",
-            "title": "Test Task",
+        # Create a real dictionary that can be modified
+        task_dict = {
+            "id": "550e8400-e29b-41d4-a716-446655440123",
+            "title": "Test Task", 
             "description": "Test Description",
             "status": "todo",
             "priority": "medium"
         }
+        task.to_dict.return_value = task_dict
         task.get_subtask_progress.return_value = {"completed": 0, "total": 0, "percentage": 0}
         return task
     
@@ -265,7 +275,7 @@ class TestNextTaskUseCaseExecute:
         assert isinstance(result, NextTaskResponse)
         assert result.has_next is True
         assert result.next_item["type"] == "task"
-        assert result.next_item["task"]["id"] == "task-123"
+        assert result.next_item["task"]["id"] == "550e8400-e29b-41d4-a716-446655440123"
         assert "Work on task 'Test Task'" in result.message
         mock_generate_docs.assert_called_once_with(["user-1"], clear_all=False)
     
@@ -294,9 +304,10 @@ class TestNextTaskUseCaseExecute:
     @pytest.mark.asyncio
     async def test_execute_all_tasks_completed(self, use_case, mock_task_repository, mock_task_entity):
         """Test execute when all tasks are completed"""
-        # Set task status to done
-        mock_task_entity.status = TaskStatus.DONE
-        mock_task_entity.status.is_done.return_value = True
+        # Set task status to done - create a mock status object with is_done method
+        mock_done_status = Mock()
+        mock_done_status.is_done.return_value = True
+        mock_task_entity.status = mock_done_status
         
         mock_task_repository.find_all.return_value = [mock_task_entity]
         
@@ -313,15 +324,19 @@ class TestNextTaskUseCaseExecute:
         """Test execute with assignee filtering"""
         # Create another task with different assignee
         other_task = Mock(spec=Task)
-        other_task.id = TaskId.from_string("task-456")
+        other_task.id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440456")
         other_task.title = "Other Task"
-        other_task.status = TaskStatus.TODO
+        # Create mock status with value attribute for actionable task filtering
+        mock_status = Mock()
+        mock_status.value = "todo"
+        other_task.status = mock_status
         other_task.priority = Priority.high()
         other_task.assignees = ["user-2"]
         other_task.labels = []
         other_task.dependencies = []
         other_task.subtasks = []
-        other_task.to_dict.return_value = {"id": "task-456", "title": "Other Task"}
+        other_task_dict = {"id": "550e8400-e29b-41d4-a716-446655440456", "title": "Other Task"}
+        other_task.to_dict.return_value = other_task_dict
         other_task.get_subtask_progress.return_value = {"completed": 0, "total": 0}
         
         mock_task_repository.find_all.return_value = [mock_task_entity, other_task]
@@ -330,7 +345,7 @@ class TestNextTaskUseCaseExecute:
         
         assert isinstance(result, NextTaskResponse)
         assert result.has_next is True
-        assert result.next_item["task"]["id"] == "task-123"  # Should return the task with user-1
+        assert result.next_item["task"]["id"] == "550e8400-e29b-41d4-a716-446655440123"  # Should return the task with user-1
     
     @pytest.mark.asyncio
     async def test_execute_with_labels_filter(self, use_case, mock_task_repository, mock_task_entity):
@@ -343,7 +358,7 @@ class TestNextTaskUseCaseExecute:
         
         assert isinstance(result, NextTaskResponse)
         assert result.has_next is True
-        assert result.next_item["task"]["id"] == "task-123"
+        assert result.next_item["task"]["id"] == "550e8400-e29b-41d4-a716-446655440123"
     
     @pytest.mark.asyncio
     async def test_execute_no_matching_filters(self, use_case, mock_task_repository, mock_task_entity):
@@ -363,8 +378,10 @@ class TestNextTaskUseCaseExecute:
         dep_task = Mock(spec=Task)
         dep_task.id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440001")
         dep_task.title = "Dependency Task"
-        dep_task.status = TaskStatus.TODO
-        dep_task.status.is_done.return_value = False
+        # Create mock status with is_done method
+        mock_todo_status = Mock()
+        mock_todo_status.is_done.return_value = False
+        dep_task.status = mock_todo_status
         
         # Set up main task with dependency
         mock_task_entity.dependencies = [dep_task.id]
@@ -397,14 +414,28 @@ class TestNextTaskUseCaseHelperMethods:
     def mock_task_entity(self):
         """Create a mock task entity"""
         task = Mock(spec=Task)
-        task.id = TaskId.from_string("task-123")
+        task.id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440123")
         task.title = "Test Task"
-        task.status = TaskStatus.TODO
+        # Create mock status with value attribute for actionable task filtering
+        mock_status = Mock()
+        mock_status.value = "todo"
+        task.status = mock_status
         task.priority = Priority.medium()
         task.assignees = ["user-1"]
         task.labels = ["test"]
         task.dependencies = []
         task.subtasks = []
+        # Create a real dictionary that can be modified
+        task_dict = {
+            "id": "550e8400-e29b-41d4-a716-446655440123",
+            "title": "Test Task",
+            "status": "todo",
+            "priority": "medium",
+            "assignees": ["user-1"],
+            "labels": ["test"]
+        }
+        task.to_dict.return_value = task_dict
+        task.get_subtask_progress.return_value = {"completed": 0, "total": 0, "percentage": 0}
         return task
     
     def test_apply_filters_no_filters(self, use_case, mock_task_entity):
@@ -472,17 +503,26 @@ class TestNextTaskUseCaseHelperMethods:
         # Create tasks with different priorities
         high_task = Mock()
         high_task.priority = Priority.high()
-        high_task.status = TaskStatus.TODO
+        # Create mock status with value attribute for actionable task filtering
+        mock_status = Mock()
+        mock_status.value = "todo"
+        high_task.status = mock_status
         high_task.id = "task-high"
         
         low_task = Mock()
         low_task.priority = Priority.low()
-        low_task.status = TaskStatus.TODO
+        # Create mock status with value attribute for actionable task filtering
+        mock_status = Mock()
+        mock_status.value = "todo"
+        low_task.status = mock_status
         low_task.id = "task-low"
         
         critical_task = Mock()
         critical_task.priority = Priority.critical()
-        critical_task.status = TaskStatus.IN_PROGRESS
+        # Create mock status with value attribute for actionable task filtering
+        mock_in_progress_status = Mock()
+        mock_in_progress_status.value = "in_progress"
+        critical_task.status = mock_in_progress_status
         critical_task.id = "task-critical"
         
         tasks = [low_task, high_task, critical_task]
@@ -524,9 +564,11 @@ class TestNextTaskUseCaseHelperMethods:
         """Test _can_task_be_started with completed dependencies"""
         # Create completed dependency task
         dep_task = Mock()
-        dep_task.id = TaskId.from_string("dep-123")
-        dep_task.status = TaskStatus.DONE
-        dep_task.status.is_done.return_value = True
+        dep_task.id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440002")
+        # Create mock status with is_done method
+        mock_done_status = Mock()
+        mock_done_status.is_done.return_value = True
+        dep_task.status = mock_done_status
         
         mock_task_entity.dependencies = [dep_task.id]
         all_tasks = [mock_task_entity, dep_task]
@@ -539,9 +581,11 @@ class TestNextTaskUseCaseHelperMethods:
         """Test _can_task_be_started with incomplete dependencies"""
         # Create incomplete dependency task
         dep_task = Mock()
-        dep_task.id = TaskId.from_string("dep-123")
-        dep_task.status = TaskStatus.TODO
-        dep_task.status.is_done.return_value = False
+        dep_task.id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440002")
+        # Create mock status with is_done method
+        mock_todo_status = Mock()
+        mock_todo_status.is_done.return_value = False
+        dep_task.status = mock_todo_status
         
         mock_task_entity.dependencies = [dep_task.id]
         all_tasks = [mock_task_entity, dep_task]
@@ -581,7 +625,10 @@ class TestNextTaskUseCaseHelperMethods:
     
     def test_should_generate_context_info_todo_status(self, use_case, mock_task_entity):
         """Test _should_generate_context_info with todo status and no completed subtasks"""
-        mock_task_entity.status = TaskStatus.TODO
+        # Create mock status with value attribute
+        mock_status = Mock()
+        mock_status.value = "todo"
+        mock_task_entity.status = mock_status
         mock_task_entity.subtasks = []
         
         result = use_case._should_generate_context_info(mock_task_entity)
@@ -590,7 +637,10 @@ class TestNextTaskUseCaseHelperMethods:
     
     def test_should_generate_context_info_non_todo_status(self, use_case, mock_task_entity):
         """Test _should_generate_context_info with non-todo status"""
-        mock_task_entity.status = TaskStatus.IN_PROGRESS
+        # Create mock status with value attribute
+        mock_status = Mock()
+        mock_status.value = "in_progress"
+        mock_task_entity.status = mock_status
         
         result = use_case._should_generate_context_info(mock_task_entity)
         
@@ -598,7 +648,10 @@ class TestNextTaskUseCaseHelperMethods:
     
     def test_should_generate_context_info_completed_subtasks(self, use_case, mock_task_entity):
         """Test _should_generate_context_info with completed subtasks"""
-        mock_task_entity.status = TaskStatus.TODO
+        # Create mock status with value attribute
+        mock_status = Mock()
+        mock_status.value = "todo"
+        mock_task_entity.status = mock_status
         mock_task_entity.subtasks = [{"id": "sub-1", "completed": True}]
         
         result = use_case._should_generate_context_info(mock_task_entity)
@@ -620,7 +673,7 @@ class TestNextTaskUseCaseHelperMethods:
         """Test _task_to_dict basic functionality"""
         result = use_case._task_to_dict(mock_task_entity)
         
-        assert result["id"] == "task-123"
+        assert result["id"] == "550e8400-e29b-41d4-a716-446655440123"
         assert result["title"] == "Test Task"
         assert "context_data" in result
         assert result["context_available"] is False
@@ -641,7 +694,7 @@ class TestNextTaskUseCaseHelperMethods:
         
         result = use_case._get_task_context(mock_task_entity, all_tasks)
         
-        assert result["task_id"] == "task-123"
+        assert result["task_id"] == "550e8400-e29b-41d4-a716-446655440123"
         assert result["can_start"] is True
         assert result["dependency_count"] == 0
         assert result["blocking_count"] == 0
@@ -666,16 +719,18 @@ class TestNextTaskUseCaseHelperMethods:
         """Test _get_blocking_info"""
         # Create blocked task
         blocked_task = Mock()
-        blocked_task.id = TaskId.from_string("blocked-123")
+        blocked_task.id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440003")
         blocked_task.title = "Blocked Task"
         blocked_task.priority = Priority.high()
         
         # Create blocking dependency
         dep_task = Mock()
-        dep_task.id = TaskId.from_string("dep-123")
+        dep_task.id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440002")
         dep_task.title = "Dependency Task"
-        dep_task.status = TaskStatus.TODO
-        dep_task.status.is_done.return_value = False
+        # Create mock status with is_done method
+        mock_todo_status = Mock()
+        mock_todo_status.is_done.return_value = False
+        dep_task.status = mock_todo_status
         dep_task.priority = Priority.medium()
         
         blocked_task.dependencies = [dep_task.id]
@@ -684,8 +739,8 @@ class TestNextTaskUseCaseHelperMethods:
         
         assert len(result["blocked_tasks"]) == 1
         assert len(result["required_completions"]) == 1
-        assert result["blocked_tasks"][0]["id"] == "blocked-123"
-        assert result["required_completions"][0]["id"] == "dep-123"
+        assert result["blocked_tasks"][0]["id"] == "550e8400-e29b-41d4-a716-446655440003"
+        assert result["required_completions"][0]["id"] == "550e8400-e29b-41d4-a716-446655440002"
 
 
 class TestNextTaskUseCaseContextIntegration:
@@ -723,8 +778,11 @@ class TestNextTaskUseCaseContextIntegration:
         """Test _validate_task_context_alignment with no mismatches"""
         # Create mock task
         task = Mock()
-        task.id = TaskId.from_string("task-123")
-        task.status = TaskStatus.TODO
+        task.id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440123")
+        # Create mock status with value attribute for actionable task filtering
+        mock_status = Mock()
+        mock_status.value = "todo"
+        task.status = mock_status
         
         # Mock context service to return matching status
         mock_context_service.resolve_context.return_value = {
@@ -742,9 +800,12 @@ class TestNextTaskUseCaseContextIntegration:
         """Test _validate_task_context_alignment with status mismatch"""
         # Create mock task
         task = Mock()
-        task.id = TaskId.from_string("task-123")
+        task.id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440123")
         task.title = "Test Task"
-        task.status = TaskStatus.TODO
+        # Create mock status with value attribute for actionable task filtering
+        mock_status = Mock()
+        mock_status.value = "todo"
+        task.status = mock_status
         
         # Mock context service to return different status
         mock_context_service.resolve_context.return_value = {
@@ -757,7 +818,7 @@ class TestNextTaskUseCaseContextIntegration:
         result = use_case._validate_task_context_alignment([task])
         
         assert len(result) == 1
-        assert result[0]["task_id"] == "task-123"
+        assert result[0]["task_id"] == "550e8400-e29b-41d4-a716-446655440123"
         assert result[0]["task_status"] == "todo"
         assert result[0]["context_status"] == "in_progress"
         assert "fix_action" in result[0]
@@ -766,9 +827,12 @@ class TestNextTaskUseCaseContextIntegration:
         """Test _validate_task_context_alignment with done task but incomplete subtasks"""
         # Create mock task
         task = Mock()
-        task.id = TaskId.from_string("task-123")
+        task.id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440123")
         task.title = "Done Task"
-        task.status = TaskStatus.DONE
+        # Create mock status with value attribute
+        mock_status = Mock()
+        mock_status.value = "done"
+        task.status = mock_status
         
         # Mock context service to return incomplete subtasks
         mock_context_service.resolve_context.return_value = {
@@ -794,8 +858,11 @@ class TestNextTaskUseCaseContextIntegration:
         """Test _validate_task_context_alignment with context resolution error"""
         # Create mock task
         task = Mock()
-        task.id = TaskId.from_string("task-123")
-        task.status = TaskStatus.TODO
+        task.id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440123")
+        # Create mock status with value attribute for actionable task filtering
+        mock_status = Mock()
+        mock_status.value = "todo"
+        task.status = mock_status
         
         # Mock context service to raise exception
         mock_context_service.resolve_context.side_effect = Exception("Context error")
@@ -810,9 +877,12 @@ class TestNextTaskUseCaseContextIntegration:
         """Test execute when status mismatches are detected"""
         # Create mock task
         task = Mock()
-        task.id = TaskId.from_string("task-123")
+        task.id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440123")
         task.title = "Mismatched Task"
-        task.status = TaskStatus.TODO
+        # Create mock status with value attribute for actionable task filtering
+        mock_status = Mock()
+        mock_status.value = "todo"
+        task.status = mock_status
         task.priority = Priority.medium()
         task.assignees = []
         task.labels = []
@@ -843,17 +913,21 @@ class TestNextTaskUseCaseContextIntegration:
         """Test execute with context generation for todo task"""
         # Create mock task
         task = Mock()
-        task.id = TaskId.from_string("task-123")
+        task.id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440123")
         task.title = "Context Task"
         task.description = "Task with context"
-        task.status = TaskStatus.TODO
+        # Create mock status with value attribute for actionable task filtering
+        mock_status = Mock()
+        mock_status.value = "todo"
+        task.status = mock_status
         task.priority = Priority.medium()
         task.assignees = ["user-1"]
         task.labels = ["test"]
         task.dependencies = []
         task.subtasks = []
         task.context_id = "context-123"
-        task.to_dict.return_value = {"id": "task-123", "title": "Context Task"}
+        task_dict = {"id": "550e8400-e29b-41d4-a716-446655440123", "title": "Context Task"}
+        task.to_dict.return_value = task_dict
         task.get_subtask_progress.return_value = {"completed": 0, "total": 0}
         
         mock_task_repository.find_all.return_value = [task]
@@ -877,17 +951,21 @@ class TestNextTaskUseCaseContextIntegration:
         """Test execute when context creation fails"""
         # Create mock task
         task = Mock()
-        task.id = TaskId.from_string("task-123")
+        task.id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440123")
         task.title = "Error Context Task"
         task.description = "Task with context error"
-        task.status = TaskStatus.TODO
+        # Create mock status with value attribute for actionable task filtering
+        mock_status = Mock()
+        mock_status.value = "todo"
+        task.status = mock_status
         task.priority = Priority.medium()
         task.assignees = ["user-1"]
         task.labels = []
         task.dependencies = []
         task.subtasks = []
         task.context_id = "context-123"
-        task.to_dict.return_value = {"id": "task-123", "title": "Error Context Task"}
+        task_dict = {"id": "550e8400-e29b-41d4-a716-446655440123", "title": "Error Context Task"}
+        task.to_dict.return_value = task_dict
         task.get_subtask_progress.return_value = {"completed": 0, "total": 0}
         
         mock_task_repository.find_all.return_value = [task]

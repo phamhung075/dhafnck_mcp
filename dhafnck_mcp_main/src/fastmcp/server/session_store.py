@@ -224,7 +224,7 @@ class RedisEventStore(EventStore):
             # Handle dict-like objects
             if hasattr(message, '__dict__'):
                 # Recursively serialize nested objects
-                result = {}
+                result = {"type": type(message).__name__, "message": str(message)}
                 for key, value in message.__dict__.items():
                     try:
                         # Test if value is JSON serializable
@@ -641,6 +641,56 @@ class MemoryEventStore(EventStore):
         self._event_sequence += 1
         return f"{stream_id}:{timestamp_ms}:{self._event_sequence:06d}"
     
+    def _serialize_message(self, message: Any) -> Dict[str, Any]:
+        """Safely serialize message objects to prevent JSON serialization errors"""
+        try:
+            # Handle FastAPI JSONResponse objects
+            if hasattr(message, 'body') and hasattr(message, 'status_code'):
+                # This is likely a JSONResponse object
+                try:
+                    if hasattr(message, 'body') and isinstance(message.body, bytes):
+                        # Decode JSON body
+                        import json as json_lib
+                        body = json_lib.loads(message.body.decode('utf-8'))
+                        return {
+                            "type": "json_response",
+                            "body": body,
+                            "status_code": getattr(message, 'status_code', 200),
+                            "headers": dict(getattr(message, 'headers', {}))
+                        }
+                except Exception:
+                    # Fallback for JSONResponse
+                    return {
+                        "type": "json_response", 
+                        "body": str(message.body) if hasattr(message, 'body') else None,
+                        "status_code": getattr(message, 'status_code', 200)
+                    }
+            
+            # Handle Pydantic models
+            if hasattr(message, 'model_dump'):
+                return message.model_dump()
+            
+            # Handle dict-like objects
+            if hasattr(message, '__dict__'):
+                # Recursively serialize nested objects
+                result = {"type": type(message).__name__, "message": str(message)}
+                for key, value in message.__dict__.items():
+                    try:
+                        # Test if value is JSON serializable
+                        json.dumps(value)
+                        result[key] = value
+                    except TypeError:
+                        # Convert non-serializable values to string
+                        result[key] = str(value)
+                return result
+            
+            # Handle other types by converting to string
+            return {"message": str(message), "type": type(message).__name__}
+            
+        except Exception as e:
+            logger.error(f"Failed to serialize message: {e}")
+            return {"error": f"Serialization failed: {str(e)}", "type": type(message).__name__}
+    
     async def store_event(
         self,
         stream_id: str,
@@ -651,12 +701,16 @@ class MemoryEventStore(EventStore):
         event_id = self._generate_event_id(stream_id)
         
         # Extract session_id from stream_id
-        session_id = stream_id.split(':')[0] if ':' in stream_id else stream_id
+        if ':' in stream_id:
+            session_id, actual_stream_id = stream_id.split(':', 1)
+        else:
+            session_id = stream_id
+            actual_stream_id = stream_id
         
         # Create session event from the message
         event = SessionEvent(
             session_id=session_id,
-            stream_id=stream_id,
+            stream_id=stream_id,  # Keep original stream_id
             event_id=event_id,
             event_type="message",
             event_data={
@@ -667,7 +721,7 @@ class MemoryEventStore(EventStore):
             ttl=self.default_ttl
         )
         
-        key = f"mcp:session:{session_id}:stream:{stream_id}"
+        key = f"mcp:session:{session_id}:stream:{actual_stream_id}"
         
         if key not in self._store:
             self._store[key] = []

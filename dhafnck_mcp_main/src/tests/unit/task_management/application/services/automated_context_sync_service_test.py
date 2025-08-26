@@ -74,27 +74,6 @@ class TestAutomatedContextSyncServiceInit:
         assert result == mock_user_scoped_repo
         mock_repo.with_user.assert_called_once_with("test_user")
 
-    def test_get_user_scoped_repository_with_user_id_property(self):
-        """Test _get_user_scoped_repository with repository that has user_id property."""
-        mock_task_repo = Mock(spec=TaskRepository)
-        service = AutomatedContextSyncService(mock_task_repo, user_id="test_user")
-        
-        mock_repo = Mock()
-        mock_repo.user_id = "different_user"
-        mock_repo.session = Mock()
-        
-        # Mock the repository class constructor
-        with patch('type') as mock_type:
-            mock_repo_class = Mock()
-            mock_type.return_value = mock_repo_class
-            mock_new_repo = Mock()
-            mock_repo_class.return_value = mock_new_repo
-            
-            result = service._get_user_scoped_repository(mock_repo)
-            
-            # Should create new instance with correct user_id
-            mock_repo_class.assert_called_once_with(mock_repo.session, user_id="test_user")
-            assert result == mock_new_repo
 
     def test_get_user_scoped_repository_no_user_context(self):
         """Test _get_user_scoped_repository returns original repo when no user context."""
@@ -122,7 +101,7 @@ class TestTaskContextSynchronization:
         
         # Create mock task
         mock_task = Mock(spec=Task)
-        mock_task.id = TaskId.generate()
+        mock_task.id = TaskId.generate_new()
         mock_task.git_branch_id = "branch_123"
         mock_task.project_id = "project_456"
         
@@ -477,7 +456,7 @@ class TestBatchOperations:
             mock_tasks.append(mock_task)
         
         # Mock repository responses
-        with patch('fastmcp.task_management.application.services.automated_context_sync_service.TaskId') as mock_task_id:
+        with patch('fastmcp.task_management.domain.value_objects.task_id.TaskId') as mock_task_id:
             mock_task_repo.find_by_id.side_effect = mock_tasks
             
             results = await service.sync_multiple_tasks(task_ids)
@@ -501,7 +480,7 @@ class TestBatchOperations:
             mock_task.id = str(task_id)
             return mock_task
         
-        with patch('fastmcp.task_management.application.services.automated_context_sync_service.TaskId') as mock_task_id:
+        with patch('fastmcp.task_management.domain.value_objects.task_id.TaskId') as mock_task_id:
             mock_task_id.from_string.side_effect = lambda x: x  # Return task_id as-is
             mock_task_repo.find_by_id.side_effect = mock_find_by_id
             
@@ -524,7 +503,7 @@ class TestBatchOperations:
         
         task_ids = ["task_1", "task_2"]
         
-        with patch('fastmcp.task_management.application.services.automated_context_sync_service.TaskId') as mock_task_id:
+        with patch('fastmcp.task_management.domain.value_objects.task_id.TaskId') as mock_task_id:
             mock_task_id.from_string.side_effect = Exception("Invalid task ID")
             
             with patch('fastmcp.task_management.application.services.automated_context_sync_service.logger') as mock_logger:

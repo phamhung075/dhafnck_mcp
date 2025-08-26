@@ -185,7 +185,17 @@ class ParameterEnforcementService:
                 logger.error(f"[STRICT] Blocking {action} due to missing required parameters: {missing_required}")
                 return self._create_strict_result(action, missing_required, missing_recommended, agent_id)
             else:
-                return self._create_warning_result(action, missing_required, missing_recommended, agent_id)
+                # All required parameters provided - return success result with STRICT level
+                return EnforcementResult(
+                    allowed=True,
+                    level=EnforcementLevel.STRICT,
+                    missing_required=missing_required,
+                    missing_recommended=missing_recommended,
+                    hints=[f"✅ All required parameters provided for {action}"] if missing_recommended else [],
+                    examples={},
+                    compliance_tracked=True,
+                    agent_id=agent_id
+                )
         
         return EnforcementResult(
             allowed=True,

@@ -75,15 +75,16 @@ class GitBranchFacadeFactory:
         self._facades_cache.clear()
         logger.info("Git branch facades cache cleared")
     
-    def get_cached_facade(self, project_id: str) -> Optional[GitBranchApplicationFacade]:
+    def get_cached_facade(self, project_id: str, user_id: Optional[str] = None) -> Optional[GitBranchApplicationFacade]:
         """
         Get a cached facade if available.
         
         Args:
             project_id: Project identifier
+            user_id: User identifier for authentication
             
         Returns:
             Cached facade or None
         """
-        cache_key = f"{project_id}"
+        cache_key = f"{project_id}:{user_id or 'no_user'}"
         return self._facades_cache.get(cache_key)

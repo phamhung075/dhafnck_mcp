@@ -11,6 +11,7 @@ This module tests the CreateGitBranchUseCase functionality including:
 """
 
 import pytest
+import sys
 from unittest.mock import Mock, AsyncMock, patch
 from datetime import datetime, timezone
 
@@ -375,9 +376,13 @@ class TestCreateGitBranchUseCaseContextCreation:
                     mock_auth_config.is_default_user_allowed.return_value = False
                     mock_validate_user.return_value = "authenticated_user"
                     
-                    # Mock request with user_id (this would normally come from request context)
-                    with patch('builtins.request') as mock_request:
-                        mock_request.user_id = "authenticated_user"
+                    # Mock flask module and request with user_id (this would normally come from request context)
+                    mock_flask_module = Mock()
+                    mock_request = Mock()
+                    mock_request.user_id = "authenticated_user"
+                    mock_flask_module.request = mock_request
+                    
+                    with patch.dict('sys.modules', {'flask': mock_flask_module}):
                         
                         # Setup context facade
                         mock_factory = Mock()
@@ -409,8 +414,12 @@ class TestCreateGitBranchUseCaseContextCreation:
                 mock_auth_config.is_default_user_allowed.return_value = False
                 
                 # Mock request without user_id
-                with patch('builtins.request') as mock_request:
-                    mock_request.user_id = None
+                mock_flask_module = Mock()
+                mock_request = Mock()
+                mock_request.user_id = None
+                mock_flask_module.request = mock_request
+                
+                with patch.dict('sys.modules', {'flask': mock_flask_module}):
                     
                     result = await use_case.execute(
                         project_id="project-123",

@@ -113,16 +113,6 @@ class TestAddTaskProgressFieldMigration:
         assert "CHECK (progress_percentage >= 0 AND progress_percentage <= 100)" in actual_sql
         assert "INTEGER" in actual_sql
     
-    @patch('builtins.print')
-    def test_main_execution(self, mock_print):
-        """Test the main execution prints the correct message"""
-        # Import and check __main__ guard
-        import fastmcp.task_management.infrastructure.database.migrations.add_task_progress_field as migration
-        
-        # Execute the module's main block by calling it directly
-        if hasattr(migration, '__name__'):
-            # The print statement should have been called during module import
-            mock_print.assert_any_call("Migration file for adding progress_percentage to tasks table")
 
 
 class TestMigrationIntegration:

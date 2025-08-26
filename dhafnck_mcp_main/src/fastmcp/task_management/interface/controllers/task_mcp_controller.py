@@ -474,7 +474,9 @@ class TaskMCPController(ContextPropagationMixin):
         # (These are now part of the method signature)
         
         try:
-            facade = self._get_facade_for_request(git_branch_id=git_branch_id, user_id=user_id)
+            # Use provided facade if available, otherwise create one
+            if facade is None:
+                facade = self._get_facade_for_request(git_branch_id=git_branch_id)
             
             if action == "create":
                 if not title:

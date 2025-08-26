@@ -74,10 +74,10 @@ class TestAuthIntegrationRoutes:
         mock_auth_instance = Mock()
         mock_auth_instance.register_user = AsyncMock(return_value=mock_result)
         
-        with patch('fastmcp.server.routes.auth_integration.AuthService', return_value=mock_auth_instance):
-            with patch('fastmcp.server.routes.auth_integration.UserRepository'):
-                with patch('fastmcp.server.routes.auth_integration.JWTService', return_value=mock_jwt_service_instance):
-                    with patch('fastmcp.server.routes.auth_integration.get_db_config', return_value=mock_db_config):
+        with patch('fastmcp.auth.application.services.auth_service.AuthService', return_value=mock_auth_instance):
+            with patch('fastmcp.auth.infrastructure.repositories.user_repository.UserRepository'):
+                with patch('fastmcp.auth.domain.services.jwt_service.JWTService', return_value=mock_jwt_service_instance):
+                    with patch('fastmcp.task_management.infrastructure.database.database_config.get_db_config', return_value=mock_db_config):
                         # Import and call the endpoint
                         from fastmcp.server.routes.auth_integration import create_auth_integration_routes
                         routes = create_auth_integration_routes()
@@ -120,10 +120,10 @@ class TestAuthIntegrationRoutes:
         mock_auth_instance = Mock()
         mock_auth_instance.register_user = AsyncMock(return_value=mock_result)
         
-        with patch('fastmcp.server.routes.auth_integration.AuthService', return_value=mock_auth_instance):
-            with patch('fastmcp.server.routes.auth_integration.UserRepository'):
-                with patch('fastmcp.server.routes.auth_integration.JWTService', return_value=mock_jwt_service_instance):
-                    with patch('fastmcp.server.routes.auth_integration.get_db_config', return_value=mock_db_config):
+        with patch('fastmcp.auth.application.services.auth_service.AuthService', return_value=mock_auth_instance):
+            with patch('fastmcp.auth.infrastructure.repositories.user_repository.UserRepository'):
+                with patch('fastmcp.auth.domain.services.jwt_service.JWTService', return_value=mock_jwt_service_instance):
+                    with patch('fastmcp.task_management.infrastructure.database.database_config.get_db_config', return_value=mock_db_config):
                         from fastmcp.server.routes.auth_integration import create_auth_integration_routes
                         routes = create_auth_integration_routes()
                         
@@ -160,10 +160,10 @@ class TestAuthIntegrationRoutes:
         mock_auth_instance = Mock()
         mock_auth_instance.login = AsyncMock(return_value=mock_result)
         
-        with patch('fastmcp.server.routes.auth_integration.AuthService', return_value=mock_auth_instance):
-            with patch('fastmcp.server.routes.auth_integration.UserRepository'):
-                with patch('fastmcp.server.routes.auth_integration.JWTService', return_value=mock_jwt_service_instance):
-                    with patch('fastmcp.server.routes.auth_integration.get_db_config', return_value=mock_db_config):
+        with patch('fastmcp.auth.application.services.auth_service.AuthService', return_value=mock_auth_instance):
+            with patch('fastmcp.auth.infrastructure.repositories.user_repository.UserRepository'):
+                with patch('fastmcp.auth.domain.services.jwt_service.JWTService', return_value=mock_jwt_service_instance):
+                    with patch('fastmcp.task_management.infrastructure.database.database_config.get_db_config', return_value=mock_db_config):
                         from fastmcp.server.routes.auth_integration import create_auth_integration_routes
                         routes = create_auth_integration_routes()
                         
@@ -200,10 +200,10 @@ class TestAuthIntegrationRoutes:
         mock_auth_instance = Mock()
         mock_auth_instance.login = AsyncMock(return_value=mock_result)
         
-        with patch('fastmcp.server.routes.auth_integration.AuthService', return_value=mock_auth_instance):
-            with patch('fastmcp.server.routes.auth_integration.UserRepository'):
-                with patch('fastmcp.server.routes.auth_integration.JWTService', return_value=mock_jwt_service_instance):
-                    with patch('fastmcp.server.routes.auth_integration.get_db_config', return_value=mock_db_config):
+        with patch('fastmcp.auth.application.services.auth_service.AuthService', return_value=mock_auth_instance):
+            with patch('fastmcp.auth.infrastructure.repositories.user_repository.UserRepository'):
+                with patch('fastmcp.auth.domain.services.jwt_service.JWTService', return_value=mock_jwt_service_instance):
+                    with patch('fastmcp.task_management.infrastructure.database.database_config.get_db_config', return_value=mock_db_config):
                         from fastmcp.server.routes.auth_integration import create_auth_integration_routes
                         routes = create_auth_integration_routes()
                         
@@ -230,7 +230,7 @@ class TestAuthIntegrationRoutes:
             "refresh_token": "valid_refresh_token"
         }
         
-        with patch('fastmcp.server.routes.auth_integration.JWTService', return_value=mock_jwt_service_instance):
+        with patch('fastmcp.auth.domain.services.jwt_service.JWTService', return_value=mock_jwt_service_instance):
             from fastmcp.server.routes.auth_integration import create_auth_integration_routes
             routes = create_auth_integration_routes()
             
@@ -258,7 +258,7 @@ class TestAuthIntegrationRoutes:
         mock_jwt_invalid = Mock()
         mock_jwt_invalid.verify_refresh_token = Mock(return_value=None)
         
-        with patch('fastmcp.server.routes.auth_integration.JWTService', return_value=mock_jwt_invalid):
+        with patch('fastmcp.auth.domain.services.jwt_service.JWTService', return_value=mock_jwt_invalid):
             from fastmcp.server.routes.auth_integration import create_auth_integration_routes
             routes = create_auth_integration_routes()
             
@@ -328,10 +328,10 @@ class TestAuthIntegrationRoutes:
         mock_auth_instance = Mock()
         mock_auth_instance.register_user = AsyncMock(side_effect=Exception("Database error"))
         
-        with patch('fastmcp.server.routes.auth_integration.AuthService', return_value=mock_auth_instance):
-            with patch('fastmcp.server.routes.auth_integration.UserRepository'):
-                with patch('fastmcp.server.routes.auth_integration.JWTService', return_value=mock_jwt_service_instance):
-                    with patch('fastmcp.server.routes.auth_integration.get_db_config', return_value=mock_db_config):
+        with patch('fastmcp.auth.application.services.auth_service.AuthService', return_value=mock_auth_instance):
+            with patch('fastmcp.auth.infrastructure.repositories.user_repository.UserRepository'):
+                with patch('fastmcp.auth.domain.services.jwt_service.JWTService', return_value=mock_jwt_service_instance):
+                    with patch('fastmcp.task_management.infrastructure.database.database_config.get_db_config', return_value=mock_db_config):
                         from fastmcp.server.routes.auth_integration import create_auth_integration_routes
                         routes = create_auth_integration_routes()
                         
@@ -363,10 +363,10 @@ class TestAuthIntegrationRoutes:
         mock_auth_instance = Mock()
         mock_auth_instance.login = AsyncMock(side_effect=Exception("Authentication error"))
         
-        with patch('fastmcp.server.routes.auth_integration.AuthService', return_value=mock_auth_instance):
-            with patch('fastmcp.server.routes.auth_integration.UserRepository'):
-                with patch('fastmcp.server.routes.auth_integration.JWTService', return_value=mock_jwt_service_instance):
-                    with patch('fastmcp.server.routes.auth_integration.get_db_config', return_value=mock_db_config):
+        with patch('fastmcp.auth.application.services.auth_service.AuthService', return_value=mock_auth_instance):
+            with patch('fastmcp.auth.infrastructure.repositories.user_repository.UserRepository'):
+                with patch('fastmcp.auth.domain.services.jwt_service.JWTService', return_value=mock_jwt_service_instance):
+                    with patch('fastmcp.task_management.infrastructure.database.database_config.get_db_config', return_value=mock_db_config):
                         from fastmcp.server.routes.auth_integration import create_auth_integration_routes
                         routes = create_auth_integration_routes()
                         

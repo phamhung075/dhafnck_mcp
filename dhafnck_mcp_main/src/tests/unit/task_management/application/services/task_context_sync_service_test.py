@@ -209,7 +209,7 @@ class TestTaskContextSyncServiceSyncContext:
         mock_context_service.get_context.return_value = None
         
         # Setup git branch repository
-        with patch('fastmcp.task_management.application.services.task_context_sync_service.ORMGitBranchRepository') as mock_git_repo_class:
+        with patch('fastmcp.task_management.infrastructure.repositories.orm.git_branch_repository.ORMGitBranchRepository') as mock_git_repo_class:
             mock_git_repo = Mock()
             mock_git_branch = Mock()
             mock_git_branch.project_id = "project-456"
@@ -285,7 +285,7 @@ class TestTaskContextSyncServiceSyncContext:
         # Setup task repository - task not found
         mock_task_repository.find_by_id.return_value = None
         
-        result = await service.sync_context_and_get_task("nonexistent-task", user_id="user-123")
+        result = await service.sync_context_and_get_task("12345678-1234-1234-1234-123456789012", user_id="user-123")
         
         assert result is None
         mock_task_repository.find_by_id.assert_called_once()
@@ -304,7 +304,7 @@ class TestTaskContextSyncServiceSyncContext:
         mock_context_service.get_context.return_value = None
         
         # Setup git branch repository
-        with patch('fastmcp.task_management.application.services.task_context_sync_service.ORMGitBranchRepository') as mock_git_repo_class:
+        with patch('fastmcp.task_management.infrastructure.repositories.orm.git_branch_repository.ORMGitBranchRepository') as mock_git_repo_class:
             mock_git_repo = Mock()
             mock_git_branch = Mock()
             mock_git_branch.project_id = "derived-project-id"
@@ -334,7 +334,7 @@ class TestTaskContextSyncServiceSyncContext:
         mock_context_service.get_context.return_value = None
         
         # Setup git branch repository - no git branch found
-        with patch('fastmcp.task_management.application.services.task_context_sync_service.ORMGitBranchRepository') as mock_git_repo_class:
+        with patch('fastmcp.task_management.infrastructure.repositories.orm.git_branch_repository.ORMGitBranchRepository') as mock_git_repo_class:
             mock_git_repo = Mock()
             mock_git_repo.find_by_id.return_value = None
             mock_git_repo_class.return_value = mock_git_repo
@@ -419,7 +419,7 @@ class TestTaskContextSyncServiceSyncContext:
         mock_task.id = TaskId.from_string("task-123")
         mock_task.title = "User Task"
         mock_task.description = "User Description"
-        mock_task.status = Status.TODO
+        mock_task.status = TaskStatus.TODO
         mock_task.priority = Priority.high()
         mock_task.assignees = ["user-123"]
         mock_task.labels = ["user-task"]
@@ -499,7 +499,7 @@ class TestTaskContextSyncServiceErrorScenarios:
         mock_task.id = TaskId.from_string("task-123")
         mock_task.title = "Test Task"
         mock_task.description = "Test Description"
-        mock_task.status = Status.TODO
+        mock_task.status = TaskStatus.TODO
         mock_task.priority = Priority.medium()
         mock_task.assignees = []
         mock_task.labels = []
@@ -510,7 +510,7 @@ class TestTaskContextSyncServiceErrorScenarios:
         mock_task_repository.find_by_id.return_value = mock_task
         
         # Setup git branch repository to raise exception
-        with patch('fastmcp.task_management.application.services.task_context_sync_service.ORMGitBranchRepository') as mock_git_repo_class:
+        with patch('fastmcp.task_management.infrastructure.repositories.orm.git_branch_repository.ORMGitBranchRepository') as mock_git_repo_class:
             mock_git_repo_class.side_effect = Exception("Git repository error")
             
             with patch('fastmcp.task_management.application.services.task_context_sync_service.UnifiedContextFacadeFactory'):

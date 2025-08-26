@@ -90,11 +90,18 @@ class SubtaskApplicationService:
     def manage_subtasks(self, task_id: str, action: str, subtask_data: dict) -> dict:
         """Manage subtasks with enhanced DDD support"""
         if action in ["add_subtask", "add"]:
+            # Handle both singular and plural assignee formats
+            assignees = []
+            if "assignees" in subtask_data:
+                assignees = subtask_data["assignees"] if isinstance(subtask_data["assignees"], list) else [subtask_data["assignees"]]
+            elif "assignee" in subtask_data and subtask_data["assignee"]:
+                assignees = [subtask_data["assignee"]]
+            
             request = AddSubtaskRequest(
                 task_id=task_id,
                 title=subtask_data.get("title", ""),
                 description=subtask_data.get("description", ""),
-                assignee=subtask_data.get("assignee", "")
+                assignees=assignees
             )
             return self.add_subtask(request).__dict__
         elif action in ["complete_subtask", "complete"]:
@@ -103,13 +110,27 @@ class SubtaskApplicationService:
                 raise ValueError("id is required for completing a subtask")
             return self.complete_subtask(task_id, id)
         elif action in ["update_subtask", "update"]:
+            # Handle both singular and plural assignee formats
+            assignees = None
+            if "assignees" in subtask_data:
+                assignees = subtask_data["assignees"] if isinstance(subtask_data["assignees"], list) else [subtask_data["assignees"]]
+            elif "assignee" in subtask_data and subtask_data["assignee"]:
+                assignees = [subtask_data["assignee"]]
+            
+            # Handle completed -> status mapping
+            status = subtask_data.get("status")
+            if "completed" in subtask_data and subtask_data["completed"]:
+                status = "completed"
+            
             request = UpdateSubtaskRequest(
                 task_id=task_id,
                 id=subtask_data.get("id"),
                 title=subtask_data.get("title"),
                 description=subtask_data.get("description"),
-                completed=subtask_data.get("completed"),
-                assignee=subtask_data.get("assignee")
+                status=status,
+                assignees=assignees,
+                priority=subtask_data.get("priority"),
+                progress_percentage=subtask_data.get("progress_percentage")
             )
             return self.update_subtask(request).__dict__
         elif action in ["remove_subtask", "remove"]:
