@@ -324,7 +324,8 @@ class TaskMCPController(ContextPropagationMixin):
             dependencies: Annotated[Optional[Union[List[str], str]], Field(description="List of task IDs this task depends on (for create action)")] = None,
             # Enhanced completion parameters (merged from complete_task_with_update)
             completion_summary: Annotated[Optional[str], Field(description=manage_task_desc["parameters"].get("completion_summary", "Summary of what was accomplished (for complete action)"))] = None,
-            testing_notes: Annotated[Optional[str], Field(description=manage_task_desc["parameters"].get("testing_notes", "Description of testing performed (for complete action)"))] = None
+            testing_notes: Annotated[Optional[str], Field(description=manage_task_desc["parameters"].get("testing_notes", "Description of testing performed (for complete action)"))] = None,
+            user_id: Annotated[Optional[str], Field(description="User identifier for authentication. Optional, defaults to authenticated user context")] = None
         ) -> Dict[str, Any]:
             # Parse labels, assignees, and dependencies if they come as strings
             parsed_labels = self._parse_string_list(labels, "labels") if labels is not None else None
@@ -381,7 +382,7 @@ class TaskMCPController(ContextPropagationMixin):
             coerced_force_full_generation = self._coerce_to_bool(force_full_generation, "force_full_generation")
             coerced_include_context = self._coerce_to_bool(include_context, "include_context")
             
-            return self.manage_task(
+            return self._handle_task_management(
                 action=action,
                 git_branch_id=git_branch_id,
                 task_id=task_id,
@@ -402,13 +403,19 @@ class TaskMCPController(ContextPropagationMixin):
                 dependency_id=dependency_id,
                 dependencies=parsed_dependencies,
                 completion_summary=completion_summary,
-                testing_notes=testing_notes
+                testing_notes=testing_notes,
+                user_id=user_id
             )
         
         # NOTE: Context enforcing functionality is integrated into the main manage_task tool
         # No separate tools needed - use manage_task with appropriate actions
     
-    def _get_facade_for_request(self, task_id: Optional[str] = None, git_branch_id: Optional[str] = None) -> TaskApplicationFacade:
+    # Public API method for direct access (tests, etc.)
+    def manage_task(self, *args, **kwargs):
+        """Public API method that delegates to the internal handler."""
+        return self._handle_task_management(*args, **kwargs)
+    
+    def _get_facade_for_request(self, task_id: Optional[str] = None, git_branch_id: Optional[str] = None, user_id: Optional[str] = None) -> TaskApplicationFacade:
         """
         Get a TaskApplicationFacade with the appropriate context.
         If a mock facade is present, it will be used for testing purposes.
@@ -418,13 +425,17 @@ class TaskMCPController(ContextPropagationMixin):
         if hasattr(self, '_task_facade') and self._task_facade is not None:
              return self._task_facade
 
-        # Derive context from provided identifiers
-        project_id, git_branch_name, user_id = self._derive_context_from_identifiers(task_id, git_branch_id)
-        logger.debug(f"Derived context for task_id={task_id}, git_branch_id={git_branch_id}: project_id={project_id}, git_branch_name={git_branch_name}, user_id={user_id}")
+        # Derive context from provided identifiers (only project_id and git_branch_name)
+        project_id, git_branch_name, derived_user_id = self._derive_context_from_identifiers(task_id, git_branch_id, user_id)
+        
+        # Use provided user_id if available, otherwise use derived user_id
+        effective_user_id = user_id or derived_user_id
+        
+        logger.debug(f"Derived context for task_id={task_id}, git_branch_id={git_branch_id}: project_id={project_id}, git_branch_name={git_branch_name}, provided_user_id={user_id}, effective_user_id={effective_user_id}")
         
         # Use resolved git_branch_id if available
         effective_git_branch_id = git_branch_id or getattr(self, '_resolved_git_branch_id', None)
-        return self._get_task_facade(project_id, git_branch_name, user_id, effective_git_branch_id)
+        return self._get_task_facade(project_id, git_branch_name, effective_user_id, effective_git_branch_id)
 
 
     def handle_crud_operations(self, action: str, git_branch_id: Optional[str] = None,
@@ -1270,7 +1281,7 @@ class TaskMCPController(ContextPropagationMixin):
         """Handle next task request with optional context inclusion."""
         try:
             # Derive context parameters from git_branch_id
-            project_id, git_branch_name, user_id = self._derive_context_from_identifiers(git_branch_id=git_branch_id)
+            project_id, git_branch_name, user_id = self._derive_context_from_identifiers(git_branch_id=git_branch_id, user_id=None)
             
             # Since MCP tools are synchronous, we need to run the async method in sync context
             async def _run_async(facade, include_context, user_id, project_id, git_branch_id):
@@ -1309,7 +1320,7 @@ class TaskMCPController(ContextPropagationMixin):
                 {"git_branch_id": git_branch_id}
             )
     
-    def manage_task(self, 
+    def _handle_task_management(self, 
                    action: str,
                    git_branch_id: Optional[str] = None,
                    task_id: Optional[str] = None,
@@ -1336,7 +1347,8 @@ class TaskMCPController(ContextPropagationMixin):
                    progress_made: Optional[str] = None,
                    files_modified: Optional[List[str]] = None,
                    decisions_made: Optional[List[str]] = None,
-                   blockers_encountered: Optional[List[str]] = None) -> Dict[str, Any]:
+                   blockers_encountered: Optional[List[str]] = None,
+                   user_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Manage task operations by routing to appropriate handlers.
         For add_dependency/remove_dependency, use dependency_id parameter.
@@ -1387,7 +1399,7 @@ class TaskMCPController(ContextPropagationMixin):
 
         logger.info(f"Managing task with action: {action}")
         
-        facade = self._get_facade_for_request(task_id=task_id, git_branch_id=git_branch_id)
+        facade = self._get_facade_for_request(task_id=task_id, git_branch_id=git_branch_id, user_id=user_id)
 
         if action in ["create", "update", "get", "delete", "complete"]:
             return self.handle_crud_operations(
@@ -1509,7 +1521,7 @@ class TaskMCPController(ContextPropagationMixin):
                 flat["manage_task"] = sub["manage_task"]
         return flat
     
-    def _derive_context_from_identifiers(self, task_id: Optional[str] = None, git_branch_id: Optional[str] = None) -> tuple:
+    def _derive_context_from_identifiers(self, task_id: Optional[str] = None, git_branch_id: Optional[str] = None, user_id: Optional[str] = None) -> tuple:
         """
         Derive project_id, git_branch_name, and user_id from task_id or git_branch_id.
         
@@ -1523,9 +1535,12 @@ class TaskMCPController(ContextPropagationMixin):
         import logging
         logger = logging.getLogger(__name__)
         
-        # Get authenticated user ID using helper function
-        log_authentication_details()  # For debugging
-        user_id = get_authenticated_user_id(None, "Task context resolution")
+        # Get authenticated user ID using helper function (if not provided)
+        if user_id is None:
+            log_authentication_details()  # For debugging
+            user_id = get_authenticated_user_id(None, "Task context resolution")
+        else:
+            logger.debug(f"Using provided user_id: {user_id}")
         
         # For git_branch_id, look up the actual project_id
         if git_branch_id:
@@ -1640,7 +1655,8 @@ class TaskMCPController(ContextPropagationMixin):
                     # Derive context from task
                     project_id, git_branch_name, user_id = self._derive_context_from_identifiers(
                         task_id=task_id, 
-                        git_branch_id=task.get("git_branch_id")
+                        git_branch_id=task.get("git_branch_id"),
+                        user_id=None
                     )
                     
                     # Validate user_id before creating context facade

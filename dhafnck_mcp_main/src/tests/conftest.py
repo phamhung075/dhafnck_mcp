@@ -446,8 +446,8 @@ def set_mcp_db_path_for_tests(request):
     
     from fastmcp.task_management.infrastructure.database.database_initializer import reset_initialization_cache
     from fastmcp.task_management.infrastructure.database.database_source_manager import DatabaseSourceManager
-    from fastmcp.task_management.infrastructure.database.test_database_config import (
-        TestDatabaseConfig,
+    from tests.unit.infrastructure.database.test_database_config import (
+        DatabaseTestConfig,
         install_missing_dependencies
     )
     
@@ -473,8 +473,8 @@ def set_mcp_db_path_for_tests(request):
     original_test_db_url = os.environ.get("TEST_DATABASE_URL")
     
     try:
-        # Set up TestDatabaseConfig - it will respect DATABASE_TYPE environment variable
-        test_config = TestDatabaseConfig()
+        # Set up DatabaseTestConfig - it will respect DATABASE_TYPE environment variable
+        test_config = DatabaseTestConfig()
         
         # Configure test environment (respects DATABASE_TYPE - Supabase/PostgreSQL/SQLite)
         test_config.configure_test_environment()

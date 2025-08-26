@@ -70,7 +70,8 @@ class AgentMCPController:
             agent_id: Annotated[Optional[str], Field(description=manage_agent_desc["parameters"].get("agent_id", "Agent identifier"))] = None,
             name: Annotated[Optional[str], Field(description=manage_agent_desc["parameters"].get("name", "Agent name"))] = None,
             call_agent: Annotated[Optional[str], Field(description=manage_agent_desc["parameters"].get("call_agent", "Call agent string/config"))] = None,
-            git_branch_id: Annotated[Optional[str], Field(description=manage_agent_desc["parameters"].get("git_branch_id", "Task tree identifier"))] = None
+            git_branch_id: Annotated[Optional[str], Field(description=manage_agent_desc["parameters"].get("git_branch_id", "Task tree identifier"))] = None,
+            user_id: Annotated[Optional[str], Field(description="User identifier for authentication and audit trails")] = None
         ) -> Dict[str, Any]:
             """Manage agent operations including register, assign, update, and unregister."""
             return self.manage_agent(
@@ -79,29 +80,35 @@ class AgentMCPController:
                 agent_id=agent_id,
                 name=name,
                 call_agent=call_agent,
-                git_branch_id=git_branch_id
+                git_branch_id=git_branch_id,
+                user_id=user_id
             )
     
-    def _get_facade_for_request(self, project_id: str) -> AgentApplicationFacade:
+    def _get_facade_for_request(self, project_id: str, user_id: Optional[str] = None) -> AgentApplicationFacade:
         """
         Get an AgentApplicationFacade with the appropriate context.
         
         Args:
             project_id: Project identifier
+            user_id: Optional user identifier for authentication
             
         Returns:
             AgentApplicationFacade instance
         """
-        # Get current user context from JWT token or handle authentication
-        current_user_id = get_current_user_id()
-        if current_user_id:
-            user_id = validate_user_id(current_user_id, "Agent facade creation")
+        # Use provided user_id or fall back to authentication
+        if user_id:
+            validated_user_id = validate_user_id(user_id, "Agent facade creation")
         else:
-            # NO FALLBACKS ALLOWED - user authentication is required
-            raise UserAuthenticationRequiredError("Agent facade creation")
+            # Get current user context from JWT token or handle authentication
+            current_user_id = get_current_user_id()
+            if current_user_id:
+                validated_user_id = validate_user_id(current_user_id, "Agent facade creation")
+            else:
+                # NO FALLBACKS ALLOWED - user authentication is required
+                raise UserAuthenticationRequiredError("Agent facade creation")
         
         # Pass user_id to facade factory for proper data isolation
-        return self._agent_facade_factory.create_agent_facade(project_id=project_id, user_id=user_id)
+        return self._agent_facade_factory.create_agent_facade(project_id=project_id, user_id=validated_user_id)
     
     def manage_agent(
         self,
@@ -110,7 +117,8 @@ class AgentMCPController:
         agent_id: Optional[str] = None,
         name: Optional[str] = None,
         call_agent: Optional[str] = None,
-        git_branch_id: Optional[str] = None
+        git_branch_id: Optional[str] = None,
+        user_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Unified agent management method that handles all agent operations.
@@ -121,14 +129,14 @@ class AgentMCPController:
         # Route to appropriate handler based on action
         if action in ["register", "get", "list", "update", "unregister"]:
             return self.handle_crud_operations(
-                action, project_id, agent_id, name, call_agent
+                action, project_id, agent_id, name, call_agent, user_id
             )
         elif action in ["assign", "unassign"]:
             return self.handle_assignment_operations(
-                action, project_id, agent_id, git_branch_id
+                action, project_id, agent_id, git_branch_id, user_id
             )
         elif action == "rebalance":
-            return self.handle_rebalance_operation(project_id)
+            return self.handle_rebalance_operation(project_id, user_id)
         else:
             return {
                 "success": False,
@@ -147,7 +155,8 @@ class AgentMCPController:
         project_id: str,
         agent_id: Optional[str] = None,
         name: Optional[str] = None,
-        call_agent: Optional[str] = None
+        call_agent: Optional[str] = None,
+        user_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Handle core CRUD operations by converting MCP parameters 
@@ -155,7 +164,7 @@ class AgentMCPController:
         """
         try:
             # Get facade for this request
-            facade = self._get_facade_for_request(project_id)
+            facade = self._get_facade_for_request(project_id, user_id)
             
             if action == "register":
                 if not name:
@@ -203,7 +212,8 @@ class AgentMCPController:
         action: str,
         project_id: str,
         agent_id: Optional[str] = None,
-        git_branch_id: Optional[str] = None
+        git_branch_id: Optional[str] = None,
+        user_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Handle agent assignment operations by converting MCP parameters 
@@ -211,7 +221,7 @@ class AgentMCPController:
         """
         try:
             # Get facade for this request
-            facade = self._get_facade_for_request(project_id)
+            facade = self._get_facade_for_request(project_id, user_id)
             
             # Validate required fields
             if not agent_id:
@@ -236,13 +246,13 @@ class AgentMCPController:
                 "details": str(e)
             }
     
-    def handle_rebalance_operation(self, project_id: str) -> Dict[str, Any]:
+    def handle_rebalance_operation(self, project_id: str, user_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Handle agent rebalancing operation by delegating to the application facade.
         """
         try:
             # Get facade for this request
-            facade = self._get_facade_for_request(project_id)
+            facade = self._get_facade_for_request(project_id, user_id)
             return self._handle_rebalance_agents(facade, project_id)
 
         except Exception as e:

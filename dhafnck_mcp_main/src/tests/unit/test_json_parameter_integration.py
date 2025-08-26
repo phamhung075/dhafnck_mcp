@@ -174,10 +174,11 @@ class TestJSONParameterIntegration:
             client_info=client_info_json
         )
         
-        # Verify facade was called with parsed dictionary
+        # Verify facade was called with parsed dictionary and user_id parameter
         mock_connection_facade.register_for_status_updates.assert_called_once_with(
             "test-session",
-            client_info_dict
+            client_info_dict,
+            None  # user_id parameter defaults to None
         )
         
         assert result["success"] is True

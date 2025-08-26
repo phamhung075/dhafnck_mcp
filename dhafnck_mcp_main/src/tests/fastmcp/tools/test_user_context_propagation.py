@@ -22,13 +22,14 @@ class TestUserContextPropagation:
         mock_user_context = MCPUserContext(
             user_id="test-user-123",
             email="test@example.com",
+            username="testuser",
             roles=["user"],
             scopes=["read", "write"]
         )
         
         # Create a test tool function that accesses user context
         def test_tool_function() -> str:
-            from fastmcp.auth.mcp_integration.user_context_middleware import get_current_user_id
+            from fastmcp.auth.middleware.request_context_middleware import get_current_user_id
             user_id = get_current_user_id()
             return f"User ID: {user_id}"
         
@@ -36,10 +37,10 @@ class TestUserContextPropagation:
         tool = FunctionTool.from_function(test_tool_function)
         
         # Mock the user context middleware to return our test context
-        with patch('fastmcp.auth.mcp_integration.user_context_middleware.get_current_user_context') as mock_get_context:
+        with patch('fastmcp.auth.middleware.request_context_middleware.get_current_user_context') as mock_get_context:
             mock_get_context.return_value = mock_user_context
             
-            with patch('fastmcp.auth.mcp_integration.user_context_middleware.current_user_context') as mock_context_var:
+            with patch('fastmcp.auth.middleware.request_context_middleware.current_user_context') as mock_context_var:
                 # Mock the context variable set method
                 mock_context_var.set = Mock()
                 
@@ -65,7 +66,7 @@ class TestUserContextPropagation:
         tool = FunctionTool.from_function(simple_tool_function)
         
         # Mock no user context available
-        with patch('fastmcp.auth.mcp_integration.user_context_middleware.get_current_user_context') as mock_get_context:
+        with patch('fastmcp.auth.middleware.request_context_middleware.get_current_user_context') as mock_get_context:
             mock_get_context.return_value = None
             
             # Run the tool
@@ -89,7 +90,7 @@ class TestUserContextPropagation:
         
         # Mock ImportError when trying to import user context middleware
         with patch('fastmcp.tools.tool.logger') as mock_logger:
-            with patch.dict('sys.modules', {'fastmcp.auth.mcp_integration.user_context_middleware': None}):
+            with patch.dict('sys.modules', {'fastmcp.auth.middleware.request_context_middleware': None}):
                 # This should trigger the ImportError in the try/except block
                 result = await tool.run({})
                 

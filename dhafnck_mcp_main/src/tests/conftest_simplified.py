@@ -62,7 +62,7 @@ def test_database(request):
     from fastmcp.task_management.infrastructure.database.database_initializer import reset_initialization_cache
     from fastmcp.task_management.infrastructure.database.database_source_manager import DatabaseSourceManager
     from fastmcp.task_management.infrastructure.database.test_database_config import (
-        TestDatabaseConfig,
+        DatabaseTestConfig,
         install_missing_dependencies
     )
     from fastmcp.task_management.infrastructure.database.database_config import close_db
@@ -87,8 +87,8 @@ def test_database(request):
     }
     
     try:
-        # Set up TestDatabaseConfig - it will respect DATABASE_TYPE environment variable
-        test_config = TestDatabaseConfig()
+        # Set up DatabaseTestConfig - it will respect DATABASE_TYPE environment variable
+        test_config = DatabaseTestConfig()
         
         # Configure test environment (respects DATABASE_TYPE - Supabase/PostgreSQL/SQLite)
         test_config.configure_test_environment()

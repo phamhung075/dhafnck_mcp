@@ -1,17 +1,11 @@
-"""Test suite for TaskId value object
-
-This module tests the TaskId value object following DDD principles.
-Tests verify immutability, validation, equality, and proper UUID handling.
-"""
+"""Unit tests for TaskId value object."""
 
 import pytest
 import uuid
-
 from fastmcp.task_management.domain.value_objects.task_id import TaskId
 
-pytestmark = pytest.mark.unit  # Mark all tests in this file as unit tests
 
-class TestTaskIdValueObject:
+class TestTaskIdCreation:
     
     def setup_method(self, method):
         """Clean up before each test"""
@@ -28,300 +22,510 @@ class TestTaskIdValueObject:
             except:
                 session.rollback()
 
-    """Test suite for TaskId value object"""
+    """Test TaskId creation with valid and invalid inputs."""
     
-    # ========== Valid Creation Tests ==========
-    
-    def test_task_id_creation_with_valid_uuid_hex(self):
-        """TaskId can be created with valid 32-char UUID hex string"""
-        # Arrange
+    def test_create_taskid_with_valid_uuid_hex(self):
+        """Test creating TaskId with valid 32-char hex UUID."""
+        # Using a valid UUID v4 in hex format
         valid_hex = "550e8400e29b41d4a716446655440000"
-        expected_canonical = "550e8400-e29b-41d4-a716-446655440000"
-        
-        # Act
         task_id = TaskId(valid_hex)
-        
-        # Assert
-        assert task_id.value == expected_canonical  # Stored in canonical format
-        assert str(task_id) == expected_canonical
-    
-    def test_task_id_creation_with_canonical_uuid(self):
-        """TaskId can be created with canonical UUID format (with dashes)"""
-        # Arrange
-        canonical_uuid = "550e8400-e29b-41d4-a716-446655440000"
-        
-        # Act
-        task_id = TaskId(canonical_uuid)
-        
-        # Assert
-        assert task_id.value == canonical_uuid  # Stored in canonical format
-        assert str(task_id) == canonical_uuid
-    
-    def test_task_id_creation_normalizes_to_lowercase(self):
-        """TaskId normalizes UUID to lowercase and canonical format"""
-        # Arrange
-        uppercase_uuid = "550E8400E29B41D4A716446655440000"
+        # Should be stored in canonical format
         expected_canonical = "550e8400-e29b-41d4-a716-446655440000"
-        
-        # Act
-        task_id = TaskId(uppercase_uuid)
-        
-        # Assert
         assert task_id.value == expected_canonical
+        assert str(task_id) == expected_canonical
+        # But we can get the hex format if needed
+        assert task_id.to_hex_format() == valid_hex
     
-    def test_task_id_from_string_factory_method(self):
-        """TaskId can be created using from_string factory method"""
-        # Arrange
-        uuid_string = "550e8400-e29b-41d4-a716-446655440000"
-        
-        # Act
-        task_id = TaskId.from_string(uuid_string)
-        
-        # Assert
-        assert isinstance(task_id, TaskId)
+    def test_create_taskid_with_canonical_uuid(self):
+        """Test creating TaskId with canonical UUID format (with dashes)."""
+        # Using a valid UUID v4 in canonical format
+        canonical_uuid = "550e8400-e29b-41d4-a716-446655440000"
+        task_id = TaskId(canonical_uuid)
+        # Should store in canonical format, lowercase
+        expected = "550e8400-e29b-41d4-a716-446655440000"
+        assert task_id.value == expected
+    
+    def test_create_taskid_with_uppercase_uuid(self):
+        """Test that uppercase UUIDs are converted to lowercase."""
+        uppercase_uuid = "550E8400E29B41D4A716446655440000"
+        task_id = TaskId(uppercase_uuid)
+        expected = "550e8400-e29b-41d4-a716-446655440000"
+        assert task_id.value == expected
+    
+    def test_create_taskid_with_mixed_case_canonical(self):
+        """Test mixed case canonical UUID is normalized."""
+        mixed_case = "550E8400-e29b-41d4-A716-446655440000"
+        task_id = TaskId(mixed_case)
+        expected = "550e8400-e29b-41d4-a716-446655440000"
+        assert task_id.value == expected
+    
+    def test_create_taskid_with_whitespace(self):
+        """Test that whitespace is stripped from input."""
+        uuid_with_space = "  550e8400-e29b-41d4-a716-446655440000  "
+        task_id = TaskId(uuid_with_space)
         assert task_id.value == "550e8400-e29b-41d4-a716-446655440000"
+
+
+class TestTaskIdValidation:
     
-    def test_task_id_generate_new_creates_unique_ids(self):
-        """generate_new creates unique TaskIds"""
-        # Act
-        id1 = TaskId.generate_new()
-        id2 = TaskId.generate_new()
-        id3 = TaskId.generate_new()
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
         
-        # Assert
-        assert isinstance(id1, TaskId)
-        assert isinstance(id2, TaskId)
-        assert isinstance(id3, TaskId)
-        assert id1 != id2
-        assert id2 != id3
-        assert id1 != id3
-        assert len(id1.value) == 36  # UUID canonical is 36 chars
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
+    """Test TaskId validation and error handling."""
     
-    def test_task_id_to_hex_format(self):
-        """TaskId can convert to hex UUID format without dashes"""
-        # Arrange
-        canonical_value = "550e8400-e29b-41d4-a716-446655440000"
-        task_id = TaskId(canonical_value)
-        
-        # Act
-        hex_format = task_id.to_hex_format()
-        
-        # Assert
-        assert hex_format == "550e8400e29b41d4a716446655440000"
-    
-    # ========== Validation Tests ==========
-    
-    def test_task_id_creation_with_none_raises_error(self):
-        """TaskId cannot be created with None value"""
+    def test_taskid_with_none_raises_error(self):
+        """Test that None value raises ValueError."""
         with pytest.raises(ValueError, match="Task ID cannot be None"):
             TaskId(None)
     
-    def test_task_id_creation_with_empty_string_raises_error(self):
-        """TaskId cannot be created with empty string"""
+    def test_taskid_with_empty_string_raises_error(self):
+        """Test that empty string raises ValueError."""
         with pytest.raises(ValueError, match="Task ID cannot be empty or whitespace"):
             TaskId("")
     
-    def test_task_id_creation_with_whitespace_raises_error(self):
-        """TaskId cannot be created with whitespace only"""
+    def test_taskid_with_only_whitespace_raises_error(self):
+        """Test that whitespace-only string raises ValueError."""
         with pytest.raises(ValueError, match="Task ID cannot be empty or whitespace"):
             TaskId("   ")
     
-    def test_task_id_creation_with_invalid_type_raises_error(self):
-        """TaskId must be created with string value"""
+    def test_taskid_with_invalid_type_raises_error(self):
+        """Test that non-string types raise TypeError."""
         with pytest.raises(TypeError, match="Task ID value must be a string"):
             TaskId(12345)
+        
+        with pytest.raises(TypeError, match="Task ID value must be a string"):
+            TaskId(['a', 'b', 'c'])
     
-    def test_task_id_creation_with_invalid_uuid_format_raises_error(self):
-        """TaskId validates UUID format"""
-        invalid_values = [
+    def test_taskid_with_invalid_format_raises_error(self):
+        """Test that invalid UUID formats raise ValueError."""
+        invalid_formats = [
             "not-a-uuid",
-            "550e8400-e29b-41d4-a716",  # Too short
-            "550e8400-e29b-41d4-a716-446655440000-extra",  # Too long
-            "GGGG8400-e29b-41d4-a716-446655440000",  # Invalid hex chars
-            "550e8400e29b41d4a716446655440000z",  # Invalid char at end
+            # "12345",  # Now valid as integer ID
+            "g50e8400e29b41d4a716446655440000",  # 'g' is not hex
+            "550e8400e29b41d4a71644665544000",   # Too short (31 chars)
+            "550e8400-e29b-41d4-a716-4466554400000",  # Too long (33 chars)
+            "550e8400-e29b-41d4-a716-44665544000", # Wrong length with dashes
             "123.abc",  # Invalid hierarchical ID
         ]
         
-        for invalid in invalid_values:
+        for invalid in invalid_formats:
             with pytest.raises(ValueError, match="Invalid Task ID format"):
                 TaskId(invalid)
+
+
+class TestTaskIdEquality:
     
-    # ========== Immutability Tests ==========
-    
-    def test_task_id_is_immutable(self):
-        """TaskId value cannot be modified after creation (frozen dataclass)"""
-        # Arrange
-        task_id = TaskId.generate_new()
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
         
-        # Act & Assert
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
+    """Test TaskId equality comparison."""
+    
+    def test_equal_taskids(self):
+        """Test that TaskIds with same value are equal."""
+        uuid_value = "550e8400-e29b-41d4-a716-446655440000"
+        task_id1 = TaskId(uuid_value)
+        task_id2 = TaskId(uuid_value)
+        assert task_id1 == task_id2
+    
+    def test_equal_taskids_different_input_formats(self):
+        """Test TaskIds are equal when created from different formats of same UUID."""
+        hex_format = "550e8400e29b41d4a716446655440000"
+        canonical_format = "550e8400-e29b-41d4-a716-446655440000"
+        uppercase_format = "550E8400E29B41D4A716446655440000"
+        
+        task_id1 = TaskId(hex_format)
+        task_id2 = TaskId(canonical_format)
+        task_id3 = TaskId(uppercase_format)
+        
+        assert task_id1 == task_id2
+        assert task_id2 == task_id3
+        assert task_id1 == task_id3
+    
+    def test_not_equal_taskids(self):
+        """Test that TaskIds with different values are not equal."""
+        task_id1 = TaskId("550e8400-e29b-41d4-a716-446655440000")
+        task_id2 = TaskId("660e8400e29b41d4a716446655440000")
+        assert task_id1 != task_id2
+    
+    def test_equality_with_non_taskid(self):
+        """Test that TaskId returns NotImplemented when compared to non-TaskId."""
+        task_id = TaskId("550e8400-e29b-41d4-a716-446655440000")
+        assert task_id.__eq__("550e8400-e29b-41d4-a716-446655440000") == NotImplemented
+        assert task_id.__eq__(123) == NotImplemented
+        assert task_id.__eq__(None) == NotImplemented
+
+
+class TestTaskIdImmutability:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
+    """Test TaskId immutability."""
+    
+    def test_taskid_is_immutable(self):
+        """Test that TaskId value cannot be changed after creation."""
+        task_id = TaskId("550e8400-e29b-41d4-a716-446655440000")
+        
         with pytest.raises(AttributeError):
-            task_id.value = "new-value"
+            task_id.value = "660e8400e29b41d4a716446655440000"
+
+
+class TestTaskIdHashing:
     
-    def test_task_id_dataclass_is_frozen(self):
-        """TaskId dataclass is properly frozen"""
-        # Arrange
-        task_id = TaskId.generate_new()
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
         
-        # Verify the dataclass is frozen
-        assert hasattr(task_id, "__frozen__") or task_id.__class__.__dataclass_params__.frozen
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
+    """Test TaskId hashing behavior."""
     
-    # ========== Equality and Hashing Tests ==========
+    def test_taskid_is_hashable(self):
+        """Test that TaskId can be used as dict key or in sets."""
+        task_id1 = TaskId("550e8400-e29b-41d4-a716-446655440000")
+        task_id2 = TaskId("660e8400e29b41d4a716446655440000")
+        
+        # Test as dict keys
+        task_dict = {task_id1: "Task 1", task_id2: "Task 2"}
+        assert task_dict[task_id1] == "Task 1"
+        assert task_dict[task_id2] == "Task 2"
+        
+        # Test in sets
+        task_set = {task_id1, task_id2, task_id1}  # Duplicate should be ignored
+        assert len(task_set) == 2
+        assert task_id1 in task_set
+        assert task_id2 in task_set
     
-    def test_task_id_equality(self):
-        """TaskIds with same value are equal"""
-        # Arrange
-        uuid_value = "550e8400e29b41d4a716446655440000"
-        id1 = TaskId(uuid_value)
-        id2 = TaskId(uuid_value)
-        id3 = TaskId.generate_new()
+    def test_equal_taskids_have_same_hash(self):
+        """Test that equal TaskIds have the same hash."""
+        hex_format = "550e8400e29b41d4a716446655440000"
+        canonical_format = "550e8400-e29b-41d4-a716-446655440000"
         
-        # Assert
-        assert id1 == id2
-        assert id1 != id3
-        assert id2 != id3
+        task_id1 = TaskId(hex_format)
+        task_id2 = TaskId(canonical_format)
+        
+        assert hash(task_id1) == hash(task_id2)
+
+
+class TestTaskIdFactoryMethods:
     
-    def test_task_id_equality_with_different_input_formats(self):
-        """TaskIds are equal regardless of input format (with/without dashes)"""
-        # Arrange
-        id1 = TaskId("550e8400e29b41d4a716446655440000")
-        id2 = TaskId("550e8400-e29b-41d4-a716-446655440000")
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
         
-        # Assert - Both normalize to same canonical value
-        assert id1 == id2
-        assert id1.value == id2.value == "550e8400-e29b-41d4-a716-446655440000"
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
+    """Test TaskId factory methods."""
     
-    def test_task_id_not_equal_to_other_types(self):
-        """TaskId is not equal to other types"""
-        # Arrange
-        task_id = TaskId.generate_new()
-        
-        # Assert
-        assert task_id != "some-string"
-        assert task_id != 123
-        assert task_id != None
-        assert task_id != object()
+    def test_from_string(self):
+        """Test creating TaskId from string using factory method."""
+        uuid_str = "550e8400-e29b-41d4-a716-446655440000"
+        task_id = TaskId.from_string(uuid_str)
+        assert task_id.value == uuid_str
     
-    def test_task_id_hashable(self):
-        """TaskId can be used in sets and as dict keys"""
-        # Arrange
-        id1 = TaskId("550e8400e29b41d4a716446655440000")
-        id2 = TaskId("550e8400-e29b-41d4-a716-446655440000")  # Same value, different format
-        id3 = TaskId.generate_new()  # Different value
-        
-        # Act - Use in set
-        id_set = {id1, id2, id3}
-        
-        # Assert
-        assert len(id_set) == 2  # id1 and id2 are same, so only 2 unique
-        
-        # Act - Use as dict key
-        id_dict = {id1: "value1", id3: "value3"}
-        id_dict[id2] = "value2"  # Should overwrite id1's value
-        
-        # Assert
-        assert len(id_dict) == 2
-        assert id_dict[id1] == "value2"  # Overwritten by id2
+    def test_from_int(self):
+        """Test creating TaskId from integer."""
+        # from_int now creates valid integer-based TaskIds for backward compatibility
+        task_id = TaskId.from_int(12345)
+        assert str(task_id) == "12345"
+        assert isinstance(task_id, TaskId)
     
-    def test_task_id_hash_consistency(self):
-        """TaskId hash is consistent with equality"""
-        # Arrange
-        uuid_hex = "550e8400e29b41d4a716446655440000"
-        uuid_canonical = "550e8400-e29b-41d4-a716-446655440000"
-        id1 = TaskId(uuid_hex)
-        id2 = TaskId(uuid_canonical)
+    def test_generate_new(self):
+        """Test generating new TaskId."""
+        task_id1 = TaskId.generate_new()
+        task_id2 = TaskId.generate_new()
         
-        # Assert
-        assert hash(id1) == hash(id2)  # Equal objects have equal hashes
-    
-    # ========== String Representation Tests ==========
-    
-    def test_task_id_string_representation(self):
-        """TaskId string representation returns the canonical value"""
-        # Arrange
-        hex_value = "550e8400e29b41d4a716446655440000"
-        expected_canonical = "550e8400-e29b-41d4-a716-446655440000"
-        task_id = TaskId(hex_value)
+        # Should create valid TaskIds
+        assert isinstance(task_id1, TaskId)
+        assert isinstance(task_id2, TaskId)
         
-        # Assert
-        assert str(task_id) == expected_canonical
-        assert repr(task_id) == f"TaskId(value='{expected_canonical}')"
-    
-    # ========== Factory Method Tests ==========
-    
-    def test_from_int_factory_method(self):
-        """TaskId from_int factory method creates valid integer-based TaskIds"""
-        # The from_int method creates integer TaskIds for backward compatibility
+        # Should be unique
+        assert task_id1 != task_id2
         
-        # Act - Create TaskIds from integers
-        task_id_123 = TaskId.from_int(123)
-        task_id_456 = TaskId.from_int(456)
-        
-        # Assert - Values should be stored as strings but valid
-        assert str(task_id_123) == "123"
-        assert str(task_id_456) == "456"
-        assert task_id_123 != task_id_456
+        # Should be valid 36-char canonical UUID strings
+        assert len(task_id1.value) == 36
+        assert len(task_id2.value) == 36
+        assert all(c in '0123456789abcdef-' for c in task_id1.value)
+        assert all(c in '0123456789abcdef-' for c in task_id2.value)
     
-    def test_generate_subtask_method(self):
-        """TaskId generate_subtask method creates hierarchical subtask IDs"""
-        # Arrange
+    def test_generate_subtask(self):
+        """Test generating hierarchical subtask IDs."""
+        # Create parent task ID
         parent_id = TaskId.generate_new()
         
-        # Act - Generate first subtask
+        # Generate first subtask
         existing_ids = []
         subtask1 = TaskId.generate_subtask(parent_id, existing_ids)
+        assert str(subtask1) == f"{parent_id}.001"
         
-        # Assert - First subtask should be parent.001
-        expected_first = f"{parent_id}.001"
-        assert str(subtask1) == expected_first
-        
-        # Act - Generate second subtask
+        # Generate second subtask
         existing_ids.append(str(subtask1))
         subtask2 = TaskId.generate_subtask(parent_id, existing_ids)
+        assert str(subtask2) == f"{parent_id}.002"
         
-        # Assert - Second subtask should be parent.002
-        expected_second = f"{parent_id}.002"
-        assert str(subtask2) == expected_second
-        
-        # Act - Generate third subtask with existing subtasks and non-subtask ID
-        existing_ids.append(str(subtask2))  # Add the second subtask
-        existing_ids.append("some-other-id")  # Non-subtask ID should be ignored
+        # Generate third subtask with non-subtask ID in list
+        existing_ids.append(str(subtask2))
+        existing_ids.append("unrelated-id")  # Should be ignored
         subtask3 = TaskId.generate_subtask(parent_id, existing_ids)
+        assert str(subtask3) == f"{parent_id}.003"
         
-        # Assert - Third subtask should be parent.003
-        expected_third = f"{parent_id}.003"
-        assert str(subtask3) == expected_third
-        
-        # Verify all subtasks are unique
+        # All subtasks should be unique
         assert subtask1 != subtask2
         assert subtask2 != subtask3
         assert subtask1 != subtask3
+
+
+class TestTaskIdSerialization:
     
-    # ========== Integration Tests ==========
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
+    """Test TaskId serialization/deserialization."""
     
-    def test_task_id_works_with_python_uuid(self):
-        """TaskId integrates properly with Python's uuid module"""
-        # Arrange
-        python_uuid = uuid.uuid4()
-        
-        # Act - Create from hex
-        task_id_hex = TaskId(python_uuid.hex)
-        
-        # Act - Create from string representation
-        task_id_str = TaskId(str(python_uuid))
-        
-        # Assert
-        assert task_id_hex == task_id_str
-        assert task_id_hex.value == str(python_uuid)  # Both stored in canonical format
+    def test_string_representation(self):
+        """Test string representation of TaskId."""
+        uuid_value = "550e8400-e29b-41d4-a716-446655440000"
+        task_id = TaskId(uuid_value)
+        assert str(task_id) == uuid_value
     
-    def test_task_id_preserves_uuid_value(self):
-        """TaskId preserves the actual UUID value through conversions"""
-        # Arrange
-        original_uuid = uuid.uuid4()
+    def test_to_canonical_format(self):
+        """Test converting TaskId to canonical UUID format."""
+        hex_value = "550e8400e29b41d4a716446655440000"
+        task_id = TaskId(hex_value)
         
-        # Act
-        task_id = TaskId(str(original_uuid))
-        back_to_canonical = task_id.value  # Already in canonical format
+        canonical = task_id.to_canonical_format()
+        expected = "550e8400-e29b-41d4-a716-446655440000"
+        assert canonical == expected
+    
+    def test_round_trip_conversion(self):
+        """Test converting between hex and canonical formats."""
+        original_hex = "550e8400e29b41d4a716446655440000"
+        task_id1 = TaskId(original_hex)
         
-        # Assert
-        assert back_to_canonical == str(original_uuid)
-        assert uuid.UUID(back_to_canonical) == original_uuid
+        # Convert to canonical
+        canonical = task_id1.to_canonical_format()
+        
+        # Create new TaskId from canonical
+        task_id2 = TaskId(canonical)
+        
+        # Should be equal
+        assert task_id1 == task_id2
+        assert task_id1.value == task_id2.value
+
+
+class TestTaskIdEdgeCases:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
+    """Test edge cases and error handling."""
+    
+    def test_uuid_with_invalid_hex_chars(self):
+        """Test that non-hex characters in UUID are rejected."""
+        invalid_uuids = [
+            "g50e8400e29b41d4a716446655440000",  # 'g' is not hex
+            "z50e8400-e29b-41d4-a716-446655440000",  # 'z' is not hex
+        ]
+        
+        for invalid in invalid_uuids:
+            with pytest.raises(ValueError, match="Invalid Task ID format"):
+                TaskId(invalid)
+    
+    def test_real_uuid_compatibility(self):
+        """Test compatibility with Python's uuid module."""
+        # Generate a real UUID
+        real_uuid = uuid.uuid4()
+        
+        # Create TaskId from hex
+        task_id1 = TaskId(real_uuid.hex)
+        assert task_id1.value == str(real_uuid)  # Should be canonical format
+        
+        # Create TaskId from string representation
+        task_id2 = TaskId(str(real_uuid))
+        assert task_id2.value == str(real_uuid)  # Should be canonical format
+        
+        # Both should be equal
+        assert task_id1 == task_id2
+    
+    def test_zero_uuid(self):
+        """Test handling of zero UUID (all zeros)."""
+        zero_uuid = "00000000000000000000000000000000"
+        task_id = TaskId(zero_uuid)
+        assert task_id.value == "00000000-0000-0000-0000-000000000000"
+    
+    def test_max_uuid(self):
+        """Test handling of max UUID (all f's)."""
+        max_uuid = "ffffffffffffffffffffffffffffffff"
+        task_id = TaskId(max_uuid)
+        assert task_id.value == "ffffffff-ffff-ffff-ffff-ffffffffffff"
+
+
+class TestTaskIdOrdering:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
+    """Test TaskId ordering and comparison (if applicable)."""
+    
+    def test_taskid_not_orderable(self):
+        """Test that TaskIds don't support ordering operations."""
+        task_id1 = TaskId("550e8400-e29b-41d4-a716-446655440000")
+        task_id2 = TaskId("660e8400e29b41d4a716446655440000")
+        
+        # TaskIds should not be orderable
+        with pytest.raises(TypeError):
+            _ = task_id1 < task_id2
+        
+        with pytest.raises(TypeError):
+            _ = task_id1 > task_id2
+        
+        with pytest.raises(TypeError):
+            _ = task_id1 <= task_id2
+        
+        with pytest.raises(TypeError):
+            _ = task_id1 >= task_id2
+
+
+class TestTaskIdIntegration:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
+    """Integration tests with real use cases."""
+    
+    def test_taskid_in_collections(self):
+        """Test TaskId behavior in various collections."""
+        # Create some TaskIds
+        ids = [TaskId.generate_new() for _ in range(5)]
+        
+        # Test in list
+        task_list = list(ids)
+        assert len(task_list) == 5
+        assert all(isinstance(tid, TaskId) for tid in task_list)
+        
+        # Test in set (uniqueness)
+        task_set = set(ids)
+        assert len(task_set) == 5  # All should be unique
+        
+        # Test duplicate handling in set
+        duplicate_set = set(ids + [ids[0], ids[1]])  # Add duplicates
+        assert len(duplicate_set) == 5  # Duplicates should be ignored
+        
+        # Test in dict as keys
+        task_dict = {tid: f"Task {i}" for i, tid in enumerate(ids)}
+        assert len(task_dict) == 5
+        assert all(task_dict[tid] == f"Task {i}" for i, tid in enumerate(ids))
+    
+    def test_taskid_json_serialization(self):
+        """Test that TaskId can be serialized for JSON."""
+        task_id = TaskId("550e8400-e29b-41d4-a716-446655440000")
+        
+        # Should be able to convert to string for JSON
+        json_value = str(task_id)
+        assert json_value == "550e8400-e29b-41d4-a716-446655440000"
+        
+        # Should be able to recreate from JSON value
+        restored_id = TaskId(json_value)
+        assert restored_id == task_id

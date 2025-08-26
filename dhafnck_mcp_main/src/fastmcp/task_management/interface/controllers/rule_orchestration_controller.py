@@ -7,7 +7,7 @@ This file contains the DDD-compliant controller for rule orchestration following
 """
 
 import logging
-from typing import Dict, Any, Annotated
+from typing import Dict, Any, Annotated, Optional
 from pydantic import Field  # type: ignore
 from typing import TYPE_CHECKING
 
@@ -45,11 +45,12 @@ class RuleOrchestrationController:
         def manage_rule(
             action: Annotated[str, Field(description=manage_rule_desc["parameters"].get("action", "Rule management action"))],
             target: Annotated[str, Field(description=manage_rule_desc["parameters"].get("target", "Target for the action"))] = "",
-            content: Annotated[str, Field(description=manage_rule_desc["parameters"].get("content", "Content for the action"))] = ""
+            content: Annotated[str, Field(description=manage_rule_desc["parameters"].get("content", "Content for the action"))] = "",
+            user_id: Annotated[Optional[str], Field(description="User identifier for authentication and audit trails")] = None
         ) -> Dict[str, Any]:
-            return self.handle_manage_rule_request(action=action, target=target, content=content)
+            return self.handle_manage_rule_request(action=action, target=target, content=content, user_id=user_id)
     
-    def handle_manage_rule_request(self, action: str, target: str = "", content: str = "") -> Dict[str, Any]:
+    def handle_manage_rule_request(self, action: str, target: str = "", content: str = "", user_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Handle manage_rule MCP tool requests.
         
@@ -57,6 +58,7 @@ class RuleOrchestrationController:
             action: The action to perform
             target: The target for the action (optional)
             content: The content for the action (optional)
+            user_id: User identifier for authentication and audit trails (optional)
             
         Returns:
             Dictionary containing the result of the operation
@@ -72,7 +74,7 @@ class RuleOrchestrationController:
                     "hint": "Include 'action' in your request body",
                     "available_actions": self._get_available_actions()
                 }
-            result = self.facade.execute_action(action, target, content)
+            result = self.facade.execute_action(action, target, content, user_id)
             if not isinstance(result, dict):
                 return {
                     "success": False,

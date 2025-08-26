@@ -26,39 +26,15 @@ REQUIRED BEHAVIORS:
 
 ## Missing Test Files - CREATE IMMEDIATELY:
 
-## Stale Test Files (Source Newer Than Test)
-- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/interface/fastapi_auth.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/auth/interface/fastapi_auth_test.py`
-  - **Days stale**: 0
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/project_repository.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/project_repository_test.py`
-  - **Days stale**: 3
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/auth_helper.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/auth_helper_test.py`
-  - **Days stale**: 0
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/desc/task/manage_task_description.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/desc/task/manage_task_description_test.py`
-  - **Days stale**: 5
-
-
 ## Missing Test Files
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/dtos/task/create_task_request.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/dtos/task/create_task_request_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/token_router.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/server/routes/token_router_test.py`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/factories/__init__.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/factories/__init___test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/database/migrations/add_task_progress_field.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/database/migrations/add_task_progress_field_test.py`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/domain/value_objects/__init__.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/domain/value_objects/__init___test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/domain/value_objects/task_id.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/domain/value_objects/task_id_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/domain/value_objects/task_status.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/domain/value_objects/task_status_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/database/test_helpers.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/database/test_helpers_test.py`
 
 
 ## EXECUTION COMMANDS - DO NOW:

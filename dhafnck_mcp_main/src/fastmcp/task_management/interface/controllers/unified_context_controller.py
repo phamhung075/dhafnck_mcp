@@ -252,6 +252,13 @@ class UnifiedContextMCPController:
                     operation_name=f"manage_context.{action}"
                 )
                 
+                # Normalize context_id for backward compatibility
+                # Convert 'global_singleton' string to the proper UUID for global contexts
+                if level == "global" and context_id == "global_singleton":
+                    from ....infrastructure.database.models import GLOBAL_SINGLETON_UUID
+                    context_id = GLOBAL_SINGLETON_UUID
+                    logger.info(f"Normalized global_singleton context_id to {GLOBAL_SINGLETON_UUID}")
+                
                 # Create appropriate facade with authenticated user
                 facade = self._facade_factory.create_facade(
                     user_id=authenticated_user_id,
@@ -329,10 +336,16 @@ class UnifiedContextMCPController:
                         filters=filters
                     )
                 
+                elif action == "bootstrap":
+                    response = facade.bootstrap_context_hierarchy(
+                        project_id=project_id,
+                        branch_id=git_branch_id
+                    )
+                
                 else:
                     return StandardResponseFormatter.create_error_response(
                         operation=f"manage_context.{action}",
-                        error=f"Unknown action: {action}. Valid actions: create, get, update, delete, resolve, delegate, add_insight, add_progress, list"
+                        error=f"Unknown action: {action}. Valid actions: create, get, update, delete, resolve, delegate, add_insight, add_progress, list, bootstrap"
                     )
                 
                 # Standardize response

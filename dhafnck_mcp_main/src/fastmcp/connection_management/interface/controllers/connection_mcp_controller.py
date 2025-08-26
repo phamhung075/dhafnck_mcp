@@ -50,20 +50,23 @@ class ConnectionMCPController:
             include_details: Annotated[bool, Field(description=manage_connection_desc.get("parameters", {}).get("include_details", "Whether to include detailed information"))] = True,
             connection_id: Annotated[Optional[str], Field(description=manage_connection_desc.get("parameters", {}).get("connection_id", "Specific connection identifier"))] = None,
             session_id: Annotated[Optional[str], Field(description=manage_connection_desc.get("parameters", {}).get("session_id", "Client session identifier"))] = None,
-            client_info: Annotated[Optional[Union[str, Dict[str, Any]]], Field(description=manage_connection_desc.get("parameters", {}).get("client_info", "Optional client metadata (dictionary or JSON string)"))] = None
+            client_info: Annotated[Optional[Union[str, Dict[str, Any]]], Field(description=manage_connection_desc.get("parameters", {}).get("client_info", "Optional client metadata (dictionary or JSON string)"))] = None,
+            user_id: Annotated[Optional[str], Field(description="User identifier for authentication and audit trails")] = None
         ) -> Dict[str, Any]:
             return self.manage_connection(
                 action=action,
                 include_details=include_details,
                 connection_id=connection_id,
                 session_id=session_id,
-                client_info=client_info
+                client_info=client_info,
+                user_id=user_id
             )
     
     def manage_connection(self, action: str, include_details: bool = True, 
                          connection_id: Optional[str] = None, 
                          session_id: Optional[str] = None,
-                         client_info: Optional[Union[str, Dict[str, Any]]] = None) -> Dict[str, Any]:
+                         client_info: Optional[Union[str, Dict[str, Any]]] = None,
+                         user_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Unified connection management method that routes to appropriate handlers.
         
@@ -73,6 +76,7 @@ class ConnectionMCPController:
             connection_id: Specific connection identifier for targeted diagnostics
             session_id: Client session identifier for update registration
             client_info: Optional client metadata for registration customization
+            user_id: User identifier for authentication and audit trails
             
         Returns:
             Formatted response dictionary for the requested action
@@ -97,21 +101,21 @@ class ConnectionMCPController:
             
             # Route to appropriate handler method based on action
             if action == "health_check":
-                return self.handle_health_check(include_details)
+                return self.handle_health_check(include_details, user_id)
             
             elif action == "server_capabilities":
-                return self.handle_server_capabilities(include_details)
+                return self.handle_server_capabilities(include_details, user_id)
             
             elif action == "connection_health":
-                return self.handle_connection_health(connection_id, include_details)
+                return self.handle_connection_health(connection_id, include_details, user_id)
             
             elif action == "status":
-                return self.handle_server_status(include_details)
+                return self.handle_server_status(include_details, user_id)
             
             elif action == "register_updates":
                 # Use provided session_id or default
                 effective_session_id = session_id or "default_session"
-                return self.handle_register_updates(effective_session_id, client_info)
+                return self.handle_register_updates(effective_session_id, client_info, user_id)
             
             else:
                 return {
@@ -132,10 +136,10 @@ class ConnectionMCPController:
                 "action": action
             }
     
-    def handle_health_check(self, include_details: bool = True) -> Dict[str, Any]:
+    def handle_health_check(self, include_details: bool = True, user_id: str = None) -> Dict[str, Any]:
         """Handle health check request"""
         try:
-            response = self._connection_facade.check_server_health(include_details)
+            response = self._connection_facade.check_server_health(include_details, user_id)
             return self._format_health_check_response(response)
         except Exception as e:
             logger.error(f"Error in handle_health_check: {e}")
@@ -145,10 +149,10 @@ class ConnectionMCPController:
                 "action": "health_check"
             }
     
-    def handle_server_capabilities(self, include_details: bool = True) -> Dict[str, Any]:
+    def handle_server_capabilities(self, include_details: bool = True, user_id: str = None) -> Dict[str, Any]:
         """Handle server capabilities request"""
         try:
-            response = self._connection_facade.get_server_capabilities(include_details)
+            response = self._connection_facade.get_server_capabilities(include_details, user_id)
             return self._format_server_capabilities_response(response)
         except Exception as e:
             logger.error(f"Error in handle_server_capabilities: {e}")
@@ -159,10 +163,10 @@ class ConnectionMCPController:
             }
     
     def handle_connection_health(self, connection_id: Optional[str] = None, 
-                                include_details: bool = True) -> Dict[str, Any]:
+                                include_details: bool = True, user_id: str = None) -> Dict[str, Any]:
         """Handle connection health check request"""
         try:
-            response = self._connection_facade.check_connection_health(connection_id, include_details)
+            response = self._connection_facade.check_connection_health(connection_id, include_details, user_id)
             return self._format_connection_health_response(response)
         except Exception as e:
             logger.error(f"Error in handle_connection_health: {e}")
@@ -172,10 +176,10 @@ class ConnectionMCPController:
                 "action": "connection_health"
             }
     
-    def handle_server_status(self, include_details: bool = True) -> Dict[str, Any]:
+    def handle_server_status(self, include_details: bool = True, user_id: str = None) -> Dict[str, Any]:
         """Handle server status request"""
         try:
-            response = self._connection_facade.get_server_status(include_details)
+            response = self._connection_facade.get_server_status(include_details, user_id)
             return self._format_server_status_response(response)
         except Exception as e:
             logger.error(f"Error in handle_server_status: {e}")
@@ -186,10 +190,11 @@ class ConnectionMCPController:
             }
     
     def handle_register_updates(self, session_id: str, 
-                               client_info: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+                               client_info: Optional[Dict[str, Any]] = None,
+                               user_id: str = None) -> Dict[str, Any]:
         """Handle register status updates request"""
         try:
-            response = self._connection_facade.register_for_status_updates(session_id, client_info)
+            response = self._connection_facade.register_for_status_updates(session_id, client_info, user_id)
             return self._format_register_updates_response(response)
         except Exception as e:
             logger.error(f"Error in handle_register_updates: {e}")

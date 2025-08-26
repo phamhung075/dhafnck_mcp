@@ -60,7 +60,7 @@ class ConnectionApplicationFacade:
         
         logger.info("ConnectionApplicationFacade initialized")
     
-    def check_server_health(self, include_details: bool = True) -> HealthCheckResponse:
+    def check_server_health(self, include_details: bool = True, user_id: str = None) -> HealthCheckResponse:
         """Check server health status"""
         try:
             request = HealthCheckRequest(include_details=include_details)
@@ -82,7 +82,7 @@ class ConnectionApplicationFacade:
                 error=str(e)
             )
     
-    def get_server_capabilities(self, include_details: bool = True) -> ServerCapabilitiesResponse:
+    def get_server_capabilities(self, include_details: bool = True, user_id: str = None) -> ServerCapabilitiesResponse:
         """Get server capabilities and features"""
         try:
             request = ServerCapabilitiesRequest(include_details=include_details)
@@ -100,7 +100,7 @@ class ConnectionApplicationFacade:
                 error=str(e)
             )
     
-    def check_connection_health(self, connection_id: str = None, include_details: bool = True) -> ConnectionHealthResponse:
+    def check_connection_health(self, connection_id: str = None, include_details: bool = True, user_id: str = None) -> ConnectionHealthResponse:
         """Check connection health and diagnostics"""
         try:
             request = ConnectionHealthRequest(connection_id=connection_id, include_details=include_details)
@@ -116,7 +116,7 @@ class ConnectionApplicationFacade:
                 error=str(e)
             )
     
-    def get_server_status(self, include_details: bool = True) -> ServerStatusResponse:
+    def get_server_status(self, include_details: bool = True, user_id: str = None) -> ServerStatusResponse:
         """Get comprehensive server status"""
         try:
             request = ServerStatusRequest(include_details=include_details)
@@ -132,7 +132,7 @@ class ConnectionApplicationFacade:
                 error=str(e)
             )
     
-    def register_for_status_updates(self, session_id: str, client_info: Dict[str, Any] = None) -> RegisterUpdatesResponse:
+    def register_for_status_updates(self, session_id: str, client_info: Dict[str, Any] = None, user_id: str = None) -> RegisterUpdatesResponse:
         """Register client for real-time status updates"""
         try:
             request = RegisterUpdatesRequest(session_id=session_id, client_info=client_info)

@@ -89,7 +89,8 @@ class GitBranchMCPController(ContextPropagationMixin):
             git_branch_name: Annotated[Optional[str], Field(description="Git branch name identifier (can be used for assignment operations)")] = None,
             git_branch_id: Annotated[Optional[str], Field(description="Git branch UUID for lookup (can be used for assignment operations)")] = None,
             git_branch_description: Annotated[Optional[str], Field(description="Git branch description")] = None,
-            agent_id: Annotated[Optional[str], Field(description=manage_git_branch_desc["parameters"].get("agent_id", "Agent identifier"))] = None
+            agent_id: Annotated[Optional[str], Field(description=manage_git_branch_desc["parameters"].get("agent_id", "Agent identifier"))] = None,
+            user_id: Annotated[Optional[str], Field(description=manage_git_branch_desc["parameters"].get("user_id", "User identifier for access control and audit"))] = None
         ) -> Dict[str, Any]:
             """Manage git branch operations including create, get, list, update, and delete."""
             return self.manage_git_branch(
@@ -98,7 +99,8 @@ class GitBranchMCPController(ContextPropagationMixin):
                 git_branch_name=git_branch_name,
                 git_branch_id=git_branch_id,
                 git_branch_description=git_branch_description,
-                agent_id=agent_id
+                agent_id=agent_id,
+                user_id=user_id
             )
     
     def _get_facade_for_request(self, project_id: str, user_id: str = None) -> GitBranchApplicationFacade:

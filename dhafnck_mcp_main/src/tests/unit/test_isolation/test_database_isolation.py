@@ -10,7 +10,7 @@ from typing import Any, Generator
 
 # These imports will fail initially - that's expected in TDD
 # We're testing what SHOULD exist, not what does exist
-from fastmcp.task_management.infrastructure.database.test_helpers import (
+from tests.unit.infrastructure.database.test_helpers import (
     DatabaseIsolation,
     TestDatabaseAdapter,
     setup_test_database,

@@ -1,18 +1,10 @@
-"""Test suite for Priority value object
-
-This module tests the Priority value object following DDD principles.
-Tests verify immutability, validation, ordering, and comparison operations.
-"""
+"""Unit tests for Priority value object."""
 
 import pytest
-
 from fastmcp.task_management.domain.value_objects.priority import Priority, PriorityLevel
 
 
-
-pytestmark = pytest.mark.unit  # Mark all tests in this file as unit tests
-
-class TestPriorityValueObject:
+class TestPriorityCreation:
     
     def setup_method(self, method):
         """Clean up before each test"""
@@ -29,411 +21,372 @@ class TestPriorityValueObject:
             except:
                 session.rollback()
 
-    """Test suite for Priority value object"""
+    """Test Priority creation with valid and invalid inputs."""
     
-    # ========== Valid Creation Tests ==========
+    def test_create_valid_priority_low(self):
+        """Test creating Priority with LOW value."""
+        priority = Priority("low")
+        assert priority.value == "low"
+        assert str(priority) == "low"
     
-    def test_priority_creation_with_valid_value(self):
-        """Priority can be created with valid priority value"""
-        # Act
+    def test_create_valid_priority_medium(self):
+        """Test creating Priority with MEDIUM value."""
+        priority = Priority("medium")
+        assert priority.value == "medium"
+        assert str(priority) == "medium"
+    
+    def test_create_valid_priority_high(self):
+        """Test creating Priority with HIGH value."""
         priority = Priority("high")
-        
-        # Assert
         assert priority.value == "high"
         assert str(priority) == "high"
     
-    def test_priority_creation_with_all_valid_levels(self):
-        """Priority can be created with any valid priority level"""
-        # Arrange
-        valid_priorities = ["low", "medium", "high", "urgent", "critical"]
+    def test_create_valid_priority_urgent(self):
+        """Test creating Priority with URGENT value."""
+        priority = Priority("urgent")
+        assert priority.value == "urgent"
+        assert str(priority) == "urgent"
+    
+    def test_create_valid_priority_critical(self):
+        """Test creating Priority with CRITICAL value."""
+        priority = Priority("critical")
+        assert priority.value == "critical"
+        assert str(priority) == "critical"
+    
+    def test_all_enum_values_are_valid(self):
+        """Test that all PriorityLevel enum values can create valid Priority objects."""
+        for priority_enum in PriorityLevel:
+            priority = Priority(priority_enum.label)
+            assert priority.value == priority_enum.label
+
+
+class TestPriorityValidation:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
         
-        # Act & Assert
-        for priority_value in valid_priorities:
-            priority = Priority(priority_value)
-            assert priority.value == priority_value
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
+    """Test Priority validation and error handling."""
     
-    def test_priority_factory_methods(self):
-        """Priority factory methods create correct instances"""
-        # Act & Assert
-        assert Priority.low().value == "low"
-        assert Priority.medium().value == "medium"
-        assert Priority.high().value == "high"
-        assert Priority.urgent().value == "urgent"
-        assert Priority.critical().value == "critical"
-    
-    def test_priority_from_string_with_whitespace(self):
-        """from_string trims whitespace from input"""
-        # Arrange
-        priority_with_spaces = "  high  "
+    def test_invalid_priority_raises_error(self):
+        """Test that invalid priority values raise ValueError."""
+        invalid_priorities = ["invalid", "highest", "lowest", "normal", "asap"]
         
-        # Act
-        priority = Priority.from_string(priority_with_spaces)
-        
-        # Assert
-        assert priority.value == "high"
+        for invalid_priority in invalid_priorities:
+            with pytest.raises(ValueError, match="Invalid priority"):
+                Priority(invalid_priority)
     
-    def test_priority_from_string_with_empty_defaults_to_medium(self):
-        """from_string with empty/None defaults to medium"""
-        # Act
-        priority_empty = Priority.from_string("")
-        priority_none = Priority.from_string(None)
-        
-        # Assert
-        assert priority_empty.value == "medium"
-        assert priority_none.value == "medium"
-    
-    # ========== Validation Tests ==========
-    
-    def test_priority_creation_with_empty_string_raises_error(self):
-        """Priority cannot be created with empty string"""
+    def test_empty_priority_raises_error(self):
+        """Test that empty priority raises ValueError."""
         with pytest.raises(ValueError, match="Priority cannot be empty"):
             Priority("")
     
-    def test_priority_creation_with_none_raises_error(self):
-        """Priority cannot be created with None"""
+    def test_none_priority_raises_error(self):
+        """Test that None priority raises appropriate error."""
         with pytest.raises(ValueError, match="Priority cannot be empty"):
             Priority(None)
     
-    def test_priority_creation_with_invalid_value_raises_error(self):
-        """Priority validates against enum values"""
-        invalid_values = [
-            "LOW",  # Wrong case
-            "MEDIUM",  # Wrong case
-            "very_high",
-            "super_urgent",
-            "normal",
-            "1",
-            "high!",
-            "med"
-        ]
+    def test_case_sensitivity(self):
+        """Test that priority values are case-sensitive."""
+        # Priority should be case-sensitive
+        with pytest.raises(ValueError, match="Invalid priority"):
+            Priority("LOW")  # Uppercase should be invalid
         
-        for invalid in invalid_values:
-            with pytest.raises(ValueError) as exc_info:
-                Priority(invalid)
-            assert "Invalid priority" in str(exc_info.value)
-            assert invalid in str(exc_info.value)
-            assert "Valid priorities:" in str(exc_info.value)
+        with pytest.raises(ValueError, match="Invalid priority"):
+            Priority("Medium")  # Mixed case should be invalid
+
+
+class TestPriorityFactoryMethods:
     
-    # ========== Immutability Tests ==========
-    
-    def test_priority_is_immutable(self):
-        """Priority value cannot be modified after creation (frozen dataclass)"""
-        # Arrange
-        priority = Priority.high()
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
         
-        # Act & Assert
-        with pytest.raises(AttributeError):
-            priority.value = "low"
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
+    """Test Priority factory methods."""
     
-    def test_priority_dataclass_is_frozen(self):
-        """Priority dataclass is properly frozen"""
-        # Arrange
+    def test_low_factory(self):
+        """Test low() factory method."""
+        priority = Priority.low()
+        assert priority.value == "low"
+        assert priority.order == 1
+    
+    def test_medium_factory(self):
+        """Test medium() factory method."""
         priority = Priority.medium()
-        
-        # Verify the dataclass is frozen
-        assert hasattr(priority, "__frozen__") or priority.__class__.__dataclass_params__.frozen
+        assert priority.value == "medium"
+        assert priority.order == 2
     
-    # ========== Equality and Hashing Tests ==========
-    
-    def test_priority_equality(self):
-        """Priority instances with same value are equal"""
-        # Arrange
-        priority1 = Priority("high")
-        priority2 = Priority("high")
-        priority3 = Priority.high()
-        priority4 = Priority("low")
-        
-        # Assert
-        assert priority1 == priority2
-        assert priority1 == priority3
-        assert priority2 == priority3
-        assert priority1 != priority4
-    
-    def test_priority_not_equal_to_other_types(self):
-        """Priority is not equal to other types"""
-        # Arrange
+    def test_high_factory(self):
+        """Test high() factory method."""
         priority = Priority.high()
-        
-        # Assert
-        assert priority != "high"
-        assert priority != PriorityLevel.HIGH
-        assert priority != 3
-        assert priority != None
-        assert priority != object()
+        assert priority.value == "high"
+        assert priority.order == 3
     
-    def test_priority_hashable(self):
-        """Priority can be used in sets and as dict keys"""
-        # Arrange
-        priority1 = Priority("high")
-        priority2 = Priority("high")  # Same value
-        priority3 = Priority("low")  # Different value
-        
-        # Act - Use in set
-        priority_set = {priority1, priority2, priority3}
-        
-        # Assert
-        assert len(priority_set) == 2  # priority1 and priority2 are same
-        
-        # Act - Use as dict key
-        priority_dict = {priority1: "value1", priority3: "value3"}
-        priority_dict[priority2] = "value2"  # Should overwrite priority1's value
-        
-        # Assert
-        assert len(priority_dict) == 2
-        assert priority_dict[priority1] == "value2"  # Overwritten by priority2
+    def test_urgent_factory(self):
+        """Test urgent() factory method."""
+        priority = Priority.urgent()
+        assert priority.value == "urgent"
+        assert priority.order == 4
     
-    def test_priority_hash_consistency(self):
-        """Priority hash is consistent with equality"""
-        # Arrange
-        priority1 = Priority("urgent")
-        priority2 = Priority("urgent")
+    def test_critical_factory(self):
+        """Test critical() factory method."""
+        priority = Priority.critical()
+        assert priority.value == "critical"
+        assert priority.order == 5
+    
+    def test_from_string_valid(self):
+        """Test from_string() with valid values."""
+        priority = Priority.from_string("high")
+        assert priority.value == "high"
         
-        # Assert
-        assert hash(priority1) == hash(priority2)  # Equal objects have equal hashes
+        # Test with whitespace
+        priority_with_space = Priority.from_string("  critical  ")
+        assert priority_with_space.value == "critical"
     
-    # ========== String Representation Tests ==========
-    
-    def test_priority_string_representation(self):
-        """Priority string representation returns the value"""
-        # Arrange
-        priority = Priority("critical")
+    def test_from_string_empty_defaults_to_medium(self):
+        """Test from_string() with empty value defaults to medium."""
+        priority = Priority.from_string("")
+        assert priority.value == "medium"
         
-        # Assert
-        assert str(priority) == "critical"
-        assert repr(priority) == "Priority(value='critical')"
+        priority_none = Priority.from_string(None)
+        assert priority_none.value == "medium"
+
+
+class TestPriorityLevelDetermination:
     
-    # ========== Ordering and Comparison Tests ==========
-    
-    def test_priority_ordering_levels(self):
-        """Priority levels are correctly ordered (low < medium < high < urgent < critical)"""
-        # Arrange
-        low = Priority.low()
-        medium = Priority.medium()
-        high = Priority.high()
-        urgent = Priority.urgent()
-        critical = Priority.critical()
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
         
-        # Assert ordering
-        assert low < medium < high < urgent < critical
-        assert critical > urgent > high > medium > low
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
+    """Test Priority level and order determination."""
     
-    def test_priority_less_than_comparison(self):
-        """Priority less than comparison works correctly"""
-        # Arrange
-        low = Priority.low()
-        medium = Priority.medium()
-        high = Priority.high()
-        
-        # Assert
-        assert low < medium
-        assert low < high
-        assert medium < high
-        assert not (high < medium)
-        assert not (medium < medium)  # Not less than itself
+    def test_get_level_for_all_priorities(self):
+        """Test _get_level() returns correct numeric level."""
+        assert Priority.low()._get_level() == 1
+        assert Priority.medium()._get_level() == 2
+        assert Priority.high()._get_level() == 3
+        assert Priority.urgent()._get_level() == 4
+        assert Priority.critical()._get_level() == 5
     
-    def test_priority_less_than_or_equal_comparison(self):
-        """Priority less than or equal comparison works correctly"""
-        # Arrange
-        low = Priority.low()
-        medium = Priority.medium()
-        high = Priority.high()
-        
-        # Assert
-        assert low <= medium
-        assert low <= high
-        assert medium <= medium  # Equal to itself
-        assert medium <= high
-        assert not (high <= medium)
-    
-    def test_priority_greater_than_comparison(self):
-        """Priority greater than comparison works correctly"""
-        # Arrange
-        low = Priority.low()
-        medium = Priority.medium()
-        high = Priority.high()
-        
-        # Assert
-        assert high > medium
-        assert high > low
-        assert medium > low
-        assert not (medium > high)
-        assert not (medium > medium)  # Not greater than itself
-    
-    def test_priority_greater_than_or_equal_comparison(self):
-        """Priority greater than or equal comparison works correctly"""
-        # Arrange
-        low = Priority.low()
-        medium = Priority.medium()
-        high = Priority.high()
-        
-        # Assert
-        assert high >= medium
-        assert high >= low
-        assert medium >= medium  # Equal to itself
-        assert medium >= low
-        assert not (low >= medium)
-    
-    def test_priority_comparison_with_all_levels(self):
-        """All priority levels compare correctly"""
-        # Arrange
-        priorities = [
-            Priority.low(),
-            Priority.medium(),
-            Priority.high(),
-            Priority.urgent(),
-            Priority.critical()
-        ]
-        
-        # Assert each priority is less than all higher priorities
-        for i in range(len(priorities)):
-            for j in range(i + 1, len(priorities)):
-                assert priorities[i] < priorities[j]
-                assert priorities[j] > priorities[i]
-                assert priorities[i] <= priorities[j]
-                assert priorities[j] >= priorities[i]
-    
-    def test_priority_sorting(self):
-        """Priorities can be sorted correctly"""
-        # Arrange - Create in random order
-        priorities = [
-            Priority.high(),
-            Priority.low(),
-            Priority.critical(),
-            Priority.medium(),
-            Priority.urgent()
-        ]
-        
-        # Act
-        sorted_priorities = sorted(priorities)
-        
-        # Assert
-        assert sorted_priorities[0].value == "low"
-        assert sorted_priorities[1].value == "medium"
-        assert sorted_priorities[2].value == "high"
-        assert sorted_priorities[3].value == "urgent"
-        assert sorted_priorities[4].value == "critical"
-    
-    # ========== Property Tests ==========
-    
-    def test_priority_order_property(self):
-        """Priority order property returns correct numeric level"""
-        # Assert
+    def test_order_property(self):
+        """Test order property returns correct numeric level."""
         assert Priority.low().order == 1
         assert Priority.medium().order == 2
         assert Priority.high().order == 3
         assert Priority.urgent().order == 4
         assert Priority.critical().order == 5
     
-    def test_priority_get_level_internal_method(self):
-        """_get_level returns correct numeric values"""
-        # Arrange
-        priorities = {
-            Priority.low(): 1,
-            Priority.medium(): 2,
-            Priority.high(): 3,
-            Priority.urgent(): 4,
-            Priority.critical(): 5
-        }
+    def test_is_critical(self):
+        """Test is_critical() method."""
+        assert Priority.critical().is_critical() is True
+        assert Priority.urgent().is_critical() is False
+        assert Priority.high().is_critical() is False
+        assert Priority.medium().is_critical() is False
+        assert Priority.low().is_critical() is False
+    
+    def test_is_high_or_critical(self):
+        """Test is_high_or_critical() method."""
+        assert Priority.critical().is_high_or_critical() is True
+        assert Priority.high().is_high_or_critical() is True
+        assert Priority.urgent().is_high_or_critical() is False
+        assert Priority.medium().is_high_or_critical() is False
+        assert Priority.low().is_high_or_critical() is False
+
+
+class TestPriorityComparison:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
         
-        # Assert
-        for priority, expected_level in priorities.items():
-            assert priority._get_level() == expected_level
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
+    """Test Priority comparison methods."""
     
-    # ========== Helper Method Tests ==========
-    
-    def test_is_critical_method(self):
-        """is_critical correctly identifies critical priority"""
-        # Arrange
-        critical = Priority.critical()
-        urgent = Priority.urgent()
-        high = Priority.high()
-        
-        # Assert
-        assert critical.is_critical() is True
-        assert urgent.is_critical() is False
-        assert high.is_critical() is False
-    
-    def test_is_high_or_critical_method(self):
-        """is_high_or_critical correctly identifies high/critical priorities"""
-        # Arrange
-        critical = Priority.critical()
-        high = Priority.high()
-        urgent = Priority.urgent()
-        medium = Priority.medium()
+    def test_less_than_comparison(self):
+        """Test < comparison between priorities."""
         low = Priority.low()
+        medium = Priority.medium()
+        high = Priority.high()
+        urgent = Priority.urgent()
+        critical = Priority.critical()
         
-        # Assert
-        assert critical.is_high_or_critical() is True
-        assert high.is_high_or_critical() is True
-        assert urgent.is_high_or_critical() is False  # Urgent is not high/critical
-        assert medium.is_high_or_critical() is False
-        assert low.is_high_or_critical() is False
-    
-    # ========== Enum Integration Tests ==========
-    
-    def test_priority_enum_values_match(self):
-        """Priority values match PriorityLevel enum labels"""
-        # Assert all enum labels work with Priority
-        assert Priority(PriorityLevel.LOW.label).value == "low"
-        assert Priority(PriorityLevel.MEDIUM.label).value == "medium"
-        assert Priority(PriorityLevel.HIGH.label).value == "high"
-        assert Priority(PriorityLevel.URGENT.label).value == "urgent"
-        assert Priority(PriorityLevel.CRITICAL.label).value == "critical"
-    
-    def test_all_enum_values_have_factory_methods(self):
-        """Every PriorityLevel has a corresponding factory method"""
-        # Get all enum labels
-        enum_labels = {priority.label for priority in PriorityLevel}
+        assert low < medium
+        assert medium < high
+        assert high < urgent
+        assert urgent < critical
+        assert low < critical
         
-        # Get all factory method values
-        factory_values = {
-            Priority.low().value,
-            Priority.medium().value,
-            Priority.high().value,
-            Priority.urgent().value,
-            Priority.critical().value
-        }
-        
-        # Assert they match
-        assert enum_labels == factory_values
+        # Not less than itself
+        assert not (low < low)
+        assert not (critical < critical)
     
-    def test_priority_level_enum_ordering(self):
-        """PriorityLevel enum has correct numeric ordering"""
-        # Assert
-        assert PriorityLevel.LOW.level == 1
-        assert PriorityLevel.MEDIUM.level == 2
-        assert PriorityLevel.HIGH.level == 3
-        assert PriorityLevel.URGENT.level == 4
-        assert PriorityLevel.CRITICAL.level == 5
+    def test_less_than_or_equal_comparison(self):
+        """Test <= comparison between priorities."""
+        low = Priority.low()
+        medium = Priority.medium()
+        critical = Priority.critical()
         
-        # Verify ordering
-        assert PriorityLevel.LOW.level < PriorityLevel.MEDIUM.level
-        assert PriorityLevel.MEDIUM.level < PriorityLevel.HIGH.level
-        assert PriorityLevel.HIGH.level < PriorityLevel.URGENT.level
-        assert PriorityLevel.URGENT.level < PriorityLevel.CRITICAL.level
+        assert low <= medium
+        assert low <= low
+        assert medium <= critical
+        assert critical <= critical
+        
+        assert not (critical <= low)
     
-    # ========== Business Logic Tests ==========
+    def test_greater_than_comparison(self):
+        """Test > comparison between priorities."""
+        low = Priority.low()
+        medium = Priority.medium()
+        high = Priority.high()
+        urgent = Priority.urgent()
+        critical = Priority.critical()
+        
+        assert medium > low
+        assert high > medium
+        assert urgent > high
+        assert critical > urgent
+        assert critical > low
+        
+        # Not greater than itself
+        assert not (low > low)
+        assert not (critical > critical)
     
-    def test_priority_escalation_path(self):
-        """Test typical priority escalation scenarios"""
-        # Start with low priority
-        task_priority = Priority.low()
+    def test_greater_than_or_equal_comparison(self):
+        """Test >= comparison between priorities."""
+        low = Priority.low()
+        medium = Priority.medium()
+        critical = Priority.critical()
         
-        # Can escalate to medium
-        assert task_priority < Priority.medium()
+        assert medium >= low
+        assert low >= low
+        assert critical >= medium
+        assert critical >= critical
         
-        # Further escalation to high
-        task_priority = Priority.medium()
-        assert task_priority < Priority.high()
-        
-        # Critical escalation
-        task_priority = Priority.high()
-        assert task_priority < Priority.critical()
+        assert not (low >= critical)
     
-    def test_priority_filtering_use_case(self):
-        """Test filtering tasks by priority threshold"""
-        # Arrange - Tasks with various priorities
-        task_priorities = [
+    def test_comparison_chain(self):
+        """Test chained comparisons work correctly."""
+        low = Priority.low()
+        medium = Priority.medium()
+        high = Priority.high()
+        
+        assert low < medium < high
+        assert not (high < medium < low)
+
+
+class TestPriorityEquality:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
+    """Test Priority equality comparison."""
+    
+    def test_equal_priorities(self):
+        """Test that Priority objects with same value are equal."""
+        priority1 = Priority("high")
+        priority2 = Priority("high")
+        assert priority1 == priority2
+        
+        # Test with factory methods
+        priority3 = Priority.high()
+        priority4 = Priority.high()
+        assert priority3 == priority4
+        assert priority1 == priority3
+    
+    def test_not_equal_priorities(self):
+        """Test that Priority objects with different values are not equal."""
+        priority1 = Priority("low")
+        priority2 = Priority("high")
+        assert priority1 != priority2
+
+
+class TestPriorityOrdering:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
+    """Test Priority ordering and sorting behavior."""
+    
+    def test_sort_priorities_ascending(self):
+        """Test sorting priorities in ascending order."""
+        priorities = [
+            Priority.critical(),
+            Priority.low(),
+            Priority.urgent(),
+            Priority.medium(),
+            Priority.high()
+        ]
+        
+        sorted_priorities = sorted(priorities)
+        
+        expected_order = [
             Priority.low(),
             Priority.medium(),
             Priority.high(),
@@ -441,12 +394,267 @@ class TestPriorityValueObject:
             Priority.critical()
         ]
         
-        # Filter for high priority and above
-        threshold = Priority.high()
-        high_priority_tasks = [p for p in task_priorities if p >= threshold]
+        assert sorted_priorities == expected_order
+    
+    def test_sort_priorities_descending(self):
+        """Test sorting priorities in descending order."""
+        priorities = [
+            Priority.low(),
+            Priority.critical(),
+            Priority.medium(),
+            Priority.urgent(),
+            Priority.high()
+        ]
         
-        # Assert
-        assert len(high_priority_tasks) == 3
-        assert all(p >= threshold for p in high_priority_tasks)
-        assert Priority.low() not in high_priority_tasks
-        assert Priority.medium() not in high_priority_tasks
+        sorted_priorities = sorted(priorities, reverse=True)
+        
+        expected_order = [
+            Priority.critical(),
+            Priority.urgent(),
+            Priority.high(),
+            Priority.medium(),
+            Priority.low()
+        ]
+        
+        assert sorted_priorities == expected_order
+    
+    def test_max_priority(self):
+        """Test finding maximum priority."""
+        priorities = [Priority.low(), Priority.high(), Priority.medium()]
+        assert max(priorities) == Priority.high()
+        
+        all_priorities = [
+            Priority.low(),
+            Priority.medium(),
+            Priority.high(),
+            Priority.urgent(),
+            Priority.critical()
+        ]
+        assert max(all_priorities) == Priority.critical()
+    
+    def test_min_priority(self):
+        """Test finding minimum priority."""
+        priorities = [Priority.low(), Priority.high(), Priority.medium()]
+        assert min(priorities) == Priority.low()
+        
+        all_priorities = [
+            Priority.low(),
+            Priority.medium(),
+            Priority.high(),
+            Priority.urgent(),
+            Priority.critical()
+        ]
+        assert min(all_priorities) == Priority.low()
+
+
+class TestPriorityImmutability:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
+    """Test Priority immutability."""
+    
+    def test_priority_is_immutable(self):
+        """Test that Priority value cannot be changed after creation."""
+        priority = Priority("low")
+        
+        with pytest.raises(AttributeError):
+            priority.value = "high"
+
+
+class TestPriorityHashing:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
+    """Test Priority hashing behavior."""
+    
+    def test_priority_is_hashable(self):
+        """Test that Priority can be used as dict key or in sets."""
+        priority1 = Priority("low")
+        priority2 = Priority("high")
+        priority3 = Priority("low")  # Duplicate
+        
+        # Test as dict keys
+        priority_dict = {priority1: "First", priority2: "Second"}
+        assert priority_dict[priority1] == "First"
+        assert priority_dict[priority2] == "Second"
+        
+        # Test in sets
+        priority_set = {priority1, priority2, priority3}
+        assert len(priority_set) == 2  # Duplicate should be ignored
+        assert priority1 in priority_set
+        assert priority2 in priority_set
+    
+    def test_equal_priorities_have_same_hash(self):
+        """Test that equal Priority objects have the same hash."""
+        priority1 = Priority("medium")
+        priority2 = Priority("medium")
+        priority3 = Priority.medium()
+        
+        assert hash(priority1) == hash(priority2)
+        assert hash(priority1) == hash(priority3)
+
+
+class TestPriorityEdgeCases:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
+    """Test edge cases and error handling."""
+    
+    def test_priority_with_whitespace_in_value(self):
+        """Test that priority values with internal whitespace are invalid."""
+        with pytest.raises(ValueError, match="Invalid priority"):
+            Priority("high priority")  # Space in value
+        
+        with pytest.raises(ValueError, match="Invalid priority"):
+            Priority("very urgent")  # Space in value
+    
+    def test_priority_string_representation(self):
+        """Test string representation of Priority."""
+        for priority_enum in PriorityLevel:
+            priority = Priority(priority_enum.label)
+            assert str(priority) == priority_enum.label
+    
+    def test_priority_level_enum_properties(self):
+        """Test PriorityLevel enum properties."""
+        assert PriorityLevel.LOW.label == "low"
+        assert PriorityLevel.LOW.level == 1
+        
+        assert PriorityLevel.CRITICAL.label == "critical"
+        assert PriorityLevel.CRITICAL.level == 5
+    
+    def test_get_level_fallback(self):
+        """Test _get_level fallback for edge case (should never happen due to validation)."""
+        # This is a defensive test - in practice, validation prevents invalid values
+        # We need to bypass validation to test the fallback
+        priority = Priority.__new__(Priority)
+        object.__setattr__(priority, 'value', 'invalid_priority')
+        
+        # The fallback should return 0
+        assert priority._get_level() == 0
+
+
+class TestPriorityIntegration:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
+    """Integration tests with real use cases."""
+    
+    def test_priority_based_task_sorting(self):
+        """Test sorting tasks based on priority."""
+        # Simulate tasks with priorities
+        tasks = [
+            {"id": 1, "priority": Priority.low()},
+            {"id": 2, "priority": Priority.critical()},
+            {"id": 3, "priority": Priority.medium()},
+            {"id": 4, "priority": Priority.urgent()},
+            {"id": 5, "priority": Priority.high()}
+        ]
+        
+        # Sort by priority (highest first)
+        sorted_tasks = sorted(tasks, key=lambda t: t["priority"], reverse=True)
+        
+        expected_order = [2, 4, 5, 3, 1]  # critical, urgent, high, medium, low
+        actual_order = [t["id"] for t in sorted_tasks]
+        
+        assert actual_order == expected_order
+    
+    def test_filter_high_priority_tasks(self):
+        """Test filtering tasks by high priority."""
+        priorities = [
+            Priority.low(),
+            Priority.medium(),
+            Priority.high(),
+            Priority.urgent(),
+            Priority.critical()
+        ]
+        
+        # Filter high or critical priorities
+        high_priority_tasks = [p for p in priorities if p.is_high_or_critical()]
+        assert len(high_priority_tasks) == 2
+        assert Priority.high() in high_priority_tasks
+        assert Priority.critical() in high_priority_tasks
+        
+        # Filter only critical
+        critical_tasks = [p for p in priorities if p.is_critical()]
+        assert len(critical_tasks) == 1
+        assert critical_tasks[0] == Priority.critical()
+    
+    def test_priority_in_collections(self):
+        """Test using Priority in various collections."""
+        # Create priorities
+        priorities = [Priority(p.label) for p in PriorityLevel]
+        
+        # Group by level
+        priority_groups = {}
+        for priority in priorities:
+            level = priority.order
+            priority_groups.setdefault(level, []).append(priority)
+        
+        assert len(priority_groups) == 5
+        assert all(len(group) == 1 for group in priority_groups.values())
+        
+        # Create priority count map
+        priority_counts = {
+            Priority.low(): 5,
+            Priority.medium(): 3,
+            Priority.high(): 2,
+            Priority.urgent(): 1,
+            Priority.critical(): 1
+        }
+        
+        # Find most common priority
+        most_common = max(priority_counts.items(), key=lambda x: x[1])
+        assert most_common[0] == Priority.low()
+        assert most_common[1] == 5

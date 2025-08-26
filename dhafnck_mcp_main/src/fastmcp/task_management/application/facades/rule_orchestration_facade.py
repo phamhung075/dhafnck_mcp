@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 class IRuleOrchestrationFacade:
     """Interface for rule orchestration application facade"""
     
-    def execute_action(self, action: str, target: str = "", content: str = "") -> Dict[str, Any]:
+    def execute_action(self, action: str, target: str = "", content: str = "", user_id: Optional[str] = None) -> Dict[str, Any]:
         """Execute a rule orchestration action"""
         pass
     
@@ -99,7 +99,7 @@ class RuleOrchestrationFacade(IRuleOrchestrationFacade):
             "client_analytics": self._handle_client_analytics
         }
     
-    def execute_action(self, action: str, target: str = "", content: str = "") -> Dict[str, Any]:
+    def execute_action(self, action: str, target: str = "", content: str = "", user_id: Optional[str] = None) -> Dict[str, Any]:
         """Execute a rule orchestration action"""
         try:
             handler = self.action_handlers.get(action)

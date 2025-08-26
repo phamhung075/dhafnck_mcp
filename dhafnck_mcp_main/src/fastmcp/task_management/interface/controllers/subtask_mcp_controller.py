@@ -144,7 +144,8 @@ class SubtaskMCPController(ContextPropagationMixin):
             challenges_overcome: Annotated[Optional[Union[List[str], str]], Field(description="Challenges faced and how they were solved. Accepts array, JSON string array, or comma-separated string. (for complete action)")] = None,
             next_recommendations: Annotated[Optional[Union[List[str], str]], Field(description="Recommendations for future work or improvements. Accepts array, JSON string array, or comma-separated string. (for complete action)")] = None,
             completion_quality: Annotated[Optional[str], Field(description="Quality assessment: 'excellent', 'good', 'satisfactory', 'needs_improvement' (for complete action)")] = None,
-            verification_status: Annotated[Optional[str], Field(description="Verification status: 'verified', 'pending_review', 'needs_testing', 'failed_verification' (for complete action)")] = None
+            verification_status: Annotated[Optional[str], Field(description="Verification status: 'verified', 'pending_review', 'needs_testing', 'failed_verification' (for complete action)")] = None,
+            user_id: Annotated[Optional[str], Field(description="User identifier for authentication and audit trails")] = None
         ) -> Dict[str, Any]:
 
             # Delegate to the public method
@@ -169,7 +170,8 @@ class SubtaskMCPController(ContextPropagationMixin):
                 challenges_overcome=challenges_overcome,
                 next_recommendations=next_recommendations,
                 completion_quality=completion_quality,
-                verification_status=verification_status
+                verification_status=verification_status,
+                user_id=user_id
             )
         
         logger.info("Subtask management tool registered")
@@ -196,7 +198,8 @@ class SubtaskMCPController(ContextPropagationMixin):
         challenges_overcome: Optional[Union[List[str], str]] = None,
         next_recommendations: Optional[Union[List[str], str]] = None,
         completion_quality: Optional[str] = None,
-        verification_status: Optional[str] = None
+        verification_status: Optional[str] = None,
+        user_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Public method for managing subtask operations.
@@ -312,7 +315,7 @@ class SubtaskMCPController(ContextPropagationMixin):
         logger.info(f"Managing subtask with action: {action}, task_id: {task_id}")
         
         # Get the appropriate facade
-        facade = self._get_facade_for_request(task_id=task_id)
+        facade = self._get_facade_for_request(task_id=task_id, user_id=user_id)
         
         # Route to appropriate handler based on action
         if action == "create":
@@ -997,11 +1000,14 @@ class SubtaskMCPController(ContextPropagationMixin):
         
         return {"percentage": 0, "completed": 0, "total": 0, "method": "unknown"}
     
-    def _get_facade_for_request(self, task_id: Optional[str] = None) -> SubtaskApplicationFacade:
+    def _get_facade_for_request(self, task_id: Optional[str] = None, user_id: Optional[str] = None) -> SubtaskApplicationFacade:
         """Get the appropriate facade for the request with authenticated user context."""
-        # Get authenticated user ID using the same helper function as task controller
+        # Use provided user_id or fall back to authentication
         log_authentication_details()  # For debugging
-        user_id = get_authenticated_user_id(None, "Subtask context resolution")
+        if user_id:
+            validated_user_id = validate_user_id(user_id, "Subtask context resolution")
+        else:
+            validated_user_id = get_authenticated_user_id(None, "Subtask context resolution")
         
         # Derive project context from task_id if available
         project_id = "default"
@@ -1040,7 +1046,7 @@ class SubtaskMCPController(ContextPropagationMixin):
                 logger.warning(f"Failed to derive project context for task_id {task_id}: {e}")
                 logger.debug(f"Using default project for subtask operations")
         
-        return self._subtask_facade_factory.create_subtask_facade(project_id)
+        return self._subtask_facade_factory.create_subtask_facade(project_id, user_id=validated_user_id)
     
     # Workflow hint enhancement methods
     

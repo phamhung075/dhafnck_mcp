@@ -1,434 +1,903 @@
-"""Unit tests for Subtask entity"""
+"""Unit tests for Subtask entity."""
 
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from unittest.mock import Mock, patch
-import uuid
-
 from fastmcp.task_management.domain.entities.subtask import Subtask
-from fastmcp.task_management.domain.value_objects import TaskId, Priority, TaskStatus
+from fastmcp.task_management.domain.value_objects.task_id import TaskId
 from fastmcp.task_management.domain.value_objects.subtask_id import SubtaskId
-from fastmcp.task_management.domain.exceptions.task_exceptions import InvalidTaskStateError
+from fastmcp.task_management.domain.value_objects.task_status import TaskStatus
+from fastmcp.task_management.domain.value_objects.priority import Priority
+from fastmcp.task_management.domain.enums.agent_roles import AgentRole
+from fastmcp.task_management.domain.events.task_events import TaskUpdated
 
 
-class TestSubtask:
-    """Test suite for Subtask entity"""
+class TestSubtaskCreation:
     
-    @pytest.fixture
-    def valid_subtask_data(self):
-        """Valid subtask data for testing"""
-        now = datetime.now()
-        return {
-            'id': str(SubtaskId.generate_new()),
-            'task_id': str(TaskId.generate_new()),
-            'title': 'Test Subtask',
-            'description': 'Test subtask description',
-            'status': 'todo',
-            'priority': 'medium',
-            'assignees': ['user1', 'user2'],
-            'created_at': now.isoformat(),
-            'updated_at': now.isoformat()
-        }
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
+    """Test Subtask creation and initialization."""
     
-    def test_create_subtask_minimal(self):
-        """Test creating subtask with minimal required fields"""
-        task_id = TaskId.generate_new()
-        subtask_id = SubtaskId.generate_new()
-        title = "Minimal Subtask"
-        description = "Test description"
+    def test_create_subtask_with_factory_method(self):
+        """Test creating subtask with factory method."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        subtask_id = SubtaskId("550e8400e29b41d4a716446655440001")
         
         subtask = Subtask.create(
             id=subtask_id,
-            title=title,
-            description=description,
-            parent_task_id=task_id
+            title="Implement validation",
+            description="Add input validation for the form",
+            parent_task_id=parent_task_id,
+            status=TaskStatus.todo(),
+            priority=Priority.high()
         )
         
         assert subtask.id == subtask_id
-        assert subtask.parent_task_id == task_id
-        assert subtask.title == title
-        assert subtask.description == description
+        assert subtask.title == "Implement validation"
+        assert subtask.description == "Add input validation for the form"
+        assert subtask.parent_task_id == parent_task_id
+        assert subtask.status.value == "todo"
+        assert subtask.priority.value == "high"
+        assert isinstance(subtask.created_at, datetime)
+        assert isinstance(subtask.updated_at, datetime)
+        assert subtask.created_at.tzinfo == timezone.utc
+        assert subtask.updated_at.tzinfo == timezone.utc
+        assert subtask.created_at == subtask.updated_at
+        assert subtask.assignees == []
     
-    def test_create_subtask_full(self):
-        """Test creating subtask with all fields"""
-        task_id = TaskId.generate_new()
-        subtask_id = SubtaskId.generate_new()
+    def test_create_subtask_minimal(self):
+        """Test creating subtask with minimal data."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
         
-        subtask = Subtask.create(
-            id=subtask_id,
-            parent_task_id=task_id,
-            title="Full Subtask",
-            description="Detailed description",
-            priority=Priority.high(),
-            assignees=['user1', 'user2']
+        subtask = Subtask(
+            title="Quick fix",
+            description="A quick fix",
+            parent_task_id=parent_task_id
         )
         
-        assert subtask.parent_task_id == task_id
-        assert subtask.title == "Full Subtask"
-        assert subtask.description == "Detailed description"
-        assert subtask.priority == Priority.high()
-        assert subtask.assignees == ['user1', 'user2']
-        assert str(subtask.status) == 'todo'
-    
-    def test_from_dict(self, valid_subtask_data):
-        """Test creating subtask from dictionary"""
-        parent_task_id = TaskId.generate_new()
-        subtask = Subtask.from_dict(valid_subtask_data, parent_task_id)
-        
-        assert str(subtask.id) == valid_subtask_data['id']
+        assert subtask.title == "Quick fix"
+        assert subtask.description == "A quick fix"
         assert subtask.parent_task_id == parent_task_id
-        assert subtask.title == valid_subtask_data['title']
-        assert subtask.description == valid_subtask_data['description']
-        assert str(subtask.status) == valid_subtask_data['status']
-        assert subtask.assignees == valid_subtask_data['assignees']
+        assert subtask.status.value == "todo"  # Default
+        assert subtask.priority.value == "medium"  # Default
+        assert subtask.assignees == []
+    
+    def test_subtask_post_init_timezone_handling(self):
+        """Test that __post_init__ ensures timestamps are timezone-aware."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        # Create subtask with naive timestamps
+        naive_time = datetime(2024, 1, 1, 12, 0, 0)
+        subtask = Subtask(
+            title="Test subtask",
+            description="Test",
+            parent_task_id=parent_task_id,
+            created_at=naive_time,
+            updated_at=naive_time
+        )
+        
+        # Timestamps should be made timezone-aware
+        assert subtask.created_at.tzinfo == timezone.utc
+        assert subtask.updated_at.tzinfo == timezone.utc
+    
+    def test_subtask_validation_empty_title(self):
+        """Test that empty title raises ValueError."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        with pytest.raises(ValueError, match="Subtask title cannot be empty"):
+            Subtask(
+                title="",
+                description="Test",
+                parent_task_id=parent_task_id
+            )
+    
+    def test_subtask_validation_whitespace_title(self):
+        """Test that whitespace-only title raises ValueError."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        with pytest.raises(ValueError, match="Subtask title cannot be empty"):
+            Subtask(
+                title="   ",
+                description="Test",
+                parent_task_id=parent_task_id
+            )
+    
+    def test_subtask_validation_title_too_long(self):
+        """Test that title exceeding 200 characters raises ValueError."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        with pytest.raises(ValueError, match="Subtask title cannot exceed 200 characters"):
+            Subtask(
+                title="A" * 201,
+                description="Test",
+                parent_task_id=parent_task_id
+            )
+    
+    def test_subtask_validation_description_too_long(self):
+        """Test that description exceeding 500 characters raises ValueError."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        with pytest.raises(ValueError, match="Subtask description cannot exceed 500 characters"):
+            Subtask(
+                title="Test",
+                description="A" * 501,
+                parent_task_id=parent_task_id
+            )
+    
+    def test_subtask_validation_no_parent_task_id(self):
+        """Test that missing parent_task_id raises ValueError."""
+        with pytest.raises(ValueError, match="Subtask must have a parent task ID"):
+            Subtask(
+                title="Test",
+                description="Test",
+                parent_task_id=None
+            )
+    
+    def test_subtask_equality(self):
+        """Test subtask equality based on ID."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        subtask_id = SubtaskId("550e8400e29b41d4a716446655440001")
+        
+        subtask1 = Subtask.create(
+            id=subtask_id,
+            title="Test 1",
+            description="Test",
+            parent_task_id=parent_task_id
+        )
+        
+        subtask2 = Subtask.create(
+            id=subtask_id,
+            title="Test 2",
+            description="Different",
+            parent_task_id=parent_task_id
+        )
+        
+        subtask3 = Subtask.create(
+            id=SubtaskId("550e8400e29b41d4a716446655440002"),
+            title="Test 3",
+            description="Test",
+            parent_task_id=parent_task_id
+        )
+        
+        # Same ID = equal
+        assert subtask1 == subtask2
+        # Different ID = not equal
+        assert subtask1 != subtask3
+        # Not a subtask = not equal
+        assert subtask1 != "not a subtask"
+    
+    def test_subtask_hashable(self):
+        """Test that subtasks are hashable based on ID."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        subtask1 = Subtask.create(
+            id=SubtaskId("550e8400e29b41d4a716446655440001"),
+            title="Test 1",
+            description="Test",
+            parent_task_id=parent_task_id
+        )
+        subtask2 = Subtask.create(
+            id=SubtaskId("550e8400e29b41d4a716446655440002"),
+            title="Test 2",
+            description="Test",
+            parent_task_id=parent_task_id
+        )
+        
+        # Should be able to use in sets
+        subtask_set = {subtask1, subtask2}
+        assert len(subtask_set) == 2
+        assert subtask1 in subtask_set
+        assert subtask2 in subtask_set
+
+
+class TestSubtaskProperties:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
+    """Test Subtask properties and computed fields."""
+    
+    def test_is_completed_property(self):
+        """Test is_completed property."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        subtask = Subtask.create(
+            id=SubtaskId("550e8400e29b41d4a716446655440001"),
+            title="Test",
+            description="Test",
+            parent_task_id=parent_task_id,
+            status=TaskStatus.todo()
+        )
+        
+        assert not subtask.is_completed
+        
+        subtask.status = TaskStatus.done()
+        assert subtask.is_completed
+    
+    def test_can_be_assigned_property(self):
+        """Test can_be_assigned property."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        subtask = Subtask.create(
+            id=SubtaskId("550e8400e29b41d4a716446655440001"),
+            title="Test",
+            description="Test",
+            parent_task_id=parent_task_id,
+            status=TaskStatus.todo()
+        )
+        
+        # Can be assigned when todo
+        assert subtask.can_be_assigned
+        
+        # Cannot be assigned when completed
+        subtask.status = TaskStatus.done()
+        assert not subtask.can_be_assigned
+        
+        # Cannot be assigned when cancelled
+        subtask.status = TaskStatus.cancelled()
+        assert not subtask.can_be_assigned
+
+
+class TestSubtaskStatusManagement:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
+    """Test Subtask status update functionality."""
+    
+    def test_update_status_valid_transition(self):
+        """Test updating status with valid transition."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        subtask = Subtask.create(
+            id=SubtaskId("550e8400e29b41d4a716446655440001"),
+            title="Test",
+            description="Test",
+            parent_task_id=parent_task_id,
+            status=TaskStatus.todo()
+        )
+        
+        # Valid transition: todo -> in_progress
+        subtask.update_status(TaskStatus.in_progress())
+        assert subtask.status.value == "in_progress"
+        assert len(subtask._events) == 1
+        assert isinstance(subtask._events[0], TaskUpdated)
+        assert subtask._events[0].task_id == parent_task_id
+        assert subtask._events[0].field_name == "subtask_status"
+    
+    def test_update_status_invalid_transition(self):
+        """Test updating status with invalid transition."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        subtask = Subtask.create(
+            id=SubtaskId("550e8400e29b41d4a716446655440001"),
+            title="Test",
+            description="Test",
+            parent_task_id=parent_task_id,
+            status=TaskStatus.todo()
+        )
+        
+        # Invalid transition: todo -> done (must go through in_progress)
+        with pytest.raises(ValueError, match="Cannot transition from"):
+            subtask.update_status(TaskStatus.done())
+    
+    def test_complete_subtask(self):
+        """Test completing a subtask."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        subtask = Subtask.create(
+            id=SubtaskId("550e8400e29b41d4a716446655440001"),
+            title="Test",
+            description="Test",
+            parent_task_id=parent_task_id,
+            status=TaskStatus.in_progress()
+        )
+        
+        subtask.complete()
+        assert subtask.status.value == "done"
+        assert len(subtask._events) == 1
+        assert isinstance(subtask._events[0], TaskUpdated)
+    
+    def test_complete_already_completed_subtask(self):
+        """Test completing an already completed subtask."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        subtask = Subtask.create(
+            id=SubtaskId("550e8400e29b41d4a716446655440001"),
+            title="Test",
+            description="Test",
+            parent_task_id=parent_task_id,
+            status=TaskStatus.done()
+        )
+        
+        subtask.complete()
+        # Should not raise error, just do nothing
+        assert subtask.status.value == "done"
+        assert len(subtask._events) == 0
+    
+    def test_reopen_subtask(self):
+        """Test reopening a completed subtask."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        subtask = Subtask.create(
+            id=SubtaskId("550e8400e29b41d4a716446655440001"),
+            title="Test",
+            description="Test",
+            parent_task_id=parent_task_id,
+            status=TaskStatus.done()
+        )
+        
+        subtask.reopen()
+        assert subtask.status.value == "todo"
+        assert len(subtask._events) == 1
+        assert isinstance(subtask._events[0], TaskUpdated)
+    
+    def test_reopen_not_completed_subtask(self):
+        """Test reopening a subtask that's not completed."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        subtask = Subtask.create(
+            id=SubtaskId("550e8400e29b41d4a716446655440001"),
+            title="Test",
+            description="Test",
+            parent_task_id=parent_task_id,
+            status=TaskStatus.in_progress()
+        )
+        
+        subtask.reopen()
+        # Should not raise error, just do nothing
+        assert subtask.status.value == "in_progress"
+        assert len(subtask._events) == 0
+
+
+class TestSubtaskPriorityManagement:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
+    """Test Subtask priority update functionality."""
+    
+    def test_update_priority(self):
+        """Test updating subtask priority."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        subtask = Subtask.create(
+            id=SubtaskId("550e8400e29b41d4a716446655440001"),
+            title="Test",
+            description="Test",
+            parent_task_id=parent_task_id,
+            priority=Priority.medium()
+        )
+        
+        subtask.update_priority(Priority.high())
+        assert subtask.priority.value == "high"
+        assert len(subtask._events) == 1
+        assert isinstance(subtask._events[0], TaskUpdated)
+        assert subtask._events[0].field_name == "subtask_priority"
+
+
+class TestSubtaskContentManagement:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
+    """Test Subtask title and description updates."""
+    
+    def test_update_title(self):
+        """Test updating subtask title."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        subtask = Subtask.create(
+            id=SubtaskId("550e8400e29b41d4a716446655440001"),
+            title="Original title",
+            description="Test",
+            parent_task_id=parent_task_id
+        )
+        
+        subtask.update_title("New title")
+        assert subtask.title == "New title"
+        assert len(subtask._events) == 1
+        assert isinstance(subtask._events[0], TaskUpdated)
+        assert subtask._events[0].field_name == "subtask_title"
+    
+    def test_update_title_empty(self):
+        """Test updating title with empty string raises error."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        subtask = Subtask.create(
+            id=SubtaskId("550e8400e29b41d4a716446655440001"),
+            title="Original title",
+            description="Test",
+            parent_task_id=parent_task_id
+        )
+        
+        with pytest.raises(ValueError, match="Subtask title cannot be empty"):
+            subtask.update_title("")
+    
+    def test_update_description(self):
+        """Test updating subtask description."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        subtask = Subtask.create(
+            id=SubtaskId("550e8400e29b41d4a716446655440001"),
+            title="Test",
+            description="Original description",
+            parent_task_id=parent_task_id
+        )
+        
+        subtask.update_description("New description")
+        assert subtask.description == "New description"
+        assert len(subtask._events) == 1
+        assert isinstance(subtask._events[0], TaskUpdated)
+        assert subtask._events[0].field_name == "subtask_description"
+
+
+class TestSubtaskAssigneeManagement:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
+    """Test Subtask assignee management functionality."""
+    
+    def test_update_assignees(self):
+        """Test updating assignees list."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        subtask = Subtask.create(
+            id=SubtaskId("550e8400e29b41d4a716446655440001"),
+            title="Test",
+            description="Test",
+            parent_task_id=parent_task_id
+        )
+        
+        # Update with valid agent roles
+        subtask.update_assignees(["coding_agent", "@devops_agent"])
+        assert len(subtask.assignees) == 2
+        assert "@coding_agent" in subtask.assignees
+        assert "@devops_agent" in subtask.assignees
+        assert len(subtask._events) == 1
+    
+    def test_update_assignees_with_legacy_roles(self):
+        """Test updating assignees with legacy role names."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        subtask = Subtask.create(
+            id=SubtaskId("550e8400e29b41d4a716446655440001"),
+            title="Test",
+            description="Test",
+            parent_task_id=parent_task_id
+        )
+        
+        # Legacy roles should be resolved
+        subtask.update_assignees(["senior_developer", "qa_engineer"])
+        assert "@coding_agent" in subtask.assignees  # senior_developer -> coding_agent
+        assert "@functional_tester_agent" in subtask.assignees  # qa_engineer -> functional_tester_agent
+    
+    def test_update_assignees_empty_strings_filtered(self):
+        """Test that empty strings are filtered from assignees."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        subtask = Subtask.create(
+            id=SubtaskId("550e8400e29b41d4a716446655440001"),
+            title="Test",
+            description="Test",
+            parent_task_id=parent_task_id
+        )
+        
+        subtask.update_assignees(["", "  ", "coding_agent", ""])
+        assert len(subtask.assignees) == 1
+        assert "@coding_agent" in subtask.assignees
+    
+    def test_add_assignee_string(self):
+        """Test adding a single assignee."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        subtask = Subtask.create(
+            id=SubtaskId("550e8400e29b41d4a716446655440001"),
+            title="Test",
+            description="Test",
+            parent_task_id=parent_task_id
+        )
+        
+        subtask.add_assignee("coding_agent")
+        assert "@coding_agent" in subtask.assignees
+        assert len(subtask._events) == 1
+    
+    def test_add_assignee_enum(self):
+        """Test adding assignee using AgentRole enum."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        subtask = Subtask.create(
+            id=SubtaskId("550e8400e29b41d4a716446655440001"),
+            title="Test",
+            description="Test",
+            parent_task_id=parent_task_id
+        )
+        
+        subtask.add_assignee(AgentRole.DEVOPS)
+        assert "@devops_agent" in subtask.assignees
+    
+    def test_add_assignee_duplicate(self):
+        """Test adding duplicate assignee doesn't create duplicates."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        subtask = Subtask.create(
+            id=SubtaskId("550e8400e29b41d4a716446655440001"),
+            title="Test",
+            description="Test",
+            parent_task_id=parent_task_id
+        )
+        
+        subtask.add_assignee("coding_agent")
+        subtask.add_assignee("coding_agent")
+        assert subtask.assignees.count("@coding_agent") == 1
+    
+    def test_remove_assignee_string(self):
+        """Test removing an assignee."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        subtask = Subtask.create(
+            id=SubtaskId("550e8400e29b41d4a716446655440001"),
+            title="Test",
+            description="Test",
+            parent_task_id=parent_task_id,
+            assignees=["@coding_agent", "@devops_agent"]
+        )
+        
+        subtask.remove_assignee("@coding_agent")
+        assert "@coding_agent" not in subtask.assignees
+        assert "@devops_agent" in subtask.assignees
+        assert len(subtask._events) == 1
+    
+    def test_remove_assignee_enum(self):
+        """Test removing assignee using AgentRole enum."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        subtask = Subtask.create(
+            id=SubtaskId("550e8400e29b41d4a716446655440001"),
+            title="Test",
+            description="Test",
+            parent_task_id=parent_task_id,
+            assignees=["@coding_agent", "@devops_agent"]
+        )
+        
+        subtask.remove_assignee(AgentRole.DEVOPS)
+        assert "@devops_agent" not in subtask.assignees
+        assert "@coding_agent" in subtask.assignees
+    
+    def test_remove_assignee_not_present(self):
+        """Test removing assignee that's not present."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        subtask = Subtask.create(
+            id=SubtaskId("550e8400e29b41d4a716446655440001"),
+            title="Test",
+            description="Test",
+            parent_task_id=parent_task_id,
+            assignees=["@coding_agent"]
+        )
+        
+        subtask.remove_assignee("@devops_agent")
+        # Should not raise error
+        assert "@coding_agent" in subtask.assignees
+        assert len(subtask._events) == 0  # No event since nothing was removed
+
+
+class TestSubtaskEventManagement:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
+    """Test Subtask domain event functionality."""
+    
+    def test_get_events_clears_events(self):
+        """Test that get_events returns and clears events."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        subtask = Subtask.create(
+            id=SubtaskId("550e8400e29b41d4a716446655440001"),
+            title="Test",
+            description="Test",
+            parent_task_id=parent_task_id
+        )
+        
+        # Generate some events
+        subtask.update_title("New title")
+        subtask.update_priority(Priority.high())
+        
+        events = subtask.get_events()
+        assert len(events) == 2
+        assert all(isinstance(event, TaskUpdated) for event in events)
+        
+        # Events should be cleared
+        assert len(subtask._events) == 0
+        assert subtask.get_events() == []
+
+
+class TestSubtaskSerialization:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
+    """Test Subtask serialization functionality."""
     
     def test_to_dict(self):
-        """Test converting subtask to dictionary"""
-        task_id = TaskId.generate_new()
-        subtask_id = SubtaskId.generate_new()
+        """Test converting subtask to dictionary."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        subtask_id = SubtaskId("550e8400e29b41d4a716446655440001")
+        
         subtask = Subtask.create(
             id=subtask_id,
-            parent_task_id=task_id,
-            title="Test Subtask",
-            description="Test description"
+            title="Test subtask",
+            description="Test description",
+            parent_task_id=parent_task_id,
+            status=TaskStatus.in_progress(),
+            priority=Priority.high(),
+            assignees=["@coding_agent", "@devops_agent"]
         )
         
         data = subtask.to_dict()
         
-        assert data['id'] == subtask.id.value
-        assert data['parent_task_id'] == str(subtask.parent_task_id)
-        assert data['title'] == subtask.title
-        assert data['description'] == subtask.description
-        assert data['status'] == str(subtask.status)
-        assert data['priority'] == str(subtask.priority)
-        assert 'created_at' in data
-        assert 'updated_at' in data
+        assert data["id"] == subtask_id.value
+        assert data["title"] == "Test subtask"
+        assert data["description"] == "Test description"
+        assert data["parent_task_id"] == str(parent_task_id)
+        assert data["status"] == "in_progress"
+        assert data["priority"] == "high"
+        assert data["assignees"] == ["@coding_agent", "@devops_agent"]
+        assert data["created_at"] is not None
+        assert data["updated_at"] is not None
     
-    def test_update_subtask(self):
-        """Test updating subtask fields"""
+    def test_from_dict(self):
+        """Test creating subtask from dictionary."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        data = {
+            "id": "550e8400e29b41d4a716446655440001",
+            "title": "Test subtask",
+            "description": "Test description",
+            "status": "in_progress",
+            "priority": "high",
+            "assignees": ["@coding_agent", "@devops_agent"],
+            "created_at": "2024-01-01T12:00:00+00:00",
+            "updated_at": "2024-01-01T13:00:00+00:00"
+        }
+        
+        subtask = Subtask.from_dict(data, parent_task_id)
+        
+        assert subtask.id.value == "550e8400-e29b-41d4-a716-446655440001"
+        assert subtask.title == "Test subtask"
+        assert subtask.description == "Test description"
+        assert subtask.parent_task_id == parent_task_id
+        assert subtask.status.value == "in_progress"
+        assert subtask.priority.value == "high"
+        assert subtask.assignees == ["@coding_agent", "@devops_agent"]
+        assert subtask.created_at == datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+        assert subtask.updated_at == datetime(2024, 1, 1, 13, 0, 0, tzinfo=timezone.utc)
+    
+    def test_from_dict_minimal(self):
+        """Test creating subtask from minimal dictionary data."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        data = {
+            "title": "Minimal subtask",
+            "description": "Minimal description"
+        }
+        
+        subtask = Subtask.from_dict(data, parent_task_id)
+        
+        assert subtask.title == "Minimal subtask"
+        assert subtask.description == "Minimal description"
+        assert subtask.parent_task_id == parent_task_id
+        assert subtask.status.value == "todo"  # Default
+        assert subtask.priority.value == "medium"  # Default
+        assert subtask.assignees == []
+
+
+class TestSubtaskIntegration:
+    
+    def setup_method(self, method):
+        """Clean up before each test"""
+        from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+        from sqlalchemy import text
+        
+        db_config = get_db_config()
+        with db_config.get_session() as session:
+            # Clean test data but preserve defaults
+            try:
+                session.execute(text("DELETE FROM tasks WHERE id LIKE 'test-%'"))
+                session.execute(text("DELETE FROM projects WHERE id LIKE 'test-%' AND id != 'default_project'"))
+                session.commit()
+            except:
+                session.rollback()
+
+    """Test Subtask integration scenarios."""
+    
+    def test_subtask_workflow(self):
+        """Test complete subtask workflow."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        # Create subtask
         subtask = Subtask.create(
-            id=SubtaskId.generate_new(),
-            parent_task_id=TaskId.generate_new(),
-            title="Original Title",
-            description="Original description"
+            id=SubtaskId("550e8400e29b41d4a716446655440001"),
+            title="Implement feature",
+            description="Add new feature to the system",
+            parent_task_id=parent_task_id
         )
         
-        original_updated_at = subtask.updated_at
+        # Assign team
+        subtask.add_assignee(AgentRole.CODING)
+        subtask.add_assignee("@code_reviewer_agent")
         
-        # Sleep briefly to ensure time difference
+        # Start work
+        subtask.update_status(TaskStatus.in_progress())
+        
+        # Update progress
+        subtask.update_description("Add new feature to the system - IN PROGRESS")
+        
+        # Complete subtask
+        subtask.complete()
+        
+        # Verify final state
+        assert subtask.is_completed
+        assert "@coding_agent" in subtask.assignees
+        assert "@code_reviewer_agent" in subtask.assignees
+        assert subtask.description == "Add new feature to the system - IN PROGRESS"
+        
+        # Check events
+        events = subtask.get_events()
+        assert len(events) == 5  # assignee, assignee, status, description, complete
+        assert all(event.task_id == parent_task_id for event in events)
+    
+    def test_subtask_with_multiple_status_transitions(self):
+        """Test subtask with multiple valid status transitions."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        subtask = Subtask.create(
+            id=SubtaskId("550e8400e29b41d4a716446655440001"),
+            title="Complex task",
+            description="Task with multiple transitions",
+            parent_task_id=parent_task_id
+        )
+        
+        # todo -> in_progress
+        subtask.update_status(TaskStatus.in_progress())
+        assert subtask.status.value == "in_progress"
+        
+        # in_progress -> review
+        subtask.update_status(TaskStatus.review())
+        assert subtask.status.value == "review"
+        
+        # review -> testing
+        subtask.update_status(TaskStatus.testing())
+        assert subtask.status.value == "testing"
+        
+        # testing -> done
+        subtask.update_status(TaskStatus.done())
+        assert subtask.status.value == "done"
+        
+        events = subtask.get_events()
+        assert len(events) == 4
+        assert all(isinstance(event, TaskUpdated) for event in events)
+    
+    def test_subtask_timestamp_updates(self):
+        """Test that updated_at changes with each update."""
+        parent_task_id = TaskId.from_string("550e8400-e29b-41d4-a716-446655440000")
+        
+        subtask = Subtask.create(
+            id=SubtaskId("550e8400e29b41d4a716446655440001"),
+            title="Test",
+            description="Test",
+            parent_task_id=parent_task_id
+        )
+        
+        original_updated = subtask.updated_at
+        
+        # Wait a tiny bit to ensure timestamp difference
         import time
-        time.sleep(0.01)
+        time.sleep(0.001)
         
-        # Update using individual methods
-        subtask.update_title("Updated Title")
-        subtask.update_description("New description")
-        subtask.update_status(TaskStatus.in_progress())
+        subtask.update_title("New title")
+        assert subtask.updated_at > original_updated
+        
+        previous_updated = subtask.updated_at
+        time.sleep(0.001)
+        
         subtask.update_priority(Priority.high())
-        
-        assert subtask.title == "Updated Title"
-        assert subtask.description == "New description"
-        assert str(subtask.status) == "in_progress"
-        assert subtask.priority == Priority.high()
-        assert subtask.updated_at > original_updated_at
-    
-    def test_update_partial(self):
-        """Test partial update of subtask"""
-        subtask = Subtask.create(
-            id=SubtaskId.generate_new(),
-            parent_task_id=TaskId.generate_new(),
-            title="Original",
-            description="Original desc"
-        )
-        
-        subtask.update_title("New Title")
-        
-        assert subtask.title == "New Title"
-        assert subtask.description == "Original desc"  # Unchanged
-    
-    def test_start_subtask(self):
-        """Test starting a subtask"""
-        subtask = Subtask.create(
-            id=SubtaskId.generate_new(),
-            parent_task_id=TaskId.generate_new(),
-            title="Test Subtask",
-            description="Test"
-        )
-        
-        assert str(subtask.status) == 'todo'
-        
-        subtask.update_status(TaskStatus.in_progress())
-        
-        assert str(subtask.status) == 'in_progress'
-    
-    def test_complete_subtask(self):
-        """Test completing a subtask"""
-        subtask = Subtask.create(
-            id=SubtaskId.generate_new(),
-            parent_task_id=TaskId.generate_new(),
-            title="Test Subtask",
-            description="Test"
-        )
-        
-        subtask.update_status(TaskStatus.in_progress())
-        subtask.complete()
-        
-        assert str(subtask.status) == 'done'
-    
-    def test_cannot_complete_todo_subtask(self):
-        """Test that todo subtask cannot be directly completed"""
-        subtask = Subtask.create(
-            id=SubtaskId.generate_new(),
-            parent_task_id=TaskId.generate_new(),
-            title="Test Subtask",
-            description="Test"
-        )
-        
-        # Most implementations would allow this, but let's test the behavior
-        subtask.complete()
-        assert str(subtask.status) == 'done'
-    
-    def test_assign_users(self):
-        """Test assigning users to subtask"""
-        subtask = Subtask.create(
-            id=SubtaskId.generate_new(),
-            parent_task_id=TaskId.generate_new(),
-            title="Test Subtask",
-            description="Test"
-        )
-        
-        subtask.update_assignees(['user1', 'user2'])
-        
-        assert 'user1' in subtask.assignees
-        assert 'user2' in subtask.assignees
-        assert len(subtask.assignees) == 2
-    
-    def test_unassign_users(self):
-        """Test unassigning users from subtask"""
-        subtask = Subtask.create(
-            id=SubtaskId.generate_new(),
-            parent_task_id=TaskId.generate_new(),
-            title="Test Subtask",
-            description="Test",
-            assignees=['user1', 'user2', 'user3']
-        )
-        
-        subtask.remove_assignee('user2')
-        
-        assert 'user1' in subtask.assignees
-        assert 'user2' not in subtask.assignees
-        assert 'user3' in subtask.assignees
-        assert len(subtask.assignees) == 2
-    
-    def test_is_blocked(self):
-        """Test checking if subtask is blocked"""
-        subtask = Subtask.create(
-            id=SubtaskId.generate_new(),
-            parent_task_id=TaskId.generate_new(),
-            title="Test Subtask",
-            description="Test"
-        )
-        
-        # Initially not blocked
-        assert str(subtask.status) != 'blocked'
-        
-        # To reach blocked status, first transition to in_progress, then to blocked
-        subtask.update_status(TaskStatus.in_progress())
-        assert str(subtask.status) == 'in_progress'
-        
-        # Now can transition to blocked
-        subtask.update_status(TaskStatus.blocked())
-        assert str(subtask.status) == 'blocked'
-    
-    def test_is_completed(self):
-        """Test checking if subtask is completed"""
-        subtask = Subtask.create(
-            id=SubtaskId.generate_new(),
-            parent_task_id=TaskId.generate_new(),
-            title="Test Subtask",
-            description="Test"
-        )
-        
-        assert subtask.is_completed == False
-        
-        subtask.complete()
-        assert subtask.is_completed == True
-    
-    def test_progress_percentage(self):
-        """Test progress percentage calculation"""
-        subtask = Subtask.create(
-            id=SubtaskId.generate_new(),
-            parent_task_id=TaskId.generate_new(),
-            title="Test Subtask",
-            description="Test"
-        )
-        
-        # Todo = 0%
-        assert subtask.progress_percentage == 0
-        
-        # Set progress manually
-        subtask.progress_percentage = 50
-        assert subtask.progress_percentage == 50
-        
-        # Done = 100%
-        subtask.progress_percentage = 100
-        assert subtask.progress_percentage == 100
-    
-    def test_validate_required_fields(self):
-        """Test validation of required fields"""
-        with pytest.raises((ValueError, TypeError)):
-            Subtask.create(
-                id=SubtaskId.generate_new(),
-                parent_task_id=None,  # Invalid
-                title="Test",
-                description="Test"
-            )
-        
-        with pytest.raises((ValueError, TypeError)):
-            Subtask.create(
-                id=SubtaskId.generate_new(),
-                parent_task_id=TaskId.generate_new(),
-                title="",  # Empty title
-                description="Test"
-            )
-    
-    def test_subtask_equality(self):
-        """Test subtask equality comparison"""
-        task_id = TaskId.generate_new()
-        
-        subtask1 = Subtask.create(
-            id=SubtaskId.generate_new(),
-            parent_task_id=task_id,
-            title="Test",
-            description="Test"
-        )
-        
-        subtask2 = Subtask.create(
-            id=SubtaskId.generate_new(),
-            parent_task_id=task_id,
-            title="Test",
-            description="Test"
-        )
-        
-        # Different IDs mean different subtasks
-        assert subtask1 != subtask2
-        
-        # Same object
-        assert subtask1 == subtask1
-    
-    def test_subtask_string_representation(self):
-        """Test string representation of subtask"""
-        subtask = Subtask.create(
-            id=SubtaskId.generate_new(),
-            parent_task_id=TaskId.generate_new(),
-            title="Test Subtask",
-            description="Test"
-        )
-        
-        str_repr = str(subtask)
-        assert "Test Subtask" in str_repr or str(subtask.id) in str_repr
-    
-    def test_estimated_time(self):
-        """Test estimated time for subtask"""
-        subtask = Subtask.create(
-            id=SubtaskId.generate_new(),
-            parent_task_id=TaskId.generate_new(),
-            title="Test Subtask",
-            description="Test"
-        )
-        
-        # Set estimated time if supported
-        if hasattr(subtask, 'estimated_hours'):
-            subtask.estimated_hours = 4
-            assert subtask.estimated_hours == 4
-    
-    def test_parent_task_reference(self):
-        """Test parent task reference"""
-        task_id = TaskId.generate_new()
-        
-        subtask = Subtask.create(
-            id=SubtaskId.generate_new(),
-            parent_task_id=task_id,
-            title="Child Subtask",
-            description="Test"
-        )
-        
-        assert subtask.parent_task_id == task_id
-        assert str(subtask.parent_task_id) == str(task_id)
-    
-    def test_subtask_with_invalid_priority(self):
-        """Test creating subtask with invalid priority"""
-        # Should use default priority if invalid
-        subtask = Subtask.create(
-            id=SubtaskId.generate_new(),
-            parent_task_id=TaskId.generate_new(),
-            title="Test",
-            description="Test"
-            # priority defaults to medium
-        )
-        
-        # Should have a valid priority
-        assert subtask.priority in [Priority.low(), Priority.medium(), Priority.high(), Priority.critical()]
-    
-    def test_bulk_operations(self):
-        """Test bulk operations on multiple subtasks"""
-        task_id = TaskId.generate_new()
-        
-        subtasks = [
-            Subtask.create(
-                id=SubtaskId.generate_new(),
-                parent_task_id=task_id,
-                title=f"Subtask {i}",
-                description="Test"
-            )
-            for i in range(5)
-        ]
-        
-        # Start all subtasks
-        for subtask in subtasks:
-            subtask.update_status(TaskStatus.in_progress())
-        
-        assert all(str(s.status) == 'in_progress' for s in subtasks)
-        
-        # Complete all subtasks
-        for subtask in subtasks:
-            subtask.complete()
-        
-        assert all(s.is_completed for s in subtasks)
-    
-    def test_subtask_ordering(self):
-        """Test ordering of subtasks"""
-        task_id = TaskId.generate_new()
-        
-        subtask1 = Subtask.create(
-            id=SubtaskId.generate_new(),
-            parent_task_id=task_id,
-            title="A Subtask",
-            description="Test",
-            priority=Priority.low()
-        )
-        
-        subtask2 = Subtask.create(
-            id=SubtaskId.generate_new(),
-            parent_task_id=task_id,
-            title="B Subtask",
-            description="Test",
-            priority=Priority.high()
-        )
-        
-        subtask3 = Subtask.create(
-            id=SubtaskId.generate_new(),
-            parent_task_id=task_id,
-            title="C Subtask",
-            description="Test",
-            priority=Priority.medium()
-        )
-        
-        # Sort by priority (HIGH > MEDIUM > LOW)
-        subtasks = sorted(
-            [subtask1, subtask2, subtask3],
-            key=lambda s: s.priority,
-            reverse=True
-        )
-        
-        # High priority should be first
-        assert subtasks[0] == subtask2
+        assert subtask.updated_at > previous_updated

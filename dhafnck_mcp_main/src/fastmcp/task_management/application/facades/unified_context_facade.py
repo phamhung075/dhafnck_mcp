@@ -424,3 +424,91 @@ class UnifiedContextFacade:
                 "success": False,
                 "error": str(e)
             }
+    
+    def bootstrap_context_hierarchy(
+        self,
+        project_id: Optional[str] = None,
+        branch_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Bootstrap the complete context hierarchy.
+        
+        This creates the full hierarchy from global down to the specified level,
+        ensuring all parent contexts exist before child contexts are created.
+        
+        Args:
+            project_id: Optional project to create (uses facade project_id if not provided)
+            branch_id: Optional branch to create (uses facade branch_id if not provided)
+            
+        Returns:
+            Response dict with bootstrap results
+        """
+        try:
+            # Use facade scope if parameters not provided
+            effective_project_id = project_id or self._project_id
+            effective_branch_id = branch_id or self._git_branch_id
+            
+            result = self._service.bootstrap_context_hierarchy(
+                user_id=self._user_id,
+                project_id=effective_project_id,
+                branch_id=effective_branch_id
+            )
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Failed to bootstrap context hierarchy: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "bootstrap_completed": False
+            }
+    
+    def create_context_flexible(
+        self,
+        level: str,
+        context_id: str,
+        data: Optional[Dict[str, Any]] = None,
+        auto_create_parents: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Create a context with flexible parent creation options.
+        
+        This method allows more control over whether parent contexts should be
+        automatically created, providing an escape hatch for special scenarios.
+        
+        Args:
+            level: Context level (global, project, branch, task)
+            context_id: Context identifier
+            data: Context data
+            auto_create_parents: Whether to auto-create missing parent contexts
+            
+        Returns:
+            Response dict with created context
+        """
+        try:
+            # Add scope to data
+            data = self._add_scope_to_data(data or {})
+            
+            # Add special flag for orphaned creation if needed
+            if not auto_create_parents:
+                data["allow_orphaned_creation"] = True
+            
+            # Call service with explicit auto_create_parents parameter
+            result = self._service.create_context(
+                level=level,
+                context_id=context_id,
+                data=data,
+                user_id=self._user_id,
+                project_id=self._project_id,
+                auto_create_parents=auto_create_parents
+            )
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Failed to create context with flexible options: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }

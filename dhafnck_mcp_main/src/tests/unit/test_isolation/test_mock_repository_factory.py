@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 import uuid
 
 # These imports will fail initially - that's expected in TDD
-from fastmcp.task_management.infrastructure.database.test_helpers import (
+from tests.unit.infrastructure.database.test_helpers import (
     MockRepositoryFactory,
     create_mock_task_repository,
     create_mock_project_repository,
