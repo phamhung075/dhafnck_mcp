@@ -363,23 +363,13 @@ def create_sse_app(
     except ImportError as e:
         logger.warning(f"Could not import token management routes: {e}")
     
-    # Add MCP registration routes for Claude and other MCP clients (SSE server)
-    try:
-        from .routes.mcp_registration_routes import mcp_registration_routes
-        server_routes.extend(mcp_registration_routes)
-        logger.info("MCP registration routes registered for SSE server - Claude MCP client compatibility (/register endpoint)")
-    except ImportError as e:
-        logger.warning(f"Could not import MCP registration routes for SSE server: {e}")
-    
-    # Import Mount outside try block to avoid UnboundLocalError
-    from starlette.routing import Mount
-    
     # Add user-scoped V2 routes using the same pattern as Supabase auth
     try:
-        from fastapi import FastAPI
         from .routes.user_scoped_project_routes import router as project_router
         from .routes.user_scoped_task_routes import router as task_router
         from .routes.task_summary_routes import task_summary_router
+        from fastapi import FastAPI
+        from starlette.routing import Mount
         
         # Create a minimal FastAPI app for V2 routes
         v2_app = FastAPI()
@@ -394,6 +384,14 @@ def create_sse_app(
             logger.info("MCP token management routes registered at /api/v2/mcp-tokens")
         except ImportError as mcp_token_e:
             logger.warning(f"Could not import MCP token routes: {mcp_token_e}")
+        
+        # Add API token management routes for frontend
+        try:
+            from .routes.token_management_routes import router as token_management_router
+            v2_app.include_router(token_management_router)
+            logger.info("API token management routes registered at /api/v2/tokens")
+        except ImportError as token_mgmt_e:
+            logger.warning(f"Could not import token management routes: {token_mgmt_e}")
         
         # Mount the FastAPI app as a sub-application
         server_routes.append(Mount("/", app=v2_app))
@@ -655,6 +653,8 @@ def create_streamable_http_app(
     except ImportError as e:
         logger.warning(f"Could not import token management routes for streamable HTTP: {e}")
     
+    # MCP registration routes are now handled directly in FastAPI app below
+    
     # Add user-scoped V2 routes for streamable HTTP
     try:
         from .routes.user_scoped_project_routes import router as project_router
@@ -685,20 +685,156 @@ def create_streamable_http_app(
         except ImportError as mcp_token_e:
             logger.warning(f"Could not import MCP token routes: {mcp_token_e}")
         
+        # Add API token management routes for frontend
+        try:
+            from .routes.token_management_routes import router as token_management_router
+            v2_app.include_router(token_management_router)
+            logger.info("API token management routes registered at /api/v2/tokens")
+        except ImportError as token_mgmt_e:
+            logger.warning(f"Could not import token management routes: {token_mgmt_e}")
+        
+        # Add simplified MCP registration endpoints directly to FastAPI app
+        import uuid
+        import time
+        import fastapi
+        from typing import Dict, Any
+        
+        # Store active registrations (in production, use Redis or database)
+        active_registrations: Dict[str, Dict[str, Any]] = {}
+        
+        from fastapi import Request
+        
+        @v2_app.post("/register")
+        async def register_mcp_client(request: Request):
+            """Handle MCP client registration requests."""
+            try:
+                # Parse request body if present
+                body = {}
+                if request.headers.get("content-type") == "application/json":
+                    try:
+                        body = await request.json()
+                    except:
+                        pass  # Some clients send empty body
+                
+                # Generate session ID for this client
+                session_id = str(uuid.uuid4())
+                
+                # Create registration record
+                registration = {
+                    "session_id": session_id,
+                    "client_ip": request.client.host if request.client else "unknown",
+                    "client_port": request.client.port if request.client else 0,
+                    "user_agent": request.headers.get("user-agent", "Unknown"),
+                    "registered_at": time.time(),
+                    "last_activity": time.time(),
+                    "client_info": body.get("client_info", {}),
+                    "capabilities": body.get("capabilities", {})
+                }
+                
+                # Store registration
+                active_registrations[session_id] = registration
+                
+                logger.info(f"MCP client registered: {session_id} from {request.client} with User-Agent: {request.headers.get('user-agent', 'Unknown')}")
+                
+                # Return successful registration response
+                return {
+                    "success": True,
+                    "session_id": session_id,
+                    "server": {
+                        "name": "dhafnck-mcp-server",
+                        "version": "2.1.0",
+                        "protocol_version": "2025-06-18"
+                    },
+                    "endpoints": {
+                        "mcp": "http://localhost:8000/mcp/",
+                        "initialize": "http://localhost:8000/mcp/initialize",
+                        "tools": "http://localhost:8000/mcp/tools/list",
+                        "health": "http://localhost:8000/health"
+                    },
+                    "transport": "streamable-http",
+                    "authentication": {
+                        "required": True,
+                        "type": "Bearer",
+                        "header": "Authorization",
+                        "format": "Bearer YOUR_JWT_TOKEN_HERE"
+                    },
+                    "capabilities": {
+                        "tools": True,
+                        "resources": True,
+                        "prompts": True,
+                        "logging": True,
+                        "progress": True
+                    },
+                    "instructions": {
+                        "next_step": "Initialize connection at /mcp/initialize endpoint",
+                        "authentication": "Include JWT token in Authorization header",
+                        "protocol": "Use MCP protocol for all subsequent requests"
+                    }
+                }
+                
+            except Exception as e:
+                logger.error(f"Registration error: {e}")
+                return {"error": "Registration failed", "message": str(e), "instructions": "Please check your client configuration"}
+        
+        @v2_app.post("/unregister")
+        async def unregister_mcp_client(request: Request):
+            """Handle client unregistration/logout."""
+            try:
+                body = await request.json()
+                session_id = body.get("session_id")
+                
+                if session_id and session_id in active_registrations:
+                    del active_registrations[session_id]
+                    logger.info(f"MCP client unregistered: {session_id}")
+                    return {"success": True, "message": "Client unregistered successfully"}
+                else:
+                    return {"error": "Invalid session", "message": "Session ID not found"}
+            except Exception as e:
+                logger.error(f"Unregistration error: {e}")
+                return {"error": "Unregistration failed", "message": str(e)}
+        
+        @v2_app.get("/registrations")
+        async def list_mcp_registrations():
+            """List active client registrations (for debugging)."""
+            # Clean up old registrations (older than 1 hour)
+            current_time = time.time()
+            expired_sessions = [
+                sid for sid, reg in active_registrations.items()
+                if current_time - reg["last_activity"] > 3600
+            ]
+            for sid in expired_sessions:
+                del active_registrations[sid]
+            
+            return {
+                "active_registrations": len(active_registrations),
+                "sessions": list(active_registrations.keys()),
+                "details": [
+                    {
+                        "session_id": sid,
+                        "client_ip": reg["client_ip"],
+                        "user_agent": reg["user_agent"],
+                        "registered_at": reg["registered_at"],
+                        "last_activity": reg["last_activity"]
+                    }
+                    for sid, reg in active_registrations.items()
+                ]
+            }
+        
+        @v2_app.options("/register")
+        @v2_app.options("/unregister")
+        async def handle_mcp_options():
+            """Handle CORS preflight requests."""
+            return {}
+        
+        logger.info("MCP registration endpoints added directly to FastAPI app (/register, /unregister, /registrations)")
+        
         # Mount the FastAPI app as a sub-application
         server_routes.append(Mount("/", app=v2_app))
-        logger.info("User-scoped V2 routes registered for streamable HTTP with task summaries at /api/v2/projects, /api/v2/tasks, and /api/tasks")
+        logger.info("User-scoped V2 routes registered for streamable HTTP with task summaries at /api/api/v2/projects, /api/api/v2/tasks, and /api/api/tasks")
             
     except ImportError as e:
         logger.warning(f"Could not import user-scoped V2 routes for streamable HTTP: {e}")
     
-    # Add MCP registration routes for Claude and other MCP clients
-    try:
-        from .routes.mcp_registration_routes import mcp_registration_routes
-        server_routes.extend(mcp_registration_routes)
-        logger.info("MCP registration routes registered for Claude MCP client compatibility (/register endpoint)")
-    except ImportError as e:
-        logger.warning(f"Could not import MCP registration routes: {e}")
 
     if middleware:
         server_middleware.extend(middleware)

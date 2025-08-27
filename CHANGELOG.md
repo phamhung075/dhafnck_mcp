@@ -6,6 +6,52 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Security
+- **Removed Hardcoded JWT Secrets from Code** (2025-08-27)
+  - Removed hardcoded JWT_SECRET_KEY from all source files
+  - Created secure secret generation script `generate_secure_secrets.py`
+  - Updated docker-compose.yml to require JWT_SECRET_KEY from environment
+  - Added proper error handling when JWT_SECRET_KEY is not configured
+  - Generated cryptographically secure secrets for .env file
+  - **Files Modified**:
+    - `dhafnck_mcp_main/src/fastmcp/auth/dependencies.py` - Removed hardcoded secret, added error handling
+    - `dhafnck_mcp_main/src/fastmcp/server/routes/token_management_routes.py` - Removed hardcoded secret
+    - `docker-system/docker-compose.yml` - Removed default JWT secret
+    - `.env` - Updated with secure generated secrets
+  - **Files Created**:
+    - `generate_secure_secrets.py` - Script to generate secure random secrets
+  - **Security Impact**: Eliminates hardcoded secrets vulnerability, enforces secure secret management
+
+### Added
+- **API Token Management System for Frontend** (2025-08-27)
+  - Created complete token management API endpoints at `/api/v2/tokens` for generating and managing API tokens
+  - **Endpoints Added**:
+    - `POST /api/v2/tokens` - Generate new API token with specified scopes and expiration
+    - `GET /api/v2/tokens` - List all tokens for authenticated user  
+    - `DELETE /api/v2/tokens/{token_id}` - Revoke a specific token
+    - `GET /api/v2/tokens/{token_id}` - Get token details
+    - `PATCH /api/v2/tokens/{token_id}/scopes` - Update token scopes
+    - `POST /api/v2/tokens/{token_id}/rotate` - Rotate token (revoke old, generate new)
+    - `POST /api/v2/tokens/validate` - Validate a token
+    - `GET /api/v2/tokens/{token_id}/usage` - Get usage statistics
+  - **Features**:
+    - JWT-based token generation with configurable scopes and expiration
+    - Token rotation for security (revoke old, generate new with same settings)
+    - Usage tracking and rate limiting support
+    - Secure token storage with hashing
+    - User-scoped token management with authentication
+  - **Files Created**: 
+    - `dhafnck_mcp_main/src/fastmcp/server/routes/token_management_routes.py` - Complete token management implementation
+    - `dhafnck_mcp_main/src/fastmcp/auth/dependencies.py` - JWT authentication dependencies for FastAPI
+  - **Files Modified**: 
+    - `dhafnck_mcp_main/src/fastmcp/server/http_server.py` - Added token management router to FastAPI app
+  - **Authentication Integration**:
+    - Implemented proper JWT token validation with user extraction
+    - Added `get_current_user` dependency for all token management endpoints
+    - Configured to work with Supabase JWT tokens from frontend authentication
+  - **Impact**: Enables frontend users to generate and manage API tokens for MCP authentication after login
+  - **Note**: Frontend requires valid Supabase JWT token from login to generate API tokens
+
 ### Added
 - **Complete Test Coverage for Remaining Service Layer Files** (2025-08-26)
   - Created comprehensive test files for all 11 remaining untested source files in the service layer

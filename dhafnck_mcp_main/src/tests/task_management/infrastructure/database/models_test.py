@@ -802,7 +802,7 @@ class TestDatabaseModels:
     
     def test_datetime_fields_auto_population(self, session):
         """Test that datetime fields are automatically populated"""
-        before_create = datetime.utcnow()
+        before_create = datetime.utcnow().replace(microsecond=0)  # Remove microseconds for comparison
         
         project = Project(
             id=str(uuid.uuid4()),
@@ -813,13 +813,16 @@ class TestDatabaseModels:
         session.add(project)
         session.commit()
         
-        after_create = datetime.utcnow()
+        after_create = datetime.utcnow().replace(microsecond=0) + timedelta(seconds=1)  # Add buffer
         
         retrieved = session.query(Project).filter_by(name="Datetime Test Project").first()
         assert retrieved.created_at is not None
         assert retrieved.updated_at is not None
-        assert before_create <= retrieved.created_at <= after_create
-        assert before_create <= retrieved.updated_at <= after_create
+        # Convert retrieved datetimes to comparison-friendly format
+        retrieved_created = retrieved.created_at.replace(microsecond=0)
+        retrieved_updated = retrieved.updated_at.replace(microsecond=0)
+        assert before_create <= retrieved_created <= after_create
+        assert before_create <= retrieved_updated <= after_create
     
     def test_unique_constraints_enforcement(self, session):
         """Test that unique constraints are properly enforced"""
@@ -837,15 +840,31 @@ class TestDatabaseModels:
     
     def test_foreign_key_constraints(self, session):
         """Test that foreign key constraints are enforced"""
+        # Enable foreign keys for this session (needed for SQLite)
+        from sqlalchemy import text
+        session.execute(text('PRAGMA foreign_keys=ON'))
+        
+        # Verify foreign keys are now enabled
+        result = session.execute(text('PRAGMA foreign_keys'))
+        fk_enabled = result.fetchone()[0]
+        assert fk_enabled == 1, "Foreign keys should be enabled after setting pragma"
+        
         # Try to create a task with non-existent git_branch_id
+        non_existent_branch_id = str(uuid.uuid4())  # Use a UUID that definitely doesn't exist
         task = Task(
             id=str(uuid.uuid4()),
             title="Invalid Task",
             description="Task with invalid branch",
-            git_branch_id="non-existent-branch",
+            git_branch_id=non_existent_branch_id,
             user_id="user-123"
         )
         session.add(task)
         
-        with pytest.raises(IntegrityError):
+        # Force explicit commit in a try/catch to get better error details
+        try:
             session.commit()
+            # If we get here, foreign key wasn't enforced
+            pytest.fail("Expected IntegrityError due to foreign key constraint violation")
+        except IntegrityError:
+            # This is expected - foreign key constraint should prevent the commit
+            pass

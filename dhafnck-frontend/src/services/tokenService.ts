@@ -1,5 +1,7 @@
 import { authenticatedFetch } from '../hooks/useAuthenticatedFetch';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 interface GenerateTokenRequest {
   name: string;
   scopes: string[];
@@ -26,7 +28,7 @@ interface TokenListResponse {
 }
 
 class TokenService {
-  private baseUrl = '/api/v2/tokens';
+  private baseUrl = `${API_BASE_URL}/api/v2/tokens`;
 
   async generateToken(request: GenerateTokenRequest): Promise<{ data: TokenResponse }> {
     const response = await authenticatedFetch(this.baseUrl, {
@@ -137,7 +139,7 @@ class TokenService {
 
   // Validate a token (useful for testing)
   async validateToken(token: string): Promise<{ valid: boolean; scopes?: string[]; user_id?: string }> {
-    const response = await fetch('/api/v2/tokens/validate', {
+    const response = await fetch(`${API_BASE_URL}/api/v2/tokens/validate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

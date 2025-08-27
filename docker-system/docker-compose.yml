@@ -147,9 +147,9 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - ENABLE_REDIS=${ENABLE_REDIS:-true}
       
-      # Security
-      - SECRET_KEY=${SECRET_KEY:-dev_secret_key_min_32_chars_change_in_production_environment}
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-dGhpcyBpcyBhIGR1bW15IGp3dCBzZWNyZXQgZm9yIGRldmVsb3BtZW50}
+      # Security - MUST be set in .env file, never use defaults in production!
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
       - JWT_EXPIRATION_MINUTES=${JWT_EXPIRATION_MINUTES:-1440}
       
@@ -294,5 +294,5 @@ volumes:
 
 networks:
   dhafnck-network:
-    name: dhafnck-network-opt
+    name: dhafnck-dhafnck-network
     driver: bridge

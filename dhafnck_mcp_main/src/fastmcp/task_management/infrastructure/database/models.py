@@ -297,8 +297,8 @@ class GlobalContext(Base):
     __tablename__ = "global_contexts"
     
     # All IDs are now UUID
-    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)  # Removed default to avoid conversion issues
-    organization_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=True)  # No default org ID
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)  # Removed default to avoid conversion issues
+    organization_id: Mapped[str] = mapped_column(String(36), nullable=True)  # No default org ID
     
     # Core organizational configuration
     autonomous_rules: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
@@ -329,11 +329,11 @@ class ProjectContext(Base):
     __tablename__ = "project_contexts"
     
     # Primary key - matches actual database schema
-    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
     
     # Foreign keys - all UUID now
-    project_id: Mapped[Optional[str]] = mapped_column(UUID(as_uuid=False), nullable=True)
-    parent_global_id: Mapped[Optional[str]] = mapped_column(UUID(as_uuid=False), ForeignKey("global_contexts.id"), nullable=True)
+    project_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+    parent_global_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("global_contexts.id"), nullable=True)
     
     # Data field (used in actual database)
     data: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True, default=dict)
@@ -374,11 +374,11 @@ class BranchContext(Base):
     __tablename__ = "branch_contexts"
     
     # Primary key - matches actual database schema
-    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
     
     # Foreign keys
-    branch_id: Mapped[Optional[str]] = mapped_column(UUID(as_uuid=False), ForeignKey("project_git_branchs.id"), nullable=True)
-    parent_project_id: Mapped[Optional[str]] = mapped_column(UUID(as_uuid=False), ForeignKey("project_contexts.id"), nullable=True)
+    branch_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("project_git_branchs.id"), nullable=True)
+    parent_project_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("project_contexts.id"), nullable=True)
     
     # Data field (used in actual database)
     data: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True, default=dict)
@@ -425,12 +425,12 @@ class TaskContext(Base):
     __tablename__ = "task_contexts"
     
     # Primary key - matches actual database schema
-    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
     
     # Foreign keys
     task_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("tasks.id"), nullable=True)
-    parent_branch_id: Mapped[Optional[str]] = mapped_column(UUID(as_uuid=False), ForeignKey("project_git_branchs.id"), nullable=True)
-    parent_branch_context_id: Mapped[Optional[str]] = mapped_column(UUID(as_uuid=False), ForeignKey("branch_contexts.id"), nullable=True)
+    parent_branch_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("project_git_branchs.id"), nullable=True)
+    parent_branch_context_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("branch_contexts.id"), nullable=True)
     
     # Data field (used in actual database)
     data: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True, default=dict)
@@ -478,14 +478,14 @@ class ContextDelegation(Base):
     """Context delegations table - for hierarchical context propagation"""
     __tablename__ = "context_delegations"
     
-    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
     
     # Source and target
     source_level: Mapped[str] = mapped_column(String, nullable=False)  # 'task', 'project', 'global'
-    source_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
+    source_id: Mapped[str] = mapped_column(String(36), nullable=False)
     source_type: Mapped[str] = mapped_column(String, default="context")  # Added for schema validation
     target_level: Mapped[str] = mapped_column(String, nullable=False)
-    target_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
+    target_id: Mapped[str] = mapped_column(String(36), nullable=False)
     target_type: Mapped[str] = mapped_column(String, default="context")  # Added for schema validation
     
     # Delegation data
@@ -523,8 +523,8 @@ class ContextInheritanceCache(Base):
     """Context inheritance cache table - for performance optimization"""
     __tablename__ = "context_inheritance_cache"
     
-    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))  # Added for schema validation
-    context_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))  # Added for schema validation
+    context_id: Mapped[str] = mapped_column(String(36), nullable=False)
     context_level: Mapped[str] = mapped_column(String, nullable=False)  # 'task', 'branch', 'project', 'global'
     context_type: Mapped[str] = mapped_column(String, default="hierarchical")  # Added for schema validation
     
