@@ -118,14 +118,49 @@ const keyValueToMarkdown = (data: Record<string, any>): string => {
   if (!data || Object.keys(data).length === 0) {
     return '';
   }
-  return Object.entries(data).map(([key, value]) => `${key}: ${value}`).join('\n');
+  
+  return Object.entries(data).map(([key, value]) => {
+    // Handle nested objects and arrays
+    if (typeof value === 'object' && value !== null) {
+      if (Array.isArray(value)) {
+        return `${key}: ${value.join(', ')}`;
+      } else {
+        // For objects, show as JSON string or formatted text
+        return `${key}: ${JSON.stringify(value, null, 2)}`;
+      }
+    }
+    return `${key}: ${value}`;
+  }).join('\n');
 };
 
 const patternsToMarkdown = (data: Record<string, any>): string => {
   if (!data || Object.keys(data).length === 0) {
     return '';
   }
-  return Object.entries(data).map(([key, value]) => `${key}:\n${value}`).join('\n\n');
+  
+  return Object.entries(data).map(([key, value]) => {
+    // Handle nested objects properly
+    if (typeof value === 'object' && value !== null) {
+      // Convert nested object to readable format
+      const nestedContent = Object.entries(value).map(([nestedKey, nestedValue]) => {
+        if (typeof nestedValue === 'object' && nestedValue !== null) {
+          // Handle deeply nested objects/arrays
+          if (Array.isArray(nestedValue)) {
+            return `  ${nestedKey}: ${nestedValue.join(', ')}`;
+          } else {
+            // For deeply nested objects, show each property
+            const deepContent = Object.entries(nestedValue).map(([k, v]) => 
+              `    ${k}: ${v}`
+            ).join('\n');
+            return `  ${nestedKey}:\n${deepContent}`;
+          }
+        }
+        return `  ${nestedKey}: ${nestedValue}`;
+      }).join('\n');
+      return `${key}:\n${nestedContent}`;
+    }
+    return `${key}:\n${value}`;
+  }).join('\n\n');
 };
 
 const capabilitiesToMarkdown = (data: string[]): string => {
@@ -172,14 +207,43 @@ export const GlobalContextDialog: React.FC<GlobalContextDialogProps> = ({
       console.log('Fetched global context:', context);
       
       if (context) {
+        console.log('Processing context response:', context);
         setGlobalContext(context);
         
+        // Handle the actual API response structure
+        // Backend returns: context.data.resolved_context.global_settings
+        // Map to frontend expected structure
+        const contextData = context.data || context;
+        const resolvedContext = contextData.resolved_context || {};
+        const globalSettings = resolvedContext.global_settings || {};
+        
+        console.log('Resolved context:', resolvedContext);
+        console.log('Global settings:', globalSettings);
+        
+        // Convert backend fields to frontend expected format
+        const organizationSettings = {
+          ...(globalSettings.autonomous_rules || {}),
+          ...(globalSettings.security_policies || {}),
+          ...(globalSettings.coding_standards || {})
+        };
+        
+        const globalPatterns = globalSettings.workflow_templates || {};
+        const sharedCapabilities = []; // This might need to be extracted from another field
+        const metadata = {
+          id: resolvedContext.id || '',
+          lastUpdated: new Date().toISOString(),
+          ...globalSettings.delegation_rules || {}
+        };
+        
+        console.log('Mapped data:', { organizationSettings, globalPatterns, sharedCapabilities, metadata });
+        
         // Convert each section to markdown format
-        const data = context.data || {};
-        setSettingsMarkdown(keyValueToMarkdown(data.organizationSettings || {}));
-        setPatternsMarkdown(patternsToMarkdown(data.globalPatterns || {}));
-        setCapabilitiesMarkdown(capabilitiesToMarkdown(data.sharedCapabilities || []));
-        setMetadataMarkdown(keyValueToMarkdown(data.metadata || {}));
+        setSettingsMarkdown(keyValueToMarkdown(organizationSettings));
+        setPatternsMarkdown(patternsToMarkdown(globalPatterns));
+        setCapabilitiesMarkdown(capabilitiesToMarkdown(sharedCapabilities));
+        setMetadataMarkdown(keyValueToMarkdown(metadata));
+      } else {
+        console.log('No context received, showing empty state');
       }
     } catch (error) {
       console.error('Error fetching global context:', error);
@@ -226,13 +290,31 @@ export const GlobalContextDialog: React.FC<GlobalContextDialogProps> = ({
   };
 
   const handleCancel = () => {
-    // Reset to original data
-    if (globalContext?.data) {
-      const data = globalContext.data;
-      setSettingsMarkdown(keyValueToMarkdown(data.organizationSettings || {}));
-      setPatternsMarkdown(patternsToMarkdown(data.globalPatterns || {}));
-      setCapabilitiesMarkdown(capabilitiesToMarkdown(data.sharedCapabilities || []));
-      setMetadataMarkdown(keyValueToMarkdown(data.metadata || {}));
+    // Reset to original data using the same mapping as fetchGlobalContext
+    if (globalContext) {
+      const contextData = globalContext.data || globalContext;
+      const resolvedContext = contextData.resolved_context || {};
+      const globalSettings = resolvedContext.global_settings || {};
+      
+      // Convert backend fields to frontend expected format
+      const organizationSettings = {
+        ...(globalSettings.autonomous_rules || {}),
+        ...(globalSettings.security_policies || {}),
+        ...(globalSettings.coding_standards || {})
+      };
+      
+      const globalPatterns = globalSettings.workflow_templates || {};
+      const sharedCapabilities = [];
+      const metadata = {
+        id: resolvedContext.id || '',
+        lastUpdated: new Date().toISOString(),
+        ...globalSettings.delegation_rules || {}
+      };
+      
+      setSettingsMarkdown(keyValueToMarkdown(organizationSettings));
+      setPatternsMarkdown(patternsToMarkdown(globalPatterns));
+      setCapabilitiesMarkdown(capabilitiesToMarkdown(sharedCapabilities));
+      setMetadataMarkdown(keyValueToMarkdown(metadata));
     }
     setEditMode(false);
   };
@@ -481,12 +563,25 @@ export const GlobalContextDialog: React.FC<GlobalContextDialogProps> = ({
                 variant="default" 
                 className="mt-4"
                 onClick={() => {
-                  // Initialize with empty values
+                  // Initialize with empty values and the expected backend structure
                   setSettingsMarkdown('');
                   setPatternsMarkdown('');
                   setCapabilitiesMarkdown('');
                   setMetadataMarkdown('');
-                  setGlobalContext({ data: {} });
+                  setGlobalContext({ 
+                    data: {
+                      resolved_context: {
+                        id: "7fa54328-bfb4-523c-ab6f-465e05e1bba5",
+                        global_settings: {
+                          autonomous_rules: {},
+                          security_policies: {},
+                          coding_standards: {},
+                          workflow_templates: {},
+                          delegation_rules: {}
+                        }
+                      }
+                    }
+                  });
                   setEditMode(true);
                 }}
               >

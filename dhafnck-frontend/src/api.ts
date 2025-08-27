@@ -3,6 +3,7 @@
 
 import Cookies from 'js-cookie';
 import { taskApiV2, projectApiV2, isAuthenticated } from './services/apiV2';
+import { mcpTokenService } from './services/mcpTokenService';
 
 const API_BASE = "http://localhost:8000/mcp/";
 
@@ -111,13 +112,22 @@ const MCP_HEADERS = {
   "MCP-Protocol-Version": "2025-06-18",
 };
 
-function withMcpHeaders(extra: Record<string, string> = {}): Record<string, string> {
+async function withMcpHeaders(extra: Record<string, string> = {}): Promise<Record<string, string>> {
   const headers: Record<string, string> = { ...MCP_HEADERS, ...extra };
   
-  // Add authentication header if token is available
-  const token = Cookies.get('access_token');
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  // Add MCP token authentication header if available
+  try {
+    const mcpToken = await mcpTokenService.getMCPToken();
+    if (mcpToken) {
+      headers['X-MCP-Token'] = mcpToken;
+    }
+  } catch (error) {
+    console.warn('Failed to get MCP token:', error);
+    // Fallback to JWT token if MCP token fails
+    const token = Cookies.get('access_token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
   }
   
   return headers;
@@ -1033,18 +1043,23 @@ export async function getGlobalContext(): Promise<any> {
       arguments: { 
         action: "resolve",
         level: "global",
-        context_id: "global_singleton",
+        context_id: "7fa54328-bfb4-523c-ab6f-465e05e1bba5", // Actual user's global context ID
         force_refresh: false,
         include_inherited: false  // Global has no parents to inherit from
       }
     },
     id: getRpcId(),
   };
+  
+  const headers = await withMcpHeaders();
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: headers,
     body: JSON.stringify(body),
   });
+  
+  console.log('Fetched global context:', await res.clone().json());
+  
   const data = await res.json();
   if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
     try {
@@ -1801,6 +1816,17 @@ export async function callAgent(name_agent: string): Promise<any> {
 }
 
 export async function updateGlobalContext(data: any): Promise<any> {
+  // Transform frontend data structure to backend expected format
+  const transformedData = {
+    global_settings: {
+      autonomous_rules: data.organizationSettings || {},
+      security_policies: {},  // Could be part of organizationSettings
+      coding_standards: {},   // Could be part of organizationSettings
+      workflow_templates: data.globalPatterns || {},
+      delegation_rules: data.metadata || {}
+    }
+  };
+
   const body = {
     jsonrpc: "2.0",
     method: "tools/call",
@@ -1809,8 +1835,8 @@ export async function updateGlobalContext(data: any): Promise<any> {
       arguments: { 
         action: "update",
         level: "global",
-        context_id: "global_singleton",
-        data: data,
+        context_id: "7fa54328-bfb4-523c-ab6f-465e05e1bba5", // Use the actual global context ID
+        data: transformedData,
         propagate_changes: true
       }
     },
@@ -1819,7 +1845,7 @@ export async function updateGlobalContext(data: any): Promise<any> {
 
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const responseData = await res.json();

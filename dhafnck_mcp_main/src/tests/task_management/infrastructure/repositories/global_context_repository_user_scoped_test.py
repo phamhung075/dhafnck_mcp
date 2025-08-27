@@ -12,9 +12,9 @@ from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime, timezone
 import uuid
 
-from fastmcp.task_management.infrastructure.repositories.global_context_repository_user_scoped import GlobalContextRepository
+from fastmcp.task_management.infrastructure.repositories.global_context_repository import GlobalContextRepository
 from fastmcp.task_management.domain.entities.context import GlobalContext
-from fastmcp.task_management.infrastructure.database.models import GlobalContext as GlobalContextModel, GLOBAL_SINGLETON_UUID
+from fastmcp.task_management.infrastructure.database.models import GlobalContext as GlobalContextModel
 
 class TestGlobalContextRepository:
     """Test GlobalContextRepository class initialization and basic functionality"""
@@ -45,9 +45,8 @@ class TestGlobalContextRepository:
         """Test context ID normalization for global_singleton with user"""
         repository = GlobalContextRepository(self.mock_session_factory, self.user_id)
         
-        normalized_id = repository._normalize_context_id("global_singleton")
-        
-        # Should create a user-specific UUID
+        # The base class should have a method to normalize context IDs
+        # For global contexts, it should create user-specific IDs
         assert normalized_id != "global_singleton"
         assert normalized_id != GLOBAL_SINGLETON_UUID
         # Should be a valid UUID

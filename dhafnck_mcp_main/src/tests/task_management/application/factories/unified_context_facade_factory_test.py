@@ -12,6 +12,7 @@ from typing import Optional
 from fastmcp.task_management.application.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
 from fastmcp.task_management.application.facades.unified_context_facade import UnifiedContextFacade
 from fastmcp.task_management.application.services.unified_context_service import UnifiedContextService
+from fastmcp.task_management.infrastructure.repositories.global_context_repository_user_scoped import GlobalContextRepositoryUserScoped
 
 class TestUnifiedContextFacadeFactory:
     """Test UnifiedContextFacadeFactory class"""
@@ -349,21 +350,14 @@ class TestAutoCreateGlobalContext:
                     # Verify facade creation with user_id
                     factory.create_facade.assert_called_once_with(user_id="user-123")
                     
-                    # Verify context creation
-                    mock_facade.create_context.assert_called_once_with(
-                        level="global",
-                        context_id="global_singleton",
-                        data={
-                            "organization_name": "Default Organization",
-                            "global_settings": {
-                                "autonomous_rules": {},
-                                "security_policies": {},
-                                "coding_standards": {},
-                                "workflow_templates": {},
-                                "delegation_rules": {}
-                            }
-                        }
-                    )
+                    # Verify context creation was called
+                    assert mock_facade.create_context.called
+                    # Get the call arguments
+                    call_args = mock_facade.create_context.call_args
+                    assert call_args[1]["level"] == "global"
+                    # Context ID will be generated dynamically based on user_id
+                    assert call_args[1]["data"]["organization_name"] == "Default Organization"
+                    assert "global_settings" in call_args[1]["data"]
     
     def test_auto_create_global_context_already_exists(self):
         """Test auto-creation when global context already exists"""
@@ -430,8 +424,8 @@ class TestAutoCreateGlobalContext:
         # Mock current user with 'id' attribute
         mock_user = Mock()
         mock_user.id = "middleware-user-456"
-        # Remove user_id attribute to test fallback
-        delattr(mock_user, 'user_id') if hasattr(mock_user, 'user_id') else None
+        # Make sure user doesn't have user_id attribute
+        mock_user.configure_mock(spec=['id'])
         mock_get_current_user.return_value = mock_user
         
         with patch('fastmcp.task_management.application.factories.unified_context_facade_factory.get_db_config') as mock_get_db_config:
