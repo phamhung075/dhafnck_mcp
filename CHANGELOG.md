@@ -7,6 +7,86 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 ## [Unreleased]
 
 ### Fixed
+- **Context Normalization Improvements** (2025-08-27 - Part 2)
+  - Fixed context ID normalization consistency issues between create and get operations
+  - Updated `UnifiedContextService._normalize_context_id()` to match repository logic (double UUID5)
+  - Added user_id parameter to `get_context()` method in service and facade layers
+  - Fixed repository to use entity ID instead of re-normalizing during creation
+  - Updated controller to pass user_id through to facade for get operations
+  - **Known Issue**: "global_singleton" string normalization still produces different IDs in some edge cases
+  - **Workaround**: Direct UUID access works correctly (contexts ARE properly isolated by user)
+
+- **Critical Fix: Removed GLOBAL_SINGLETON_UUID from entire codebase** (2025-08-27)
+  - Eliminated singleton pattern in favor of proper user-scoped global contexts
+  - Each user now has their own isolated global context identified by user_id
+  - Fixed `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/global_context_repository.py`
+    - Removed GLOBAL_SINGLETON_UUID import and usage
+    - Updated `_normalize_context_id()` to generate user-specific UUIDs
+    - Changed namespace UUID to `a47ae7b9-1d4b-4e5f-8b5a-9c3e5d2f8a1c` for user context generation
+  - Fixed `dhafnck_mcp_main/src/fastmcp/task_management/application/services/unified_context_service.py`
+    - Removed all GLOBAL_SINGLETON_UUID references (7 imports, multiple usages)
+    - Updated context normalization to use user-specific UUID generation
+    - Replaced singleton checks with composite ID pattern matching
+  - Fixed `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/unified_context_controller.py`
+    - Removed GLOBAL_SINGLETON_UUID import that was causing ModuleNotFoundError
+  - Fixed `dhafnck_mcp_main/src/fastmcp/task_management/application/factories/unified_context_facade_factory.py`
+    - Updated imports to use consolidated repositories
+  - **Repository Consolidation**:
+    - Consolidated duplicate repository files in `infrastructure/repositories/`
+    - Removed redundant `*_user_scoped.py` files
+    - Updated main repositories to extend `BaseUserScopedRepository`
+    - All repositories now properly isolate data by user_id
+  - **Impact**: Complete user isolation achieved - no shared global state
+  - **Note**: Requires Docker rebuild to apply changes
+
+- **Context Management UUID Serialization** (2025-08-27)
+  - **Solution Implemented**: Added comprehensive UUID-to-string serialization in UnifiedContextService
+  - **Changes Made**:
+    - Added `_serialize_for_json()` method to recursively convert UUIDs, dates, and other non-JSON types
+    - Applied serialization in `_merge_context_data()` method
+    - Applied serialization in `_create_context_entity()` method
+    - Fixed `_normalize_context_id()` to handle "global" string properly
+  - **Files Modified**:
+    - `dhafnck_mcp_main/src/fastmcp/task_management/application/services/unified_context_service.py`
+  - **Result**: Context update operations now working correctly
+  - **Verification**: Successfully tested context update on branch level with UUID data
+
+### Discovered
+- **Critical Context Management UUID Serialization Issues** (2025-08-27)
+  - **Root Cause Analysis**: Deep TDD analysis uncovered systemic UUID serialization failures
+  - **Primary Issue**: UUID objects not properly converted to strings before JSON storage
+  - **Secondary Issue**: Global context expects UUID but receives "global" string
+  - **Impact**: All context update operations failing, task creation failing with UUID mismatches
+  - **Analysis Method**: Used debugger_agent, system_architect_agent, and task_planning_agent
+  - **Architecture Findings**:
+    - Violates DDD principles - infrastructure concerns leaking into domain
+    - Missing data transformation layer at service boundaries
+    - Database schema expects UUID but API contracts use strings
+  - **Required Fixes**: ✅ PARTIALLY COMPLETED
+    1. ✅ Add UUID-aware JSON encoder in UnifiedContextService
+    2. ✅ Fix global context ID handling to map "global" to user_id
+    3. ✅ Ensure proper data transformation at service layer boundaries
+    4. ⏳ Add comprehensive integration tests for UUID handling
+  - **Affected Components**:
+    - ✅ Context management (all levels: global, project, branch, task) - FIXED
+    - ❌ Task creation and management - Still has issues
+    - ⏳ Database persistence layer - Partially fixed
+  - **Remaining Issue**: Task creation still failing with different error (AttributeError)
+
+### Added
+- **Project and Context Initialization** (2025-08-27)
+  - Created project "agentic-project" with comprehensive metadata
+  - Initialized branch context for main branch with current project state
+  - Updated branch context with recent achievements and system capabilities
+  - Documented project structure, tech stack, and development guidelines
+  - **Context Updates**:
+    - Branch context includes test migration success (Jest → Vitest)
+    - Documented 50+ obsolete test files cleanup
+    - Captured dark mode enhancement status
+    - Recorded 4-tier context hierarchy implementation
+  - **Impact**: Established context persistence for future AI sessions
+
+### Fixed
 - **Test Suite Cleanup** (2025-08-27)
   - Removed obsolete test file `src/tests/unit/infrastructure/database/test_supabase_connection_unit.py`
   - File contained 19 failing tests that were incompatible with current database implementation

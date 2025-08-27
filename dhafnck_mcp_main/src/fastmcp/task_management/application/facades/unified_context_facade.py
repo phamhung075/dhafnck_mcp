@@ -109,7 +109,8 @@ class UnifiedContextFacade:
         level: str,
         context_id: str,
         include_inherited: bool = False,
-        force_refresh: bool = False
+        force_refresh: bool = False,
+        user_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Get context with optional inheritance.
@@ -119,13 +120,14 @@ class UnifiedContextFacade:
             context_id: Context identifier
             include_inherited: Include inherited context from parents
             force_refresh: Force refresh from source
+            user_id: Optional user ID for user-scoped contexts
             
         Returns:
             Response dict with context data
         """
         try:
             result = self._service.get_context(
-                level, context_id, include_inherited, force_refresh
+                level, context_id, include_inherited, force_refresh, user_id
             )
             
             return result

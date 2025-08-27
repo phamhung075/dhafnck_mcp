@@ -1,78 +1,59 @@
 """
-Global Context Repository for unified context system.
+Global Context Repository with User Isolation.
+
+CRITICAL: Global contexts are NOT truly global - they are user-scoped.
+Each user has their own "global" context space.
 """
 
 from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, and_
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime, timezone
 from contextlib import contextmanager
 import logging
 
 from ...domain.entities.context import GlobalContext
-from ...infrastructure.database.models import GlobalContext as GlobalContextModel, GLOBAL_SINGLETON_UUID
-from .base_orm_repository import BaseORMRepository
+from ...infrastructure.database.models import GlobalContext as GlobalContextModel
+from .base_user_scoped_repository import BaseUserScopedRepository
 
 logger = logging.getLogger(__name__)
 
 
-class GlobalContextRepository(BaseORMRepository):
-    """Repository for global context operations."""
+class GlobalContextRepository(BaseUserScopedRepository):
+    """
+    Repository for global context operations with user isolation.
+    
+    IMPORTANT: Despite the name "global", these contexts are scoped per user.
+    Each user has their own set of global contexts that don't affect other users.
+    """
     
     def __init__(self, session_factory, user_id: Optional[str] = None):
-        super().__init__(GlobalContextModel)
+        """
+        Initialize with session factory and user context.
+        
+        Args:
+            session_factory: Factory for creating database sessions
+            user_id: ID of the user whose global contexts to access
+        """
+        # Get a session for the base class initialization
+        session = session_factory()
+        super().__init__(session, user_id)
         self.session_factory = session_factory
-        self.user_id = user_id
-    
-    def with_user(self, user_id: str) -> 'GlobalContextRepository':
-        """Create a new repository instance scoped to a specific user."""
-        return GlobalContextRepository(self.session_factory, user_id)
-    
-    def _is_valid_uuid(self, value: str) -> bool:
-        """Check if a string is a valid UUID."""
-        import uuid
-        try:
-            uuid.UUID(value)
-            return True
-        except (ValueError, AttributeError):
-            return False
-    
-    def _is_valid_context_id(self, value: str) -> bool:
-        """Check if a string is a valid context ID (UUID or composite ID)."""
-        if not value:
-            return False
+        self.model_class = GlobalContextModel
         
-        # Accept pure UUIDs
-        if self._is_valid_uuid(value):
-            return True
-        
-        # Accept composite context IDs for global contexts (UUID_UUID format)
-        if '_' in value:
-            parts = value.split('_', 1)  # Split on first underscore only
-            if len(parts) == 2:
-                # Check if both parts are valid UUIDs
-                return self._is_valid_uuid(parts[0]) and self._is_valid_uuid(parts[1])
-        
-        return False
+        if user_id:
+            logger.info(f"GlobalContextRepository initialized for user: {user_id}")
+        else:
+            logger.debug("GlobalContextRepository initialized in system mode during startup - use with caution (expected behavior)")
     
-    def _normalize_context_id(self, context_id: str) -> str:
-        """
-        Normalize context IDs for backward compatibility.
-        Converts 'global_singleton' string to the proper UUID for global contexts.
-        """
-        if context_id == "global_singleton":
-            return GLOBAL_SINGLETON_UUID
-        return context_id
     
     @contextmanager
     def get_db_session(self):
         """Override to use custom session factory for testing."""
-        if self._session:
-            # Use existing session from transaction
+        if hasattr(self, '_session') and self._session:
             yield self._session
         else:
-            # Use custom session factory
             session = self.session_factory()
             try:
                 yield session
@@ -85,25 +66,23 @@ class GlobalContextRepository(BaseORMRepository):
                 session.close()
     
     def create(self, entity: GlobalContext) -> GlobalContext:
-        """Create a new global context."""
-        import uuid
+        """Create a new global context for the current user."""
         with self.get_db_session() as session:
-            # Check if global context already exists for this user
-            # Each user gets a unique global context ID
-            
-            # For user-specific contexts, use the passed context_id if valid context ID
-            # Otherwise generate a new UUID  
-            if entity.id and self._is_valid_context_id(entity.id):
-                context_id = entity.id
+            # Check if user already has a global context
+            if self.user_id:
+                existing = session.query(GlobalContextModel).filter(
+                    and_(
+                        GlobalContextModel.id == entity.id,  # Use the entity's ID
+                        GlobalContextModel.user_id == self.user_id
+                    )
+                ).first()
             else:
-                context_id = str(uuid.uuid4())
+                # No user_id - this shouldn't happen in production
+                logger.warning("Checking for global context without user_id")
+                existing = None
             
-            # Check if this ID already exists
-            existing = session.query(GlobalContextModel).filter(
-                GlobalContextModel.id == context_id
-            ).first()
             if existing:
-                raise ValueError(f"Global context with ID {context_id} already exists. Use update instead.")
+                raise ValueError(f"Global context already exists for user. Use update instead.")
             
             # Extract global settings and preserve custom fields
             global_settings = entity.global_settings or {}
@@ -115,181 +94,7 @@ class GlobalContextRepository(BaseORMRepository):
             workflow_templates = global_settings.get("workflow_templates", {})
             delegation_rules = global_settings.get("delegation_rules", {})
             
-            # Collect any custom fields not in the predefined set
-            known_fields = {"autonomous_rules", "security_policies", "coding_standards", 
-                          "workflow_templates", "delegation_rules"}
-            custom_fields = {}
-            for key, value in global_settings.items():
-                if key not in known_fields:
-                    custom_fields[key] = value
-            
-            # Store custom fields in one of the existing JSON fields
-            # We'll use workflow_templates to store custom data
-            if custom_fields:
-                workflow_templates["_custom"] = custom_fields
-            
-            # Store the actual organization_name in workflow_templates metadata
-            if entity.organization_name:
-                workflow_templates["_metadata"] = {"organization_name": entity.organization_name}
-            
-            # Create new global context - map domain entity to database model
-            # For organization_id, use the default UUID since it's not user-specific
-            
-            db_model = GlobalContextModel(
-                id=context_id,  # Use the validated/generated UUID
-                organization_id="00000000-0000-0000-0000-000000000002",  # Default organization UUID
-                autonomous_rules=autonomous_rules,
-                security_policies=security_policies,
-                coding_standards=coding_standards,
-                workflow_templates=workflow_templates,
-                delegation_rules=delegation_rules,
-                user_id=self.user_id,  # CRITICAL FIX: Never fallback to "system" - should always have user_id
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc)
-            )
-            
-            session.add(db_model)
-            session.flush()
-            # Keep session.refresh() disabled to avoid UUID handling issues with composite IDs
-            # The manual row-to-model conversion in get() method handles this correctly
-            # session.refresh(db_model)
-            
-            return self._to_entity(db_model)
-    
-    def get(self, context_id: str) -> Optional[GlobalContext]:
-        """Get global context by ID."""
-        original_id = context_id
-        context_id = self._normalize_context_id(context_id)
-        
-        # For SQLite, we need to handle UUID normalization (remove hyphens)
-        # because SQLAlchemy UUID fields store without hyphens in SQLite
-        normalized_context_id = self._normalize_uuid_for_sqlite(context_id)
-        
-        with self.get_db_session() as session:
-            # Use raw SQL to avoid SQLAlchemy UUID casting issues
-            from sqlalchemy import text
-            
-            if self.user_id:
-                # Query with user filter
-                query_sql = """
-                    SELECT * FROM global_contexts 
-                    WHERE id = :context_id AND user_id = :user_id 
-                    LIMIT 1
-                """
-                result = session.execute(text(query_sql), {
-                    "context_id": normalized_context_id,
-                    "user_id": self.user_id
-                })
-            else:
-                # Query without user filter
-                query_sql = """
-                    SELECT * FROM global_contexts 
-                    WHERE id = :context_id
-                    LIMIT 1
-                """
-                result = session.execute(text(query_sql), {
-                    "context_id": normalized_context_id
-                })
-            
-            row = result.fetchone()
-            if not row:
-                logger.debug(f"Global context not found for ID: {original_id} (normalized to: {context_id}, sqlite: {normalized_context_id})")
-                return None
-            
-            # Convert row to model instance manually
-            # Handle datetime parsing for SQLite string dates
-            from datetime import datetime
-            import json
-            
-            def parse_datetime(date_str):
-                """Parse datetime string from SQLite."""
-                if isinstance(date_str, str):
-                    try:
-                        return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
-                    except:
-                        return datetime.now()
-                return date_str
-            
-            def parse_json(json_str):
-                """Parse JSON string from SQLite."""
-                if isinstance(json_str, str):
-                    try:
-                        return json.loads(json_str)
-                    except:
-                        return {}
-                return json_str or {}
-            
-            db_model = GlobalContextModel()
-            db_model.id = row[0]
-            db_model.organization_id = row[1]
-            db_model.autonomous_rules = parse_json(row[2])
-            db_model.security_policies = parse_json(row[3])
-            db_model.coding_standards = parse_json(row[4])
-            db_model.workflow_templates = parse_json(row[5])
-            db_model.delegation_rules = parse_json(row[6])
-            db_model.created_at = parse_datetime(row[7])
-            db_model.updated_at = parse_datetime(row[8])
-            db_model.version = row[9] or 1
-            db_model.user_id = row[10]
-            
-            return self._to_entity(db_model)
-    
-    def _normalize_uuid_for_sqlite(self, context_id: str) -> str:
-        """Normalize UUID format for SQLite storage (remove hyphens)."""
-        import re
-        return re.sub(r'-', '', context_id)
-    
-    def update(self, context_id: str, entity: GlobalContext) -> GlobalContext:
-        """Update global context."""
-        original_id = context_id
-        context_id = self._normalize_context_id(context_id)
-        
-        # For SQLite, we need to handle UUID normalization (remove hyphens)
-        # because SQLAlchemy UUID fields store without hyphens in SQLite
-        normalized_context_id = self._normalize_uuid_for_sqlite(context_id)
-        
-        with self.get_db_session() as session:
-            # Use raw SQL to avoid SQLAlchemy UUID casting issues
-            from sqlalchemy import text
-            
-            if self.user_id:
-                # Query with user filter
-                query_sql = """
-                    SELECT * FROM global_contexts 
-                    WHERE id = :context_id AND user_id = :user_id 
-                    LIMIT 1
-                """
-                result = session.execute(text(query_sql), {
-                    "context_id": normalized_context_id,
-                    "user_id": self.user_id
-                })
-            else:
-                # Query without user filter
-                query_sql = """
-                    SELECT * FROM global_contexts 
-                    WHERE id = :context_id
-                    LIMIT 1
-                """
-                result = session.execute(text(query_sql), {
-                    "context_id": normalized_context_id
-                })
-            
-            row = result.fetchone()
-            if not row:
-                logger.debug(f"Global context not found for update: {original_id} (normalized to: {context_id}, sqlite: {normalized_context_id})")
-                raise ValueError(f"Global context not found: {context_id}")
-            
-            # Extract global settings and preserve custom fields
-            global_settings = entity.global_settings or {}
-            
-            # Get the predefined fields
-            autonomous_rules = global_settings.get("autonomous_rules", {})
-            security_policies = global_settings.get("security_policies", {})
-            coding_standards = global_settings.get("coding_standards", {})
-            workflow_templates = global_settings.get("workflow_templates", {})
-            delegation_rules = global_settings.get("delegation_rules", {})
-            
-            # Collect any custom fields not in the predefined set
+            # Collect any custom fields
             known_fields = {"autonomous_rules", "security_policies", "coding_standards", 
                           "workflow_templates", "delegation_rules"}
             custom_fields = {}
@@ -301,116 +106,169 @@ class GlobalContextRepository(BaseORMRepository):
             if custom_fields:
                 workflow_templates["_custom"] = custom_fields
             
-            # Store the organization_name in workflow_templates metadata
-            if entity.organization_name:
-                workflow_templates["_metadata"] = {"organization_name": entity.organization_name}
+            # Create new global context with user_id
+            # Use the entity's ID which has already been normalized by the service
+            db_model = GlobalContextModel(
+                id=entity.id,  # Use the entity's ID, not re-normalizing
+                organization_id=None,  # Set to None since we don't have organization UUIDs
+                autonomous_rules=autonomous_rules,
+                security_policies=security_policies,
+                coding_standards=coding_standards,
+                workflow_templates=workflow_templates,
+                delegation_rules=delegation_rules,
+                user_id=self.user_id,  # Set user_id for isolation
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
+            )
             
-            # Use raw SQL update to avoid UUID casting issues
-            import json
-            update_sql = """
-                UPDATE global_contexts 
-                SET organization_id = :org_id,
-                    autonomous_rules = :autonomous_rules,
-                    security_policies = :security_policies,
-                    coding_standards = :coding_standards,
-                    workflow_templates = :workflow_templates,
-                    delegation_rules = :delegation_rules,
-                    updated_at = :updated_at
-                WHERE id = :context_id
-            """
+            # Log access for audit
+            self.log_access("create", "global_context", db_model.id)
             
-            # Add user filter if user_id is set
-            if self.user_id:
-                update_sql += " AND user_id = :user_id"
-            
-            update_params = {
-                "context_id": normalized_context_id,
-                "org_id": "00000000-0000-0000-0000-000000000002",  # Default organization UUID
-                "autonomous_rules": json.dumps(autonomous_rules),
-                "security_policies": json.dumps(security_policies),
-                "coding_standards": json.dumps(coding_standards),
-                "workflow_templates": json.dumps(workflow_templates),
-                "delegation_rules": json.dumps(delegation_rules),
-                "updated_at": datetime.now(timezone.utc).isoformat()
-            }
-            
-            if self.user_id:
-                update_params["user_id"] = self.user_id
-            
-            session.execute(text(update_sql), update_params)
+            session.add(db_model)
             session.flush()
+            session.refresh(db_model)
             
-            # Get the updated record using the same approach as get method
-            updated_result = session.execute(text(query_sql), {
-                "context_id": normalized_context_id,
-                "user_id": self.user_id
-            } if self.user_id else {"context_id": normalized_context_id})
+            return self._to_entity(db_model)
+    
+    def get(self, context_id: str) -> Optional[GlobalContext]:
+        """Get global context by ID, filtered by user."""
+        
+        with self.get_db_session() as session:
+            # Build query with user filter
+            query = session.query(GlobalContextModel).filter(
+                GlobalContextModel.id == context_id
+            )
             
-            updated_row = updated_result.fetchone()
-            if not updated_row:
-                raise ValueError(f"Failed to retrieve updated context: {context_id}")
+            # Apply user filter
+            query = self.apply_user_filter(query)
             
-            # Convert row to model instance manually (same as in get method)
-            import json
+            db_model = query.first()
             
-            def parse_datetime(date_str):
-                """Parse datetime string from SQLite."""
-                if isinstance(date_str, str):
-                    try:
-                        return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
-                    except:
-                        return datetime.now()
-                return date_str
+            if not db_model:
+                logger.debug(f"Global context not found for user {self.user_id}: {context_id}")
+            else:
+                self.log_access("read", "global_context", context_id)
             
-            def parse_json(json_str):
-                """Parse JSON string from SQLite."""
-                if isinstance(json_str, str):
-                    try:
-                        return json.loads(json_str)
-                    except:
-                        return {}
-                return json_str or {}
+            return self._to_entity(db_model) if db_model else None
+    
+    def update(self, context_id: str, entity: GlobalContext) -> GlobalContext:
+        """Update global context for the current user."""
+        
+        with self.get_db_session() as session:
+            # Build query with user filter
+            query = session.query(GlobalContextModel).filter(
+                GlobalContextModel.id == context_id
+            )
             
-            db_model = GlobalContextModel()
-            db_model.id = updated_row[0]
-            db_model.organization_id = updated_row[1]
-            db_model.autonomous_rules = parse_json(updated_row[2])
-            db_model.security_policies = parse_json(updated_row[3])
-            db_model.coding_standards = parse_json(updated_row[4])
-            db_model.workflow_templates = parse_json(updated_row[5])
-            db_model.delegation_rules = parse_json(updated_row[6])
-            db_model.created_at = parse_datetime(updated_row[7])
-            db_model.updated_at = parse_datetime(updated_row[8])
-            db_model.version = updated_row[9] or 1
-            db_model.user_id = updated_row[10]
+            # Apply user filter
+            query = self.apply_user_filter(query)
+            
+            db_model = query.first()
+            
+            if not db_model:
+                raise ValueError(f"Global context not found for user {self.user_id}: {context_id}")
+            
+            # Ensure user ownership before update
+            self.ensure_user_ownership(db_model)
+            
+            # Extract and update global settings
+            global_settings = entity.global_settings or {}
+            
+            autonomous_rules = global_settings.get("autonomous_rules", {})
+            security_policies = global_settings.get("security_policies", {})
+            coding_standards = global_settings.get("coding_standards", {})
+            workflow_templates = global_settings.get("workflow_templates", {})
+            delegation_rules = global_settings.get("delegation_rules", {})
+            
+            # Handle custom fields
+            known_fields = {"autonomous_rules", "security_policies", "coding_standards", 
+                          "workflow_templates", "delegation_rules"}
+            custom_fields = {}
+            for key, value in global_settings.items():
+                if key not in known_fields:
+                    custom_fields[key] = value
+            
+            if custom_fields:
+                workflow_templates["_custom"] = custom_fields
+            
+            # Update fields
+            db_model.organization_id = entity.organization_name
+            db_model.autonomous_rules = autonomous_rules
+            db_model.security_policies = security_policies
+            db_model.coding_standards = coding_standards
+            db_model.workflow_templates = workflow_templates
+            db_model.delegation_rules = delegation_rules
+            db_model.updated_at = datetime.now(timezone.utc)
+            
+            # Log access for audit
+            self.log_access("update", "global_context", context_id)
+            
+            session.flush()
+            session.refresh(db_model)
             
             return self._to_entity(db_model)
     
     def delete(self, context_id: str) -> bool:
-        """Delete global context."""
-        context_id = self._normalize_context_id(context_id)
+        """Delete global context for the current user."""
+        
         with self.get_db_session() as session:
-            # Use query instead of session.get for UUID fields to avoid casting issues
-            db_model = session.query(GlobalContextModel).filter(GlobalContextModel.id == context_id).first()
+            # Build query with user filter
+            query = session.query(GlobalContextModel).filter(
+                GlobalContextModel.id == context_id
+            )
+            
+            # Apply user filter
+            query = self.apply_user_filter(query)
+            
+            db_model = query.first()
+            
             if not db_model:
                 return False
+            
+            # Ensure user ownership before delete
+            self.ensure_user_ownership(db_model)
+            
+            # Log access for audit
+            self.log_access("delete", "global_context", context_id)
             
             session.delete(db_model)
             return True
     
     def list(self, filters: Optional[Dict[str, Any]] = None) -> List[GlobalContext]:
-        """List global contexts (should only be one per user)."""
+        """List all global contexts for the current user."""
         with self.get_db_session() as session:
-            stmt = select(GlobalContextModel)
+            # Start with base query
+            query = session.query(GlobalContextModel)
             
-            # Add user filter if user_id is set
-            if self.user_id:
-                stmt = stmt.where(GlobalContextModel.user_id == self.user_id)
+            # Apply user filter - CRITICAL for isolation
+            query = self.apply_user_filter(query)
             
-            result = session.execute(stmt)
-            db_models = result.scalars().all()
+            # Apply additional filters if provided
+            if filters:
+                for key, value in filters.items():
+                    if hasattr(GlobalContextModel, key):
+                        query = query.filter(getattr(GlobalContextModel, key) == value)
+            
+            db_models = query.all()
+            
+            # Log access for audit
+            self.log_access("list", "global_context", f"count={len(db_models)}")
             
             return [self._to_entity(model) for model in db_models]
+    
+    
+    def count_user_contexts(self) -> int:
+        """
+        Count the number of global contexts for the current user.
+        Should typically be 0 or 1.
+        
+        Returns:
+            Number of global contexts for the user
+        """
+        with self.get_db_session() as session:
+            query = session.query(GlobalContextModel)
+            query = self.apply_user_filter(query)
+            return query.count()
     
     def _to_entity(self, db_model: GlobalContextModel) -> GlobalContext:
         """Convert database model to domain entity."""
@@ -426,27 +284,49 @@ class GlobalContextRepository(BaseORMRepository):
         # Extract custom fields from workflow_templates if they exist
         workflow_templates = db_model.workflow_templates or {}
         if "_custom" in workflow_templates:
-            # Make a copy to avoid mutating the original
             workflow_templates_copy = workflow_templates.copy()
             custom_fields = workflow_templates_copy.pop("_custom", {})
-            # Add custom fields back to global_settings at root level
             global_settings.update(custom_fields)
-            # Update workflow_templates with the cleaned version
             global_settings["workflow_templates"] = workflow_templates_copy
         
         metadata = {
             "created_at": db_model.created_at.isoformat() if db_model.created_at else None,
             "updated_at": db_model.updated_at.isoformat() if db_model.updated_at else None,
-            "version": db_model.version
+            "version": db_model.version,
+            "user_id": db_model.user_id  # Include user_id in metadata
         }
-        
-        # Get organization_name from workflow_templates metadata if stored there
-        org_metadata = db_model.workflow_templates.get("_metadata", {}) if db_model.workflow_templates else {}
-        organization_name = org_metadata.get("organization_name", "Default Organization")
         
         return GlobalContext(
             id=db_model.id,
-            organization_name=organization_name,  # Get from workflow_templates metadata
+            organization_name=db_model.organization_id,
             global_settings=global_settings,
             metadata=metadata
         )
+    
+    def migrate_to_user_scoped(self) -> int:
+        """
+        Migrate existing global contexts to user-scoped contexts.
+        Assigns existing contexts to the system user.
+        
+        Returns:
+            Number of contexts migrated
+        """
+        system_user_id = "00000000-0000-0000-0000-000000000000"
+        migrated = 0
+        
+        with self.get_db_session() as session:
+            # Find contexts without user_id
+            contexts_to_migrate = session.query(GlobalContextModel).filter(
+                GlobalContextModel.user_id == None
+            ).all()
+            
+            for context in contexts_to_migrate:
+                context.user_id = system_user_id
+                migrated += 1
+                logger.info(f"Migrated global context {context.id} to system user")
+            
+            if migrated > 0:
+                session.commit()
+                logger.info(f"Migrated {migrated} global contexts to user-scoped")
+        
+        return migrated

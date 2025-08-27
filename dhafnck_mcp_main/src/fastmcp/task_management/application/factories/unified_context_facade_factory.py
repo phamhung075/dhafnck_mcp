@@ -9,8 +9,8 @@ from typing import Optional
 
 from ..facades.unified_context_facade import UnifiedContextFacade
 from ..services.unified_context_service import UnifiedContextService
-from ...infrastructure.repositories.global_context_repository_user_scoped import GlobalContextRepository
-from ...infrastructure.repositories.project_context_repository_user_scoped import ProjectContextRepository
+from ...infrastructure.repositories.global_context_repository import GlobalContextRepository
+from ...infrastructure.repositories.project_context_repository import ProjectContextRepository
 from ...infrastructure.repositories.branch_context_repository import BranchContextRepository
 from ...infrastructure.repositories.task_context_repository import TaskContextRepository
 from ..services.context_cache_service import ContextCacheService
@@ -18,7 +18,7 @@ from ..services.context_inheritance_service import ContextInheritanceService
 from ..services.context_delegation_service import ContextDelegationService
 from ..services.context_validation_service import ContextValidationService
 from ...infrastructure.database.database_config import get_db_config
-from ...infrastructure.database.models import GLOBAL_SINGLETON_UUID
+# GLOBAL_SINGLETON_UUID removed - each user has their own global context
 
 logger = logging.getLogger(__name__)
 
@@ -238,10 +238,18 @@ class UnifiedContextFacadeFactory:
             # Create user-scoped facade
             facade = self.create_facade(user_id=user_id)
             
-            # Check if user's global context already exists using "global_singleton"
-            # The user-scoped repository will convert this to a user-specific UUID
+            # Generate user-specific global context ID
+            import uuid
+            namespace = uuid.UUID("a47ae7b9-1d4b-4e5f-8b5a-9c3e5d2f8a1c")
             try:
-                existing_result = facade.get_context(level="global", context_id="global_singleton")
+                user_uuid = uuid.UUID(str(user_id))
+            except ValueError:
+                user_uuid = uuid.uuid5(namespace, str(user_id))
+            global_context_id = str(uuid.uuid5(namespace, str(user_uuid)))
+            
+            # Check if user's global context already exists
+            try:
+                existing_result = facade.get_context(level="global", context_id=global_context_id)
                 if existing_result.get("success", False):
                     logger.info(f"Global context already exists for user {user_id}")
                     return True
@@ -261,11 +269,10 @@ class UnifiedContextFacadeFactory:
                 }
             }
             
-            # Create user's global context using "global_singleton" identifier
-            # The user-scoped repository will convert this to a unique UUID per user
+            # Create user's global context using the generated UUID
             result = facade.create_context(
                 level="global",
-                context_id="global_singleton",
+                context_id=global_context_id,
                 data=default_global_data
             )
             

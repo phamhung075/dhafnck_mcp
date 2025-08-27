@@ -252,12 +252,6 @@ class UnifiedContextMCPController:
                     operation_name=f"manage_context.{action}"
                 )
                 
-                # Normalize context_id for backward compatibility
-                # Convert 'global_singleton' string to the proper UUID for global contexts
-                if level == "global" and context_id == "global_singleton":
-                    from ....infrastructure.database.models import GLOBAL_SINGLETON_UUID
-                    context_id = GLOBAL_SINGLETON_UUID
-                    logger.info(f"Normalized global_singleton context_id to {GLOBAL_SINGLETON_UUID}")
                 
                 # Create appropriate facade with authenticated user
                 facade = self._facade_factory.create_facade(
@@ -279,7 +273,8 @@ class UnifiedContextMCPController:
                         level=level,
                         context_id=context_id,
                         include_inherited=include_inherited,
-                        force_refresh=force_refresh
+                        force_refresh=force_refresh,
+                        user_id=user_id
                     )
                 
                 elif action == "update":

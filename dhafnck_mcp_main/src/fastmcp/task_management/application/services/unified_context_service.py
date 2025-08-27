@@ -4,9 +4,11 @@ Handles inheritance, delegation, caching, and business rules.
 """
 
 from typing import Dict, Any, Optional, List
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 import logging
 from uuid import UUID
+import json
+from decimal import Decimal
 
 from ...domain.entities.context import GlobalContext, ProjectContext, BranchContext, TaskContextUnified as TaskContext
 from ...domain.value_objects.context_enums import ContextLevel
@@ -15,7 +17,7 @@ from .context_inheritance_service import ContextInheritanceService
 from .context_delegation_service import ContextDelegationService
 from .context_validation_service import ContextValidationService
 from .context_hierarchy_validator import ContextHierarchyValidator
-from ...infrastructure.database.models import GLOBAL_SINGLETON_UUID
+# GLOBAL_SINGLETON_UUID removed - each user has their own global context
 
 logger = logging.getLogger(__name__)
 
@@ -98,15 +100,30 @@ class UnifiedContextService:
         if self._user_id and hasattr(repository, 'with_user'):
             return repository.with_user(self._user_id)
         return repository
+    
+    def _serialize_for_json(self, data: Any) -> Any:
+        """
+        Recursively convert non-JSON-serializable objects to strings.
+        Handles UUID, datetime, Decimal, and other common types.
+        """
+        if data is None:
+            return None
+        elif isinstance(data, (UUID, datetime, date)):
+            return str(data)
+        elif isinstance(data, Decimal):
+            return float(data)
+        elif isinstance(data, dict):
+            return {key: self._serialize_for_json(value) for key, value in data.items()}
+        elif isinstance(data, list):
+            return [self._serialize_for_json(item) for item in data]
+        elif isinstance(data, tuple):
+            return [self._serialize_for_json(item) for item in data]
+        elif hasattr(data, '__dict__'):
+            # Handle custom objects by converting to dict
+            return self._serialize_for_json(vars(data))
+        else:
+            return data
         
-    def _normalize_context_id(self, level: str, context_id: str) -> str:
-        """
-        Normalize context IDs for backward compatibility.
-        Converts 'global_singleton' string to the proper UUID for global contexts.
-        """
-        if level == "global" and context_id == "global_singleton":
-            return GLOBAL_SINGLETON_UUID
-        return context_id
         
     def create_context(
         self, 
@@ -119,8 +136,15 @@ class UnifiedContextService:
     ) -> Dict[str, Any]:
         """Create context at specified level with validation and auto-parent creation."""
         try:
+            # Temporarily set user_id if provided for normalization
+            original_user_id = self._user_id
+            if user_id:
+                self._user_id = user_id
+            
             # Normalize context_id for backward compatibility
-            context_id = self._normalize_context_id(level, context_id)
+            
+            # Restore original user_id
+            self._user_id = original_user_id
             
             # Validate level
             context_level = ContextLevel(level)
@@ -267,15 +291,16 @@ class UnifiedContextService:
             
             # Normalize context_id for database storage (generate proper UUIDs)
             if context_level == ContextLevel.GLOBAL:
-                from ...infrastructure.database.models import GLOBAL_SINGLETON_UUID
-                # Check if it's a concatenated global context (starts with global singleton UUID)
-                if context_id.startswith(GLOBAL_SINGLETON_UUID + "_"):
+                # GLOBAL_SINGLETON_UUID removed - each user has their own global context
+                # Check if it's a composite ID (UUID_UUID format)
+                if '_' in context_id and len(context_id.split('_')) == 2:
                     import uuid
                     # Extract user_id from the concatenated ID
                     parts = context_id.split("_", 1)
                     if len(parts) == 2:
                         user_uuid = parts[1]
-                        namespace = uuid.UUID(GLOBAL_SINGLETON_UUID)
+                        # Use a namespace UUID for context generation
+                        namespace = uuid.UUID("a47ae7b9-1d4b-4e5f-8b5a-9c3e5d2f8a1c")
                         proper_uuid = str(uuid.uuid5(namespace, user_uuid))
                         context_id = proper_uuid
             
@@ -301,7 +326,7 @@ class UnifiedContextService:
                 "success": True,
                 "context": self._entity_to_dict(saved_context),
                 "level": level,
-                "context_id": context_id
+                "context_id": saved_context.id  # Return the actual saved ID
             }
             
         except Exception as e:
@@ -316,7 +341,8 @@ class UnifiedContextService:
         level: str, 
         context_id: str, 
         include_inherited: bool = False,
-        force_refresh: bool = False
+        force_refresh: bool = False,
+        user_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """Get context with optional inheritance resolution."""
         try:
@@ -327,23 +353,31 @@ class UnifiedContextService:
                     "error": "Context ID is required"
                 }
             
+            # Temporarily set user_id if provided for normalization
+            original_user_id = self._user_id
+            if user_id:
+                self._user_id = user_id
+            
             # Normalize context_id for backward compatibility
-            context_id = self._normalize_context_id(level, context_id)
+            
+            # Restore original user_id
+            self._user_id = original_user_id
             
             # Validate level
             context_level = ContextLevel(level)
             
             # Normalize context_id for user-specific global contexts (same logic as create)
             if context_level == ContextLevel.GLOBAL:
-                from ...infrastructure.database.models import GLOBAL_SINGLETON_UUID
-                # Check if it's a concatenated global context (starts with global singleton UUID)
-                if context_id.startswith(GLOBAL_SINGLETON_UUID + "_"):
+                # GLOBAL_SINGLETON_UUID removed - each user has their own global context
+                # Check if it's a composite ID (UUID_UUID format)
+                if '_' in context_id and len(context_id.split('_')) == 2:
                     import uuid
                     # Extract user_id from the concatenated ID
                     parts = context_id.split("_", 1)
                     if len(parts) == 2:
                         user_uuid = parts[1]
-                        namespace = uuid.UUID(GLOBAL_SINGLETON_UUID)
+                        # Use a namespace UUID for context generation
+                        namespace = uuid.UUID("a47ae7b9-1d4b-4e5f-8b5a-9c3e5d2f8a1c")
                         proper_uuid = str(uuid.uuid5(namespace, user_uuid))
                         context_id = proper_uuid
             
@@ -351,15 +385,20 @@ class UnifiedContextService:
             # TODO: Make cache service sync or skip caching in sync mode
             
             # Get from repository
-            repository = self._get_user_scoped_repository(self.repositories.get(context_level))
+            repository = self.repositories.get(context_level)
             if not repository:
                 return {
                     "success": False,
                     "error": f"No repository configured for level: {level}"
                 }
             
-            # Use user-scoped repository if user_id is available
-            repo = self._get_user_scoped_repository(repository)
+            # Use user-scoped repository with provided user_id or service user_id
+            effective_user_id = user_id or self._user_id
+            if effective_user_id and hasattr(repository, 'with_user'):
+                repo = repository.with_user(effective_user_id)
+            else:
+                repo = repository
+            
             context_entity = repo.get(context_id)
             if not context_entity:
                 return {
@@ -380,7 +419,7 @@ class UnifiedContextService:
                 "success": True,
                 "context": context_data,
                 "level": level,
-                "context_id": context_id,
+                "context_id": context_entity.id,  # Return the actual entity ID
                 "inherited": include_inherited
             }
             
@@ -401,22 +440,22 @@ class UnifiedContextService:
         """Update context with inheritance propagation."""
         try:
             # Normalize context_id for backward compatibility
-            context_id = self._normalize_context_id(level, context_id)
             
             # Validate level
             context_level = ContextLevel(level)
             
             # Normalize context_id for user-specific global contexts (same logic as create)
             if context_level == ContextLevel.GLOBAL:
-                from ...infrastructure.database.models import GLOBAL_SINGLETON_UUID
-                # Check if it's a concatenated global context (starts with global singleton UUID)
-                if context_id.startswith(GLOBAL_SINGLETON_UUID + "_"):
+                # GLOBAL_SINGLETON_UUID removed - each user has their own global context
+                # Check if it's a composite ID (UUID_UUID format)
+                if '_' in context_id and len(context_id.split('_')) == 2:
                     import uuid
                     # Extract user_id from the concatenated ID
                     parts = context_id.split("_", 1)
                     if len(parts) == 2:
                         user_uuid = parts[1]
-                        namespace = uuid.UUID(GLOBAL_SINGLETON_UUID)
+                        # Use a namespace UUID for context generation
+                        namespace = uuid.UUID("a47ae7b9-1d4b-4e5f-8b5a-9c3e5d2f8a1c")
                         proper_uuid = str(uuid.uuid5(namespace, user_uuid))
                         context_id = proper_uuid
             
@@ -490,22 +529,22 @@ class UnifiedContextService:
         """Delete context with cleanup."""
         try:
             # Normalize context_id for backward compatibility
-            context_id = self._normalize_context_id(level, context_id)
             
             # Validate level
             context_level = ContextLevel(level)
             
             # Normalize context_id for user-specific global contexts (same logic as create)
             if context_level == ContextLevel.GLOBAL:
-                from ...infrastructure.database.models import GLOBAL_SINGLETON_UUID
-                # Check if it's a concatenated global context (starts with global singleton UUID)
-                if context_id.startswith(GLOBAL_SINGLETON_UUID + "_"):
+                # GLOBAL_SINGLETON_UUID removed - each user has their own global context
+                # Check if it's a composite ID (UUID_UUID format)
+                if '_' in context_id and len(context_id.split('_')) == 2:
                     import uuid
                     # Extract user_id from the concatenated ID
                     parts = context_id.split("_", 1)
                     if len(parts) == 2:
                         user_uuid = parts[1]
-                        namespace = uuid.UUID(GLOBAL_SINGLETON_UUID)
+                        # Use a namespace UUID for context generation
+                        namespace = uuid.UUID("a47ae7b9-1d4b-4e5f-8b5a-9c3e5d2f8a1c")
                         proper_uuid = str(uuid.uuid5(namespace, user_uuid))
                         context_id = proper_uuid
             
@@ -559,7 +598,6 @@ class UnifiedContextService:
         """Resolve full inheritance chain with caching."""
         try:
             # Normalize context_id for backward compatibility
-            context_id = self._normalize_context_id(level, context_id)
             
             # Always resolve with inheritance for this method
             result = self.get_context(
@@ -594,7 +632,6 @@ class UnifiedContextService:
         """Delegate context data to higher level."""
         try:
             # Normalize context_id for backward compatibility
-            context_id = self._normalize_context_id(level, context_id)
             
             # Validate levels
             source_level = ContextLevel(level)
@@ -677,7 +714,6 @@ class UnifiedContextService:
         """Add an insight to context."""
         try:
             # Normalize context_id for backward compatibility
-            context_id = self._normalize_context_id(level, context_id)
             
             # Get existing context
             context_result = self.get_context(level, context_id)
@@ -721,7 +757,6 @@ class UnifiedContextService:
         """Add progress update to context."""
         try:
             # Normalize context_id for backward compatibility
-            context_id = self._normalize_context_id(level, context_id)
             
             # Get existing context
             context_result = self.get_context(level, context_id)
@@ -764,6 +799,9 @@ class UnifiedContextService:
         project_id: Optional[str] = None
     ):
         """Create appropriate context entity based on level."""
+        # Serialize data to ensure JSON compatibility
+        data = self._serialize_for_json(data)
+        
         if level == ContextLevel.GLOBAL:
             return GlobalContext(
                 id=context_id,
@@ -830,6 +868,10 @@ class UnifiedContextService:
         new_data: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Merge new data with existing context data."""
+        # Serialize existing and new data to ensure JSON compatibility
+        existing_data = self._serialize_for_json(existing_data)
+        new_data = self._serialize_for_json(new_data)
+        
         merged = existing_data.copy()
         
         # Special fields that should be replaced, not extended
@@ -1055,12 +1097,24 @@ class UnifiedContextService:
             global_repo = self.repositories.get(ContextLevel.GLOBAL)
             if global_repo:
                 try:
-                    global_entity = global_repo.get("global_singleton")
+                    # Generate user-specific global context ID
+                    import uuid
+                    namespace = uuid.UUID("a47ae7b9-1d4b-4e5f-8b5a-9c3e5d2f8a1c")
+                    if self._user_id:
+                        try:
+                            user_uuid = uuid.UUID(str(self._user_id))
+                        except ValueError:
+                            user_uuid = uuid.uuid5(namespace, str(self._user_id))
+                        global_context_id = str(uuid.uuid5(namespace, str(user_uuid)))
+                    else:
+                        global_context_id = str(uuid.uuid4())
+                    
+                    global_entity = global_repo.get(global_context_id)
                     if global_entity:
                         global_data = self._entity_to_dict(global_entity)
                         inheritance_chain.append({
                             "level": "global",
-                            "id": "global_singleton",
+                            "id": global_context_id,
                             "data": global_data
                         })
                         logger.debug("Added global context to inheritance chain")
@@ -1537,16 +1591,18 @@ class UnifiedContextService:
             
             # Normalize context_id for database storage (generate proper UUIDs)
             if level == ContextLevel.GLOBAL:
-                from ...infrastructure.database.models import GLOBAL_SINGLETON_UUID
+                # GLOBAL_SINGLETON_UUID removed - each user has their own global context
                 # Check if it's a concatenated global context (starts with global singleton UUID)
-                if context_id.startswith(GLOBAL_SINGLETON_UUID + "_"):
+                # Check if it's a composite ID (UUID_UUID format)
+                if '_' in context_id and len(context_id.split('_')) == 2:
                     logger.info(f"Atomic flow: Found concatenated global context ID, converting to UUID")
                     import uuid
                     # Extract user_id from the concatenated ID
                     parts = context_id.split("_", 1)
                     if len(parts) == 2:
                         user_uuid = parts[1]
-                        namespace = uuid.UUID(GLOBAL_SINGLETON_UUID)
+                        # Use a namespace UUID for context generation
+                        namespace = uuid.UUID("a47ae7b9-1d4b-4e5f-8b5a-9c3e5d2f8a1c")
                         proper_uuid = str(uuid.uuid5(namespace, user_uuid))
                         context_id = proper_uuid
                         logger.info(f"Atomic flow: Converted global context ID to proper UUID: {proper_uuid}")
@@ -1674,9 +1730,10 @@ class UnifiedContextService:
             
             # For user-scoped contexts, generate user-specific ID
             if user_id:
-                from ...infrastructure.database.models import GLOBAL_SINGLETON_UUID
+                # GLOBAL_SINGLETON_UUID removed - each user has their own global context
                 import uuid
-                namespace = uuid.UUID(GLOBAL_SINGLETON_UUID)
+                # Use a namespace UUID for context generation
+                namespace = uuid.UUID("a47ae7b9-1d4b-4e5f-8b5a-9c3e5d2f8a1c")
                 global_context_id = str(uuid.uuid5(namespace, user_id))
             
             # Check if global context exists
