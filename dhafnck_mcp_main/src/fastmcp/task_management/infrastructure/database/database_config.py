@@ -296,7 +296,7 @@ class DatabaseConfig:
             # Test connection only if not already verified (caching for performance)
             if not DatabaseConfig._connection_verified:
                 with self.engine.connect() as conn:
-                    if self.database_type == "sqlite":
+                    if database_url and database_url.startswith("sqlite"):
                         # SQLite test query
                         result = conn.execute(text("SELECT sqlite_version()"))
                         version = result.scalar()
@@ -309,7 +309,7 @@ class DatabaseConfig:
                         logger.info(f"🎯 Connected to PostgreSQL: {version}")
                         
                         # Check if this is Supabase
-                        if "supabase" in database_url.lower():
+                        if database_url and "supabase" in database_url.lower():
                             result = conn.execute(text("SELECT current_database()"))
                             db_name = result.scalar()
                             logger.info(f"🚀 SUPABASE CONNECTION SUCCESSFUL! Database: {db_name}")

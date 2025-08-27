@@ -14,7 +14,7 @@ This module tests the database models including:
 """
 
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
@@ -65,10 +65,10 @@ class TestDatabaseModels:
     
     def test_api_token_model(self, session):
         """Test APIToken model creation and fields"""
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
         
         # Create API token
-        expires_at = datetime.utcnow() + timedelta(days=30)
+        expires_at = datetime.now(timezone.utc) + timedelta(days=30)
         api_token = APIToken(
             id=str(uuid4()),
             user_id="test-user-123",
@@ -90,7 +90,8 @@ class TestDatabaseModels:
         assert retrieved_token.name == "Test Token"
         assert retrieved_token.token_hash == "hashed_token_value"
         assert retrieved_token.scopes == ["read", "write"]
-        assert retrieved_token.expires_at == expires_at
+        # Compare without timezone info since SQLite doesn't store timezone
+        assert retrieved_token.expires_at.replace(tzinfo=timezone.utc) == expires_at
         assert retrieved_token.usage_count == 0
         assert retrieved_token.rate_limit == 5000
         assert retrieved_token.is_active is True
@@ -100,10 +101,10 @@ class TestDatabaseModels:
     
     def test_api_token_default_values(self, session):
         """Test APIToken model default values"""
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
         
         # Create minimal API token
-        expires_at = datetime.utcnow() + timedelta(days=7)
+        expires_at = datetime.now(timezone.utc) + timedelta(days=7)
         api_token = APIToken(
             id=str(uuid4()),
             user_id="test-user-456",
@@ -125,10 +126,10 @@ class TestDatabaseModels:
     
     def test_api_token_update_usage(self, session):
         """Test updating API token usage statistics"""
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
         
         # Create and save token
-        expires_at = datetime.utcnow() + timedelta(days=30)
+        expires_at = datetime.now(timezone.utc) + timedelta(days=30)
         api_token = APIToken(
             id=str(uuid4()),
             user_id="test-user-789",
@@ -141,7 +142,7 @@ class TestDatabaseModels:
         session.commit()
         
         # Update usage
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         api_token.usage_count = 10
         api_token.last_used_at = now
         session.commit()
@@ -149,13 +150,14 @@ class TestDatabaseModels:
         # Verify updates
         retrieved_token = session.query(APIToken).filter_by(id=api_token.id).first()
         assert retrieved_token.usage_count == 10
-        assert retrieved_token.last_used_at == now
+        # Compare without timezone info since SQLite doesn't store timezone
+        assert retrieved_token.last_used_at.replace(tzinfo=timezone.utc) == now
     
     def test_api_token_hash_duplicates_allowed(self, session):
         """Test that APIToken allows duplicate token_hash (no unique constraint in model)."""
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
         
-        expires_at = datetime.utcnow() + timedelta(days=30)
+        expires_at = datetime.now(timezone.utc) + timedelta(days=30)
         
         # Create first token
         token1 = APIToken(
@@ -185,9 +187,9 @@ class TestDatabaseModels:
     
     def test_api_token_deactivation(self, session):
         """Test APIToken deactivation behavior."""
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
         
-        expires_at = datetime.utcnow() + timedelta(days=30)
+        expires_at = datetime.now(timezone.utc) + timedelta(days=30)
         
         # Create active token
         token = APIToken(
@@ -592,7 +594,7 @@ class TestDatabaseModels:
             resolved_context={"merged": "data"},
             dependencies_hash="abc123",
             resolution_path="global->project->branch->task",
-            expires_at=datetime.utcnow() + timedelta(hours=1),
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
             cache_size_bytes=1024,
             user_id="test-user-123"  # Added required field
         )
@@ -796,12 +798,13 @@ class TestDatabaseModels:
         session.commit()
         
         # Update last_active_at
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         agent.last_active_at = now
         session.commit()
         
         saved_agent = session.query(Agent).filter_by(id=agent.id).first()
-        assert saved_agent.last_active_at == now
+        # Fix timezone comparison - add timezone info to retrieved datetime
+        assert saved_agent.last_active_at.replace(tzinfo=timezone.utc) == now
         assert saved_agent.model_metadata["version"] == "2.0"
         assert "async" in saved_agent.model_metadata["features"]
         assert saved_agent.model_metadata["config"]["timeout"] == 300

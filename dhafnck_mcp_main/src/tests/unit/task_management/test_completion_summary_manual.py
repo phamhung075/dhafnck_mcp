@@ -10,18 +10,18 @@ import os
 import sys
 from pathlib import Path
 
-# Set up environment for PostgreSQL
-os.environ['DATABASE_TYPE'] = 'postgresql'
-os.environ['DATABASE_URL'] = 'postgresql://dhafnck_user:dhafnck_password@localhost:5432/dhafnck_mcp'
+# Set up environment for SQLite (for testing)
+os.environ['DATABASE_TYPE'] = 'sqlite'
+os.environ['PYTEST_CURRENT_TEST'] = 'test_completion_summary_manual.py::test_completion_summary_storage'
 
 # Add the project to Python path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 # Import after setting environment
-from dhafnck_mcp_main.src.fastmcp.task_management.infrastructure.database.database_config import get_db_config
-from dhafnck_mcp_main.src.fastmcp.task_management.application.facades.task_application_facade import TaskApplicationFacade
-from dhafnck_mcp_main.src.fastmcp.task_management.domain.value_objects.task_id import TaskId
+from fastmcp.task_management.infrastructure.database.database_config import get_db_config
+from fastmcp.task_management.application.facades.task_application_facade import TaskApplicationFacade
+from fastmcp.task_management.domain.value_objects.task_id import TaskId
 from sqlalchemy import text
 import uuid
 import json
@@ -36,7 +36,7 @@ def test_completion_summary_storage():
         print("✅ Database connected successfully")
         
         # 2. Create a test task facade
-        from dhafnck_mcp_main.src.fastmcp.task_management.infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
+        from fastmcp.task_management.infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
         task_repository = TaskRepositoryFactory.create()
         facade = TaskApplicationFacade(task_repository)
         
@@ -48,70 +48,92 @@ def test_completion_summary_storage():
         with db.get_session() as session:
             # Insert test project
             session.execute(text("""
-                INSERT INTO projects (id, name, description, status, created_at, updated_at)
-                VALUES (:id, :name, :description, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                INSERT INTO projects (id, name, description, status, user_id, metadata, created_at, updated_at)
+                VALUES (:id, :name, :description, 'active', :user_id, :metadata, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 ON CONFLICT (id) DO NOTHING
             """), {
                 "id": project_id,
                 "name": "Test Project for Context Storage",
-                "description": "Project for testing completion summary context storage"
+                "description": "Project for testing completion summary context storage",
+                "user_id": "test-user-123",
+                "metadata": "{}"
             })
             
             # Insert test branch
             session.execute(text("""
-                INSERT INTO project_git_branchs (id, project_id, name, description, created_at, updated_at)
-                VALUES (:id, :project_id, :name, :description, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                INSERT INTO project_git_branchs (id, project_id, name, description, priority, status, metadata, task_count, completed_task_count, user_id, created_at, updated_at)
+                VALUES (:id, :project_id, :name, :description, :priority, :status, :metadata, :task_count, :completed_task_count, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 ON CONFLICT (id) DO NOTHING
             """), {
                 "id": branch_id,
                 "project_id": project_id,
                 "name": "test-completion-summary",
-                "description": "Branch for testing completion summary context storage"
+                "description": "Branch for testing completion summary context storage",
+                "priority": "medium",
+                "status": "active",
+                "metadata": "{}",
+                "task_count": 0,
+                "completed_task_count": 0,
+                "user_id": "test-user-123"
             })
             
             session.commit()
             print(f"✅ Created test project: {project_id}")
             print(f"✅ Created test branch: {branch_id}")
         
-        # 3. Create a test task
+        # 3. Create a test task using the use case directly
         task_id = str(uuid.uuid4())
         
-        # Create task using the facade with proper request object
-        from dhafnck_mcp_main.src.fastmcp.task_management.application.dtos.task.create_task_request import CreateTaskRequest
+        # Import use cases directly for better control
+        from fastmcp.task_management.application.dtos.task.create_task_request import CreateTaskRequest
+        from fastmcp.task_management.application.use_cases.create_task import CreateTaskUseCase
+        from fastmcp.task_management.application.use_cases.complete_task import CompleteTaskUseCase
+        from fastmcp.task_management.infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
+        from fastmcp.task_management.infrastructure.repositories.project_repository_factory import ProjectRepositoryFactory
+        from fastmcp.task_management.domain.value_objects.task_id import TaskId
         
+        # Create repositories
+        task_repository = TaskRepositoryFactory.create()
+        project_repository = ProjectRepositoryFactory.create()
+        
+        # Create the create task use case
+        create_task_use_case = CreateTaskUseCase(task_repository, project_repository)
+        
+        # Create task request with proper data
         request = CreateTaskRequest(
             title="Test completion summary storage",
             description="Testing that completion_summary is stored in context",
             priority="medium",
-            git_branch_id=branch_id
+            git_branch_id=branch_id,
+            user_id="test-user-123"
         )
         
-        created_task = facade.create_task(request)
-        print(f"📋 Task creation response: {created_task}")
-        
-        # Check different possible key names
-        actual_task_id = None
-        if 'task_id' in created_task:
-            actual_task_id = created_task['task_id']
-        elif 'id' in created_task:
-            actual_task_id = created_task['id']
-        elif 'task' in created_task and 'id' in created_task['task']:
-            actual_task_id = created_task['task']['id']
-        else:
-            print(f"❌ Could not find task ID in response keys: {list(created_task.keys())}")
-            return False
-            
-        print(f"✅ Created task: {actual_task_id}")
+        # Execute create task use case
+        created_task = create_task_use_case.execute(request, task_id)
+        print(f"✅ Created task: {created_task.id}")
+        actual_task_id = str(created_task.id)
         
         # 4. Complete the task with completion_summary and testing_notes
         completion_summary = "Task completed successfully with proper context storage validation"
         testing_notes = "Verified that completion_summary field stores data correctly in context system"
         
-        completed_task = facade.complete_task(
-            task_id=actual_task_id,
+        # Create complete task use case
+        complete_task_use_case = CompleteTaskUseCase(task_repository)
+        
+        # Complete the task
+        completed_task = complete_task_use_case.execute(
+            TaskId(actual_task_id),
             completion_summary=completion_summary,
             testing_notes=testing_notes
         )
+        
+        # Convert domain object to dict for context checking
+        completed_task = {
+            'context': completed_task.context,  # Assuming this contains the context
+            'id': str(completed_task.id),
+            'completion_summary': completed_task.completion_summary,
+            'testing_notes': completed_task.testing_notes
+        }
         
         print(f"✅ Completed task with summary: {completion_summary[:50]}...")
         
@@ -126,7 +148,7 @@ def test_completion_summary_storage():
                     context_dict = json.loads(context_data)
                 except json.JSONDecodeError:
                     print(f"❌ Context is not valid JSON: {context_data[:100]}...")
-                    return False
+                    raise AssertionError(f"Context is not valid JSON: {context_data[:100]}...")
             else:
                 context_dict = context_data
             
@@ -140,10 +162,10 @@ def test_completion_summary_storage():
                 else:
                     print(f"❌ completion_summary not found in expected location")
                     print(f"   Context structure: {json.dumps(context_dict, indent=2)[:500]}...")
-                    return False
+                    raise AssertionError(f"completion_summary not found in expected location. Context structure: {json.dumps(context_dict, indent=2)[:500]}...")
             else:
                 print(f"❌ Context.progress is not a dict: {progress}")
-                return False
+                raise AssertionError(f"Context.progress is not a dict: {progress}")
             
             # Check for testing_notes in context  
             next_steps = progress.get('next_steps', [])
@@ -156,26 +178,27 @@ def test_completion_summary_storage():
         else:
             print(f"❌ No context found in completed task")
             print(f"   Task response keys: {list(completed_task.keys())}")
-            return False
+            raise AssertionError(f"No context found in completed task. Task response keys: {list(completed_task.keys())}")
         
         print("✅ All completion_summary context storage tests passed!")
-        return True
+        # For pytest compatibility, use assertions instead of returning values
+        assert True  # Test passed
         
     except Exception as e:
         print(f"❌ Test failed with error: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        # For pytest compatibility, re-raise the exception instead of returning False
+        raise
 
 if __name__ == "__main__":
     print("🚀 Manual Completion Summary Context Storage Test")
     print("=" * 60)
     
-    success = test_completion_summary_storage()
-    
-    if success:
+    try:
+        test_completion_summary_storage()
         print("\n🎉 SUCCESS: completion_summary context storage is working correctly!")
         sys.exit(0)
-    else:
-        print("\n💥 FAILURE: completion_summary context storage needs fixing")
+    except Exception as e:
+        print(f"\n💥 FAILURE: completion_summary context storage needs fixing - {e}")
         sys.exit(1)
