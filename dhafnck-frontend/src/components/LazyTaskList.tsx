@@ -386,7 +386,7 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
 
         {/* Expanded Content */}
         {isExpanded && fullTask && (
-          <div className="border-t border-gray-200 dark:border-gray-700">
+          <div className="border-t border-surface-border dark:border-gray-700">
             <div className="border-l-4 border-blue-400 dark:border-blue-600">
               <Suspense fallback={<div className="p-4 text-center text-sm text-muted-foreground">Loading subtasks...</div>}>
                 <LazySubtaskList 
@@ -525,7 +525,7 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
         </TableRow>
         
         {isExpanded && fullTask && (
-          <TableRow className="bg-gray-50/50 dark:bg-gray-900/50">
+          <TableRow className="bg-background-secondary dark:bg-gray-900/50">
             <TableCell colSpan={7} className="p-0">
               <div className="border-l-4 border-blue-400 dark:border-blue-600 ml-8">
                 <Suspense fallback={<div className="p-4 text-center text-sm text-muted-foreground">Loading subtasks...</div>}>

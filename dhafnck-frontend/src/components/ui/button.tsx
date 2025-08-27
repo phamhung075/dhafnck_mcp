@@ -10,7 +10,7 @@ const buttonVariants = {
   default: "theme-btn-primary",
   outline: "theme-btn-outline",
   secondary: "theme-btn-secondary",
-  ghost: "hover:bg-background-hover text-base-primary",
+  ghost: "theme-btn-ghost",
   link: "underline-offset-4 hover:underline text-primary"
 };
 

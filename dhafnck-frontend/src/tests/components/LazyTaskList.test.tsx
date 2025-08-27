@@ -243,8 +243,8 @@ describe('LazyTaskList', () => {
         expect(screen.getByText('Test Task 1')).toBeInTheDocument();
         expect(screen.getByText('todo')).toBeInTheDocument();
         expect(screen.getByText('high')).toBeInTheDocument();
-        expect(screen.getByText('2 subtasks')).toBeInTheDocument(); // subtask count
-        expect(screen.getByText('Has dependencies')).toBeInTheDocument();
+        expect(screen.getByText('2')).toBeInTheDocument(); // subtask count badge
+        expect(screen.getByText('Has deps')).toBeInTheDocument();
         expect(screen.getByText('1 assigned')).toBeInTheDocument();
       });
     });
@@ -324,9 +324,11 @@ describe('LazyTaskList', () => {
         expect(screen.getByText('Test Task 1')).toBeInTheDocument();
       });
 
-      // Find and click the view button (Eye icon)
-      const viewButtons = screen.getAllByTitle('View details');
-      fireEvent.click(viewButtons[0]);
+      // Click the mobile view button for task-1
+      const expandButtons = screen.getAllByRole('button').filter(button => 
+        button.getAttribute('title')?.includes('View details')
+      );
+      fireEvent.click(expandButtons[0]);
 
       await waitFor(() => {
         expect(screen.getByTestId('task-details-dialog')).toBeInTheDocument();

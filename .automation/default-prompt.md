@@ -27,27 +27,14 @@ REQUIRED BEHAVIORS:
 ## Missing Test Files - CREATE IMMEDIATELY:
 
 ## Stale Test Files (Source Newer Than Test)
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/http_server.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/server/http_server_test.py`
-  - **Days stale**: 0
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/agent_mcp_controller.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/agent_mcp_controller_test.py`
-  - **Days stale**: 0
+- **Source**: `dhafnck-frontend/src/components/LazyTaskList.tsx`
+  - **Test**: `dhafnck-frontend/src/tests/components/LazyTaskList.test.tsx`
+  - **Days stale**: 1
 
 
 ## Missing Test Files
-- **Source**: `dhafnck-frontend/src/components/TaskContextDialog.tsx`
-  - **Create test at**: `dhafnck-frontend/src/tests/components/TaskContextDialog.test.tsx`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/mcp_integration/repository_filter.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/auth/mcp_integration/repository_filter_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/facades/task_application_facade.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/facades/task_application_facade_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/project_mcp_controller.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/project_mcp_controller_test.py`
+- **Source**: `dhafnck-frontend/src/components/TaskDetailsDialog.tsx`
+  - **Create test at**: `dhafnck-frontend/src/tests/components/TaskDetailsDialog.test.tsx`
 
 
 ## EXECUTION COMMANDS - DO NOW:

@@ -223,7 +223,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect, refreshKey }) => {
           {projects.map((project) => (
             <li key={project.id}>
               <div
-                className="group relative flex items-center justify-between p-2 rounded-md hover:bg-muted/80 transition-colors cursor-pointer"
+                className="group relative flex items-center justify-between p-2 rounded-md hover:bg-background-hover transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-2 flex-1" onClick={() => toggleProject(project.id)}>
                   {openProjects[project.id] ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}

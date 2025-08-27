@@ -148,6 +148,17 @@ body {
     background-color: var(--color-button-outline-hover);
   }
   
+  /* Enhanced Ghost Button */
+  .theme-btn-ghost {
+    background-color: transparent;
+    color: var(--color-text);
+    @apply px-4 py-2 rounded-md font-medium transition-colors duration-200;
+  }
+  
+  .theme-btn-ghost:hover {
+    background-color: var(--color-background-hover);
+  }
+  
   .theme-btn-danger {
     background-color: var(--color-button-danger-bg);
     @apply text-white px-4 py-2 rounded-md font-medium transition-colors duration-200;
