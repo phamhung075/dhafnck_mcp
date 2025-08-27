@@ -26,10 +26,9 @@ REQUIRED BEHAVIORS:
 
 ## Missing Test Files - CREATE IMMEDIATELY:
 
-## Stale Test Files (Source Newer Than Test)
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/task_mcp_controller.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/task_mcp_controller_test.py`
-  - **Days stale**: 0
+## Missing Test Files
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/database/database_config.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/database/database_config_test.py`
 
 
 ## EXECUTION COMMANDS - DO NOW:

@@ -94,10 +94,10 @@ class Task(Base):
     """Main tasks table"""
     __tablename__ = "tasks"
     
-    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
     title: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
-    git_branch_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("project_git_branchs.id", ondelete="CASCADE"), nullable=False)
+    git_branch_id: Mapped[str] = mapped_column(String(36), ForeignKey("project_git_branchs.id", ondelete="CASCADE"), nullable=False)
     status: Mapped[str] = mapped_column(String, nullable=False, default="todo")
     priority: Mapped[str] = mapped_column(String, nullable=False, default="medium")
     details: Mapped[str] = mapped_column(Text, default="")
@@ -108,9 +108,9 @@ class Task(Base):
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime)  # Added for schema validation
     completion_summary: Mapped[str] = mapped_column(Text, default="")  # Added for schema validation
     testing_notes: Mapped[str] = mapped_column(Text, default="")  # Added for schema validation
-    context_id: Mapped[Optional[str]] = mapped_column(UUID(as_uuid=False))
+    context_id: Mapped[Optional[str]] = mapped_column(String(36))
     progress_percentage: Mapped[int] = mapped_column(Integer, default=0)
-    user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)  # User isolation field - REQUIRED
+    user_id: Mapped[str] = mapped_column(String(36), nullable=False)  # User isolation field - REQUIRED
     
     # Relationships
     git_branch: Mapped[ProjectGitBranch] = relationship("ProjectGitBranch", back_populates="tasks")
@@ -133,8 +133,8 @@ class TaskSubtask(Base):
     """Subtasks table"""
     __tablename__ = "task_subtasks"
     
-    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
-    task_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    task_id: Mapped[str] = mapped_column(String(36), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
     title: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str] = mapped_column(Text, default="")
     status: Mapped[str] = mapped_column(String, nullable=False, default="todo")
@@ -166,10 +166,10 @@ class TaskAssignee(Base):
     """Task assignees table"""
     __tablename__ = "task_assignees"
     
-    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
-    task_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    task_id: Mapped[str] = mapped_column(String(36), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
     assignee_id: Mapped[str] = mapped_column(String, nullable=False)
-    agent_id: Mapped[Optional[str]] = mapped_column(UUID(as_uuid=False))  # Fixed: Database has UUID type
+    agent_id: Mapped[Optional[str]] = mapped_column(String(36))  # Fixed: Database has UUID type
     role: Mapped[str] = mapped_column(String, default="contributor")
     user_id: Mapped[str] = mapped_column(String, nullable=False)  # User isolation field - REQUIRED
     assigned_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
@@ -189,10 +189,10 @@ class TaskDependency(Base):
     __tablename__ = "task_dependencies"
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    task_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
-    depends_on_task_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    task_id: Mapped[str] = mapped_column(String(36), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    depends_on_task_id: Mapped[str] = mapped_column(String(36), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
     dependency_type: Mapped[str] = mapped_column(String, default="blocks")
-    user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)  # No default - authentication required
+    user_id: Mapped[str] = mapped_column(String(36), nullable=False)  # No default - authentication required
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     
     # Relationships
@@ -251,7 +251,7 @@ class TaskLabel(Base):
     """Task labels relationship table"""
     __tablename__ = "task_labels"
     
-    task_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("tasks.id", ondelete="CASCADE"), primary_key=True)
+    task_id: Mapped[str] = mapped_column(String(36), ForeignKey("tasks.id", ondelete="CASCADE"), primary_key=True)
     label_id: Mapped[str] = mapped_column(String, ForeignKey("labels.id", ondelete="CASCADE"), primary_key=True)
     user_id: Mapped[str] = mapped_column(String, nullable=False)  # User isolation field - REQUIRED
     applied_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
@@ -428,7 +428,7 @@ class TaskContext(Base):
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
     
     # Foreign keys
-    task_id: Mapped[Optional[str]] = mapped_column(UUID(as_uuid=False), ForeignKey("tasks.id"), nullable=True)
+    task_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("tasks.id"), nullable=True)
     parent_branch_id: Mapped[Optional[str]] = mapped_column(UUID(as_uuid=False), ForeignKey("project_git_branchs.id"), nullable=True)
     parent_branch_context_id: Mapped[Optional[str]] = mapped_column(UUID(as_uuid=False), ForeignKey("branch_contexts.id"), nullable=True)
     

@@ -51,19 +51,29 @@ class CreateTaskUseCase:
                 )
             
             # Create domain entity using git_branch_id from request (follows clean relationship chain)
+            print(f"🔍 CREATE TASK: request.git_branch_id = '{request.git_branch_id}' (type: {type(request.git_branch_id)})")
+            print(f"🔍 CREATE TASK: task_id = '{task_id}' (type: {type(task_id)})")
+            
+            # Debug: check git_branch_id value right before Task.create()
+            git_branch_id_param = request.git_branch_id
+            print(f"🔍 BEFORE Task.create(): git_branch_id_param = '{git_branch_id_param}' (type: {type(git_branch_id_param)})")
+            
             task = Task.create(
                 id=task_id,
                 title=title,
                 description=description,
                 status=status,
                 priority=priority,
-                git_branch_id=request.git_branch_id,  # Use git_branch_id instead of project_id
+                git_branch_id=git_branch_id_param,  # Use git_branch_id instead of project_id
                 details=request.details,
                 estimated_effort=request.estimated_effort,
                 assignees=request.assignees,
                 labels=request.labels,
                 due_date=request.due_date,
             )
+            
+            print(f"🔍 AFTER Task.create(): task.git_branch_id = '{task.git_branch_id}' (type: {type(task.git_branch_id)})")
+            print(f"🔍 CREATED TASK: task.id = '{task.id}' (type: {type(task.id)})")
             
             # Add dependencies if provided
             if hasattr(request, 'dependencies') and request.dependencies:

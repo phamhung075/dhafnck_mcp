@@ -166,6 +166,10 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
         if hasattr(task, 'progress_percentage'):
             entity.overall_progress = task.progress_percentage
         
+        # Map completion_summary from database to entity (Vision System field)
+        if hasattr(task, 'completion_summary') and task.completion_summary:
+            entity._completion_summary = task.completion_summary
+        
         return entity
     
     def create_task(self, title: str, description: str, priority: str = "medium",
@@ -666,6 +670,11 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
                     if hasattr(task, 'overall_progress'):
                         existing.progress_percentage = task.overall_progress
                     
+                    # Save completion_summary from Vision System field
+                    completion_summary = task.get_completion_summary()
+                    if completion_summary is not None:
+                        existing.completion_summary = completion_summary
+                    
                     # Update dependencies
                     # First, remove all existing dependencies
                     session.query(TaskDependency).filter(TaskDependency.task_id == str(task.id)).delete()
@@ -722,8 +731,19 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
                         raise UserAuthenticationRequiredError("Task creation")
                     
                     # Create new task
+                    print(f"🔍 DEBUG SAVE: task.id = '{task.id}' (type: {type(task.id)})")
+                    print(f"🔍 DEBUG SAVE: str(task.id) = '{str(task.id)}'")
+                    print(f"🔍 DEBUG SAVE: task.git_branch_id = '{task.git_branch_id}' (type: {type(task.git_branch_id)})")
+                    
+                    # Check if TaskId has .value attribute and what it contains
+                    if hasattr(task.id, 'value'):
+                        print(f"🔍 DEBUG SAVE: task.id.value = '{task.id.value}'")
+                    
+                    task_id_str = str(task.id)
+                    print(f"🔍 DEBUG SAVE: task_id_str after str() = '{task_id_str}'")
+                    
                     new_task = Task(
-                        id=str(task.id),
+                        id=task_id_str,
                         title=task.title,
                         description=task.description,
                         git_branch_id=task.git_branch_id,
@@ -737,8 +757,13 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
                         context_id=task.context_id,
                         user_id=task_user_id,  # Add user_id field
                         # Map overall_progress to progress_percentage
-                        progress_percentage=task.overall_progress if hasattr(task, 'overall_progress') else 0
+                        progress_percentage=task.overall_progress if hasattr(task, 'overall_progress') else 0,
+                        # Save completion_summary from Vision System field
+                        completion_summary=task.get_completion_summary() or ""
                     )
+                    
+                    print(f"🔍 DEBUG SAVE: new_task.id (ORM) = '{new_task.id}'")
+                    print(f"🔍 DEBUG SAVE: new_task.git_branch_id (ORM) = '{new_task.git_branch_id}'")
                     session.add(new_task)
                     
                     # Add dependencies for new task
@@ -826,9 +851,10 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
     
     def get_next_id(self):
         """Get next available task ID"""
-        # Generate a new UUID
+        # Generate a new UUID and return as TaskId object
         import uuid
-        return str(uuid.uuid4())
+        from ....domain.value_objects.task_id import TaskId
+        return TaskId(str(uuid.uuid4()))
     
     def count(self, **kwargs) -> int:
         """Get total number of tasks with optional filters"""
