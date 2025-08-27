@@ -27,8 +27,14 @@ REQUIRED BEHAVIORS:
 ## Missing Test Files - CREATE IMMEDIATELY:
 
 ## Missing Test Files
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/database/database_config.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/database/database_config_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/use_cases/create_task.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/use_cases/create_task_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/database/models.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/database/models_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/task_repository.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/task_repository_test.py`
 
 
 ## EXECUTION COMMANDS - DO NOW:

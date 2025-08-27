@@ -44,7 +44,7 @@ class Project(Base):
     """Project model - Core organizational structure"""
     __tablename__ = "projects"
     
-    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
@@ -65,14 +65,14 @@ class ProjectGitBranch(Base):
     """Git branches (task trees) - Project workspaces"""
     __tablename__ = "project_git_branchs"
     
-    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
-    project_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
     assigned_agent_id: Mapped[Optional[str]] = mapped_column(String)
-    agent_id: Mapped[Optional[str]] = mapped_column(UUID(as_uuid=False))  # Fixed: Database has UUID type
+    agent_id: Mapped[Optional[str]] = mapped_column(String(36))  # Fixed: Database has UUID type
     priority: Mapped[str] = mapped_column(String, default="medium")
     status: Mapped[str] = mapped_column(String, default="todo")
     model_metadata: Mapped[Dict[str, Any]] = mapped_column("metadata", JSON, default=dict)
