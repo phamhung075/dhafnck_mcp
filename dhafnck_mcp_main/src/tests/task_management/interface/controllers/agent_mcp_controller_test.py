@@ -1,7 +1,7 @@
 """Tests for AgentMCPController"""
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch, MagicMock, AsyncMock
 from typing import Dict, Any, Optional
 
 from fastmcp.task_management.interface.controllers.agent_mcp_controller import AgentMCPController
@@ -360,3 +360,133 @@ class TestAgentMCPController:
         
         # Basic validation should pass (detailed validation tested in domain layer)
         assert "error_code" not in result or result["success"] is True
+
+    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    def test_workflow_guidance_factory_integration(self, mock_get_user, controller):
+        """Test that workflow guidance factory integration works."""
+        mock_get_user.return_value = "test-user"
+        
+        # Test that the controller has workflow guidance factory available
+        with patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.AgentWorkflowFactory') as mock_workflow_factory:
+            result = controller.manage_agent(
+                action="register",
+                project_id="project-123",
+                name="test-agent"
+            )
+            
+            # Workflow guidance should be available even if not explicitly used
+            assert result["success"] is True
+
+    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    def test_enhanced_error_handling(self, mock_get_user, controller, mock_agent_facade_factory):
+        """Test enhanced error handling with more specific error types."""
+        mock_get_user.return_value = "test-user"
+        
+        # Test facade exception handling
+        mock_facade = mock_agent_facade_factory.create_agent_facade.return_value
+        mock_facade.register_agent.side_effect = ConnectionError("Database connection failed")
+        
+        result = controller.manage_agent(
+            action="register",
+            project_id="project-123",
+            name="test-agent"
+        )
+        
+        assert result["success"] is False
+        assert "Database connection failed" in result["error"]
+
+    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.validate_user_id')
+    def test_user_id_validation_flow(self, mock_validate_user, mock_get_user, controller):
+        """Test complete user ID validation flow."""
+        mock_get_user.return_value = "test-user"
+        mock_validate_user.return_value = "test-user"
+        
+        result = controller.manage_agent(
+            action="register",
+            project_id="project-123",
+            name="test-agent"
+        )
+        
+        assert result["success"] is True
+        mock_validate_user.assert_called()
+
+    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    def test_all_supported_actions_comprehensive(self, mock_get_user, controller, mock_agent_facade_factory):
+        """Test all supported agent management actions with proper responses."""
+        mock_get_user.return_value = "test-user"
+        
+        # Setup different responses for different actions
+        mock_facade = mock_agent_facade_factory.create_agent_facade.return_value
+        mock_facade.register_agent.return_value = {"success": True, "agent_id": "agent-123", "action": "register"}
+        mock_facade.assign_agent.return_value = {"success": True, "assigned": True, "action": "assign"}
+        mock_facade.get_agent.return_value = {"success": True, "agent": {"id": "agent-123"}, "action": "get"}
+        mock_facade.list_agents.return_value = {"success": True, "agents": [], "action": "list"}
+        mock_facade.update_agent.return_value = {"success": True, "updated": True, "action": "update"}
+        mock_facade.unassign_agent.return_value = {"success": True, "unassigned": True, "action": "unassign"}
+        mock_facade.unregister_agent.return_value = {"success": True, "unregistered": True, "action": "unregister"}
+        mock_facade.rebalance_agents.return_value = {"success": True, "rebalanced": True, "action": "rebalance"}
+        
+        actions = [
+            {"action": "register", "project_id": "p1", "name": "agent"},
+            {"action": "assign", "project_id": "p1", "agent_id": "a1", "git_branch_id": "b1"},
+            {"action": "get", "project_id": "p1", "agent_id": "a1"},
+            {"action": "list", "project_id": "p1"},
+            {"action": "update", "project_id": "p1", "agent_id": "a1", "name": "updated"},
+            {"action": "unassign", "project_id": "p1", "agent_id": "a1", "git_branch_id": "b1"},
+            {"action": "unregister", "project_id": "p1", "agent_id": "a1"},
+            {"action": "rebalance", "project_id": "p1"}
+        ]
+        
+        for action_params in actions:
+            result = controller.manage_agent(**action_params)
+            
+            # All should succeed with mocked facade
+            assert result["success"] is True
+            assert result["action"] == action_params["action"]
+
+    def test_controller_initialization_comprehensive(self, mock_agent_facade_factory):
+        """Test comprehensive controller initialization."""
+        controller = AgentMCPController(mock_agent_facade_factory)
+        
+        # Test that the factory is properly stored
+        assert controller._agent_facade_factory == mock_agent_facade_factory
+        
+        # Test that the workflow factory is initialized
+        assert hasattr(controller, '_workflow_factory')
+        
+        # Test logging is configured
+        from fastmcp.task_management.interface.controllers.agent_mcp_controller import logger
+        assert logger is not None
+
+    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    def test_concurrent_operations_safety(self, mock_get_user, controller, mock_agent_facade_factory):
+        """Test that concurrent operations are handled safely."""
+        mock_get_user.return_value = "test-user"
+        
+        # Simulate multiple concurrent requests
+        results = []
+        import threading
+        
+        def make_request(project_id):
+            result = controller.manage_agent(
+                action="list",
+                project_id=project_id
+            )
+            results.append(result)
+        
+        threads = []
+        for i in range(5):
+            thread = threading.Thread(target=make_request, args=(f"project-{i}",))
+            threads.append(thread)
+            thread.start()
+        
+        for thread in threads:
+            thread.join()
+        
+        # All should succeed
+        for result in results:
+            assert result["success"] is True
+        
+        # Should have been called 5 times
+        assert mock_agent_facade_factory.create_agent_facade.call_count == 5

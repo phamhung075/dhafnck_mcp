@@ -27,29 +27,27 @@ REQUIRED BEHAVIORS:
 ## Missing Test Files - CREATE IMMEDIATELY:
 
 ## Stale Test Files (Source Newer Than Test)
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/database/models.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/database/models_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/http_server.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/server/http_server_test.py`
+  - **Days stale**: 0
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/agent_mcp_controller.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/agent_mcp_controller_test.py`
   - **Days stale**: 0
 
 
 ## Missing Test Files
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/lazy_task_routes.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/server/routes/lazy_task_routes_test.py`
+- **Source**: `dhafnck-frontend/src/components/TaskContextDialog.tsx`
+  - **Create test at**: `dhafnck-frontend/src/tests/components/TaskContextDialog.test.tsx`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/factories/unified_context_facade_factory.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/factories/unified_context_facade_factory_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/mcp_integration/repository_filter.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/auth/mcp_integration/repository_filter_test.py`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/use_cases/create_project.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/use_cases/create_project_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/facades/task_application_facade.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/facades/task_application_facade_test.py`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/global_context_repository_user_scoped.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/global_context_repository_user_scoped_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/auth_helper.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/auth_helper_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/desc/context/manage_unified_context_description.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/desc/context/manage_unified_context_description_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/project_mcp_controller.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/controllers/project_mcp_controller_test.py`
 
 
 ## EXECUTION COMMANDS - DO NOW:

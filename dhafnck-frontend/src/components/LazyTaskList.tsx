@@ -287,7 +287,7 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
     const fullTask = fullTasks.get(summary.id) || null;
     
     return (
-      <div key={summary.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border mb-3">
+      <div key={summary.id} className="bg-surface dark:bg-gray-800 rounded-lg shadow-sm border border-surface-border dark:border-gray-700 mb-3">
         <div className="p-4">
           {/* Task Header */}
           <div className="flex items-start justify-between mb-3">

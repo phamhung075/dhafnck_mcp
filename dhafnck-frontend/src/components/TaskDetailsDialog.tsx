@@ -350,7 +350,7 @@ export const TaskDetailsDialog: React.FC<TaskDetailsDialogProps> = ({
           {activeTab === 'details' && (
             <div className="space-y-4">
               {/* Task Information Header */}
-              <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="bg-background-secondary dark:bg-gray-800/50 p-4 rounded-lg">
                 <div className="flex gap-2 mt-3 flex-wrap">
                   <Badge variant={getStatusColor(displayTask?.status || 'pending')} className="px-3 py-1">
                     Status: {displayTask?.status?.replace('_', ' ') || 'pending'}
@@ -375,8 +375,8 @@ export const TaskDetailsDialog: React.FC<TaskDetailsDialogProps> = ({
             <div className="space-y-4">
               {/* IDs and References */}
               <div>
-                <h4 className="font-semibold text-sm mb-3 text-blue-700">IDs and References</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm bg-blue-50 p-3 rounded">
+                <h4 className="font-semibold text-sm mb-3 text-blue-700 dark:text-blue-300">IDs and References</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm bg-blue-50 dark:bg-blue-900/20 p-3 rounded border border-blue-200 dark:border-blue-700">
                   <div className="space-y-1">
                     <span className="text-muted-foreground font-medium">Task ID:</span>
                     <p className="font-mono text-xs break-all">{displayTask.id}</p>
@@ -400,8 +400,8 @@ export const TaskDetailsDialog: React.FC<TaskDetailsDialogProps> = ({
 
               {/* Time Information */}
               <div>
-                <h4 className="font-semibold text-sm mb-3 text-green-700">Time Information</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm bg-green-50 p-3 rounded">
+                <h4 className="font-semibold text-sm mb-3 text-green-700 dark:text-green-300">Time Information</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm bg-green-50 dark:bg-green-900/20 p-3 rounded border border-green-200 dark:border-green-700">
                   {displayTask.estimated_effort && (
                     <div>
                       <span className="text-muted-foreground font-medium">Estimated Effort:</span>
@@ -433,8 +433,8 @@ export const TaskDetailsDialog: React.FC<TaskDetailsDialogProps> = ({
 
               {/* Assignment & Organization */}
               <div>
-                <h4 className="font-semibold text-sm mb-3 text-purple-700">Assignment & Organization</h4>
-                <div className="space-y-3 bg-purple-50 p-3 rounded">
+                <h4 className="font-semibold text-sm mb-3 text-purple-700 dark:text-purple-300">Assignment & Organization</h4>
+                <div className="space-y-3 bg-purple-50 dark:bg-purple-900/20 p-3 rounded border border-purple-200 dark:border-purple-700">
                   {/* Details field */}
                   {displayTask.details && (
                     <div>
@@ -479,8 +479,8 @@ export const TaskDetailsDialog: React.FC<TaskDetailsDialogProps> = ({
                 <>
                   <Separator />
                   <div>
-                    <h4 className="font-semibold text-sm mb-3 text-orange-700">Dependencies ({displayTask.dependencies.length})</h4>
-                    <div className="space-y-2 bg-orange-50 p-3 rounded">
+                    <h4 className="font-semibold text-sm mb-3 text-orange-700 dark:text-orange-300">Dependencies ({displayTask.dependencies.length})</h4>
+                    <div className="space-y-2 bg-orange-50 dark:bg-orange-900/20 p-3 rounded border border-orange-200 dark:border-orange-700">
                       {displayTask.dependencies.map((dep: string, index: number) => (
                         <div key={index} className="text-sm flex items-start">
                           <span className="text-muted-foreground font-medium mr-2">#{index + 1}:</span>
@@ -497,8 +497,8 @@ export const TaskDetailsDialog: React.FC<TaskDetailsDialogProps> = ({
                 <>
                   <Separator />
                   <div>
-                    <h4 className="font-semibold text-sm mb-3 text-indigo-700">Subtasks Summary</h4>
-                    <div className="bg-indigo-50 p-3 rounded">
+                    <h4 className="font-semibold text-sm mb-3 text-indigo-700 dark:text-indigo-300">Subtasks Summary</h4>
+                    <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded border border-indigo-200 dark:border-indigo-700">
                       {displayTask.subtasks.length > 0 ? (
                         <>
                           <p className="text-sm font-medium">Total subtasks: {displayTask.subtasks.length}</p>
@@ -541,16 +541,16 @@ export const TaskDetailsDialog: React.FC<TaskDetailsDialogProps> = ({
                   {/* Enhanced Context Display */}
                   {contextDisplay.hasInfo && (
                     <div>
-                      <h4 className="font-semibold text-sm mb-3 text-teal-700">Task Completion Details</h4>
-                      <div className="bg-teal-50 p-3 rounded space-y-3">
+                      <h4 className="font-semibold text-sm mb-3 text-teal-700 dark:text-teal-300">Task Completion Details</h4>
+                      <div className="bg-teal-50 dark:bg-teal-900/20 p-3 rounded space-y-3 border border-teal-200 dark:border-teal-700">
                         
                         {/* Completion Summary */}
                         {contextDisplay.completionSummary && (
                           <div>
-                            <h5 className="font-medium text-xs text-teal-800 mb-1">
+                            <h5 className="font-medium text-xs text-teal-800 dark:text-teal-300 mb-1">
                               Completion Summary{contextDisplay.isLegacy ? ' (Legacy)' : ''}:
                             </h5>
-                            <p className={`text-sm whitespace-pre-wrap p-2 rounded border ${contextDisplay.isLegacy ? 'bg-yellow-50' : 'bg-white'}`}>
+                            <p className={`text-sm whitespace-pre-wrap p-2 rounded border ${contextDisplay.isLegacy ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-700' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'}`}>
                               {contextDisplay.completionSummary}
                             </p>
                             {contextDisplay.completionPercentage && (
@@ -569,8 +569,8 @@ export const TaskDetailsDialog: React.FC<TaskDetailsDialogProps> = ({
                         {/* Task Status */}
                         {contextDisplay.taskStatus && (
                           <div>
-                            <h5 className="font-medium text-xs text-teal-800 mb-1">Context Status:</h5>
-                            <span className="inline-block px-2 py-1 bg-teal-200 text-teal-800 text-xs font-medium rounded">
+                            <h5 className="font-medium text-xs text-teal-800 dark:text-teal-300 mb-1">Context Status:</h5>
+                            <span className="inline-block px-2 py-1 bg-teal-200 dark:bg-teal-800/30 text-teal-800 dark:text-teal-200 text-xs font-medium rounded border border-teal-300 dark:border-teal-700">
                               {contextDisplay.taskStatus}
                             </span>
                           </div>
@@ -579,10 +579,10 @@ export const TaskDetailsDialog: React.FC<TaskDetailsDialogProps> = ({
                         {/* Testing Notes */}
                         {contextDisplay.testingNotes.length > 0 && (
                           <div>
-                            <h5 className="font-medium text-xs text-teal-800 mb-1">Testing Notes & Next Steps:</h5>
+                            <h5 className="font-medium text-xs text-teal-800 dark:text-teal-300 mb-1">Testing Notes & Next Steps:</h5>
                             <ul className="text-sm space-y-1">
                               {contextDisplay.testingNotes.map((step: string, index: number) => (
-                                <li key={index} className="bg-white p-2 rounded border border-l-4 border-l-teal-300">
+                                <li key={index} className="bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700 border-l-4 border-l-teal-300 dark:border-l-teal-500">
                                   {step}
                                 </li>
                               ))}
@@ -595,8 +595,8 @@ export const TaskDetailsDialog: React.FC<TaskDetailsDialogProps> = ({
 
                   {/* Raw Context Data */}
                   <div>
-                    <h4 className="font-semibold text-sm mb-3 text-teal-700">Raw Context Data</h4>
-                    <div className="bg-teal-50 p-3 rounded">
+                    <h4 className="font-semibold text-sm mb-3 text-teal-700 dark:text-teal-300">Raw Context Data</h4>
+                    <div className="bg-teal-50 dark:bg-teal-900/20 p-3 rounded border border-teal-200 dark:border-teal-700">
                       <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
                         {JSON.stringify(displayTask.context_data, null, 2)}
                       </pre>
@@ -608,10 +608,10 @@ export const TaskDetailsDialog: React.FC<TaskDetailsDialogProps> = ({
               {/* Raw Data */}
               <Separator />
               <details className="cursor-pointer">
-                <summary className="font-semibold text-sm text-gray-700 hover:text-gray-900">
+                <summary className="font-semibold text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100">
                   View Complete Raw Task Data (JSON)
                 </summary>
-                <div className="mt-3 bg-gray-100 p-3 rounded">
+                <div className="mt-3 bg-gray-100 dark:bg-gray-800 p-3 rounded border border-gray-200 dark:border-gray-700">
                   <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
                     {JSON.stringify(displayTask, null, 2)}
                   </pre>
