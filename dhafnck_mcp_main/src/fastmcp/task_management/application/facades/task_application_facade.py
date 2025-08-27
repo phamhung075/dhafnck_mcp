@@ -154,8 +154,22 @@ class TaskApplicationFacade:
             derived_user_id = None
             try:
                 from fastmcp.auth.middleware.request_context_middleware import get_current_user_id
-                derived_user_id = get_current_user_id()
-                logger.info(f"🎯 TaskApplicationFacade: get_current_user_id() returned: {derived_user_id}")
+                context_user_obj = get_current_user_id()
+                logger.info(f"🎯 TaskApplicationFacade: get_current_user_id() returned: {context_user_obj} (type: {type(context_user_obj)})")
+                
+                # Extract user_id string from the context object (handles BackwardCompatUserContext objects)
+                if context_user_obj:
+                    if isinstance(context_user_obj, str):
+                        # Already a string
+                        derived_user_id = context_user_obj
+                    elif hasattr(context_user_obj, 'user_id'):
+                        # Extract user_id attribute from BackwardCompatUserContext
+                        derived_user_id = context_user_obj.user_id
+                        logger.info(f"🔧 TaskApplicationFacade: Extracted user_id from context object: {derived_user_id}")
+                    else:
+                        # Fallback: convert to string
+                        derived_user_id = str(context_user_obj) if context_user_obj else None
+                        logger.warning(f"⚠️ TaskApplicationFacade: Fallback string conversion: {derived_user_id}")
             except ImportError:
                 logger.warning("User context middleware not available - using fallback")
             

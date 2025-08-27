@@ -148,23 +148,23 @@ class TestUnifiedContextFacadeFactory:
         mock_get_db_config.return_value = Mock(SessionLocal=mock_session_factory)
         factory = UnifiedContextFacadeFactory()
         
-        # Mock global repository to simulate context doesn't exist
-        factory.global_repo.get = Mock(side_effect=Exception("Not found"))
-        
         # Mock facade creation result
         with patch.object(factory, 'create_facade') as mock_create_facade:
             mock_facade = Mock()
+            # Mock get_context to simulate context doesn't exist
+            mock_facade.get_context.side_effect = Exception("Not found")
+            # Mock create_context to simulate successful creation
             mock_facade.create_context.return_value = {"success": True}
             mock_create_facade.return_value = mock_facade
 
-            # Act
-            result = factory.auto_create_global_context()
+            # Act - provide user_id parameter
+            result = factory.auto_create_global_context(user_id="test-user-123")
 
             # Assert
             assert result is True
             mock_facade.create_context.assert_called_once_with(
                 level="global",
-                context_id=GLOBAL_SINGLETON_UUID,
+                context_id="global_singleton",
                 data={
                     "organization_name": "Default Organization",
                     "global_settings": {
@@ -185,16 +185,19 @@ class TestUnifiedContextFacadeFactory:
         mock_get_db_config.return_value = Mock(SessionLocal=mock_session_factory)
         factory = UnifiedContextFacadeFactory()
         
-        # Mock global repository to simulate context exists
-        mock_existing_context = Mock()
-        factory.global_repo.get = Mock(return_value=mock_existing_context)
+        # Mock facade creation result
+        with patch.object(factory, 'create_facade') as mock_create_facade:
+            mock_facade = Mock()
+            # Mock get_context to simulate context already exists
+            mock_facade.get_context.return_value = {"success": True}
+            mock_create_facade.return_value = mock_facade
 
-        # Act
-        result = factory.auto_create_global_context()
+            # Act - provide user_id parameter
+            result = factory.auto_create_global_context(user_id="test-user-123")
 
-        # Assert
-        assert result is True
-        factory.global_repo.get.assert_called_once_with(GLOBAL_SINGLETON_UUID)
+            # Assert
+            assert result is True
+            mock_facade.get_context.assert_called_once_with(level="global", context_id="global_singleton")
 
     @patch('fastmcp.task_management.application.factories.unified_context_facade_factory.get_db_config')
     def test_auto_create_global_context_failure(self, mock_get_db_config):

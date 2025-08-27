@@ -87,22 +87,40 @@ class TestJSONParameterIntegration:
         data_dict = {"title": "Test Task", "description": "Test Description", "metadata": {"key": "value"}}
         data_json = json.dumps(data_dict)
         
-        # Mock the manage_context method to test parameter parsing
-        result = unified_context_controller.manage_context(
-            action="create",
-            level="task",
-            context_id="task-123",
-            data=data_json
-        )
-        
-        # Verify facade was called with parsed dictionary
-        mock_unified_context_facade.create_context.assert_called_once_with(
-            level="task",
-            context_id="task-123",
-            data=data_dict
-        )
-        
-        assert result["success"] is True
+        # Mock authentication helper to return test user
+        with patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
+            mock_auth.return_value = "test-user-123"
+            
+            # Register tools to get the manage_context function
+            mcp = Mock()
+            tools = {}
+            
+            def mock_tool(name=None, description=None):
+                def decorator(func):
+                    tools[name] = func
+                    return func
+                return decorator
+            
+            mcp.tool = mock_tool
+            unified_context_controller.register_tools(mcp)
+            manage_context = tools["manage_context"]
+            
+            # Mock the manage_context method to test parameter parsing
+            result = manage_context(
+                action="create",
+                level="task",
+                context_id="task-123",
+                data=data_json
+            )
+            
+            # Verify facade was called with parsed dictionary
+            mock_unified_context_facade.create_context.assert_called_once_with(
+                level="task",
+                context_id="task-123",
+                data=data_dict
+            )
+            
+            assert result["success"] is True
     
     def test_unified_context_delegate_data_as_json_string(self, unified_context_controller, mock_unified_context_facade):
         """Test that 'delegate_data' parameter accepts JSON strings."""
@@ -114,15 +132,33 @@ class TestJSONParameterIntegration:
         }
         delegate_json = json.dumps(delegate_dict)
         
-        # Call with JSON string
-        result = unified_context_controller.manage_context(
-            action="delegate",
-            level="task",
-            context_id="task-123",
-            delegate_to="project",
-            delegate_data=delegate_json,
-            delegation_reason="Reusable pattern"
-        )
+        # Mock authentication helper to return test user
+        with patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
+            mock_auth.return_value = "test-user-123"
+            
+            # Register tools to get the manage_context function
+            mcp = Mock()
+            tools = {}
+            
+            def mock_tool(name=None, description=None):
+                def decorator(func):
+                    tools[name] = func
+                    return func
+                return decorator
+            
+            mcp.tool = mock_tool
+            unified_context_controller.register_tools(mcp)
+            manage_context = tools["manage_context"]
+            
+            # Call with JSON string
+            result = manage_context(
+                action="delegate",
+                level="task",
+                context_id="task-123",
+                delegate_to="project",
+                delegate_data=delegate_json,
+                delegation_reason="Reusable pattern"
+            )
         
         # Verify facade was called with parsed dictionary
         mock_unified_context_facade.delegate_context.assert_called_once_with(
@@ -141,12 +177,30 @@ class TestJSONParameterIntegration:
         filters_dict = {"status": "active", "priority": "high", "tags": ["important"]}
         filters_json = json.dumps(filters_dict)
         
-        # Call with JSON string
-        result = unified_context_controller.manage_context(
-            action="list",
-            level="task",
-            filters=filters_json
-        )
+        # Mock authentication helper to return test user
+        with patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
+            mock_auth.return_value = "test-user-123"
+            
+            # Register tools to get the manage_context function
+            mcp = Mock()
+            tools = {}
+            
+            def mock_tool(name=None, description=None):
+                def decorator(func):
+                    tools[name] = func
+                    return func
+                return decorator
+            
+            mcp.tool = mock_tool
+            unified_context_controller.register_tools(mcp)
+            manage_context = tools["manage_context"]
+            
+            # Call with JSON string
+            result = manage_context(
+                action="list",
+                level="task",
+                filters=filters_json
+            )
         
         # Verify facade was called with parsed dictionary
         mock_unified_context_facade.list_contexts.assert_called_once_with(
@@ -185,13 +239,31 @@ class TestJSONParameterIntegration:
     
     def test_invalid_json_string_returns_helpful_error(self, unified_context_controller):
         """Test that invalid JSON strings return helpful error messages."""
-        # Call with invalid JSON
-        result = unified_context_controller.manage_context(
-            action="create",
-            level="task",
-            context_id="task-123",
-            data='{invalid json string}'
-        )
+        # Mock authentication helper to return test user
+        with patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
+            mock_auth.return_value = "test-user-123"
+            
+            # Register tools to get the manage_context function
+            mcp = Mock()
+            tools = {}
+            
+            def mock_tool(name=None, description=None):
+                def decorator(func):
+                    tools[name] = func
+                    return func
+                return decorator
+            
+            mcp.tool = mock_tool
+            unified_context_controller.register_tools(mcp)
+            manage_context = tools["manage_context"]
+            
+            # Call with invalid JSON
+            result = manage_context(
+                action="create",
+                level="task",
+                context_id="task-123",
+                data='{invalid json string}'
+            )
         
         # Verify error response
         assert result["success"] is False
@@ -218,22 +290,40 @@ class TestJSONParameterIntegration:
         data_dict = {"title": "Test"}
         delegate_json = '{"pattern": "test_pattern"}'
         
-        # First create with dict
-        unified_context_controller.manage_context(
-            action="create",
-            level="task",
-            context_id="task-123",
-            data=data_dict
-        )
-        
-        # Then delegate with JSON string
-        result = unified_context_controller.manage_context(
-            action="delegate",
-            level="task",
-            context_id="task-123",
-            delegate_to="project",
-            delegate_data=delegate_json
-        )
+        # Mock authentication helper to return test user
+        with patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
+            mock_auth.return_value = "test-user-123"
+            
+            # Register tools to get the manage_context function
+            mcp = Mock()
+            tools = {}
+            
+            def mock_tool(name=None, description=None):
+                def decorator(func):
+                    tools[name] = func
+                    return func
+                return decorator
+            
+            mcp.tool = mock_tool
+            unified_context_controller.register_tools(mcp)
+            manage_context = tools["manage_context"]
+            
+            # First create with dict
+            manage_context(
+                action="create",
+                level="task",
+                context_id="task-123",
+                data=data_dict
+            )
+            
+            # Then delegate with JSON string
+            result = manage_context(
+                action="delegate",
+                level="task",
+                context_id="task-123",
+                delegate_to="project",
+                delegate_data=delegate_json
+            )
         
         # Verify both calls succeeded
         assert mock_unified_context_facade.create_context.called
@@ -245,15 +335,33 @@ class TestJSONParameterIntegration:
     
     def test_none_values_handled_correctly(self, unified_context_controller, mock_unified_context_facade):
         """Test that None values for dict parameters are handled correctly."""
-        # Call with None values
-        result = unified_context_controller.manage_context(
-            action="create",
-            level="task",
-            context_id="task-123",
-            data=None,
-            delegate_data=None,
-            filters=None
-        )
+        # Mock authentication helper to return test user
+        with patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
+            mock_auth.return_value = "test-user-123"
+            
+            # Register tools to get the manage_context function
+            mcp = Mock()
+            tools = {}
+            
+            def mock_tool(name=None, description=None):
+                def decorator(func):
+                    tools[name] = func
+                    return func
+                return decorator
+            
+            mcp.tool = mock_tool
+            unified_context_controller.register_tools(mcp)
+            manage_context = tools["manage_context"]
+            
+            # Call with None values
+            result = manage_context(
+                action="create",
+                level="task",
+                context_id="task-123",
+                data=None,
+                delegate_data=None,
+                filters=None
+            )
         
         # Should succeed with empty dict for data
         mock_unified_context_facade.create_context.assert_called_once_with(
@@ -285,13 +393,31 @@ class TestJSONParameterIntegration:
         }
         complex_json = json.dumps(complex_data)
         
-        # Call with complex JSON
-        result = unified_context_controller.manage_context(
-            action="create",
-            level="task",
-            context_id="task-123",
-            data=complex_json
-        )
+        # Mock authentication helper to return test user
+        with patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
+            mock_auth.return_value = "test-user-123"
+            
+            # Register tools to get the manage_context function
+            mcp = Mock()
+            tools = {}
+            
+            def mock_tool(name=None, description=None):
+                def decorator(func):
+                    tools[name] = func
+                    return func
+                return decorator
+            
+            mcp.tool = mock_tool
+            unified_context_controller.register_tools(mcp)
+            manage_context = tools["manage_context"]
+            
+            # Call with complex JSON
+            result = manage_context(
+                action="create",
+                level="task",
+                context_id="task-123",
+                data=complex_json
+            )
         
         # Verify complex structure was parsed correctly
         mock_unified_context_facade.create_context.assert_called_once_with(

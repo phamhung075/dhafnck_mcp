@@ -373,6 +373,49 @@ body {
     background-color: var(--color-background-tertiary);
     @apply animate-pulse rounded;
   }
+
+  /* Context Display Components */
+  .theme-context-section {
+    background-color: var(--color-background-secondary);
+    border: 1px solid var(--color-surface-border);
+    @apply p-3 rounded;
+  }
+
+  .theme-context-metadata {
+    background-color: var(--color-info-light);
+    border: 1px solid var(--color-info);
+    @apply p-3 rounded;
+  }
+
+  .theme-context-data {
+    background-color: var(--color-success-light);
+    border: 1px solid var(--color-success);
+    @apply p-3 rounded;
+  }
+
+  .theme-context-insights {
+    background-color: var(--color-secondary-light);
+    border: 1px solid var(--color-secondary);
+    @apply p-3 rounded space-y-2;
+  }
+
+  .theme-context-progress {
+    background-color: var(--color-warning-light);
+    border: 1px solid var(--color-warning);
+    @apply p-3 rounded space-y-2;
+  }
+
+  .theme-context-completion {
+    background-color: var(--color-success-light);
+    border: 1px solid var(--color-success);
+    @apply p-3 rounded;
+  }
+
+  .theme-context-raw {
+    background-color: var(--color-code-background);
+    border: 1px solid var(--color-code-border);
+    @apply p-3 rounded;
+  }
 }
 
 /* Utility Classes for Theme */

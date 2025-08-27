@@ -45,7 +45,21 @@ class UserFilteredRepository(Generic[T], ABC):
         Raises:
             RuntimeError: If no user is authenticated
         """
-        user_id = get_current_user_id()
+        context_user_obj = get_current_user_id()
+        
+        # Extract user_id string from the context object (handles BackwardCompatUserContext objects)
+        user_id = None
+        if context_user_obj:
+            if isinstance(context_user_obj, str):
+                # Already a string
+                user_id = context_user_obj
+            elif hasattr(context_user_obj, 'user_id'):
+                # Extract user_id attribute from BackwardCompatUserContext
+                user_id = context_user_obj.user_id
+            else:
+                # Fallback: convert to string
+                user_id = str(context_user_obj) if context_user_obj else None
+        
         if not user_id:
             raise RuntimeError("No authenticated user in context")
         return user_id

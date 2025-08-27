@@ -802,7 +802,7 @@ class TestDatabaseModels:
     
     def test_datetime_fields_auto_population(self, session):
         """Test that datetime fields are automatically populated"""
-        before_create = datetime.utcnow().replace(microsecond=0)  # Remove microseconds for comparison
+        before_create = datetime.utcnow()
         
         project = Project(
             id=str(uuid.uuid4()),
@@ -813,16 +813,14 @@ class TestDatabaseModels:
         session.add(project)
         session.commit()
         
-        after_create = datetime.utcnow().replace(microsecond=0) + timedelta(seconds=1)  # Add buffer
+        after_create = datetime.utcnow() + timedelta(seconds=2)  # Add buffer
         
         retrieved = session.query(Project).filter_by(name="Datetime Test Project").first()
         assert retrieved.created_at is not None
         assert retrieved.updated_at is not None
-        # Convert retrieved datetimes to comparison-friendly format
-        retrieved_created = retrieved.created_at.replace(microsecond=0)
-        retrieved_updated = retrieved.updated_at.replace(microsecond=0)
-        assert before_create <= retrieved_created <= after_create
-        assert before_create <= retrieved_updated <= after_create
+        # Check that timestamps are within reasonable range
+        assert before_create <= retrieved.created_at <= after_create
+        assert before_create <= retrieved.updated_at <= after_create
     
     def test_unique_constraints_enforcement(self, session):
         """Test that unique constraints are properly enforced"""

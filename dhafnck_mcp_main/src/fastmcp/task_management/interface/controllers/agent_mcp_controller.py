@@ -100,7 +100,24 @@ class AgentMCPController:
             validated_user_id = validate_user_id(user_id, "Agent facade creation")
         else:
             # Get current user context from JWT token or handle authentication
-            current_user_id = get_current_user_id()
+            context_user_obj = get_current_user_id()
+            logger.info(f"🎯 Agent Controller: get_current_user_id() returned: {context_user_obj} (type: {type(context_user_obj)})")
+            
+            # Extract user_id string from the context object (handles BackwardCompatUserContext objects)
+            current_user_id = None
+            if context_user_obj:
+                if isinstance(context_user_obj, str):
+                    # Already a string
+                    current_user_id = context_user_obj
+                elif hasattr(context_user_obj, 'user_id'):
+                    # Extract user_id attribute from BackwardCompatUserContext
+                    current_user_id = context_user_obj.user_id
+                    logger.info(f"🔧 Agent Controller: Extracted user_id from context object: {current_user_id}")
+                else:
+                    # Fallback: convert to string
+                    current_user_id = str(context_user_obj) if context_user_obj else None
+                    logger.warning(f"⚠️ Agent Controller: Fallback string conversion: {current_user_id}")
+            
             if current_user_id:
                 validated_user_id = validate_user_id(current_user_id, "Agent facade creation")
             else:

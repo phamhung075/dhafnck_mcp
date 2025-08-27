@@ -7,6 +7,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 ## [Unreleased]
 
 ### Added
+- **Frontend Dark Mode Context Display Fix** (2025-08-27)
+  - **Fixed critical UI issue**: Context display areas remained light colored in dark mode, causing poor readability
+  - **Problem**: `TaskContextDialog.tsx` component used hardcoded CSS classes (`bg-gray-50`, `bg-blue-50`, etc.) instead of theme variables
+  - **Solution**: 
+    - Added new theme-aware CSS classes in `src/styles/theme.css`: `theme-context-section`, `theme-context-metadata`, `theme-context-data`, `theme-context-insights`, `theme-context-progress`, `theme-context-completion`, `theme-context-raw`
+    - Replaced hardcoded colors with theme variables that automatically adapt to light/dark modes
+    - Updated text colors to use `text-base-primary` and `text-base-secondary` for proper contrast
+    - Replaced status alerts with `theme-alert-warning` and `theme-alert-error` classes
+    - Applied theme badges using `theme-badge-primary` for consistent styling
+  - **Files Modified**:
+    - `dhafnck-frontend/src/styles/theme.css`: Added context-specific theme classes
+    - `dhafnck-frontend/src/components/TaskContextDialog.tsx`: Updated to use theme-aware classes
+  - **Impact**: Context displays now properly adapt to dark mode with appropriate contrast ratios, significantly improving user experience
+  - **User Benefit**: Users can now comfortably read context information in both light and dark themes without eye strain
+
 - **Complete MCP Tools Integration for All 71 Agents** (2025-08-27)
   - Implemented comprehensive MCP (Model Context Protocol) tool integration across all agent categories
   - **Role-Based Tool Assignment**: Each agent category receives tools appropriate for their function
@@ -32,16 +47,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
   - **Impact**: Agents now have access to appropriate tools for their specialized functions, enabling advanced workflows
 
 ### Fixed
-- **CRITICAL**: User context resolution in authentication helper now properly extracts user_id from `BackwardCompatUserContext` objects (2025-08-27)
-  - **Root Cause**: `BackwardCompatUserContext` objects were being passed as user_id to database layer instead of extracting user_id string
-  - **Error**: `invalid input syntax for type uuid: <fastmcp.auth.middleware.request_context_middleware.get_current_user_context.<locals>.BackwardCompatUserContext object>`
-  - **Solution**: Added `_extract_user_id_from_context_object()` function to properly convert context objects to user ID strings
+- **CRITICAL**: User context serialization bug causing frontend/MCP project data mismatch (2025-08-27)
+  - **Root Cause**: Controllers were storing Python object representations (`<BackwardCompatUserContext object at 0x...>`) instead of actual user ID strings in the database
+  - **Problem**: MCP backend could see multiple projects but frontend only showed 1 project due to improper user filtering
+  - **Solution**: Fixed user context object extraction in 4 critical components:
+    - `ProjectMCPController.manage_project()`: Now properly extracts user_id from BackwardCompatUserContext objects
+    - `AgentMCPController._get_facade()`: Fixed context object handling for agent operations  
+    - `UserFilteredRepository._get_current_user_id()`: Added proper user_id extraction logic
+    - `TaskApplicationFacade.create_task()`: Fixed user context resolution for task creation
   - **Files Modified**:
-    - `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/auth_helper.py`: Added context object extraction logic
-    - Updated `get_authenticated_user_id()`, `get_user_id_from_request_state()` functions
-    - Enhanced context resolution for RequestContextMiddleware and custom user context middleware
-  - **Impact**: Fixes SQL errors preventing task creation and other operations when authentication context returns objects instead of strings
-  - **Testing**: Created verification script `test-user-id-extraction.py` - all extraction scenarios pass
+    - `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/project_mcp_controller.py`: Lines 149-176
+    - `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/agent_mcp_controller.py`: Lines 101-125
+    - `dhafnck_mcp_main/src/fastmcp/auth/mcp_integration/repository_filter.py`: Lines 38-65
+    - `dhafnck_mcp_main/src/fastmcp/task_management/application/facades/task_application_facade.py`: Lines 153-174
+  - **Technical Details**: Added context object type checking to handle both string user IDs and BackwardCompatUserContext objects with proper attribute extraction
+  - **Impact**: Resolves frontend-backend data sync issues, ensures proper user-scoped data filtering across all components
+  - **User Benefit**: Frontend now correctly displays all user projects and maintains proper data isolation between users
 
 ### Fixed (Critical)
 - **All Agent Capabilities Corrected Based on Role Requirements** (2025-08-27)

@@ -149,11 +149,28 @@ class ProjectMCPController(ContextPropagationMixin):
         # Get actual user ID from context if not provided
         if user_id is None:
             logger.info(f"🔍 Project Controller: No user_id provided, trying context extraction...")
-            context_user_id = get_current_user_id()
-            logger.info(f"🎯 Project Controller: get_current_user_id() returned: {context_user_id}")
-            if context_user_id:
-                user_id = context_user_id
-                logger.info(f"✅ Project Controller: Using context user_id: {user_id}")
+            context_user_obj = get_current_user_id()
+            logger.info(f"🎯 Project Controller: get_current_user_id() returned: {context_user_obj} (type: {type(context_user_obj)})")
+            
+            # Extract user_id string from the context object (handles BackwardCompatUserContext objects)
+            if context_user_obj:
+                if isinstance(context_user_obj, str):
+                    # Already a string
+                    user_id = context_user_obj
+                elif hasattr(context_user_obj, 'user_id'):
+                    # Extract user_id attribute from BackwardCompatUserContext
+                    user_id = context_user_obj.user_id
+                    logger.info(f"🔧 Project Controller: Extracted user_id from context object: {user_id}")
+                else:
+                    # Fallback: convert to string
+                    user_id = str(context_user_obj) if context_user_obj else None
+                    logger.warning(f"⚠️ Project Controller: Fallback string conversion: {user_id}")
+                
+                if user_id:
+                    logger.info(f"✅ Project Controller: Using extracted user_id: {user_id}")
+                else:
+                    logger.error(f"❌ Project Controller: Could not extract user_id from context object")
+                    raise UserAuthenticationRequiredError(f"Project {action}")
             else:
                 logger.error(f"❌ Project Controller: No authentication found - user authentication is required")
                 raise UserAuthenticationRequiredError(f"Project {action}")

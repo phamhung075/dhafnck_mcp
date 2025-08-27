@@ -12,7 +12,7 @@ This test demonstrates that the critical authentication issue is resolved:
 import pytest
 import os
 import uuid
-from unittest.mock import Mock
+from unittest.mock import Mock, AsyncMock
 
 from mcp.server.auth.middleware.bearer_auth import BearerAuthBackend, RequireAuthMiddleware, AuthenticatedUser
 from mcp.server.auth.provider import AccessToken

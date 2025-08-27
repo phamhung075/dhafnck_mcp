@@ -369,7 +369,6 @@ def create_sse_app(
         from .routes.user_scoped_task_routes import router as task_router
         from .routes.task_summary_routes import task_summary_router
         from fastapi import FastAPI
-        from starlette.routing import Mount
         
         # Create a minimal FastAPI app for V2 routes
         v2_app = FastAPI()
@@ -661,7 +660,6 @@ def create_streamable_http_app(
         from .routes.user_scoped_task_routes import router as task_router
         from .routes.task_summary_routes import task_summary_router
         from fastapi import FastAPI
-        from starlette.routing import Mount
         
         # Create a minimal FastAPI app for V2 routes
         v2_app = FastAPI()

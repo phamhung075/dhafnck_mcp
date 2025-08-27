@@ -32,30 +32,30 @@ export const TaskContextDialog: React.FC<TaskContextDialogProps> = ({
         
         <div className="flex-1 overflow-y-auto space-y-4">
           {/* Task Information */}
-          <div className="bg-gray-50 p-3 rounded">
+          <div className="theme-context-section">
             <h4 className="font-medium text-sm mb-1">Task: {task?.title}</h4>
-            <p className="text-xs text-muted-foreground">ID: {task?.id}</p>
+            <p className="text-xs text-base-secondary">ID: {task?.id}</p>
           </div>
 
           {/* Loading State */}
           {loading && (
             <div className="flex items-center justify-center py-8">
-              <div className="text-sm text-muted-foreground">Loading context...</div>
+              <div className="text-sm text-base-secondary">Loading context...</div>
             </div>
           )}
 
           {/* Special Message State (No context available) */}
           {!loading && context && context.message && !context.error && (
             <div className="space-y-4">
-              <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                <h4 className="font-medium text-yellow-800 mb-2">{context.message}</h4>
+              <div className="theme-alert theme-alert-warning">
+                <h4 className="font-medium mb-2">{context.message}</h4>
                 {context.info && (
-                  <p className="text-sm text-yellow-700 mb-3">{context.info}</p>
+                  <p className="text-sm mb-3">{context.info}</p>
                 )}
                 {context.suggestions && context.suggestions.length > 0 && (
                   <div className="mt-3">
-                    <p className="text-sm font-medium text-yellow-800 mb-1">Suggestions:</p>
-                    <ul className="list-disc list-inside text-sm text-yellow-700 space-y-1">
+                    <p className="text-sm font-medium mb-1">Suggestions:</p>
+                    <ul className="list-disc list-inside text-sm space-y-1">
                       {context.suggestions.map((suggestion: string, index: number) => (
                         <li key={index}>{suggestion}</li>
                       ))}
@@ -68,10 +68,10 @@ export const TaskContextDialog: React.FC<TaskContextDialogProps> = ({
 
           {/* Error State */}
           {!loading && context && context.error && (
-            <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-              <h4 className="font-medium text-red-800 mb-2">{context.message}</h4>
+            <div className="theme-alert theme-alert-error">
+              <h4 className="font-medium mb-2">{context.message}</h4>
               {context.details && (
-                <p className="text-sm text-red-700">{context.details}</p>
+                <p className="text-sm">{context.details}</p>
               )}
             </div>
           )}
@@ -82,9 +82,9 @@ export const TaskContextDialog: React.FC<TaskContextDialogProps> = ({
               {/* Context Summary */}
               {context.metadata && (
                 <div>
-                  <h4 className="font-semibold text-sm mb-3 text-blue-700">Context Metadata</h4>
-                  <div className="bg-blue-50 p-3 rounded">
-                    <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
+                  <h4 className="font-semibold text-sm mb-3 text-base-primary">Context Metadata</h4>
+                  <div className="theme-context-metadata">
+                    <pre className="text-xs overflow-x-auto whitespace-pre-wrap text-base-primary">
                       {JSON.stringify(context.metadata, null, 2)}
                     </pre>
                   </div>
@@ -94,9 +94,9 @@ export const TaskContextDialog: React.FC<TaskContextDialogProps> = ({
               {/* Context Data */}
               {context.data && (
                 <div>
-                  <h4 className="font-semibold text-sm mb-3 text-green-700">Context Data</h4>
-                  <div className="bg-green-50 p-3 rounded">
-                    <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
+                  <h4 className="font-semibold text-sm mb-3 text-base-primary">Context Data</h4>
+                  <div className="theme-context-data">
+                    <pre className="text-xs overflow-x-auto whitespace-pre-wrap text-base-primary">
                       {JSON.stringify(context.data, null, 2)}
                     </pre>
                   </div>
@@ -106,14 +106,14 @@ export const TaskContextDialog: React.FC<TaskContextDialogProps> = ({
               {/* Insights */}
               {context.insights && context.insights.length > 0 && (
                 <div>
-                  <h4 className="font-semibold text-sm mb-3 text-purple-700">Insights</h4>
-                  <div className="bg-purple-50 p-3 rounded space-y-2">
+                  <h4 className="font-semibold text-sm mb-3 text-base-primary">Insights</h4>
+                  <div className="theme-context-insights">
                     {context.insights.map((insight: any, index: number) => (
-                      <div key={index} className="border-l-4 border-purple-300 pl-3">
-                        <p className="text-sm font-medium">{insight.title || `Insight ${index + 1}`}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{insight.content}</p>
+                      <div key={index} className="border-l-4 border-base pl-3">
+                        <p className="text-sm font-medium text-base-primary">{insight.title || `Insight ${index + 1}`}</p>
+                        <p className="text-xs text-base-secondary mt-1">{insight.content}</p>
                         {insight.timestamp && (
-                          <p className="text-xs text-muted-foreground mt-1">
+                          <p className="text-xs text-base-secondary mt-1">
                             {new Date(insight.timestamp).toLocaleString()}
                           </p>
                         )}
@@ -126,19 +126,19 @@ export const TaskContextDialog: React.FC<TaskContextDialogProps> = ({
               {/* Completion Summary - Enhanced Display */}
               {contextDisplay.completionSummary && (
                 <div>
-                  <h4 className="font-semibold text-sm mb-3 text-green-700">
+                  <h4 className="font-semibold text-sm mb-3 text-base-primary">
                     Completion Summary{contextDisplay.isLegacy ? ' (Legacy Format)' : ''}
                   </h4>
-                  <div className={`p-3 rounded ${contextDisplay.isLegacy ? 'bg-yellow-50' : 'bg-green-50'}`}>
-                    <p className="text-sm whitespace-pre-wrap">{contextDisplay.completionSummary}</p>
+                  <div className={`${contextDisplay.isLegacy ? 'theme-alert theme-alert-warning' : 'theme-context-completion'}`}>
+                    <p className="text-sm whitespace-pre-wrap text-base-primary">{contextDisplay.completionSummary}</p>
                     {contextDisplay.completionPercentage && (
-                      <div className="mt-2 pt-2 border-t border-green-200">
-                        <span className="text-xs text-muted-foreground">Completion: </span>
-                        <span className="text-xs font-medium">{contextDisplay.completionPercentage}%</span>
+                      <div className="mt-2 pt-2 border-t border-base">
+                        <span className="text-xs text-base-secondary">Completion: </span>
+                        <span className="text-xs font-medium text-base-primary">{contextDisplay.completionPercentage}%</span>
                       </div>
                     )}
                     {contextDisplay.isLegacy && (
-                      <p className="text-xs text-muted-foreground mt-2 italic">
+                      <p className="text-xs text-base-secondary mt-2 italic">
                         Note: This is using the legacy completion_summary format
                       </p>
                     )}
@@ -149,9 +149,9 @@ export const TaskContextDialog: React.FC<TaskContextDialogProps> = ({
               {/* Task Status from Metadata */}
               {contextDisplay.taskStatus && (
                 <div>
-                  <h4 className="font-semibold text-sm mb-3 text-blue-700">Task Status</h4>
-                  <div className="bg-blue-50 p-3 rounded">
-                    <span className="inline-block px-2 py-1 bg-blue-200 text-blue-800 text-xs font-medium rounded">
+                  <h4 className="font-semibold text-sm mb-3 text-base-primary">Task Status</h4>
+                  <div className="theme-context-metadata">
+                    <span className="theme-badge theme-badge-primary">
                       {contextDisplay.taskStatus}
                     </span>
                   </div>
@@ -161,11 +161,11 @@ export const TaskContextDialog: React.FC<TaskContextDialogProps> = ({
               {/* Testing Notes from Next Steps */}
               {contextDisplay.testingNotes.length > 0 && (
                 <div>
-                  <h4 className="font-semibold text-sm mb-3 text-purple-700">Testing Notes & Next Steps</h4>
-                  <div className="bg-purple-50 p-3 rounded space-y-2">
+                  <h4 className="font-semibold text-sm mb-3 text-base-primary">Testing Notes & Next Steps</h4>
+                  <div className="theme-context-insights">
                     {contextDisplay.testingNotes.map((step: string, index: number) => (
-                      <div key={index} className="border-l-4 border-purple-300 pl-3">
-                        <p className="text-sm">{step}</p>
+                      <div key={index} className="border-l-4 border-base pl-3">
+                        <p className="text-sm text-base-primary">{step}</p>
                       </div>
                     ))}
                   </div>
@@ -175,13 +175,13 @@ export const TaskContextDialog: React.FC<TaskContextDialogProps> = ({
               {/* Progress History */}
               {context.progress && Array.isArray(context.progress) && context.progress.length > 0 && (
                 <div>
-                  <h4 className="font-semibold text-sm mb-3 text-orange-700">Progress History</h4>
-                  <div className="bg-orange-50 p-3 rounded space-y-2">
+                  <h4 className="font-semibold text-sm mb-3 text-base-primary">Progress History</h4>
+                  <div className="theme-context-progress">
                     {context.progress.map((progress: any, index: number) => (
-                      <div key={index} className="border-l-4 border-orange-300 pl-3">
-                        <p className="text-sm">{progress.content}</p>
+                      <div key={index} className="border-l-4 border-base pl-3">
+                        <p className="text-sm text-base-primary">{progress.content}</p>
                         {progress.timestamp && (
-                          <p className="text-xs text-muted-foreground mt-1">
+                          <p className="text-xs text-base-secondary mt-1">
                             {new Date(progress.timestamp).toLocaleString()}
                           </p>
                         )}
@@ -193,9 +193,9 @@ export const TaskContextDialog: React.FC<TaskContextDialogProps> = ({
 
               {/* Raw Context */}
               <div>
-                <h4 className="font-semibold text-sm mb-3 text-gray-700">Complete Context (Raw JSON)</h4>
-                <div className="bg-gray-100 p-3 rounded">
-                  <pre className="text-xs overflow-x-auto whitespace-pre-wrap max-h-96">
+                <h4 className="font-semibold text-sm mb-3 text-base-primary">Complete Context (Raw JSON)</h4>
+                <div className="theme-context-raw">
+                  <pre className="text-xs overflow-x-auto whitespace-pre-wrap max-h-96 text-base-primary">
                     {JSON.stringify(context, null, 2)}
                   </pre>
                 </div>
@@ -207,8 +207,8 @@ export const TaskContextDialog: React.FC<TaskContextDialogProps> = ({
           {!loading && !context && (
             <div className="flex items-center justify-center py-8">
               <div className="text-center">
-                <p className="text-sm text-muted-foreground mb-2">No context data available</p>
-                <p className="text-xs text-muted-foreground">Complete the task or update it to create context</p>
+                <p className="text-sm text-base-secondary mb-2">No context data available</p>
+                <p className="text-xs text-base-secondary">Complete the task or update it to create context</p>
               </div>
             </div>
           )}
