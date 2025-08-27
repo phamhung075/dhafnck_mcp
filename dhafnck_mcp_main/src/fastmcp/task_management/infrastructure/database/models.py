@@ -17,9 +17,12 @@ from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.sql import func
 from .database_config import Base
 
-# Global singleton UUID constant for consistent reference across the system
-# This UUID is used instead of "global_singleton" string to satisfy PostgreSQL UUID constraints
-GLOBAL_SINGLETON_UUID = "00000000-0000-0000-0000-000000000001"
+# DEPRECATED: Global singleton UUID constant - SHOULD NOT BE USED FOR NEW CODE
+# This UUID was used for system-wide global context singleton pattern, which is incorrect.
+# NEW APPROACH: Each user gets their own global context with a unique UUID generated from user_id.
+# This constant is kept only for backward compatibility during migration.
+# TODO: Remove after migration to user-scoped global contexts is complete
+GLOBAL_SINGLETON_UUID = "00000000-0000-0000-0000-000000000001"  # DEPRECATED - DO NOT USE
 
 
 class APIToken(Base):

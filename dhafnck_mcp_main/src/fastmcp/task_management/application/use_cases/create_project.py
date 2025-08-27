@@ -83,7 +83,27 @@ class CreateProjectUseCase:
                 # Note: The repository should already be user-scoped by the service layer
                 user_id = None
                 if hasattr(self._project_repository, 'user_id'):
-                    user_id = getattr(self._project_repository, 'user_id', None)
+                    user_context = getattr(self._project_repository, 'user_id', None)
+                    
+                    # Extract actual user ID string from user context object
+                    if user_context is not None:
+                        if hasattr(user_context, 'user_id'):
+                            user_id = user_context.user_id
+                        elif hasattr(user_context, 'id'):
+                            user_id = user_context.id
+                        elif isinstance(user_context, str):
+                            user_id = user_context
+                        else:
+                            # Try to get user ID from the context manager
+                            try:
+                                from ....auth.middleware.request_context_middleware import get_current_user_context
+                                current_user = get_current_user_context()
+                                if current_user and hasattr(current_user, 'user_id'):
+                                    user_id = current_user.user_id
+                                elif current_user and hasattr(current_user, 'id'):
+                                    user_id = current_user.id
+                            except Exception:
+                                pass
                 
                 if user_id is None:
                     # NO FALLBACKS ALLOWED - user authentication is required
@@ -91,8 +111,17 @@ class CreateProjectUseCase:
                 
                 user_id = validate_user_id(user_id, "Project context creation")
                 
-                # Create unified context facade
+                # Create unified context facade factory and ensure global context exists
                 factory = UnifiedContextFacadeFactory()
+                
+                # Auto-create user-scoped global context if it doesn't exist
+                # This is required for the hierarchical context system to function properly
+                global_context_created = factory.auto_create_global_context(user_id=user_id)
+                if not global_context_created:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Failed to ensure global context exists for user {user_id} - proceeding with project context creation")
+                
                 context_facade = factory.create_facade(
                     user_id=user_id,
                     project_id=project.id
@@ -120,6 +149,11 @@ class CreateProjectUseCase:
                     import logging
                     logger = logging.getLogger(__name__)
                     logger.warning(f"Failed to create project context for {project.id}: {context_response.get('error')}")
+                else:
+                    # Log success for debugging
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.info(f"Successfully created project context for {project.id}")
                     
             except Exception as context_error:
                 # Log context creation error but don't fail project creation

@@ -6,6 +6,186 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Added
+- **Complete MCP Tools Integration for All 71 Agents** (2025-08-27)
+  - Implemented comprehensive MCP (Model Context Protocol) tool integration across all agent categories
+  - **Role-Based Tool Assignment**: Each agent category receives tools appropriate for their function
+  - **Tool Categories Implemented**:
+    - **Testing Agents** (10 agents): Browser automation, IDE diagnostics, task management, sequential thinking
+    - **Coding Agents** (8 agents): IDE tools, code execution, context management, git operations, browser debugging  
+    - **Design Agents** (8 agents): shadcn-ui components, browser tools, task management for UI work
+    - **Documentation Agents** (4 agents): Task management, context tools, project management, IDE diagnostics
+    - **Analysis Agents** (12 agents): Sequential thinking, context management, browser tools for research
+    - **Orchestration Agents** (11 agents): Full dhafnck suite - tasks, projects, agents, compliance, connections
+    - **Marketing Agents** (11 agents): Browser tools for social media, task management, context tools
+    - **Concept Agents** (6 agents): Sequential thinking and context tools for ideation
+    - **System Agents** (1 agent): Complete tool suite including shadcn-ui, browser, IDE, and dhafnck tools
+  - **MCP Tool Types Added**:
+    - `mcp__browsermcp__*`: Browser automation for UI testing and social media management
+    - `mcp__ide__*`: IDE diagnostics and code execution for development
+    - `mcp__dhafnck_mcp_http__*`: Task, project, context, and system management
+    - `mcp__sequential-thinking__*`: Advanced reasoning capabilities
+    - `mcp__shadcn-ui-server__*`: UI component management and installation
+  - **Files Modified**: All 71 `capabilities.yaml` files in `dhafnck_mcp_main/agent-library/agents/`
+  - **Script Created**: `add_mcp_tools_to_agents.py` for automated MCP tool assignment
+  - **Report Generated**: `mcp_tools_addition_report.md` with complete tool matrix
+  - **Impact**: Agents now have access to appropriate tools for their specialized functions, enabling advanced workflows
+
+### Fixed
+- **CRITICAL**: User context resolution in authentication helper now properly extracts user_id from `BackwardCompatUserContext` objects (2025-08-27)
+  - **Root Cause**: `BackwardCompatUserContext` objects were being passed as user_id to database layer instead of extracting user_id string
+  - **Error**: `invalid input syntax for type uuid: <fastmcp.auth.middleware.request_context_middleware.get_current_user_context.<locals>.BackwardCompatUserContext object>`
+  - **Solution**: Added `_extract_user_id_from_context_object()` function to properly convert context objects to user ID strings
+  - **Files Modified**:
+    - `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/auth_helper.py`: Added context object extraction logic
+    - Updated `get_authenticated_user_id()`, `get_user_id_from_request_state()` functions
+    - Enhanced context resolution for RequestContextMiddleware and custom user context middleware
+  - **Impact**: Fixes SQL errors preventing task creation and other operations when authentication context returns objects instead of strings
+  - **Testing**: Created verification script `test-user-id-extraction.py` - all extraction scenarios pass
+
+### Fixed (Critical)
+- **All Agent Capabilities Corrected Based on Role Requirements** (2025-08-27)
+  - Fixed incorrect file permissions for ALL 71 agents in the system
+  - **Problem**: Many agents had incorrect or missing file read/write permissions preventing them from functioning
+  - **Solution**: Created comprehensive permission matrix based on agent roles and responsibilities
+  - **Agent Categories Fixed**:
+    - **Testing Agents** (10 agents): Now have read/write/create permissions for test files
+    - **Coding Agents** (8 agents): Full file operations including delete for refactoring
+    - **Documentation Agents** (4 agents): Read and write/create for documentation
+    - **Design Agents** (8 agents): Read/write/create for design files
+    - **Analysis Agents** (12 agents): Read-only access for analysis and research
+    - **Orchestration Agents** (11 agents): Read/write/create for management tasks
+    - **Marketing Agents** (11 agents): Read/write/create for content creation
+    - **Concept Agents** (6 agents): Read-only for idea processing
+    - **System Agents** (1 agent): Full access including delete
+  - **Files Modified**: All 71 `capabilities.yaml` files in agent-library
+  - **Script Created**: `fix_agent_capabilities.py` for automated capability management
+  - **Report Generated**: `agent_capability_fix_report.md` with full permission matrix
+  - **Impact**: Agents can now properly perform their designated tasks with appropriate file access
+
+### Enhanced
+- **Testing Agents Enhanced with File Timestamp Intelligence** (2025-08-27)
+  - Added intelligent file timestamp comparison to multiple testing agents to prevent incorrect code reversions
+  - **CRITICAL**: Agents now check file modification times before generating, updating, or executing tests
+  - **Agents Enhanced**:
+    - `test_orchestrator_agent`: Orchestrates tests with timestamp awareness
+    - `test_case_generator_agent`: Generates tests for current code, not old versions
+    - `functional_tester_agent`: Executes tests with intelligent failure analysis
+  - **Key Features**:
+    - File timestamp checking with `stat`, `ls -l`, and git commands
+    - Smart decision logic: Updates tests to match newer code, never reverts code to match old tests
+    - Prevents deletion of new functionality to satisfy outdated tests
+    - Distinguishes between real bugs and outdated test expectations
+    - Preserves recent code improvements and innovations
+  - **New Capabilities**:
+    - File system commands: `stat`, `ls -l`, `git log`, `git diff`, `diff`, `find`, `date`
+    - Timestamp comparison logic in decision matrix
+    - Intelligent failure classification (bug vs outdated test)
+    - Git history analysis for change context
+  - **Files Created/Modified**:
+    - `dhafnck_mcp_main/agent-library/agents/test_orchestrator_agent/contexts/instructions.yaml`: Comprehensive timestamp-aware orchestration
+    - `dhafnck_mcp_main/agent-library/agents/test_orchestrator_agent/capabilities.yaml`: Added file system commands
+    - `dhafnck_mcp_main/agent-library/agents/test_case_generator_agent/contexts/instructions.yaml`: Smart test generation logic
+    - `dhafnck_mcp_main/agent-library/agents/functional_tester_agent/contexts/instructions.yaml`: Intelligent test execution
+  - **Impact**: Testing agents now preserve new code and update tests appropriately
+  - **Usage**: Agents automatically check `code_file.mtime > test_file.mtime` to decide actions
+  - **Note**: Agent loading system already supports `instructions.yaml` files in contexts/ directory
+
+- **Debugger Agent Enhanced with Docker and Browser Debugging Capabilities** (2025-08-27)
+  - Added Docker container debugging tools to debugger agent for system/container log analysis
+  - Added browser MCP tools for live frontend debugging and UI interaction
+  - **New Capabilities Added**:
+    - Docker log viewing: `docker logs`, `docker compose logs` for container debugging
+    - Container inspection: `docker exec`, `docker inspect`, `docker stats` for live debugging
+    - Browser automation: Navigate, click, type, and interact with frontend UI
+    - Console log capture: Get browser console logs for JavaScript error debugging  
+    - Visual debugging: Take screenshots of browser state for UI issue analysis
+    - IDE diagnostics: Get real-time diagnostics from VS Code
+  - **Files Modified**:
+    - `dhafnck_mcp_main/agent-library/agents/debugger_agent/capabilities.yaml`: Added MCP tools and Docker commands
+    - `dhafnck_mcp_main/agent-library/agents/debugger_agent/contexts/debugger_agent_instructions.yaml`: Updated instructions with new debugging techniques
+  - **Impact**: Debugger agent can now debug Docker containers and live frontend applications
+  - **Usage**: Agent can view Docker logs with commands like `docker logs <container>` and interact with frontend using browser MCP tools
+
+### Changed
+- **Global Context Architecture Clarification** (2025-08-27)
+  - **CRITICAL ARCHITECTURAL UPDATE**: Clarified that global context is user-scoped, not system-wide singleton
+  - **Key Changes**:
+    - Each user has their own global context instance (not shared across all users)
+    - Context hierarchy remains: USER-SCOPED GLOBAL → PROJECT → BRANCH → TASK
+    - Global context provides user-specific patterns, standards, and preferences
+    - User isolation maintained throughout entire context hierarchy
+  - **Files Updated**:
+    - `CLAUDE.md`: Updated context hierarchy documentation 
+    - `dhafnck_mcp_main/docs/context-system/01-architecture.md`: Architecture documentation
+    - `dhafnck_mcp_main/docs/troubleshooting-guides/global-context-singleton-setup-solution.md`: Troubleshooting guide
+    - `dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/desc/context/manage_unified_context_description.py`: API documentation
+  - **Impact**: 
+    - Documentation now accurately reflects implemented user-scoped architecture
+    - Eliminates confusion about global context being shared between users
+    - Provides clear understanding that each user's global context is private to them
+  - **Status**: ✅ Documentation Updated - System already implements user-scoped global contexts
+
+### Added
+- **Project Context Migration Script** (2025-08-27)
+  - Created comprehensive migration script to create missing contexts for existing projects
+  - Root Cause: Existing projects don't have contexts and are invisible in frontend
+  - **Features**:
+    - Queries all projects from database and identifies those lacking contexts
+    - Creates complete 4-tier context hierarchy (GLOBAL → PROJECT → BRANCH → TASK)
+    - Handles global context requirement automatically
+    - Reports success/failure for each migration with detailed statistics
+    - Supports dry-run mode for safe testing
+    - Runnable both inside Docker containers and locally
+    - Optional user-specific migration support
+  - **File Created**: `dhafnck_mcp_main/scripts/migrate_project_contexts.py`
+  - **Usage**: `python migrate_project_contexts.py [--dry-run] [--user-id USER_ID]`
+  - **Result**: Makes existing projects visible in frontend by creating missing context records
+  - **Status**: ✅ Ready for execution
+
+### Fixed
+- **Project Context Auto-Creation Implementation** (2025-08-27)
+  - Fixed automatic project context creation during project creation for frontend visibility
+  - Root Cause: Projects created via manage_project weren't automatically creating hierarchical contexts, making them invisible to frontend
+  - **Issues Resolved**:
+    - Fixed "badly formed hexadecimal UUID string" error in global context creation
+    - Enhanced user ID extraction from user context objects in CreateProjectUseCase
+    - Improved UUID normalization in GlobalContextRepository to handle user context objects properly
+    - Added automatic global context creation when missing during project context creation
+  - **Files Modified**:
+    - `dhafnck_mcp_main/src/fastmcp/task_management/application/use_cases/create_project.py` - Enhanced user ID extraction and global context auto-creation
+    - `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/global_context_repository_user_scoped.py` - Fixed UUID normalization for user context objects
+  - **Result**: Project contexts are now successfully created during project creation process
+  - **Status**: ✅ Partial Fix - Contexts are created but user isolation issue remains (contexts not visible in list operations)
+  - **Testing**: Verified context creation success in logs, but frontend visibility still limited by user scope filtering
+
+- **Docker Frontend Health Check Configuration** (2025-08-27)
+  - Fixed frontend container health check failing due to `curl` not being available in development stage
+  - Root Cause: Docker Compose override was using `curl` while development container only had `wget`
+  - Updated health check to use netcat (`nc -z 127.0.0.1 3800`) for simple port connectivity test
+  - Fixed localhost resolution issue by using 127.0.0.1 directly
+  - **Files Modified**:
+    - `docker-system/docker-compose.yml` - Updated frontend health check from curl to netcat
+  - **Result**: Frontend container now shows healthy status instead of unhealthy
+  - **Testing**: Verified health check passes and frontend remains accessible on port 3800
+- **Global Context Singleton Issue**: Resolved issue where context hierarchy required global_singleton context but MCP server failed to initialize it due to database connectivity problems
+  - Verified Supabase database connection working properly (PostgreSQL 17.4)
+  - Confirmed global context auto-creation during system startup (UUID: `00000000-0000-0000-0000-000000000001`) 
+  - Fixed context controller registration in MCP tools
+  - Context hierarchy now working: GLOBAL → PROJECT → BRANCH → TASK
+  - Files: `dhafnck_mcp_main/docs/troubleshooting-guides/global-context-singleton-setup-solution.md`
+
+### Fixed
+- **Fixed manage_context MCP Tool Import Error** (2025-08-27)
+  - Fixed ModuleNotFoundError: No module named 'context_application_facade'
+  - Updated import from `context_application_facade` to `unified_context_facade`
+  - Fixed UnifiedContextFacade initialization in lazy task routes
+  - Updated type annotations and dependency injection
+  - **Files Modified**:
+    - `dhafnck_mcp_main/src/fastmcp/server/routes/lazy_task_routes.py` - Updated imports and facade initialization
+  - **Resolution**: All manage_context operations now work correctly
+  - **Testing**: Verified with health check and context list operations
+
 ### Security
 - **Removed Hardcoded JWT Secrets from Code** (2025-08-27)
   - Removed hardcoded JWT_SECRET_KEY from all source files

@@ -14,7 +14,7 @@ MANAGE_UNIFIED_CONTEXT_DESCRIPTION = """
 
 🏗️ HIERARCHY STRUCTURE:
 
-GLOBAL (Singleton: 'global_singleton')
+GLOBAL (User-scoped: per-user global context)
    ↓ inherits to
 PROJECT (ID: project_id)  
    ↓ inherits to
@@ -36,7 +36,7 @@ TASK (ID: task_id)
 | list               | level                      | filters, user_id, project_id, git_branch_id | List contexts at specified level |
 
 🎯 LEVEL PARAMETER:
-• 'global': Organization-wide singleton context
+• 'global': User-scoped global context (each user has their own)
 • 'project': Project-level contexts 
 • 'branch': Git branch contexts
 • 'task': Task-specific contexts

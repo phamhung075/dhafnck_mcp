@@ -90,7 +90,7 @@ class UnifiedContextFacadeFactory:
         self.session_factory = session_factory
         
         try:
-            # Initialize repositories
+            # Initialize repositories with user-scoped global context repository
             self.global_repo = GlobalContextRepository(session_factory)
             self.project_repo = ProjectContextRepository(session_factory)
             self.branch_repo = BranchContextRepository(session_factory)
@@ -205,28 +205,51 @@ class UnifiedContextFacadeFactory:
         """
         return self.unified_service
     
-    def auto_create_global_context(self) -> bool:
+    def auto_create_global_context(self, user_id: Optional[str] = None) -> bool:
         """
-        Auto-create global context if it doesn't exist.
+        Auto-create user-scoped global context if it doesn't exist.
         
-        This method ensures the global singleton context exists for the hierarchical
+        This method ensures each user has their own global context for the hierarchical
         context system to function properly. It's safe to call multiple times.
+        
+        Args:
+            user_id: The user ID to create global context for. If None, tries to get from current context.
         
         Returns:
             bool: True if global context was created or already exists, False if creation failed
         """
         try:
-            # Check if global context already exists
+            # Get user_id from parameter or current context
+            if not user_id:
+                try:
+                    from ....auth.middleware.request_context_middleware import get_current_user_context
+                    current_user = get_current_user_context()
+                    if current_user and hasattr(current_user, 'user_id'):
+                        user_id = current_user.user_id
+                    elif current_user and hasattr(current_user, 'id'):
+                        user_id = current_user.id
+                except Exception:
+                    pass
+            
+            if not user_id:
+                logger.warning("Cannot auto-create global context: no user_id provided or available")
+                return False
+            
+            # Create user-scoped facade
+            facade = self.create_facade(user_id=user_id)
+            
+            # Check if user's global context already exists using "global_singleton"
+            # The user-scoped repository will convert this to a user-specific UUID
             try:
-                existing_context = self.global_repo.get(GLOBAL_SINGLETON_UUID)
-                if existing_context:
-                    logger.info("Global context already exists")
+                existing_result = facade.get_context(level="global", context_id="global_singleton")
+                if existing_result.get("success", False):
+                    logger.info(f"Global context already exists for user {user_id}")
                     return True
             except Exception:
                 # Context doesn't exist, continue with creation
                 pass
             
-            # Create default global context
+            # Create default global context for this user
             default_global_data = {
                 "organization_name": "Default Organization",
                 "global_settings": {
@@ -238,22 +261,19 @@ class UnifiedContextFacadeFactory:
                 }
             }
             
-            # Create facade with system user ID for global context creation
-            # Global context requires a user_id due to database schema constraints
-            # We use a system user ID for organization-wide global contexts
-            SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000000"  # System user for global contexts
-            facade = self.create_facade(user_id=SYSTEM_USER_ID)
+            # Create user's global context using "global_singleton" identifier
+            # The user-scoped repository will convert this to a unique UUID per user
             result = facade.create_context(
                 level="global",
-                context_id=GLOBAL_SINGLETON_UUID,
+                context_id="global_singleton",
                 data=default_global_data
             )
             
             if result.get("success", False):
-                logger.info("Global context auto-created successfully")
+                logger.info(f"Global context auto-created successfully for user {user_id}")
                 return True
             else:
-                logger.warning(f"Failed to auto-create global context: {result.get('error', 'Unknown error')}")
+                logger.warning(f"Failed to auto-create global context for user {user_id}: {result.get('error', 'Unknown error')}")
                 return False
                 
         except Exception as e:

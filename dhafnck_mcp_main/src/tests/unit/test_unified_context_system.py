@@ -19,7 +19,7 @@ from fastmcp.task_management.application.services.unified_context_service import
 from fastmcp.task_management.interface.controllers.unified_context_controller import (
     UnifiedContextMCPController
 )
-from fastmcp.task_management.infrastructure.repositories.global_context_repository import GlobalContextRepository
+from fastmcp.task_management.infrastructure.repositories.global_context_repository_user_scoped import GlobalContextRepository
 from fastmcp.task_management.infrastructure.repositories.project_context_repository import ProjectContextRepository
 from fastmcp.task_management.infrastructure.repositories.branch_context_repository import BranchContextRepository
 from fastmcp.task_management.infrastructure.repositories.task_context_repository import TaskContextRepository

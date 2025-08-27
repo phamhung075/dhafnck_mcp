@@ -1,5 +1,48 @@
 # Test Changelog
 
+## Test Updates - 2025-08-27 (Authentication Middleware Test Suite - 3 New Test Files Created)
+
+### Authentication Middleware Test Coverage Enhanced
+- **Issue Resolved**: Missing test files for critical authentication middleware components identified in commit 103d8995
+- **Approach**: Created comprehensive test files for Supabase authentication service and middleware components
+- **Completion Rate**: 3/3 test files created (100% success rate)
+- **Coverage**: Supabase authentication integration, dual authentication middleware, request context middleware
+
+### New Authentication Test Files Created (2025-08-27)
+
+#### Infrastructure Tests (1 file)
+- **supabase_auth_test.py**: Complete test coverage for Supabase authentication service
+  - Coverage: Sign up, sign in, password reset, token verification, OAuth integration
+  - Focus: All authentication flows including email verification, error handling, and security
+  - Location: `dhafnck_mcp_main/src/tests/auth/infrastructure/supabase_auth_test.py`
+  - Test Classes: TestSupabaseAuthService
+  - Key Features: Mock Supabase client testing, JWT token verification, OAuth provider support
+  - Security: Tests removal of insecure JWT decoding, proper token validation
+
+#### Middleware Tests (2 files)
+- **dual_auth_middleware_test.py**: Comprehensive tests for unified authentication middleware
+  - Coverage: Token extraction, multiple auth methods (Supabase JWT, local JWT, MCP tokens)
+  - Focus: Request type detection, authentication flow, error handling, token priority
+  - Location: `dhafnck_mcp_main/src/tests/auth/middleware/dual_auth_middleware_test.py`
+  - Test Classes: TestDualAuthMiddleware
+  - Key Features: Tests API token priority, JWT validation with multiple secrets, MCP/frontend detection
+  - Security: Tests proper token validation order and authentication fallback chain
+
+- **request_context_middleware_test.py**: Complete test coverage for authentication context propagation
+  - Coverage: Context variable management, ASGI scope propagation for MCP endpoints
+  - Focus: Authentication context capture, MCP endpoint user propagation, backward compatibility
+  - Location: `dhafnck_mcp_main/src/tests/auth/middleware/request_context_middleware_test.py`
+  - Test Classes: TestRequestContextMiddleware
+  - Key Features: Tests critical fix for MCP authentication, context variable isolation
+  - Bug Fix: Tests proper user propagation to ASGI scope for MCP endpoints
+
+### Test Coverage Analysis
+- **Security Enhancements**: Tests verify removal of insecure JWT decoding practices
+- **Authentication Chain**: Complete coverage of token validation priority (API → Supabase → MCP)
+- **MCP Integration**: Tests fix for "User not found in scope" errors in MCP clients
+- **Context Management**: Full coverage of authentication context propagation through middleware
+- **Error Scenarios**: Comprehensive testing of authentication failures, invalid tokens, rate limiting
+
 ## Test Updates - 2025-08-27 (Token Management and Authentication Test Suite - 4 Files Updated/Created)
 
 ### Token Management and Authentication Test Coverage Enhanced

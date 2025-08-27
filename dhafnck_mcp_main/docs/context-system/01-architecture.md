@@ -7,7 +7,7 @@ The DhafnckMCP Context System implements a 4-tier hierarchical architecture wher
 ## 4-Tier Hierarchy
 
 ```
-GLOBAL (Singleton: 'global_singleton')
+GLOBAL (User-scoped: per-user global context)
    ↓ inherits to
 PROJECT (ID: project_id)  
    ↓ inherits to
@@ -61,9 +61,9 @@ class UnifiedContextService:
 ### Context Levels
 
 #### Global Context
-- **Purpose**: Organization-wide patterns and standards
-- **Content**: Coding standards, security policies, architecture patterns
-- **Singleton**: Always 'global_singleton'
+- **Purpose**: User-specific patterns and standards
+- **Content**: User's coding standards, security policies, personal architecture patterns
+- **Scope**: User-scoped (each user has their own global context instance)
 
 #### Project Context
 - **Purpose**: Project-specific configuration
@@ -83,9 +83,10 @@ class UnifiedContextService:
 ### Database Schema
 
 ```sql
--- Global contexts (singleton)
+-- Global contexts (user-scoped)
 CREATE TABLE global_contexts (
-    id VARCHAR(50) PRIMARY KEY,  -- Always 'global_singleton'
+    id VARCHAR(50) PRIMARY KEY,  -- User-scoped global context ID
+    user_id VARCHAR(36) NOT NULL, -- User who owns this global context
     organization_name VARCHAR(255),
     global_settings JSON,
     metadata JSON,

@@ -5,13 +5,23 @@ command_execution:
   enabled: true
   restrictions:
   - sandbox_mode
+  allowed_commands:
+  - git log
+  - grep
+  - find
+  - stat
 file_operations:
   enabled: true
   permissions:
-    create: true
-    delete: false
     read: true
-    write: true
+    write: false
+    create: false
+    delete: false
 mcp_tools:
   enabled: true
-  tools: []
+  tools:
+  - mcp__sequential-thinking__sequentialthinking
+  - mcp__dhafnck_mcp_http__manage_context
+  - mcp__dhafnck_mcp_http__manage_task
+  - mcp__browsermcp__browser_navigate
+  - mcp__browsermcp__browser_snapshot

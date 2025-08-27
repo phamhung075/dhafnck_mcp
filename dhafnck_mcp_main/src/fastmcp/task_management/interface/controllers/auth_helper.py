@@ -72,9 +72,18 @@ def get_user_id_from_request_state() -> Optional[str]:
         if request and hasattr(request, 'state'):
             logger.info(f"🔍 Request has state, attributes: {dir(request.state)}")
             if hasattr(request.state, 'user_id'):
-                user_id = request.state.user_id
-                logger.info(f"✅ Got user_id from request state: {user_id}")
-                return user_id
+                user_id_obj = request.state.user_id
+                logger.info(f"🎯 Got user_id from request state: {user_id_obj} (type: {type(user_id_obj)})")
+                
+                # Extract user_id from the context object (handles BackwardCompatUserContext objects)
+                extracted_user_id = _extract_user_id_from_context_object(user_id_obj)
+                logger.info(f"🔧 Extracted user_id: {extracted_user_id}")
+                
+                if extracted_user_id:
+                    logger.info(f"✅ Got user_id from request state: {extracted_user_id}")
+                    return extracted_user_id
+                else:
+                    logger.warning("⚠️ Request state user_id could not be extracted")
             else:
                 logger.warning("⚠️ Request state exists but no user_id attribute")
         elif request:
@@ -87,6 +96,50 @@ def get_user_id_from_request_state() -> Optional[str]:
         logger.error(f"❌ Error getting user_id from request state: {e}")
         import traceback
         logger.debug(f"Full traceback: {traceback.format_exc()}")
+    
+    return None
+
+
+def _extract_user_id_from_context_object(context_obj) -> Optional[str]:
+    """
+    Extract user_id string from various context object types.
+    
+    Args:
+        context_obj: Context object that might contain user_id
+        
+    Returns:
+        User ID string or None if extraction fails
+    """
+    if context_obj is None:
+        return None
+    
+    # If it's already a string, return it directly
+    if isinstance(context_obj, str):
+        return context_obj
+    
+    # Try to extract user_id attribute from context objects
+    if hasattr(context_obj, 'user_id'):
+        user_id = context_obj.user_id
+        logger.info(f"🔧 Extracted user_id from context object: {user_id}")
+        return user_id if isinstance(user_id, str) else str(user_id)
+    
+    # Try to extract id attribute as fallback
+    if hasattr(context_obj, 'id'):
+        user_id = context_obj.id
+        logger.info(f"🔧 Extracted id from context object: {user_id}")
+        return user_id if isinstance(user_id, str) else str(user_id)
+    
+    # If it's a dict-like object, try to get user_id key
+    if hasattr(context_obj, 'get'):
+        user_id = context_obj.get('user_id')
+        if user_id:
+            logger.info(f"🔧 Extracted user_id from dict-like object: {user_id}")
+            return user_id if isinstance(user_id, str) else str(user_id)
+    
+    # Log the object type for debugging
+    logger.warning(f"⚠️ Could not extract user_id from context object type: {type(context_obj)}")
+    if hasattr(context_obj, '__dict__'):
+        logger.debug(f"🔍 Context object attributes: {list(context_obj.__dict__.keys())}")
     
     return None
 
@@ -130,10 +183,15 @@ def get_authenticated_user_id(provided_user_id: Optional[str] = None, operation_
         if REQUEST_CONTEXT_AVAILABLE:
             logger.info("🆕 Trying RequestContextMiddleware context variables...")
             try:
-                context_user_id = get_user_from_request_context()
-                logger.info(f"🎯 RequestContextMiddleware returned: {context_user_id}")
-                if context_user_id:
-                    user_id = context_user_id
+                context_user_obj = get_user_from_request_context()
+                logger.info(f"🎯 RequestContextMiddleware returned: {context_user_obj} (type: {type(context_user_obj)})")
+                
+                # Extract user_id from the context object (handles BackwardCompatUserContext objects)
+                extracted_user_id = _extract_user_id_from_context_object(context_user_obj)
+                logger.info(f"🔧 Extracted user_id: {extracted_user_id}")
+                
+                if extracted_user_id:
+                    user_id = extracted_user_id
                     logger.info(f"✅ Got user_id from RequestContextMiddleware: {user_id}")
                     
                     # Log additional context info for debugging
@@ -141,7 +199,7 @@ def get_authenticated_user_id(provided_user_id: Optional[str] = None, operation_
                         auth_method = get_current_auth_method()
                         logger.info(f"🔐 Authentication method: {auth_method}")
                 else:
-                    logger.warning("⚠️ RequestContextMiddleware returned None - request not authenticated")
+                    logger.warning("⚠️ RequestContextMiddleware returned None or could not extract user_id - request not authenticated")
             except Exception as e:
                 logger.error(f"❌ Error accessing RequestContextMiddleware context: {e}")
                 import traceback
@@ -160,13 +218,18 @@ def get_authenticated_user_id(provided_user_id: Optional[str] = None, operation_
         if user_id is None and USER_CONTEXT_AVAILABLE:
             logger.info("🔧 Trying custom user context middleware...")
             try:
-                context_user_id = get_current_user_id()
-                logger.info(f"🎯 Custom context middleware returned: {context_user_id}")
-                if context_user_id:
-                    user_id = context_user_id
+                context_user_obj = get_current_user_id()
+                logger.info(f"🎯 Custom context middleware returned: {context_user_obj} (type: {type(context_user_obj)})")
+                
+                # Extract user_id from the context object (handles BackwardCompatUserContext objects)
+                extracted_user_id = _extract_user_id_from_context_object(context_user_obj)
+                logger.info(f"🔧 Extracted user_id: {extracted_user_id}")
+                
+                if extracted_user_id:
+                    user_id = extracted_user_id
                     logger.info(f"✅ Got user_id from custom context middleware: {user_id}")
                 else:
-                    logger.warning("⚠️ Custom context middleware returned None")
+                    logger.warning("⚠️ Custom context middleware returned None or could not extract user_id")
             except Exception as e:
                 logger.error(f"❌ Error calling get_current_user_id(): {e}")
                 import traceback

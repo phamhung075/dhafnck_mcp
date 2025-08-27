@@ -5,19 +5,28 @@ command_execution:
   enabled: true
   restrictions:
   - sandbox_mode
+  allowed_commands:
+  - npm
+  - yarn
+  - pnpm
 file_operations:
   enabled: true
   permissions:
-    create: true
-    delete: false
     read: true
     write: true
+    create: true
+    delete: false
 mcp_tools:
   enabled: true
   tools:
-  - mcp_shadcn-ui-server_list-components
-  - mcp_shadcn-ui-server_get-component-docs
-  - mcp_shadcn-ui-server_install-component
-  - mcp_shadcn-ui-server_list-blocks
-  - mcp_shadcn-ui-server_get-block-docs
-  - mcp_shadcn-ui-server_install-blocks
+  - mcp__shadcn-ui-server__list-components
+  - mcp__shadcn-ui-server__get-component-docs
+  - mcp__shadcn-ui-server__install-component
+  - mcp__shadcn-ui-server__list-blocks
+  - mcp__shadcn-ui-server__get-block-docs
+  - mcp__shadcn-ui-server__install-blocks
+  - mcp__browsermcp__browser_navigate
+  - mcp__browsermcp__browser_snapshot
+  - mcp__browsermcp__browser_screenshot
+  - mcp__dhafnck_mcp_http__manage_task
+  - mcp__dhafnck_mcp_http__manage_context

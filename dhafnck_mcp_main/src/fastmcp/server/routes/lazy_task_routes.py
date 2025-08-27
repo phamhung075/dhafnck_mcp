@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 import logging
 
 from fastmcp.task_management.application.facades.task_application_facade import TaskApplicationFacade
-from fastmcp.task_management.application.facades.context_application_facade import ContextApplicationFacade
+from fastmcp.task_management.application.facades.unified_context_facade import UnifiedContextFacade
 
 logger = logging.getLogger(__name__)
 
@@ -80,9 +80,16 @@ def get_task_facade() -> TaskApplicationFacade:
     """Dependency injection for TaskApplicationFacade"""
     return TaskApplicationFacade()
 
-def get_context_facade() -> ContextApplicationFacade:
-    """Dependency injection for ContextApplicationFacade"""
-    return ContextApplicationFacade()
+def get_context_facade() -> UnifiedContextFacade:
+    """Dependency injection for UnifiedContextFacade"""
+    # Use the proper factory to create UnifiedContextFacade
+    from fastmcp.task_management.application.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+    
+    # Get factory instance (handles database availability automatically)
+    factory = UnifiedContextFacadeFactory.get_instance()
+    
+    # Create and return facade instance
+    return factory.create_unified_context_facade()
 
 # =============================================
 # LAZY LOADING ENDPOINTS
@@ -92,7 +99,7 @@ def get_context_facade() -> ContextApplicationFacade:
 async def get_task_summaries(
     request: TaskSummaryRequest,
     task_facade: TaskApplicationFacade = Depends(get_task_facade),
-    context_facade: ContextApplicationFacade = Depends(get_context_facade)
+    context_facade: UnifiedContextFacade = Depends(get_context_facade)
 ):
     """
     Get lightweight task summaries for list views.
@@ -276,7 +283,7 @@ async def get_subtask_summaries(
 @router.get("/tasks/{task_id}/context/summary")
 async def get_task_context_summary(
     task_id: str,
-    context_facade: ContextApplicationFacade = Depends(get_context_facade)
+    context_facade: UnifiedContextFacade = Depends(get_context_facade)
 ):
     """
     Get lightweight context summary for a task.

@@ -23,7 +23,7 @@ network dhafnck-network not found
 ```
 
 **Solutions**:
-- Use correct network name: `dhafnck-dhafnck-network`
+- Use correct network name: `dhafnck-network`
 - Set authentication to disabled: `DHAFNCK_AUTH_ENABLED=false`
 - Use proper Docker compose configuration
 

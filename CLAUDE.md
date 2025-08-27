@@ -62,9 +62,9 @@ mcp__dhafnck_mcp_http__manage_task(
 
 ### The Context Hierarchy
 ```
-GLOBAL → PROJECT → BRANCH → TASK
+GLOBAL (per-user) → PROJECT → BRANCH → TASK
 ```
-Each level inherits from above. Update context to share information between:
+Each level inherits from above. The global context is user-scoped (each user has their own global context instance). Update context to share information between:
 - Different AI sessions
 - Different agents  
 - Different time periods

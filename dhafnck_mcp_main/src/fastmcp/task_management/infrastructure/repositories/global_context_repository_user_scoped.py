@@ -56,9 +56,34 @@ class GlobalContextRepository(BaseUserScopedRepository):
             # Create a user-specific global context ID using UUID5 for deterministic generation
             # This ensures the same user always gets the same global context UUID
             import uuid
-            namespace = uuid.UUID(GLOBAL_SINGLETON_UUID)
-            user_uuid = uuid.UUID(self.user_id)
-            return str(uuid.uuid5(namespace, str(user_uuid)))
+            
+            # Extract actual user ID string from user context object if needed
+            actual_user_id = None
+            if hasattr(self.user_id, 'user_id'):
+                actual_user_id = str(self.user_id.user_id)
+            elif hasattr(self.user_id, 'id'):
+                actual_user_id = str(self.user_id.id)
+            elif isinstance(self.user_id, str):
+                actual_user_id = self.user_id
+            else:
+                # Fallback to string representation of the object for consistency
+                actual_user_id = str(self.user_id)
+            
+            try:
+                namespace = uuid.UUID(GLOBAL_SINGLETON_UUID)
+                # Try to create UUID from the actual user ID string
+                try:
+                    user_uuid = uuid.UUID(actual_user_id)
+                except ValueError:
+                    # If actual_user_id is not a valid UUID, use UUID5 with the string
+                    user_uuid = uuid.uuid5(namespace, actual_user_id)
+                
+                return str(uuid.uuid5(namespace, str(user_uuid)))
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to create user-specific global context UUID: {e}. Using global singleton.")
+                return GLOBAL_SINGLETON_UUID
         elif context_id == "global_singleton":
             return GLOBAL_SINGLETON_UUID
         return context_id
