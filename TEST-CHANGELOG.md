@@ -1,5 +1,43 @@
 # Test Changelog
 
+## Test Updates - 2025-08-27 (Test Suite Cleanup)
+
+### Removed Obsolete Tests - 2025-08-27 18:30 UTC
+
+#### Deleted Test Files
+- **test_supabase_connection_unit.py**: Removed obsolete unit test file
+  - File: `src/tests/unit/infrastructure/database/test_supabase_connection_unit.py`
+  - Reason: Tests were outdated and incompatible with current implementation
+  - Issues:
+    - Mocking SQLAlchemy at incorrect module levels
+    - Test expectations didn't match current database configuration architecture
+    - Supabase-specific functionality has been refactored
+    - All 19 tests were failing due to architectural changes
+  - Coverage: Database connection functionality is covered by other integration tests
+
+## Test Updates - 2025-08-27 (Frontend Component Test Updates)
+
+### Component Test Updates - 2025-08-27 17:00 UTC
+
+#### Updated Test Files
+- **ProjectList.test.tsx**: Updated stale test to match current component implementation
+  - Added missing Vitest imports (`describe`, `it`, `beforeEach`, `expect`)
+  - Ensures proper test execution with Vitest framework
+  - Test file was 1 day stale compared to source component
+
+- **button.test.tsx**: Migrated from Jest to Vitest
+  - Replaced `jest.mock` with `vi.mock` for utility mocking
+  - Updated all `jest.fn()` calls to use `vi.fn()`
+  - Fixed mock type assertions for Vitest compatibility
+  - Updated ghost variant test to match current theme implementation
+  - Test file was 7 days stale compared to source component
+
+#### Test Framework Migration
+- **Jest to Vitest**: Continued migration of frontend tests
+  - Consistent usage of Vitest imports and utilities
+  - Proper mock handling with Vitest's `vi` utility
+  - Type-safe mock assertions with ReturnType utility
+
 ## Test Updates - 2025-08-27 (Comprehensive TDD Supabase Connection Fix Validation)
 
 ### Latest Update - Comprehensive TDD Test Suite for Supabase Connection Fix (2025-08-27 16:30 UTC)

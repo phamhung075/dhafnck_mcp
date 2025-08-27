@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { vi } from 'vitest';
+import { vi, describe, it, beforeEach, expect } from 'vitest';
 import '@testing-library/jest-dom';
 import ProjectList from '../../components/ProjectList';
 import * as api from '../../api';

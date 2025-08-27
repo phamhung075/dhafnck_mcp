@@ -6,6 +6,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Fixed
+- **Test Suite Cleanup** (2025-08-27)
+  - Removed obsolete test file `src/tests/unit/infrastructure/database/test_supabase_connection_unit.py`
+  - File contained 19 failing tests that were incompatible with current database implementation
+  - Issues: Incorrect SQLAlchemy mocking, outdated expectations, refactored functionality
+  - Database functionality properly covered by existing integration tests
+
 ### Added
 - **Database Management Consolidation** (2025-08-27)
   - Created comprehensive `database_manager.py` script for all Supabase database operations

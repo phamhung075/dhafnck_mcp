@@ -1,19 +1,20 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, beforeEach, expect, vi } from 'vitest';
 import '@testing-library/jest-dom';
 import { Button, ButtonProps } from '../../../components/ui/button';
 import { cn } from '../../../lib/utils';
 
 // Mock the cn utility
-jest.mock('../../../lib/utils', () => ({
-  cn: jest.fn((...args: any[]) => args.filter(Boolean).join(' ')),
+vi.mock('../../../lib/utils', () => ({
+  cn: vi.fn((...args: any[]) => args.filter(Boolean).join(' ')),
 }));
 
 describe('Button', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Ensure the mock is working
-    (cn as jest.Mock).mockImplementation((...args: any[]) => args.filter(Boolean).join(' '));
+    (cn as ReturnType<typeof vi.fn>).mockImplementation((...args: any[]) => args.filter(Boolean).join(' '));
   });
 
   it('renders with default props', () => {
@@ -54,8 +55,7 @@ describe('Button', () => {
       render(<Button variant="ghost">Ghost</Button>);
       
       const button = screen.getByRole('button');
-      expect(button.className).toContain('hover:bg-background-hover');
-      expect(button.className).toContain('text-base-primary');
+      expect(button.className).toContain('theme-btn-ghost');
     });
 
     it('renders link variant', () => {
@@ -123,7 +123,7 @@ describe('Button', () => {
   });
 
   it('handles click events', () => {
-    const handleClick = jest.fn();
+    const handleClick = vi.fn();
     render(<Button onClick={handleClick}>Click me</Button>);
     
     const button = screen.getByRole('button');
@@ -133,7 +133,7 @@ describe('Button', () => {
   });
 
   it('respects disabled state', () => {
-    const handleClick = jest.fn();
+    const handleClick = vi.fn();
     render(<Button disabled onClick={handleClick}>Disabled</Button>);
     
     const button = screen.getByRole('button');
