@@ -18,6 +18,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
   - Updated data structure to match frontend expectations for proper display
   - Global context ID: 7fa54328-bfb4-523c-ab6f-465e05e1bba5
 
+- **Project Context Updated with Comprehensive Data** (2025-08-27 21:20)
+  - Updated "agentic-project" context with complete project information
+  - **Project Info**: Version 2.0.0-alpha, React/FastMCP/MCP architecture
+  - **Technical Specs**: 4-tier context hierarchy, 60+ specialized agents, DDD architecture
+  - **Patterns**: MCP tools, component patterns, error handling standards
+  - **Workflows**: Feature development, bug fixing, code review, deployment processes
+  - Project ID: 0f76fee2-4497-40a9-9b35-205500e9609d
+  - Result: Project context now contains rich metadata for team collaboration
+
 ### Fixed
 - **Fixed Global Context Display Issue in Frontend** (2025-08-27 21:00)
   - Root cause: Frontend was not correctly parsing the API response structure
@@ -28,17 +37,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
   - Files modified: `dhafnck-frontend/src/components/GlobalContextDialog.tsx`
   - Result: Global context now displays correctly with all organizational settings visible
 
-- **Fixed Nested Object Display in Global Context** (2025-08-27 21:05)
-  - Issue: Workflow templates showing as `[object Object]` in Global Patterns tab
-  - Root cause: `patternsToMarkdown()` function not handling nested objects properly
-  - Solution: Updated both `keyValueToMarkdown()` and `patternsToMarkdown()` functions to:
-    - Properly handle nested objects and arrays
-    - Display nested properties with proper indentation
-    - Convert arrays to comma-separated strings
-    - Show deeply nested objects with structured formatting
+- **Fixed Nested Object Display Issue in Context Dialogs** (2025-08-27 21:15)
+  - Problem: Nested objects showing as `[object Object]` in markdown conversion
+  - Root cause: patternsToMarkdown and workflowToMarkdown functions not handling nested objects
+  - Solution: Implemented recursive object handling with proper indentation
+  - Updated conversion functions to properly display nested data structures
   - Files modified: `dhafnck-frontend/src/components/GlobalContextDialog.tsx`
-  - Result: Workflow templates now display correctly with all nested properties visible
-  
+  - Result: All nested objects now display with proper formatting and hierarchy
+
+- **Restructured Project Context Display for Consistency** (2025-08-27 21:30)
+  - Problem: Project context display was inconsistent with global context interface
+  - Solution: Implemented tabbed interface matching GlobalContextDialog pattern
+  - Added sub-tabs for Project Info, Technical Specs, Patterns, and Workflows
+  - Created formatNestedObject helper function for readable display
+  - Removed 230+ lines of complex nested rendering code for better maintainability
+  - Files modified: `dhafnck-frontend/src/components/ProjectDetailsDialog.tsx`
+  - Result: Unified context display pattern across global and project levels
 ### Added (continued)
 - **Global Context Comprehensive Data** (2025-08-27)
   - Populated global context with rich demonstration data across all sections

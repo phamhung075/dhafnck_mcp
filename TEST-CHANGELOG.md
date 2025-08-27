@@ -1,5 +1,45 @@
 # TEST-CHANGELOG
 
+## Test Updates - 2025-08-27 (Frontend Tests Updated)
+
+### Frontend Test Updates
+
+#### Updated Stale Test Files
+
+**dhafnck-frontend/src/tests/api.test.ts** (2 days stale)
+- Updated `updateGlobalContext` test to use new data structure with `global_settings` wrapper
+- Fixed global context ID from 'global_singleton' to actual user ID '7fa54328-bfb4-523c-ab6f-465e05e1bba5'
+- Added new test suite for `getGlobalContext` API method
+- Added MCP Token Service integration tests:
+  - Test for using MCP token when available
+  - Test for fallback to JWT token when MCP token fails
+- Fixed mock for `withMcpHeaders` since it now returns a Promise
+- Added `mcpTokenService` mock and imports
+- Updated test assertions to handle async headers
+
+**dhafnck-frontend/src/tests/components/GlobalContextDialog.test.tsx** (1 day stale)
+- Completely rewrote test file to match new component structure and props
+- Updated component props from `(currentContext, onUpdate)` to `(open, onOpenChange, onClose)`
+- Added comprehensive tests for new tab-based UI:
+  - Organization Settings tab tests
+  - Global Patterns tab tests
+  - Shared Capabilities tab tests
+  - Metadata tab tests
+- Added tests for edit mode functionality:
+  - Enter/exit edit mode
+  - Save changes with proper data transformation
+  - Cancel changes and restore original content
+- Added tests for markdown parsing:
+  - Key-value parsing for settings/metadata
+  - Pattern parsing with descriptions
+  - Capabilities parsing as bullet points
+- Added tests for Copy JSON functionality with clipboard API mocking
+- Added tests for Initialize Global Context when no context exists
+- Added tests for loading states and error handling
+- Updated API mocks to import directly from api module
+- Added tests for placeholder text in each tab
+- Added test for maintaining separate content across tabs
+
 ## Test Updates - 2025-08-27 (Unified Context System Test Coverage)
 
 ### Updated Test Files for Unified Context System

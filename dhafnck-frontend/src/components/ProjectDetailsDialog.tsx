@@ -22,6 +22,7 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
   const [projectContext, setProjectContext] = useState<any>(null);
   const [contextLoading, setContextLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'context'>('details');
+  const [contextTab, setContextTab] = useState<'info' | 'technical' | 'patterns' | 'workflows'>('info');
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['data', 'resolved_context', 'project_data', 'metadata']));
   const [jsonCopied, setJsonCopied] = useState(false);
 
@@ -97,6 +98,31 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
         console.error('Failed to copy JSON:', err);
       });
     }
+  };
+
+  // Format nested objects to readable markdown-like text
+  const formatNestedObject = (data: any, indent: number = 0): string => {
+    if (!data || typeof data !== 'object') {
+      return String(data);
+    }
+    
+    const spaces = '  '.repeat(indent);
+    let result: string[] = [];
+    
+    Object.entries(data).forEach(([key, value]) => {
+      if (typeof value === 'object' && value !== null) {
+        if (Array.isArray(value)) {
+          result.push(`${spaces}${key}: ${value.join(', ')}`);
+        } else {
+          result.push(`${spaces}${key}:`);
+          result.push(formatNestedObject(value, indent + 1));
+        }
+      } else {
+        result.push(`${spaces}${key}: ${value}`);
+      }
+    });
+    
+    return result.join('\n');
   };
 
   // Render nested JSON beautifully (same as TaskDetailsDialog)
@@ -449,175 +475,8 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                 </div>
               ) : projectContext ? (
                 <>
-                  {/* Context Header */}
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-                    <h3 className="text-lg font-semibold text-blue-700 dark:text-blue-300 flex items-center gap-2">
-                      <Layers className="w-5 h-5" />
-                      Project Context - Complete Hierarchical View
-                    </h3>
-                    <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
-                      Interactive nested view showing ALL context data - click to expand/collapse sections
-                    </p>
-                  </div>
-                  
-                  {/* Project Settings Section */}
-                  {(projectContext.project_settings || projectContext.team_preferences || projectContext.technology_stack || projectContext.project_workflow) && (
-                    <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
-                      <h4 className="text-md font-semibold text-green-700 dark:text-green-300 mb-3">
-                        🎯 Project Configuration
-                      </h4>
-                      
-                      {/* Team Preferences */}
-                      {projectContext.team_preferences && Object.keys(projectContext.team_preferences).length > 0 && (
-                        <details className="mb-3">
-                          <summary className="cursor-pointer text-sm font-medium text-green-600 hover:text-green-700">
-                            👥 Team Preferences
-                          </summary>
-                          <div className="mt-2 ml-4 text-sm bg-white dark:bg-gray-800 p-2 rounded">
-                            {renderNestedJson(projectContext.team_preferences)}
-                          </div>
-                        </details>
-                      )}
-                      
-                      {/* Technology Stack */}
-                      {projectContext.technology_stack && Object.keys(projectContext.technology_stack).length > 0 && (
-                        <details className="mb-3">
-                          <summary className="cursor-pointer text-sm font-medium text-green-600 hover:text-green-700">
-                            🔧 Technology Stack
-                          </summary>
-                          <div className="mt-2 ml-4 text-sm bg-white dark:bg-gray-800 p-2 rounded">
-                            {renderNestedJson(projectContext.technology_stack)}
-                          </div>
-                        </details>
-                      )}
-                      
-                      {/* Project Workflow */}
-                      {projectContext.project_workflow && Object.keys(projectContext.project_workflow).length > 0 && (
-                        <details className="mb-3">
-                          <summary className="cursor-pointer text-sm font-medium text-green-600 hover:text-green-700">
-                            📋 Project Workflow
-                          </summary>
-                          <div className="mt-2 ml-4 text-sm bg-white dark:bg-gray-800 p-2 rounded max-h-60 overflow-y-auto">
-                            {renderNestedJson(projectContext.project_workflow)}
-                          </div>
-                        </details>
-                      )}
-                      
-                      {/* Local Standards */}
-                      {projectContext.local_standards && Object.keys(projectContext.local_standards).length > 0 && (
-                        <details className="mb-3">
-                          <summary className="cursor-pointer text-sm font-medium text-green-600 hover:text-green-700">
-                            📏 Local Standards
-                          </summary>
-                          <div className="mt-2 ml-4 text-sm bg-white dark:bg-gray-800 p-2 rounded">
-                            {renderNestedJson(projectContext.local_standards)}
-                          </div>
-                        </details>
-                      )}
-                    </div>
-                  )}
-                  
-                  {/* Global Settings Section */}
-                  {projectContext.global_settings && (
-                    <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-                      <h4 className="text-md font-semibold text-blue-700 dark:text-blue-300 mb-3">
-                        🌍 Global Settings (Inherited)
-                      </h4>
-                      
-                      {Object.entries(projectContext.global_settings).map(([key, value]) => {
-                        if (!value || (typeof value === 'object' && Object.keys(value as any).length === 0)) return null;
-                        
-                        return (
-                          <details key={key} className="mb-3">
-                            <summary className="cursor-pointer text-sm font-medium text-blue-600 hover:text-blue-700">
-                              {key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                            </summary>
-                            <div className="mt-2 ml-4 text-sm bg-white dark:bg-gray-800 p-2 rounded">
-                              {renderNestedJson(value)}
-                            </div>
-                          </details>
-                        );
-                      })}
-                    </div>
-                  )}
-                  
-                  {/* Metadata Section */}
-                  {projectContext.metadata && (
-                    <div className="bg-purple-50 dark:bg-purple-950/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
-                      <h4 className="text-md font-semibold text-purple-700 dark:text-purple-300 mb-3">
-                        📊 Metadata & System Information
-                      </h4>
-                      
-                      <div className="grid grid-cols-2 gap-4 mb-3">
-                        {projectContext.metadata.created_at && (
-                          <div className="bg-white dark:bg-gray-800 p-2 rounded">
-                            <span className="text-xs text-gray-500">Created</span>
-                            <p className="font-medium text-sm">{new Date(projectContext.metadata.created_at).toLocaleDateString()}</p>
-                          </div>
-                        )}
-                        {projectContext.metadata.updated_at && (
-                          <div className="bg-white dark:bg-gray-800 p-2 rounded">
-                            <span className="text-xs text-gray-500">Last Updated</span>
-                            <p className="font-medium text-sm">{new Date(projectContext.metadata.updated_at).toLocaleDateString()}</p>
-                          </div>
-                        )}
-                      </div>
-                      
-                      <details>
-                        <summary className="cursor-pointer text-sm font-medium text-purple-600 hover:text-purple-700">
-                          View All Metadata
-                        </summary>
-                        <div className="mt-2 ml-4 text-sm bg-white dark:bg-gray-800 p-2 rounded max-h-40 overflow-y-auto">
-                          {renderNestedJson(projectContext.metadata)}
-                        </div>
-                      </details>
-                    </div>
-                  )}
-                  
-                  {/* Inheritance Information */}
-                  {(projectContext._inheritance || projectContext.inheritance_metadata) && (
-                    <div className="bg-orange-50 dark:bg-orange-950/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
-                      <h4 className="text-md font-semibold text-orange-700 dark:text-orange-300 mb-3">
-                        🔗 Context Inheritance
-                      </h4>
-                      <div className="text-sm">
-                        {(projectContext._inheritance || projectContext.inheritance_metadata) && (
-                          <>
-                            <p className="mb-2">
-                              <span className="font-medium">Inheritance Chain:</span> {
-                                (projectContext._inheritance?.chain || 
-                                 projectContext.inheritance_metadata?.inheritance_chain)?.join(' → ') || 'N/A'
-                              }
-                            </p>
-                            <p className="mb-2">
-                              <span className="font-medium">Inheritance Depth:</span> {
-                                projectContext._inheritance?.inheritance_depth || 
-                                projectContext.inheritance_metadata?.inheritance_depth || 0
-                              }
-                            </p>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Debug Information - Collapsed by Default */}
-                  <details className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <summary className="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-700">
-                      🐛 Debug: View Raw Context Data
-                    </summary>
-                    <div className="mt-3">
-                      <p className="text-xs text-gray-500 mb-2">Complete context structure for debugging purposes</p>
-                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto max-h-96 overflow-y-auto">
-                        <code className="text-xs font-mono">
-                          {JSON.stringify(projectContext, null, 2)}
-                        </code>
-                      </pre>
-                    </div>
-                  </details>
-                  
-                  {/* Expand/Collapse All Controls */}
-                  <div className="flex gap-2 justify-end mt-2">
+                  {/* Context Actions */}
+                  <div className="flex justify-end gap-2">
                     <Button
                       variant="outline"
                       size="sm"
@@ -636,65 +495,143 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                         </>
                       )}
                     </Button>
+                  </div>
+
+                  {/* Context Sub-tabs */}
+                  <div className="flex gap-2 border-b pb-2">
                     <Button
-                      variant="outline"
+                      variant={contextTab === 'info' ? 'default' : 'ghost'}
                       size="sm"
-                      onClick={() => {
-                        // Expand all sections including HTML details elements
-                        const allPaths = new Set<string>();
-                        const traverse = (obj: any, path: string = '') => {
-                          if (obj && typeof obj === 'object') {
-                            allPaths.add(path);
-                            Object.keys(obj).forEach(key => {
-                              const newPath = path ? `${path}.${key}` : key;
-                              traverse(obj[key], newPath);
-                            });
-                          }
-                        };
-                        traverse(projectContext);
-                        setExpandedSections(allPaths);
-                        
-                        // Also expand all HTML details elements
-                        const detailsElements = document.querySelectorAll('details');
-                        detailsElements.forEach(details => {
-                          details.open = true;
-                        });
-                      }}
+                      onClick={() => setContextTab('info')}
+                      className="flex items-center gap-2"
                     >
-                      Expand All
+                      <Info className="w-4 h-4" />
+                      Project Info
                     </Button>
                     <Button
-                      variant="outline"
+                      variant={contextTab === 'technical' ? 'default' : 'ghost'}
                       size="sm"
-                      onClick={() => {
-                        // Collapse all sections
-                        setExpandedSections(new Set(['data', 'resolved_context', 'project_data', 'metadata']));
-                        
-                        // Also collapse all HTML details elements
-                        const detailsElements = document.querySelectorAll('details');
-                        detailsElements.forEach(details => {
-                          details.open = false;
-                        });
-                      }}
+                      onClick={() => setContextTab('technical')}
+                      className="flex items-center gap-2"
                     >
-                      Collapse All
+                      <Layers className="w-4 h-4" />
+                      Technical Specs
                     </Button>
+                    <Button
+                      variant={contextTab === 'patterns' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setContextTab('patterns')}
+                      className="flex items-center gap-2"
+                    >
+                      <FileText className="w-4 h-4" />
+                      Patterns
+                    </Button>
+                    <Button
+                      variant={contextTab === 'workflows' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setContextTab('workflows')}
+                      className="flex items-center gap-2"
+                    >
+                      <Users className="w-4 h-4" />
+                      Workflows
+                    </Button>
+                  </div>
+                  
+                  {/* Context Content based on sub-tab */}
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+                    {contextTab === 'info' && (
+                      <div>
+                        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                          <Info className="w-5 h-5" /> Project Information
+                        </h3>
+                        {projectContext.project_info || projectContext.project_settings ? (
+                          <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800 dark:text-gray-200">
+                            {formatNestedObject(projectContext.project_info || projectContext.project_settings || {})}
+                          </pre>
+                        ) : (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+                            No project information defined yet.
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {contextTab === 'technical' && (
+                      <div>
+                        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                          <Layers className="w-5 h-5" /> Technical Specifications
+                        </h3>
+                        {projectContext.technical_specifications || projectContext.technology_stack ? (
+                          <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800 dark:text-gray-200">
+                            {formatNestedObject(projectContext.technical_specifications || projectContext.technology_stack || {})}
+                          </pre>
+                        ) : (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+                            No technical specifications defined yet.
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {contextTab === 'patterns' && (
+                      <div>
+                        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                          <FileText className="w-5 h-5" /> Project Patterns
+                        </h3>
+                        {projectContext.project_patterns ? (
+                          <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800 dark:text-gray-200">
+                            {formatNestedObject(projectContext.project_patterns || {})}
+                          </pre>
+                        ) : (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+                            No project patterns defined yet.
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {contextTab === 'workflows' && (
+                      <div>
+                        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                          <Users className="w-5 h-5" /> Development Workflows
+                        </h3>
+                        {projectContext.development_workflows || projectContext.project_workflow ? (
+                          <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800 dark:text-gray-200">
+                            {formatNestedObject(projectContext.development_workflows || projectContext.project_workflow || {})}
+                          </pre>
+                        ) : (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+                            No development workflows defined yet.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Show raw JSON at the bottom */}
+                    <details className="cursor-pointer mt-6">
+                      <summary className="font-semibold text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100">
+                        View Complete JSON Context
+                      </summary>
+                      <div className="mt-3 bg-gray-100 dark:bg-gray-800 p-3 rounded">
+                        <pre className="text-xs overflow-x-auto whitespace-pre-wrap text-gray-800 dark:text-gray-200">
+                          {JSON.stringify(projectContext, null, 2)}
+                        </pre>
+                      </div>
+                    </details>
                   </div>
                 </>
               ) : (
-                <div className="text-center py-8 bg-gray-50 rounded-lg">
-                  <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                  <h3 className="text-lg font-medium text-gray-900">No Context Available</h3>
-                  <p className="text-sm text-gray-500 mt-2">
-                    This project doesn't have any context data yet.
-                  </p>
-                  <p className="text-xs text-gray-400 mt-4">
-                    Context is created when projects are updated or when branches are created within the project.
+                <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <Folder className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-3" />
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">No Project Context Available</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                    Project context has not been initialized yet.
                   </p>
                 </div>
               )}
             </div>
           )}
+          
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>

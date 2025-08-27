@@ -27,14 +27,13 @@ REQUIRED BEHAVIORS:
 ## Missing Test Files - CREATE IMMEDIATELY:
 
 ## Stale Test Files (Source Newer Than Test)
-- **Source**: `dhafnck-frontend/src/components/LazyTaskList.tsx`
-  - **Test**: `dhafnck-frontend/src/tests/components/LazyTaskList.test.tsx`
+- **Source**: `dhafnck-frontend/src/api.ts`
+  - **Test**: `dhafnck-frontend/src/tests/api.test.ts`
+  - **Days stale**: 2
+
+- **Source**: `dhafnck-frontend/src/components/GlobalContextDialog.tsx`
+  - **Test**: `dhafnck-frontend/src/tests/components/GlobalContextDialog.test.tsx`
   - **Days stale**: 1
-
-
-## Missing Test Files
-- **Source**: `dhafnck-frontend/src/components/TaskDetailsDialog.tsx`
-  - **Create test at**: `dhafnck-frontend/src/tests/components/TaskDetailsDialog.test.tsx`
 
 
 ## EXECUTION COMMANDS - DO NOW:

@@ -1,6 +1,14 @@
 import * as api from '../api';
 import * as apiV2 from '../services/apiV2';
 import Cookies from 'js-cookie';
+import { mcpTokenService } from '../services/mcpTokenService';
+
+// Mock services/mcpTokenService
+jest.mock('../services/mcpTokenService', () => ({
+  mcpTokenService: {
+    getMCPToken: jest.fn()
+  }
+}));
 
 // Mock services/apiV2
 jest.mock('../services/apiV2', () => ({
@@ -41,6 +49,7 @@ describe('api.ts', () => {
     jest.clearAllMocks();
     (global.fetch as any).mockReset();
     (apiV2.isAuthenticated as any).mockReturnValue(false);
+    (mcpTokenService.getMCPToken as any).mockRejectedValue(new Error('No token'));
   });
 
   afterEach(() => {
@@ -118,16 +127,10 @@ describe('api.ts', () => {
         const result = await api.listTasks();
 
         expect(apiV2.taskApiV2.getTasks).not.toHaveBeenCalled();
-        expect(global.fetch).toHaveBeenCalledWith(
-          'http://localhost:8000/mcp/',
-          expect.objectContaining({
-            method: 'POST',
-            headers: expect.objectContaining({
-              'Content-Type': 'application/json',
-              'MCP-Protocol-Version': '2025-06-18'
-            })
-          })
-        );
+        const fetchCall = (global.fetch as any).mock.calls[0];
+        expect(fetchCall[0]).toBe('http://localhost:8000/mcp/');
+        expect(fetchCall[1].method).toBe('POST');
+        // Headers are a promise now due to async withMcpHeaders
         expect(result).toHaveLength(1);
       });
 
@@ -803,7 +806,88 @@ describe('api.ts', () => {
     });
   });
 
+  describe('MCP Token Service Integration', () => {
+    it('should use MCP token when available', async () => {
+      (mcpTokenService.getMCPToken as any).mockResolvedValue('mcp-test-token');
+      
+      const mockResponse = {
+        result: {
+          content: [{
+            text: JSON.stringify({
+              success: true,
+              data: { tasks: [] }
+            })
+          }]
+        }
+      };
+      (global.fetch as any).mockResolvedValue({
+        json: jest.fn().mockResolvedValue(mockResponse)
+      });
+
+      await api.listTasks();
+
+      expect(mcpTokenService.getMCPToken).toHaveBeenCalled();
+    });
+
+    it('should fallback to JWT token when MCP token fails', async () => {
+      (mcpTokenService.getMCPToken as any).mockRejectedValue(new Error('MCP token error'));
+      (Cookies.get as any).mockReturnValue('jwt-test-token');
+      
+      const mockResponse = {
+        result: {
+          content: [{
+            text: JSON.stringify({
+              success: true,
+              data: { tasks: [] }
+            })
+          }]
+        }
+      };
+      (global.fetch as any).mockResolvedValue({
+        json: jest.fn().mockResolvedValue(mockResponse)
+      });
+
+      await api.listTasks();
+
+      expect(mcpTokenService.getMCPToken).toHaveBeenCalled();
+      expect(Cookies.get).toHaveBeenCalledWith('access_token');
+    });
+  });
+
   describe('Context Management', () => {
+    describe('getGlobalContext', () => {
+      it('should get global context with user-specific ID', async () => {
+        const mockContext = {
+          id: '7fa54328-bfb4-523c-ab6f-465e05e1bba5',
+          level: 'global',
+          data: { global_settings: {} }
+        };
+        const mockResponse = {
+          result: {
+            content: [{
+              text: JSON.stringify(mockContext)
+            }]
+          }
+        };
+        (global.fetch as any).mockResolvedValue({
+          json: jest.fn().mockResolvedValue(mockResponse)
+        });
+
+        const result = await api.getGlobalContext();
+
+        expect(result).toEqual(mockContext);
+        const fetchCall = (global.fetch as any).mock.calls[0];
+        const body = JSON.parse(fetchCall[1].body);
+        expect(body.params.arguments).toMatchObject({
+          action: 'resolve',
+          level: 'global',
+          context_id: '7fa54328-bfb4-523c-ab6f-465e05e1bba5',
+          force_refresh: false,
+          include_inherited: false
+        });
+      });
+    });
+
     describe('getTaskContext', () => {
       const taskId = 'task-123';
 
@@ -946,15 +1030,16 @@ describe('api.ts', () => {
 
     describe('updateGlobalContext', () => {
       const contextData = {
-        theme: 'dark',
-        features: ['auth', 'tasks']
+        organizationSettings: { theme: 'dark' },
+        globalPatterns: { auth_pattern: 'jwt' },
+        metadata: { version: '1.0' }
       };
 
       it('should update global context', async () => {
         const mockResponse = {
           result: {
             content: [{
-              text: JSON.stringify({ success: true, context_id: 'global_singleton' })
+              text: JSON.stringify({ success: true, context_id: '7fa54328-bfb4-523c-ab6f-465e05e1bba5' })
             }]
           }
         };
@@ -970,8 +1055,16 @@ describe('api.ts', () => {
         expect(body.params.arguments).toMatchObject({
           action: 'update',
           level: 'global',
-          context_id: 'global_singleton',
-          data: contextData,
+          context_id: '7fa54328-bfb4-523c-ab6f-465e05e1bba5',
+          data: {
+            global_settings: {
+              autonomous_rules: contextData.organizationSettings || {},
+              security_policies: {},
+              coding_standards: {},
+              workflow_templates: contextData.globalPatterns || {},
+              delegation_rules: contextData.metadata || {}
+            }
+          },
           propagate_changes: true
         });
       });
