@@ -57,12 +57,26 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         logger.debug(f"🔧 REQUEST_CONTEXT: Processing request {request.method} {request.url.path}")
         
         try:
-            # Process the request through the middleware chain
-            # DualAuthMiddleware should run before this and set request.state.user_id etc.
-            response = await call_next(request)
-            
-            # After DualAuthMiddleware has processed the request, capture authentication context
+            # Capture authentication context BEFORE processing the request
+            # DualAuthMiddleware should have already run and set request.state.user_id etc.
             self._capture_auth_context_from_request_state(request)
+            
+            # CRITICAL FIX: For MCP endpoints, also set user in ASGI scope for handle_streamable_http
+            # The MCP handler expects user info in the scope dictionary, not just request.state
+            if hasattr(request, 'state') and hasattr(request.state, 'user_id'):
+                user_id = request.state.user_id
+                if user_id and request.url.path.startswith('/mcp'):
+                    # Set user in ASGI scope for MCP streamable HTTP handler
+                    if hasattr(request, 'scope') and isinstance(request.scope, dict):
+                        request.scope['user'] = {
+                            'user_id': user_id,
+                            'email': getattr(request.state.auth_info, 'email', None) if hasattr(request.state, 'auth_info') else None,
+                            'auth_method': getattr(request.state, 'auth_type', 'unknown')
+                        }
+                        logger.debug(f"✅ REQUEST_CONTEXT: Set user in ASGI scope for MCP endpoint - user_id={user_id}")
+            
+            # Process the request through the middleware chain with context available
+            response = await call_next(request)
             
             return response
             

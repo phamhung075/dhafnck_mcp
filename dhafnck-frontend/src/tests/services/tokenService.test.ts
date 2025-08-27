@@ -9,7 +9,8 @@ jest.mock('../../hooks/useAuthenticatedFetch', () => ({
 const mockAuthenticatedFetch = jest.mocked(authenticatedFetch);
 
 describe('tokenService', () => {
-  const baseUrl = '/api/v2/tokens';
+  const API_BASE_URL = 'http://localhost:8000';
+  const baseUrl = `${API_BASE_URL}/api/v2/tokens`;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -300,7 +301,7 @@ describe('tokenService', () => {
 
       const result = await tokenService.validateToken('test-token-value');
 
-      expect(global.fetch).toHaveBeenCalledWith('/api/v2/tokens/validate', {
+      expect(global.fetch).toHaveBeenCalledWith(`${API_BASE_URL}/api/v2/tokens/validate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

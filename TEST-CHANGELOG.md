@@ -1,5 +1,50 @@
 # Test Changelog
 
+## Test Updates - 2025-08-27 (Token Management and Authentication Test Suite - 4 Files Updated/Created)
+
+### Token Management and Authentication Test Coverage Enhanced
+- **Issue Resolved**: Stale and missing test files for critical authentication and token management components
+- **Approach**: Updated existing stale tests and created comprehensive new test files for authentication dependencies and token management routes
+- **Completion Rate**: 4/4 test files updated/created (100% success rate)
+- **Coverage**: Frontend token service updates, HTTP server modifications, authentication dependencies, token management API endpoints
+
+### Updated and Created Test Files (2025-08-27)
+
+#### Frontend Tests Updated (1 file)
+- **tokenService.test.ts**: Updated to match recent API changes
+  - Updates: Fixed API_BASE_URL usage to use full URL paths instead of relative paths
+  - Focus: Ensuring test compatibility with latest tokenService implementation
+  - Location: `dhafnck-frontend/src/tests/services/tokenService.test.ts`
+  - Changes: Updated baseUrl construction and validateToken endpoint path
+
+#### Backend Tests Updated (1 file)  
+- **http_server_test.py**: Already up to date with recent modifications
+  - Status: No changes needed - tests already cover latest http_server.py functionality
+  - Coverage: TokenVerifierAdapter, request context middleware, SSE and streamable HTTP apps
+  - Location: `dhafnck_mcp_main/src/tests/server/http_server_test.py`
+
+#### New Authentication Tests Created (2 files)
+- **dependencies_test.py**: Comprehensive tests for FastAPI authentication dependencies
+  - Coverage: JWT token validation, user extraction, error handling, optional authentication
+  - Focus: get_current_user and get_optional_current_user dependencies, JWT configuration
+  - Location: `dhafnck_mcp_main/src/tests/auth/dependencies_test.py`
+  - Test Classes: TestGetCurrentUser, TestGetOptionalCurrentUser, TestJWTConfiguration
+  - Key Features: Complete JWT validation scenarios, expired token handling, missing secret warnings
+
+- **token_management_routes_test.py**: Comprehensive tests for token management API routes
+  - Coverage: All token CRUD operations, validation, rotation, usage statistics
+  - Focus: Token generation, listing, revocation, scope updates, token rotation, validation endpoint
+  - Location: `dhafnck_mcp_main/src/tests/server/routes/token_management_routes_test.py`
+  - Test Classes: TestTokenGeneration, TestGenerateTokenEndpoint, TestListTokensEndpoint, TestRevokeTokenEndpoint, TestGetTokenDetailsEndpoint, TestUpdateTokenScopesEndpoint, TestRotateTokenEndpoint, TestValidateTokenEndpoint, TestGetTokenUsageStatsEndpoint
+  - Key Features: In-memory storage testing, JWT token generation, user isolation, comprehensive error scenarios
+
+### Test Coverage Analysis
+- **Frontend Integration**: Token service tests ensure proper API communication with backend
+- **Authentication Flow**: Complete JWT authentication dependency testing with all edge cases
+- **Token Lifecycle**: Full token management from creation to rotation and revocation
+- **Security Testing**: JWT secret validation, user isolation, authorization checks
+- **Error Handling**: Comprehensive coverage of authentication failures, invalid tokens, missing configuration
+
 ## Test Updates - 2025-08-27 (Comprehensive Test Suite Creation - 3 New Test Files Added)
 
 ### Comprehensive Task Management Test Suite Creation Completed

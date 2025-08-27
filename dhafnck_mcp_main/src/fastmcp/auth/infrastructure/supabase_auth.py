@@ -302,32 +302,12 @@ class SupabaseAuthService:
                 
         except Exception as e:
             logger.error(f"Token verification error: {e}")
-            # Try alternate method - decode JWT locally
-            try:
-                import jwt
-                # Decode without verification to get user info
-                # Note: In production, you should verify with Supabase's public key
-                decoded = jwt.decode(access_token, options={"verify_signature": False})
-                
-                # Create a user object from the decoded token
-                user_data = {
-                    'id': decoded.get('sub'),
-                    'email': decoded.get('email'),
-                    'user_metadata': decoded.get('user_metadata', {}),
-                    'email_confirmed_at': 'verified' if decoded.get('user_metadata', {}).get('email_verified') else None
-                }
-                
-                # Return as a dict since we don't have the Supabase User object
-                return SupabaseAuthResult(
-                    success=True,
-                    user=user_data
-                )
-            except Exception as jwt_error:
-                logger.error(f"JWT decode error: {jwt_error}")
-                return SupabaseAuthResult(
-                    success=False,
-                    error_message="Invalid or expired token"
-                )
+            # Don't decode without verification - this is a security risk!
+            # If Supabase can't verify the token, it's invalid
+            return SupabaseAuthResult(
+                success=False,
+                error_message="Invalid or expired token"
+            )
     
     async def resend_verification_email(self, email: str) -> SupabaseAuthResult:
         """

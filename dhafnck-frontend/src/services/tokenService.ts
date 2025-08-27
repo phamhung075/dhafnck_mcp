@@ -1,6 +1,11 @@
 import { authenticatedFetch } from '../hooks/useAuthenticatedFetch';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Ensure we always have the backend URL
+const API_BASE_URL = (typeof import.meta.env !== 'undefined' && import.meta.env.VITE_API_URL) 
+  ? import.meta.env.VITE_API_URL 
+  : 'http://localhost:8000';
+
+console.log('TokenService - API_BASE_URL:', API_BASE_URL);
 
 interface GenerateTokenRequest {
   name: string;
@@ -30,7 +35,12 @@ interface TokenListResponse {
 class TokenService {
   private baseUrl = `${API_BASE_URL}/api/v2/tokens`;
 
+  constructor() {
+    console.log('TokenService initialized with baseUrl:', this.baseUrl);
+  }
+
   async generateToken(request: GenerateTokenRequest): Promise<{ data: TokenResponse }> {
+    console.log('TokenService.generateToken - calling:', this.baseUrl);
     const response = await authenticatedFetch(this.baseUrl, {
       method: 'POST',
       headers: {

@@ -26,15 +26,22 @@ REQUIRED BEHAVIORS:
 
 ## Missing Test Files - CREATE IMMEDIATELY:
 
+## Stale Test Files (Source Newer Than Test)
+- **Source**: `dhafnck-frontend/src/services/tokenService.ts`
+  - **Test**: `dhafnck-frontend/src/tests/services/tokenService.test.ts`
+  - **Days stale**: 6
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/http_server.py`
+  - **Test**: `dhafnck_mcp_main/src/tests/server/http_server_test.py`
+  - **Days stale**: 0
+
+
 ## Missing Test Files
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/application/use_cases/create_task.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/application/use_cases/create_task_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/auth/dependencies.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/auth/dependencies_test.py`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/database/models.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/database/models_test.py`
-
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/task_repository.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/infrastructure/repositories/orm/task_repository_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/token_management_routes.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/server/routes/token_management_routes_test.py`
 
 
 ## EXECUTION COMMANDS - DO NOW:

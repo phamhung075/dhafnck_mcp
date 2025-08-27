@@ -210,6 +210,42 @@ DELETE /api/v2/tokens/{id}     # Revoke token
 GET    /api/v2/tokens/{id}/usage # Usage statistics
 ```
 
+## MCP Connection Authentication Issue (RESOLVED)
+
+### Issue Description
+MCP clients (like Claude Code) were receiving "User not found in scope" errors even after successful token validation. This occurred because:
+
+1. **DualAuthMiddleware** validated tokens and set user info in `request.state`
+2. **RequestContextMiddleware** captured context from `request.state`
+3. **BUT** the MCP `handle_streamable_http` handler expected user in ASGI `scope` dictionary
+
+### Root Cause
+The middleware chain was correctly authenticating users but not propagating the authentication data to the ASGI scope where the MCP handler expected it.
+
+### Solution Applied
+Modified `RequestContextMiddleware` to bridge the gap:
+
+```python
+# In RequestContextMiddleware.dispatch()
+if hasattr(request, 'state') and hasattr(request.state, 'user_id'):
+    user_id = request.state.user_id
+    if user_id and request.url.path.startswith('/mcp'):
+        # Set user in ASGI scope for MCP streamable HTTP handler
+        if hasattr(request, 'scope') and isinstance(request.scope, dict):
+            request.scope['user'] = {
+                'user_id': user_id,
+                'email': getattr(request.state.auth_info, 'email', None),
+                'auth_method': getattr(request.state, 'auth_type', 'unknown')
+            }
+```
+
+### Middleware Execution Order
+```
+1. DualAuthMiddleware    → Validates token, sets request.state
+2. RequestContextMiddleware → Captures context, sets ASGI scope for MCP
+3. MCP Handler          → Reads user from ASGI scope
+```
+
 ## Error Handling
 
 ### Common Token Errors
