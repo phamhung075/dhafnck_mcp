@@ -6,25 +6,25 @@ from datetime import datetime
 from uuid import uuid4
 import logging
 
-from ...domain.entities.agent import Agent, AgentStatus as EntityAgentStatus
-from ...domain.entities.task import Task
-from ...domain.value_objects.agents import (
+from ....domain.entities.agent import Agent, AgentStatus as EntityAgentStatus
+from ....domain.entities.task import Task
+from ....domain.value_objects.agents import (
     AgentProfile, AgentCapabilities, AgentRole, AgentExpertise, AgentStatus
 )
-from ...domain.value_objects.coordination import (
+from ....domain.value_objects.coordination import (
     CoordinationType, CoordinationRequest, WorkAssignment, WorkHandoff,
     HandoffStatus, ConflictResolution, ConflictType, ResolutionStrategy,
     AgentCommunication
 )
-from ...domain.events.agent_events import (
+from ....domain.events.agent_events import (
     AgentAssigned, AgentUnassigned, WorkHandoffRequested, WorkHandoffAccepted,
     WorkHandoffRejected, WorkHandoffCompleted, ConflictDetected, ConflictResolved,
     AgentCollaborationStarted, AgentStatusBroadcast, AgentWorkloadRebalanced
 )
-from ...domain.exceptions import DomainException
-from ...domain.repositories.task_repository import TaskRepository
+from ....domain.exceptions import DomainException
+from ....domain.repositories.task_repository import TaskRepository
 # from ...infrastructure.repositories.agent_repository import AgentRepository  # TODO: AgentRepository not implemented yet
-from ...infrastructure.event_bus import EventBus, get_event_bus
+from ....infrastructure.event_bus import EventBus, get_event_bus
 
 logger = logging.getLogger(__name__)
 

@@ -1547,13 +1547,11 @@ class TaskMCPController(ContextPropagationMixin):
         if git_branch_id:
             logger.debug(f"Looking up project_id for git_branch_id {git_branch_id}")
             try:
-                # Use GitBranchApplicationFacade with proper factory pattern
-                from ...application.facades.git_branch_application_facade import GitBranchApplicationFacade
-                from ...infrastructure.repositories.repository_factory import RepositoryFactory
+                # Use GitBranchApplicationFacade properly through facade factory
+                from ...application.factories.git_branch_facade_factory import GitBranchFacadeFactory
                 
-                git_branch_facade = GitBranchApplicationFacade(
-                    git_branch_repository=RepositoryFactory.get_git_branch_repository()
-                )
+                factory = GitBranchFacadeFactory()
+                git_branch_facade = factory.create_git_branch_facade(user_id=user_id)
                 
                 try:
                     git_branch_data = git_branch_facade.get_git_branch_by_id(git_branch_id)

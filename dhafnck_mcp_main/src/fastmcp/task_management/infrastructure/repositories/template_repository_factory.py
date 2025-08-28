@@ -64,35 +64,59 @@ class TemplateRepositoryFactory:
     
     def create_repository(self, db_path: Optional[str] = None) -> TemplateRepositoryInterface:
         """
-        Create a template repository (always uses ORM)
+        Create a template repository based on environment configuration
         
         Args:
             db_path: Custom database path (optional, ignored for ORM)
             
         Returns:
-            ORMTemplateRepository instance
+            TemplateRepository instance based on environment
         """
-        # Always use ORM repository
-        return ORMTemplateRepository()
+        # Check environment variables for proper repository selection
+        env = os.getenv('ENVIRONMENT', 'production')
+        db_type = os.getenv('DATABASE_TYPE', 'supabase')
+        redis_enabled = os.getenv('REDIS_ENABLED', 'false').lower() == 'true'
+        
+        # For test environment, use mock if available
+        if env == 'test':
+            try:
+                from .mock_repository_factory import MockTemplateRepository
+                return MockTemplateRepository()
+            except ImportError:
+                pass  # Fall through to ORM
+        
+        # For now, always use ORM repository as base
+        base_repo = ORMTemplateRepository()
+        
+        # Wrap with cache if Redis is enabled and not in test environment
+        if redis_enabled and env != 'test':
+            try:
+                from .cached.cached_template_repository import CachedTemplateRepository
+                return CachedTemplateRepository(base_repo)
+            except ImportError:
+                pass  # Use base repository without caching
+        
+        return base_repo
     
     def create_sqlite_repository(self, db_path: Optional[str] = None) -> TemplateRepositoryInterface:
         """
-        Create a template repository (now always uses ORM)
+        Create a template repository (delegates to create_repository for consistency)
         
         Args:
             db_path: Custom database path (optional, ignored for ORM)
             
         Returns:
-            ORMTemplateRepository instance
+            TemplateRepository instance based on environment
         """
-        # Always use ORM repository
-        return ORMTemplateRepository()
+        # Delegate to create_repository for environment checking
+        return self.create_repository(db_path)
     
     def create_orm_repository(self) -> TemplateRepositoryInterface:
         """
-        Create an ORM template repository
+        Create an ORM template repository (delegates to create_repository for consistency)
         
         Returns:
-            ORMTemplateRepository instance
+            TemplateRepository instance based on environment
         """
-        return ORMTemplateRepository()
+        # Delegate to create_repository for environment checking
+        return self.create_repository()

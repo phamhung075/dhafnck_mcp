@@ -87,12 +87,14 @@ class SubtaskMCPController(ContextPropagationMixin):
             subtask_facade_factory: Factory for creating subtask application facades
             task_facade: Optional task facade for parent task operations
             context_facade: Optional context facade for parent context updates
-            task_repository_factory: Optional task repository factory instance
+            task_repository_factory: Deprecated - will be removed
         """
         self._subtask_facade_factory = subtask_facade_factory
-        self._task_facade = task_facade
+        # Store facades through the factory, not directly
+        from ...application.facades.task_application_facade import TaskApplicationFacade
+        self._task_application_facade = task_facade if task_facade else TaskApplicationFacade(None)
         self._context_facade = context_facade
-        self._task_repository_factory = task_repository_factory
+        # Don't store repository factory - violates DDD
         self._workflow_guidance = SubtaskWorkflowFactory.create()
         logger.info("SubtaskMCPController initialized with integrated progress tracking")
     
@@ -1014,13 +1016,16 @@ class SubtaskMCPController(ContextPropagationMixin):
         if task_id:
             logger.debug(f"Deriving context for subtask operations on task_id {task_id}")
             try:
-                # Use TaskApplicationFacade with proper factory pattern
-                from ...application.facades.task_application_facade import TaskApplicationFacade
-                from ...infrastructure.repositories.repository_factory import RepositoryFactory
-                
-                task_facade = TaskApplicationFacade(
-                    task_repository=RepositoryFactory.get_task_repository()
-                )
+                # Use TaskApplicationFacade through proper DDD layers
+                if hasattr(self, '_task_application_facade') and self._task_application_facade:
+                    task_facade = self._task_application_facade
+                else:
+                    # Create facade through proper factory pattern
+                    from ...application.facades.task_application_facade import TaskApplicationFacade
+                    from ...infrastructure.repositories.repository_factory import RepositoryFactory
+                    # Get repository through factory (respects environment)
+                    task_repo = RepositoryFactory.get_task_repository()
+                    task_facade = TaskApplicationFacade(task_repo)
                 
                 task_data = task_facade.get_task(task_id, include_context=False)
                 if task_data and 'task' in task_data:
@@ -1028,13 +1033,11 @@ class SubtaskMCPController(ContextPropagationMixin):
                     if git_branch_id:
                         logger.debug(f"Found git_branch_id {git_branch_id} for task_id {task_id}")
                         
-                        # Look up project_id from git_branch_id using facade with factory
-                        from ...application.facades.git_branch_application_facade import GitBranchApplicationFacade
-                        from ...infrastructure.repositories.repository_factory import RepositoryFactory
+                        # Look up project_id from git_branch_id using facade factory properly
+                        from ...application.factories.git_branch_facade_factory import GitBranchFacadeFactory
                         
-                        git_branch_facade = GitBranchApplicationFacade(
-                            git_branch_repository=RepositoryFactory.get_git_branch_repository()
-                        )
+                        factory = GitBranchFacadeFactory()
+                        git_branch_facade = factory.create_git_branch_facade(user_id=validated_user_id)
                         
                         try:
                             branch_data = git_branch_facade.get_git_branch_by_id(git_branch_id)

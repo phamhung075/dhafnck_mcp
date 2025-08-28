@@ -81,12 +81,16 @@ class AgentRepositoryFactory:
     @classmethod
     def _get_default_type(cls) -> AgentRepositoryType:
         """Get default repository type from environment"""
-        env_type = os.getenv("MCP_AGENT_REPOSITORY_TYPE", "orm").lower()
+        # Check standard environment variables
+        env = os.getenv('ENVIRONMENT', 'production')
+        db_type = os.getenv('DATABASE_TYPE', 'supabase')
         
-        try:
-            return AgentRepositoryType(env_type)
-        except ValueError:
-            logger.warning(f"Invalid agent repository type '{env_type}', using orm")
+        if env == 'test':
+            return AgentRepositoryType.MOCK
+        elif db_type in ['sqlite', 'supabase', 'postgresql']:
+            return AgentRepositoryType.ORM
+        else:
+            logger.warning(f"Unknown DATABASE_TYPE: {db_type}, defaulting to ORM")
             return AgentRepositoryType.ORM
     
     @classmethod
@@ -109,24 +113,9 @@ class AgentRepositoryFactory:
     ) -> AgentRepository:
         """Create repository instance of specified type"""
         
-        if repository_type not in cls._repository_types:
-            raise ValueError(f"Unsupported agent repository type: {repository_type.value}")
-        
-        repository_class = cls._repository_types[repository_type]
-        
-        try:
-            if repository_type == AgentRepositoryType.ORM:
-                return repository_class(user_id=user_id, **kwargs)
-            else:
-                return repository_class(user_id=user_id, **kwargs)
-                
-        except Exception as e:
-            logger.error(f"Failed to create {repository_type.value} agent repository: {e}")
-            # Fallback to ORM if possible
-            if repository_type != AgentRepositoryType.ORM:
-                logger.info("Falling back to ORM agent repository")
-                return ORMAgentRepository(user_id=user_id)
-            raise
+        # Use central RepositoryFactory for environment-based selection
+        from .repository_factory import RepositoryFactory
+        return RepositoryFactory.get_agent_repository()
     
     @classmethod
     def register_type(

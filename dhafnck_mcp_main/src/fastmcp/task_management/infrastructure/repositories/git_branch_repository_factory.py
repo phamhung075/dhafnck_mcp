@@ -57,20 +57,9 @@ class GitBranchRepositoryFactory:
         
         # Create repository instance based on type
         try:
-            if repository_type == GitBranchRepositoryType.ORM:
-                from .orm.git_branch_repository import ORMGitBranchRepository
-                repository = ORMGitBranchRepository(
-                    user_id=user_id,
-                    **kwargs
-                )
-            elif repository_type == GitBranchRepositoryType.JSON:
-                # JSON repository not implemented yet
-                raise NotImplementedError(f"JSON repository type not yet implemented")
-            elif repository_type == GitBranchRepositoryType.MEMORY:
-                # Memory repository not implemented yet
-                raise NotImplementedError(f"Memory repository type not yet implemented")
-            else:
-                raise ValueError(f"Unsupported repository type: {repository_type}")
+            # Use central RepositoryFactory for consistent environment-based selection
+            from .repository_factory import RepositoryFactory
+            repository = RepositoryFactory.get_git_branch_repository()
             
             # Cache the instance
             cls._instances[cache_key] = repository
@@ -85,17 +74,17 @@ class GitBranchRepositoryFactory:
     @classmethod
     def _get_default_type(cls) -> GitBranchRepositoryType:
         """Get default repository type from environment or fallback"""
-        # Try to use ORM, fallback to memory if database not available
-        try:
-            from ..database.database_config import get_db_config
-            # Try to get database config to check if it's available
-            db_config = get_db_config()
-            if db_config and db_config.engine:
-                return GitBranchRepositoryType.ORM
-        except Exception as e:
-            logger.warning(f"Database not available, using memory repository: {e}")
+        # Check environment variables properly
+        env = os.getenv('ENVIRONMENT', 'production')
+        db_type = os.getenv('DATABASE_TYPE', 'supabase')
         
-        return GitBranchRepositoryType.MEMORY
+        if env == 'test':
+            return GitBranchRepositoryType.MEMORY
+        elif db_type in ['sqlite', 'supabase', 'postgresql']:
+            return GitBranchRepositoryType.ORM
+        else:
+            logger.warning(f"Unknown DATABASE_TYPE: {db_type}, defaulting to ORM")
+            return GitBranchRepositoryType.ORM
     
     @classmethod
     def register_type(

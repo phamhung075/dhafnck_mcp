@@ -13,12 +13,12 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 from dataclasses import dataclass
 
-from ...domain.entities.task import Task
-from ...domain.entities.context import TaskContext
-from ...domain.value_objects.progress import ProgressType
-from ...domain.repositories.task_repository import TaskRepository
-from ...domain.repositories.context_repository import ContextRepository
-from ...infrastructure.event_store import EventStore, get_event_store
+from ....domain.entities.task import Task
+from ....domain.entities.context import TaskContext
+from ....domain.value_objects.progress import ProgressType
+from ....domain.repositories.task_repository import TaskRepository
+from ....domain.repositories.context_repository import ContextRepository
+from ....infrastructure.event_store import EventStore, get_event_store
 
 
 logger = logging.getLogger(__name__)
