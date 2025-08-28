@@ -2,20 +2,20 @@
 
 from typing import Any, Dict, Optional
 
-from ...application.dtos.subtask import (
+from ....application.dtos.subtask import (
     AddSubtaskRequest,
     UpdateSubtaskRequest,
     SubtaskResponse
 )
 
-from ...domain import TaskRepository
-from ...domain.repositories.subtask_repository import SubtaskRepository
-from ..use_cases.add_subtask import AddSubtaskUseCase
-from ..use_cases.update_subtask import UpdateSubtaskUseCase
-from ..use_cases.remove_subtask import RemoveSubtaskUseCase
-from ..use_cases.complete_subtask import CompleteSubtaskUseCase
-from ..use_cases.get_subtasks import GetSubtasksUseCase
-from ..use_cases.get_subtask import GetSubtaskUseCase
+from ....domain import TaskRepository
+from ....domain.repositories.subtask_repository import SubtaskRepository
+from ...use_cases.add_subtask import AddSubtaskUseCase
+from ...use_cases.update_subtask import UpdateSubtaskUseCase
+from ...use_cases.remove_subtask import RemoveSubtaskUseCase
+from ...use_cases.complete_subtask import CompleteSubtaskUseCase
+from ...use_cases.get_subtasks import GetSubtasksUseCase
+from ...use_cases.get_subtask import GetSubtaskUseCase
 
 
 class SubtaskApplicationService:

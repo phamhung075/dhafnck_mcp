@@ -11,18 +11,18 @@ from typing import Optional, Dict, Any
 from datetime import datetime
 from pathlib import Path
 
-from ...infrastructure.utilities.path_resolver import PathResolver
-from ...infrastructure.repositories.project_repository_factory import GlobalRepositoryManager
-from ...application.use_cases.create_project import CreateProjectUseCase
-from ...application.use_cases.get_project import GetProjectUseCase
-from ...application.use_cases.list_projects import ListProjectsUseCase
-from ...application.use_cases.update_project import UpdateProjectUseCase
-# from ...application.use_cases.delete_project import DeleteProjectUseCase  # Not used, commented out
-from ...application.use_cases.project_health_check import ProjectHealthCheckUseCase
-from ...application.use_cases.cleanup_obsolete_use_case import CleanupObsoleteUseCase
-from ...application.use_cases.validate_integrity_use_case import ValidateIntegrityUseCase
-from ...application.use_cases.rebalance_agents_use_case import RebalanceAgentsUseCase
-from ...domain.repositories.project_repository import ProjectRepository
+from ....infrastructure.utilities.path_resolver import PathResolver
+from ....infrastructure.repositories.project_repository_factory import GlobalRepositoryManager
+from ....application.use_cases.create_project import CreateProjectUseCase
+from ....application.use_cases.get_project import GetProjectUseCase
+from ....application.use_cases.list_projects import ListProjectsUseCase
+from ....application.use_cases.update_project import UpdateProjectUseCase
+# from ....application.use_cases.delete_project import DeleteProjectUseCase  # Not used, commented out
+from ....application.use_cases.project_health_check import ProjectHealthCheckUseCase
+from ....application.use_cases.cleanup_obsolete_use_case import CleanupObsoleteUseCase
+from ....application.use_cases.validate_integrity_use_case import ValidateIntegrityUseCase
+from ....application.use_cases.rebalance_agents_use_case import RebalanceAgentsUseCase
+from ....domain.repositories.project_repository import ProjectRepository
 
 logger = logging.getLogger(__name__)
 
@@ -189,7 +189,7 @@ class ProjectManagementService:
             # Validate deletion safety if not forced
             if not force:
                 # Get branches for this project
-                from ..facades.git_branch_application_facade import GitBranchApplicationFacade
+                from ...facades.git_branch_application_facade import GitBranchApplicationFacade
                 git_branch_facade = GitBranchApplicationFacade()
                 branches_result = git_branch_facade.list_git_branchs(project_id)
                 
@@ -231,7 +231,7 @@ class ProjectManagementService:
             
             # Now proceed with deletion
             # Delete all branches (which will cascade delete tasks)
-            from ..facades.git_branch_application_facade import GitBranchApplicationFacade
+            from ...facades.git_branch_application_facade import GitBranchApplicationFacade
             git_branch_facade = GitBranchApplicationFacade()
             branches_result = git_branch_facade.list_git_branchs(project_id)
             

@@ -19,7 +19,7 @@ from ....domain.value_objects.progress import ProgressType
 from ....domain.repositories.task_repository import TaskRepository
 from ....domain.repositories.context_repository import ContextRepository
 from ....infrastructure.event_store import EventStore, get_event_store
-
+from ....domain.value_objects.progress import ProgressStatus
 
 logger = logging.getLogger(__name__)
 

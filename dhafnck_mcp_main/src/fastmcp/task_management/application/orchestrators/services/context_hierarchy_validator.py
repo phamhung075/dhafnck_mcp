@@ -7,7 +7,7 @@ for the 4-tier hierarchy: Global → Project → Branch → Task
 
 import logging
 from typing import Dict, Any, Optional, Tuple, List
-from ...domain.value_objects.context_enums import ContextLevel
+from ....domain.value_objects.context_enums import ContextLevel
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ class ContextHierarchyValidator:
         """Validate project context requirements."""
         # Check if global context exists
         try:
-            from ...infrastructure.database.models import GLOBAL_SINGLETON_UUID
+            from ....infrastructure.database.models import GLOBAL_SINGLETON_UUID
             
             # The global_repo passed to this validator is already user-scoped if needed
             # So we can directly use it to check for global context existence

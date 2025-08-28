@@ -11,10 +11,10 @@ from uuid import UUID
 from datetime import datetime, timezone
 from datetime import datetime, timedelta
 
-from ...domain.value_objects.hints import (
+from ....domain.value_objects.hints import (
     WorkflowHint, HintCollection, HintType, HintPriority
 )
-from ...domain.services.hint_rules import (
+from ....domain.services.hint_rules import (
     HintRule, RuleContext,
     StalledProgressRule,
     ImplementationReadyForTestingRule,
@@ -23,15 +23,15 @@ from ...domain.services.hint_rules import (
     NearCompletionRule,
     CollaborationNeededRule
 )
-from ...domain.events.hint_events import (
+from ....domain.events.hint_events import (
     HintGenerated, HintAccepted, HintDismissed,
     HintFeedbackProvided, HintEffectivenessCalculated
 )
-from ...domain.entities.task import Task
-from ...domain.entities.context import TaskContext
-from ...domain.repositories.task_repository import TaskRepository
-from ...domain.repositories.context_repository import ContextRepository
-from ...infrastructure.event_store import EventStore, get_event_store
+from ....domain.entities.task import Task
+from ....domain.entities.context import TaskContext
+from ....domain.repositories.task_repository import TaskRepository
+from ....domain.repositories.context_repository import ContextRepository
+from ....infrastructure.event_store import EventStore, get_event_store
 
 
 logger = logging.getLogger(__name__)
@@ -233,7 +233,7 @@ class HintGenerationService:
             )
             
             # Import HintMetadata
-            from ...domain.value_objects.hints import HintMetadata
+            from ....domain.value_objects.hints import HintMetadata
             
             # Create new hint with enhanced metadata
             return WorkflowHint(

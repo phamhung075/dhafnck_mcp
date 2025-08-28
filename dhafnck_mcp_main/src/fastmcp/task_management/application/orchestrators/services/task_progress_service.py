@@ -5,9 +5,9 @@ Handles automatic progress calculation and updates for tasks based on subtask co
 
 import logging
 from typing import Optional, Any
-from ...domain.repositories.task_repository import TaskRepository
-from ...domain.repositories.subtask_repository import SubtaskRepository
-from ...domain.value_objects.task_id import TaskId
+from ....domain.repositories.task_repository import TaskRepository
+from ....domain.repositories.subtask_repository import SubtaskRepository
+from ....domain.value_objects.task_id import TaskId
 
 logger = logging.getLogger(__name__)
 
@@ -94,8 +94,8 @@ class TaskProgressService:
             
             # Update the task progress in the database
             # We need to update the task through the repository or directly via SQLAlchemy
-            from ...infrastructure.database.database_config import get_session
-            from ...infrastructure.database.models import Task as TaskModel
+            from ....infrastructure.database.database_config import get_session
+            from ....infrastructure.database.models import Task as TaskModel
             
             with get_session() as session:
                 task_model = session.get(TaskModel, task_id)
@@ -124,8 +124,8 @@ class TaskProgressService:
         """
         try:
             # Get the task from database
-            from ...infrastructure.database.database_config import get_session
-            from ...infrastructure.database.models import Task as TaskModel
+            from ....infrastructure.database.database_config import get_session
+            from ....infrastructure.database.models import Task as TaskModel
             
             with get_session() as session:
                 task_model = session.get(TaskModel, task_id)

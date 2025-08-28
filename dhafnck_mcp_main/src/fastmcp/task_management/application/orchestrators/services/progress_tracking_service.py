@@ -14,20 +14,20 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Tuple
 from uuid import UUID
 
-from ...domain.entities.task import Task
-from ...domain.entities.context import TaskContext
-from ...domain.value_objects.task_id import TaskId
-from ...domain.value_objects.progress import (
+from ....domain.entities.task import Task
+from ....domain.entities.context import TaskContext
+from ....domain.value_objects.task_id import TaskId
+from ....domain.value_objects.progress import (
     ProgressType, ProgressStatus, ProgressSnapshot, 
     ProgressTimeline, ProgressCalculationStrategy, ProgressMetadata
 )
-from ...domain.events.progress_events import (
+from ....domain.events.progress_events import (
     ProgressUpdated, ProgressMilestoneReached, ProgressStalled,
     SubtaskProgressAggregated, ProgressBlocked, ProgressUnblocked
 )
-from ...domain.repositories.task_repository import TaskRepository
-from ...domain.repositories.context_repository import ContextRepository
-from ...infrastructure.event_bus import EventBus, get_event_bus
+from ....domain.repositories.task_repository import TaskRepository
+from ....domain.repositories.context_repository import ContextRepository
+from ....infrastructure.event_bus import EventBus, get_event_bus
 
 logger = logging.getLogger(__name__)
 

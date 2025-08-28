@@ -5,10 +5,10 @@ from typing import List, Dict, Optional, Set, Any
 from collections import defaultdict, deque
 from datetime import datetime
 
-from ...domain.repositories.task_repository import TaskRepository
-from ...domain.value_objects.task_id import TaskId
-from ...domain.exceptions.task_exceptions import TaskNotFoundError
-from ..dtos.task.dependency_info import DependencyInfo, DependencyChain, DependencyRelationships
+from ....domain.repositories.task_repository import TaskRepository
+from ....domain.value_objects.task_id import TaskId
+from ....domain.exceptions.task_exceptions import TaskNotFoundError
+from ...dtos.task.dependency_info import DependencyInfo, DependencyChain, DependencyRelationships
 
 logger = logging.getLogger(__name__)
 

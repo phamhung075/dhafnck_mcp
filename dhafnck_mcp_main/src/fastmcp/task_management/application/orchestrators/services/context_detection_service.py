@@ -7,7 +7,7 @@ git branch ID, or task ID by checking through the proper application layer.
 import logging
 from typing import Tuple, Optional
 
-from ...infrastructure.repositories.repository_factory import RepositoryFactory
+from ....infrastructure.repositories.repository_factory import RepositoryFactory
 
 logger = logging.getLogger(__name__)
 

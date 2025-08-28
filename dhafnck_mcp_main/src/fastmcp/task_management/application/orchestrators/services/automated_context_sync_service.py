@@ -13,10 +13,10 @@ from datetime import datetime, timezone
 import asyncio
 
 from .task_context_sync_service import TaskContextSyncService
-from ...domain.repositories.task_repository import TaskRepository
-from ...domain.repositories.subtask_repository import SubtaskRepository
-from ...domain.entities.task import Task
-from ...domain.entities.subtask import Subtask
+from ....domain.repositories.task_repository import TaskRepository
+from ....domain.repositories.subtask_repository import SubtaskRepository
+from ....domain.entities.task import Task
+from ....domain.entities.subtask import Subtask
 
 logger = logging.getLogger(__name__)
 
@@ -250,7 +250,7 @@ class AutomatedContextSyncService:
         for task_id in task_ids:
             try:
                 # Find the task
-                from ...domain.value_objects.task_id import TaskId
+                from ....domain.value_objects.task_id import TaskId
                 domain_task_id = TaskId.from_string(task_id)
                 task = self._task_repository.find_by_id(domain_task_id)
                 

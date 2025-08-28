@@ -2,16 +2,16 @@
 
 from typing import Any, Dict, Optional, TYPE_CHECKING
 
-from ...application.dtos.dependency import (
+from ....application.dtos.dependency import (
     AddDependencyRequest,
     DependencyResponse
 )
 
-from ...domain import TaskRepository
+from ....domain import TaskRepository
 
 # Use TYPE_CHECKING to avoid circular imports
 if TYPE_CHECKING:
-    from ..use_cases import (
+    from ...use_cases import (
         AddDependencyUseCase,
         RemoveDependencyUseCase,
         GetDependenciesUseCase,

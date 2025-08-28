@@ -1,4 +1,4 @@
-from ...domain.value_objects.priority import PriorityLevel
+from ....domain.value_objects.priority import PriorityLevel
 from typing import Optional
 
 

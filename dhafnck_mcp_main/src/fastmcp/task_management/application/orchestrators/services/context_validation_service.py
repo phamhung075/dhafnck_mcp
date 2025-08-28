@@ -8,10 +8,10 @@ from typing import Optional, Tuple, List, Dict, Any
 from datetime import datetime
 import logging
 
-from ...domain.entities.context import TaskContext
-from ...domain.entities.task import Task
-from ...domain.value_objects.context_enums import ContextLevel
-from ...domain.exceptions.vision_exceptions import (
+from ....domain.entities.context import TaskContext
+from ....domain.entities.task import Task
+from ....domain.value_objects.context_enums import ContextLevel
+from ....domain.exceptions.vision_exceptions import (
     InvalidContextUpdateError,
     MissingCompletionSummaryError
 )

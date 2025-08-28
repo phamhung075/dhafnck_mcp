@@ -8,18 +8,18 @@ import logging
 from collections import defaultdict
 from enum import Enum
 
-from ...domain.entities.agent import Agent, AgentStatus, AgentCapability
-from ...domain.entities.task import Task
-from ...domain.value_objects.task_status import TaskStatus, TaskStatusEnum
-from ...domain.value_objects.priority import Priority, PriorityLevel
-from ...domain.value_objects.agents import (
+from ....domain.entities.agent import Agent, AgentStatus, AgentCapability
+from ....domain.entities.task import Task
+from ....domain.value_objects.task_status import TaskStatus, TaskStatusEnum
+from ....domain.value_objects.priority import Priority, PriorityLevel
+from ....domain.value_objects.agents import (
     AgentRole, AgentExpertise, AgentProfile, AgentCapabilities
 )
-from ...domain.value_objects.coordination import WorkAssignment
-from ...domain.events.agent_events import AgentAssigned
-from ...domain.exceptions import DomainException
-from ...domain.repositories.task_repository import TaskRepository
-# from ...infrastructure.repositories.agent_repository import AgentRepository  # TODO: Not implemented yet
+from ....domain.value_objects.coordination import WorkAssignment
+from ....domain.events.agent_events import AgentAssigned
+from ....domain.exceptions import DomainException
+from ....domain.repositories.task_repository import TaskRepository
+# from ....infrastructure.repositories.agent_repository import AgentRepository  # TODO: Not implemented yet
 # from ..event_bus import EventBus  # TODO: Not implemented yet
 from .agent_coordination_service import AgentCoordinationService
 

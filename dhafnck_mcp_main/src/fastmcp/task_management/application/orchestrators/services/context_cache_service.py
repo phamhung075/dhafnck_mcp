@@ -9,7 +9,7 @@ import json
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timezone, timedelta
 
-from ...infrastructure.logging import TaskManagementLogger, log_operation
+from ....infrastructure.logging import TaskManagementLogger, log_operation
 
 logger = TaskManagementLogger.get_logger(__name__)
 

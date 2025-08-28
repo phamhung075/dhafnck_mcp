@@ -8,8 +8,8 @@ import uuid
 from typing import Dict, Any, List, Union, Optional
 from datetime import datetime
 
-from ...domain.enums.compliance_enums import ComplianceLevel, ValidationResult
-from ...domain.value_objects.compliance_objects import ValidationReport
+from ....domain.enums.compliance_enums import ComplianceLevel, ValidationResult
+from ....domain.value_objects.compliance_objects import ValidationReport
 
 logger = logging.getLogger(__name__)
 

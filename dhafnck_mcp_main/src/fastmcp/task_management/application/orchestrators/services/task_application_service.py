@@ -2,7 +2,7 @@
 
 from typing import Optional, Any
 
-from ...application.dtos.task import (
+from ....application.dtos.task import (
     CreateTaskRequest,
     CreateTaskResponse,
     TaskResponse,
@@ -11,21 +11,21 @@ from ...application.dtos.task import (
     TaskListResponse,
     SearchTasksRequest
 )
-from ...domain.exceptions.task_exceptions import TaskNotFoundError
-from ...domain.repositories.task_repository import TaskRepository
-from ..use_cases.create_task import CreateTaskUseCase
-from ..use_cases.get_task import GetTaskUseCase
-from ..use_cases.update_task import UpdateTaskUseCase
-from ..use_cases.list_tasks import ListTasksUseCase
-from ..use_cases.search_tasks import SearchTasksUseCase
-from ..use_cases.delete_task import DeleteTaskUseCase
-from ..use_cases.complete_task import CompleteTaskUseCase
+from ....domain.exceptions.task_exceptions import TaskNotFoundError
+from ....domain.repositories.task_repository import TaskRepository
+from ...use_cases.create_task import CreateTaskUseCase
+from ...use_cases.get_task import GetTaskUseCase
+from ...use_cases.update_task import UpdateTaskUseCase
+from ...use_cases.list_tasks import ListTasksUseCase
+from ...use_cases.search_tasks import SearchTasksUseCase
+from ...use_cases.delete_task import DeleteTaskUseCase
+from ...use_cases.complete_task import CompleteTaskUseCase
 
 
 class TaskApplicationService:
     """Application service for task CRUD, search, and completion"""
     def __init__(self, task_repository: TaskRepository, context_service: Optional[Any] = None, user_id: Optional[str] = None):
-        from ..factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+        from ...factories.unified_context_facade_factory import UnifiedContextFacadeFactory
         from .unified_context_service import UnifiedContextService
         self._task_repository = task_repository
         self._user_id = user_id  # Store user context
@@ -44,8 +44,8 @@ class TaskApplicationService:
         self._delete_task_use_case = DeleteTaskUseCase(self._get_user_scoped_repository())
         
         # Initialize task context repository for unified context system
-        from ...infrastructure.repositories.task_context_repository import TaskContextRepository
-        from ...infrastructure.database.database_config import get_db_config
+        from ....infrastructure.repositories.task_context_repository import TaskContextRepository
+        from ....infrastructure.database.database_config import get_db_config
         db_config = get_db_config()
         task_context_repository = TaskContextRepository(db_config.SessionLocal)
         

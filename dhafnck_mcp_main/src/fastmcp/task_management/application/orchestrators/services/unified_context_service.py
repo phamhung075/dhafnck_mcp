@@ -10,8 +10,8 @@ from uuid import UUID
 import json
 from decimal import Decimal
 
-from ...domain.entities.context import GlobalContext, ProjectContext, BranchContext, TaskContextUnified as TaskContext
-from ...domain.value_objects.context_enums import ContextLevel
+from ....domain.entities.context import GlobalContext, ProjectContext, BranchContext, TaskContextUnified as TaskContext
+from ....domain.value_objects.context_enums import ContextLevel
 from .context_cache_service import ContextCacheService
 from .context_inheritance_service import ContextInheritanceService
 from .context_delegation_service import ContextDelegationService
@@ -320,7 +320,7 @@ class UnifiedContextService:
             
             # Invalidate cache for parent contexts (child creation affects inheritance)
             try:
-                from ...infrastructure.cache.context_cache import get_context_cache
+                from ....infrastructure.cache.context_cache import get_context_cache
                 cache = get_context_cache()
                 
                 # Invalidate parent inheritance chains since a new child was added
@@ -516,7 +516,7 @@ class UnifiedContextService:
             
             # Invalidate cache for updated context
             try:
-                from ...infrastructure.cache.context_cache import get_context_cache
+                from ....infrastructure.cache.context_cache import get_context_cache
                 cache = get_context_cache()
                 
                 # Invalidate the specific context and its inheritance chain
@@ -608,7 +608,7 @@ class UnifiedContextService:
             
             # Invalidate cache for deleted context
             try:
-                from ...infrastructure.cache.context_cache import get_context_cache
+                from ....infrastructure.cache.context_cache import get_context_cache
                 cache = get_context_cache()
                 user_id = self.user_id
                 

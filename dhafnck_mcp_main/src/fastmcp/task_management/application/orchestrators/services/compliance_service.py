@@ -9,10 +9,10 @@ import uuid
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
-from ...domain.enums.compliance_enums import ComplianceLevel, ValidationResult, SecurityLevel
-from ...domain.value_objects.compliance_objects import ComplianceRule, ValidationReport, SecurityContext
-from ...infrastructure.validation.document_validator import DocumentValidator
-from ...infrastructure.security.access_controller import AccessController
+from ....domain.enums.compliance_enums import ComplianceLevel, ValidationResult, SecurityLevel
+from ....domain.value_objects.compliance_objects import ComplianceRule, ValidationReport, SecurityContext
+from ....infrastructure.validation.document_validator import DocumentValidator
+from ....infrastructure.security.access_controller import AccessController
 
 logger = logging.getLogger(__name__)
 

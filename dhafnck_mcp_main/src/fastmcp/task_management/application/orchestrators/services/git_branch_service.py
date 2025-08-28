@@ -4,9 +4,9 @@ Service for managing Git Branches
 from typing import Dict, Any, Optional
 import logging
 
-from ...domain.repositories.project_repository import ProjectRepository
-from ...domain.entities.git_branch import GitBranch
-from ...infrastructure.repositories.project_repository_factory import GlobalRepositoryManager
+from ....domain.repositories.project_repository import ProjectRepository
+from ....domain.entities.git_branch import GitBranch
+from ....infrastructure.repositories.project_repository_factory import GlobalRepositoryManager
 from .unified_context_service import UnifiedContextService
 
 logger = logging.getLogger(__name__)
@@ -27,13 +27,13 @@ class GitBranchService:
             # Fallback to default repository (may require compatibility mode)
             self._project_repo = GlobalRepositoryManager.get_default()
         # Initialize git branch repository with user context
-        from ...infrastructure.repositories.orm.git_branch_repository import ORMGitBranchRepository
+        from ....infrastructure.repositories.orm.git_branch_repository import ORMGitBranchRepository
         self._git_branch_repo = ORMGitBranchRepository(user_id=user_id)
         # Initialize hierarchical context service for branch context creation
         if hierarchical_context_service:
             self._hierarchical_context_service = hierarchical_context_service
         else:
-            from ..factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+            from ...factories.unified_context_facade_factory import UnifiedContextFacadeFactory
             factory = UnifiedContextFacadeFactory()
             self._hierarchical_context_service = factory.create_unified_service()
 

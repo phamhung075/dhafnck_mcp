@@ -1,14 +1,14 @@
 from typing import Optional, Any
 import logging
 
-from ..factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+from ...factories.unified_context_facade_factory import UnifiedContextFacadeFactory
 from .unified_context_service import UnifiedContextService
-from ...domain.repositories.task_repository import TaskRepository
-from ...domain.value_objects.task_id import TaskId
-from ..use_cases.get_task import GetTaskUseCase
-from ...domain.constants import validate_user_id
-from ...domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
-from ....config.auth_config import AuthConfig
+from ....domain.repositories.task_repository import TaskRepository
+from ....domain.value_objects.task_id import TaskId
+from ...use_cases.get_task import GetTaskUseCase
+from ....domain.constants import validate_user_id
+from ....domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
+from .....config.auth_config import AuthConfig
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +81,7 @@ class TaskContextSyncService:
             # If project_id not provided, try to get it from the task's git_branch
             if not project_id and hasattr(domain_task, 'git_branch_id'):
                 # Try to get project_id from git branch repository
-                from ...infrastructure.repositories.orm.git_branch_repository import ORMGitBranchRepository
+                from ....infrastructure.repositories.orm.git_branch_repository import ORMGitBranchRepository
                 git_branch_repo = ORMGitBranchRepository()
                 git_branch = git_branch_repo.find_by_id(domain_task.git_branch_id)
                 if git_branch and hasattr(git_branch, 'project_id'):

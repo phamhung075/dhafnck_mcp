@@ -9,9 +9,9 @@ import logging
 from datetime import datetime
 import uuid
 
-from ...domain.entities.git_branch import GitBranch
-from ...infrastructure.repositories.git_branch_repository_factory import GitBranchRepositoryFactory
-from ...infrastructure.repositories.project_repository_factory import get_default_repository
+from ....domain.entities.git_branch import GitBranch
+from ....infrastructure.repositories.git_branch_repository_factory import GitBranchRepositoryFactory
+from ....infrastructure.repositories.project_repository_factory import get_default_repository
 
 logger = logging.getLogger(__name__)
 
