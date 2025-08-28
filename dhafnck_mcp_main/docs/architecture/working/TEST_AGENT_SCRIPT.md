@@ -2,7 +2,7 @@
 
 ## Executive Summary for Test Agent
 
-**YOUR MISSION**: Get test tasks from planner agent and create comprehensive tests to verify code fixes and architecture compliance based on issues_report.md.
+**YOUR MISSION**: Get test tasks from planner agent and create comprehensive tests to verify code fixes and architecture compliance based on workplace.md.
 
 ## 🔄 Test Agent Workflow
 

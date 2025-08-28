@@ -2,7 +2,7 @@
 
 ## Executive Summary for Code Agent
 
-**YOUR MISSION**: Get tasks from planner agent and implement actual code fixes for architecture violations based on issues_report.md.
+**YOUR MISSION**: Get tasks from planner agent and implement actual code fixes for architecture violations based on workplace.md.
 
 ## 🔄 Code Agent Workflow 
 

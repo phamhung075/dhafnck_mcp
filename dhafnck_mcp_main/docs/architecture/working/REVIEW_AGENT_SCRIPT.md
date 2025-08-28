@@ -2,7 +2,7 @@
 
 ## Executive Summary for Review Agent
 
-**YOUR MISSION**: Review code and test implementations, verify compliance, and APPEND all reviews to the SAME SINGLE `issues_report.md` file where analyze agent writes. NO SEPARATE REPORT FILES.
+**YOUR MISSION**: Review code and test implementations, verify compliance, and APPEND all reviews to the SAME SINGLE `workplace.md` file where analyze agent writes. NO SEPARATE REPORT FILES.
 
 ## 🔄 Review Agent Workflow
 
@@ -510,11 +510,11 @@ elif available_tasks["task"]["title"].contains("Review") and "Test" in available
 
 ```python
 def update_issues_report_with_review(component_type, review_data):
-    """APPEND review findings to the SAME SINGLE issues_report.md file (no separate files)"""
+    """APPEND review findings to the SAME SINGLE workplace.md file (no separate files)"""
     
     try:
         # Read current report
-        current_report = Read(file_path="dhafnck_mcp_main/docs/architecture/issues_report.md")
+        current_report = Read(file_path="dhafnck_mcp_main/docs/architecture/workplace.md")
         
         # Calculate overall compliance improvement
         if component_type == "controller_fixes":
@@ -593,11 +593,11 @@ def update_issues_report_with_review(component_type, review_data):
         
         # Write updated report
         Write(
-            file_path="dhafnck_mcp_main/docs/architecture/issues_report.md",
+            file_path="dhafnck_mcp_main/docs/architecture/workplace.md",
             content=updated_report
         )
         
-        print(f"📝 Updated issues_report.md with {component_type} review results")
+        print(f"📝 Updated workplace.md with {component_type} review results")
         print(f"📊 Component Status: {review_data['status']}")
         print(f"📈 Compliance Points Added: +{improvement_points:.0f}")
         
@@ -665,7 +665,7 @@ elif available_tasks["task"]["title"].contains("Final Compliance Review"):
 '''
         
         Write(
-            file_path="dhafnck_mcp_main/docs/architecture/issues_report.md",
+            file_path="dhafnck_mcp_main/docs/architecture/workplace.md",
             content=final_report_update
         )
         
@@ -727,7 +727,7 @@ while True:
     if not task:
         # Check if system is complete
         try:
-            current_report = Read(file_path="dhafnck_mcp_main/docs/architecture/issues_report.md")
+            current_report = Read(file_path="dhafnck_mcp_main/docs/architecture/workplace.md")
             if "PRODUCTION READY" in current_report:
                 print("✅ System is production ready - review agent work complete")
                 break
@@ -744,7 +744,7 @@ while True:
 
 ## 📊 Review Impact on Issues Report
 
-The review agent updates `issues_report.md` with:
+The review agent updates `workplace.md` with:
 
 1. **Component Status** - FIXED, NEEDS_REWORK, or REJECTED
 2. **Detailed Findings** - Specific issues found in code/tests
@@ -754,11 +754,11 @@ The review agent updates `issues_report.md` with:
 
 ## 🎯 Success Criteria
 
-- ✅ **APPEND TO SAME FILE**: All reviews added to existing `issues_report.md`
+- ✅ **APPEND TO SAME FILE**: All reviews added to existing `workplace.md`
 - ✅ **NO NEW FILES**: Never create separate review reports
 - ✅ All code implementations reviewed for DDD compliance
 - ✅ All test implementations reviewed for quality and coverage
-- ✅ `issues_report.md` updated with detailed review findings (in same file)
+- ✅ `workplace.md` updated with detailed review findings (in same file)
 - ✅ Issues marked as FIXED when compliant or NEEDS_REWORK when not
 - ✅ Final compliance review conducted when all components complete
 - ✅ Production readiness decision documented in same report file

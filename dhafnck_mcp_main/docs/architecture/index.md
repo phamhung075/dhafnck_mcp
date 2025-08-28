@@ -42,15 +42,25 @@ This directory contains comprehensive architecture documentation for the Dhafnck
 - Testing strategies for different configurations
 - Monitoring and troubleshooting guide
 
-#### 4. [Architecture Issues Report](issues_report.md) 🚨 **CRITICAL - CURRENT VIOLATIONS**
-**Purpose**: Comprehensive analysis of all architecture violations with specific remediation tasks
-- Current compliance score: 20/100 (CRITICAL FAILURE)
-- 90 total violations (ALL HIGH SEVERITY)
-- Specific file names and line numbers for each violation
-- Organized by priority with clear task assignments for agents
+### Working Documents & Agent Scripts
+
+#### 4. [Architecture Issues Report](working/workplace.md) 🚨 **CRITICAL - ACTIVE WORK**
+**Purpose**: Live working document for architecture violation analysis and remediation
+- Current compliance score tracking
+- Active violations being fixed
+- Agent task assignments and progress
+- Review results and compliance updates
 - Controller layer violations (direct infrastructure access)
 - Repository factory pattern failures (no environment switching)
 - Missing cache invalidation across all repositories
+
+#### Agent Implementation Scripts (working/)
+**Location**: `working/` subdirectory contains active agent scripts for multi-agent workflow:
+- **[PLANNER_TASK_AGENT_SCRIPT.md](working/PLANNER_TASK_AGENT_SCRIPT.md)** - Task planning and assignment
+- **[ANALYZE_AGENT_SCRIPT.md](working/ANALYZE_AGENT_SCRIPT.md)** - Architecture violation analysis
+- **[CODE_AGENT_SCRIPT.md](working/CODE_AGENT_SCRIPT.md)** - Code implementation fixes
+- **[TEST_AGENT_SCRIPT.md](working/TEST_AGENT_SCRIPT.md)** - Test creation and validation
+- **[REVIEW_AGENT_SCRIPT.md](working/REVIEW_AGENT_SCRIPT.md)** - Code and test review
 
 #### 5. [Repository Layer Architecture Analysis](REPOSITORY_LAYER_ARCHITECTURE_ANALYSIS.md)
 **Purpose**: Verification that repository layer correctly implements DDD, ORM, and Redis cache
@@ -84,10 +94,10 @@ This directory contains comprehensive architecture documentation for the Dhafnck
 ## 🎯 Quick Reference
 
 ### For AI Agents Starting New Work
-1. **PRIMARY REFERENCE**: [Architecture Issues Report](issues_report.md) - **COMPREHENSIVE VIOLATIONS ANALYSIS**
-2. **SECONDARY REFERENCE**: [Agent Architecture Implementation Guide](AGENT_ARCHITECTURE_PROMPT.md) - **ALL-IN-ONE DOCUMENT**
-3. **Current Status**: 90 violations (ALL HIGH SEVERITY), 20/100 compliance score (CRITICAL FAILURE)
-4. **MUST FIX FIRST**: Follow the specific tasks in issues_report.md organized by priority
+1. **PRIMARY REFERENCE**: [Architecture Issues Report](working/workplace.md) - **LIVE WORKING DOCUMENT**
+2. **AGENT SCRIPTS**: See `working/` directory for specific agent implementation guides
+3. **ALL-IN-ONE GUIDE**: [Agent Architecture Implementation Guide](AGENT_ARCHITECTURE_PROMPT.md) - **COMPLETE REFERENCE**
+4. **MUST FIX FIRST**: Follow the specific tasks in working/workplace.md organized by priority
 5. **Architecture flow**: Controller → Facade → Use Case → Repository Factory → Repository
 6. **Never hardcode** repository implementations - always use factory
 
