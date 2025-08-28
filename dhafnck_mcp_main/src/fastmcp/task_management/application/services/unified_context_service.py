@@ -318,9 +318,23 @@ class UnifiedContextService:
             saved_context = repo.create(context_entity)
             logger.info(f"Successfully created {level} context in repository: {saved_context}")
             
-            # Invalidate cache for this context
-            # Note: Cache service still async - skip for now in sync mode
-            # await self.cache_service.invalidate(level, context_id)
+            # Invalidate cache for parent contexts (child creation affects inheritance)
+            try:
+                from ...infrastructure.cache.context_cache import get_context_cache
+                cache = get_context_cache()
+                
+                # Invalidate parent inheritance chains since a new child was added
+                if context_level != ContextLevel.GLOBAL:
+                    parent_level, parent_id = self._get_parent_info(context_level, saved_context)
+                    if parent_level and parent_id:
+                        cache.invalidate_inheritance(
+                            user_id=user_id,
+                            level=parent_level.value,
+                            context_id=parent_id
+                        )
+                        logger.debug(f"Invalidated parent cache for {parent_level.value}:{parent_id}")
+            except Exception as cache_error:
+                logger.warning(f"Cache invalidation failed (non-critical): {cache_error}")
             
             return {
                 "success": True,
@@ -500,8 +514,30 @@ class UnifiedContextService:
             # Save to repository using user-scoped repository
             saved_context = repo.update(context_id, updated_entity)
             
-            # Skip cache invalidation for now (cache service is async)
-            # TODO: Make cache service sync or skip caching in sync mode
+            # Invalidate cache for updated context
+            try:
+                from ...infrastructure.cache.context_cache import get_context_cache
+                cache = get_context_cache()
+                
+                # Invalidate the specific context and its inheritance chain
+                cache.invalidate_context(
+                    user_id=user_id,
+                    level=context_level.value,
+                    context_id=context_id
+                )
+                cache.invalidate_inheritance(
+                    user_id=user_id,
+                    level=context_level.value,
+                    context_id=context_id
+                )
+                
+                # If propagating changes, invalidate child contexts
+                if propagate_changes:
+                    self._invalidate_child_caches(context_level, context_id, user_id, cache)
+                
+                logger.debug(f"Cache invalidated for updated context {level}:{context_id}")
+            except Exception as cache_error:
+                logger.warning(f"Cache invalidation failed (non-critical): {cache_error}")
             
             # Skip propagation for now (propagation service is async)
             # TODO: Make propagation sync or skip propagation in sync mode
@@ -570,11 +606,30 @@ class UnifiedContextService:
             # Delete from repository
             result = repo.delete(context_id)
             
-            # Skip cache invalidation for now (cache service is async)
-            # TODO: Make cache service sync or skip caching in sync mode
-            
-            # Skip cleanup for now (cleanup service is async)
-            # TODO: Make cleanup sync or skip cleanup in sync mode
+            # Invalidate cache for deleted context
+            try:
+                from ...infrastructure.cache.context_cache import get_context_cache
+                cache = get_context_cache()
+                user_id = self.user_id
+                
+                # Invalidate the specific context and its inheritance chain
+                cache.invalidate_context(
+                    user_id=user_id,
+                    level=context_level.value,
+                    context_id=context_id
+                )
+                cache.invalidate_inheritance(
+                    user_id=user_id,
+                    level=context_level.value,
+                    context_id=context_id
+                )
+                
+                # Invalidate child contexts that depended on this context
+                self._invalidate_child_caches(context_level, context_id, user_id, cache)
+                
+                logger.debug(f"Cache invalidated for deleted context {level}:{context_id}")
+            except Exception as cache_error:
+                logger.warning(f"Cache invalidation failed (non-critical): {cache_error}")
             
             return {
                 "success": result,
@@ -1721,6 +1776,46 @@ class UnifiedContextService:
                 return True
         
         return False
+    
+    def _get_parent_info(self, context_level: ContextLevel, context_entity) -> tuple:
+        """Get parent level and ID for a context."""
+        parent_level = None
+        parent_id = None
+        
+        if context_level == ContextLevel.PROJECT:
+            parent_level = ContextLevel.GLOBAL
+            # Global context ID is user-specific
+            import uuid
+            namespace = uuid.UUID("a47ae7b9-1d4b-4e5f-8b5a-9c3e5d2f8a1c")
+            parent_id = str(uuid.uuid5(namespace, self.user_id)) if self.user_id else None
+        elif context_level == ContextLevel.BRANCH:
+            parent_level = ContextLevel.PROJECT
+            parent_id = getattr(context_entity, 'project_id', None)
+        elif context_level == ContextLevel.TASK:
+            parent_level = ContextLevel.BRANCH
+            parent_id = getattr(context_entity, 'git_branch_id', None) or getattr(context_entity, 'branch_id', None)
+        
+        return parent_level, parent_id
+    
+    def _invalidate_child_caches(self, context_level: ContextLevel, context_id: str, user_id: str, cache):
+        """Invalidate caches for child contexts."""
+        try:
+            if context_level == ContextLevel.GLOBAL:
+                # Global changes affect all user contexts
+                cache.invalidate_context(user_id=user_id)
+                cache.invalidate_inheritance(user_id=user_id)
+            elif context_level == ContextLevel.PROJECT:
+                # Project changes affect branch and task contexts
+                cache.invalidate_context(user_id=user_id, level="branch")
+                cache.invalidate_context(user_id=user_id, level="task")
+                cache.invalidate_inheritance(user_id=user_id, level="branch")
+                cache.invalidate_inheritance(user_id=user_id, level="task")
+            elif context_level == ContextLevel.BRANCH:
+                # Branch changes affect task contexts
+                cache.invalidate_context(user_id=user_id, level="task")
+                cache.invalidate_inheritance(user_id=user_id, level="task")
+        except Exception as e:
+            logger.warning(f"Failed to invalidate child caches: {e}")
     
     def _ensure_global_context_exists(self, user_id: Optional[str] = None) -> Dict[str, Any]:
         """Ensure global context exists, create if missing."""

@@ -14,8 +14,8 @@ mcp__dhafnck_mcp_http__manage_connection(action="health_check")
 # Check database connectivity
 mcp__dhafnck_mcp_http__manage_project(action="list")
 
-# Validate context inheritance
-mcp__dhafnck_mcp_http__validate_context_inheritance(level="task", context_id="your-task-id")
+# Check context with inheritance
+mcp__dhafnck_mcp_http__manage_context(action="get", level="task", context_id="your-task-id", include_inherited=True)
 
 # Verify January 2025 fixes are working (all should succeed without errors)
 # Test task creation (validates TaskId scoping fix)
@@ -292,8 +292,9 @@ mcp__dhafnck_mcp_http__manage_context(
     action="get_health"
 )
 
-# Check inheritance chain
-mcp__dhafnck_mcp_http__validate_context_inheritance(
+# Check resolved context with full inheritance
+mcp__dhafnck_mcp_http__manage_context(
+    action="resolve",
     level="task",
     context_id="your-task-id"
 )
@@ -321,28 +322,32 @@ mcp__dhafnck_mcp_http__manage_context(
 
 **Diagnosis**:
 ```bash
-# Check delegation queue
-mcp__dhafnck_mcp_http__manage_delegation_queue(
-    action="get_status"
+# Check context delegations (use manage_context with delegate action)
+mcp__dhafnck_mcp_http__manage_context(
+    action="list",
+    level="project"  # Check at higher level for delegated items
 )
 
-# List pending delegations
-mcp__dhafnck_mcp_http__manage_delegation_queue(
-    action="list"
+# List contexts at project level to see delegated patterns
+mcp__dhafnck_mcp_http__manage_context(
+    action="list",
+    level="project"
 )
 ```
 
 **Solutions**:
 ```bash
-# Approve pending delegations
-mcp__dhafnck_mcp_http__manage_delegation_queue(
-    action="approve",
+# Delegate context to higher level
+mcp__dhafnck_mcp_http__manage_context(
+    action="delegate",
+    level="task",
     delegation_id="delegation-uuid"
 )
 
-# Reject inappropriate delegations
-mcp__dhafnck_mcp_http__manage_delegation_queue(
-    action="reject",
+# Remove delegated content by updating context
+mcp__dhafnck_mcp_http__manage_context(
+    action="update",
+    level="project",
     delegation_id="delegation-uuid",
     rejection_reason="Too specific for project scope"
 )
@@ -364,8 +369,9 @@ agent = mcp__dhafnck_mcp_http__call_agent(name_agent="@uber_orchestrator_agent")
 
 ### Step 2: Context Validation
 ```bash
-# 1. Validate inheritance chain
-validation = mcp__dhafnck_mcp_http__validate_context_inheritance(
+# 1. Get resolved context with inheritance
+resolved_context = mcp__dhafnck_mcp_http__manage_context(
+    action="resolve",
     level="task",
     context_id="your-task-id"
 )
@@ -412,9 +418,10 @@ cache_status = mcp__dhafnck_mcp_http__manage_context(
 # 2. Monitor resolution times
 # Look for resolution_timing in responses
 
-# 3. Check delegation queue size
-queue_status = mcp__dhafnck_mcp_http__manage_delegation_queue(
-    action="get_status"
+# 3. Check project-level contexts for delegations
+project_contexts = mcp__dhafnck_mcp_http__manage_context(
+    action="list",
+    level="project"
 )
 ```
 
@@ -448,7 +455,8 @@ queue_status = mcp__dhafnck_mcp_http__manage_delegation_queue(
 #### "Context resolution failed" Error
 ```bash
 # Diagnosis:
-validation = mcp__dhafnck_mcp_http__validate_context_inheritance(
+context_check = mcp__dhafnck_mcp_http__manage_context(
+    action="get",
     level="task",
     context_id="failing-task-id"
 )
@@ -597,7 +605,8 @@ mcp__dhafnck_mcp_http__manage_project(action="list")
 # 1. Validate all contexts
 # Run validation on all active tasks
 for task_id in active_tasks:
-    mcp__dhafnck_mcp_http__validate_context_inheritance(
+    mcp__dhafnck_mcp_http__manage_context(
+        action="resolve",
         level="task",
         context_id=task_id
     )
@@ -642,9 +651,10 @@ mcp__dhafnck_mcp_http__manage_context(
     action="cleanup_cache"
 )
 
-# 3. Delegation queue review
-mcp__dhafnck_mcp_http__manage_delegation_queue(
-    action="list"
+# 3. Review delegated patterns at project level
+mcp__dhafnck_mcp_http__manage_context(
+    action="list",
+    level="project"
 )
 ```
 
@@ -691,7 +701,7 @@ When reporting issues, include:
 ### Common Support Scenarios
 
 #### "My task won't complete"
-1. Check context exists: validate_context_inheritance
+1. Check context exists: manage_context(action="get")
 2. Update context before completion
 3. Verify all subtasks are completed
 4. Check for validation errors

@@ -13,11 +13,12 @@ import logging
 from ...domain.entities.context import BranchContext
 from ...infrastructure.database.models import BranchContext as BranchContextModel
 from .base_orm_repository import BaseORMRepository
+from ..cache.cache_invalidation_mixin import CacheInvalidationMixin, CacheOperation
 
 logger = logging.getLogger(__name__)
 
 
-class BranchContextRepository(BaseORMRepository):
+class BranchContextRepository(CacheInvalidationMixin, BaseORMRepository):
     """Repository for branch context operations."""
     
     def __init__(self, session_factory, user_id: Optional[str] = None):
@@ -116,6 +117,16 @@ class BranchContextRepository(BaseORMRepository):
             # Don't refresh to avoid UUID conversion issues with SQLite
             # session.refresh(db_model)
             
+            # Invalidate cache after create
+            self.invalidate_cache_for_entity(
+                entity_type="context",
+                entity_id=branch_id,
+                operation=CacheOperation.CREATE,
+                user_id=self.user_id,
+                level="branch",
+                propagate=True
+            )
+            
             return self._to_entity(db_model)
     
     def get(self, context_id: str) -> Optional[BranchContext]:
@@ -179,6 +190,16 @@ class BranchContextRepository(BaseORMRepository):
             # Don't refresh to avoid UUID conversion issues with SQLite
             # session.refresh(db_model)
             
+            # Invalidate cache after update
+            self.invalidate_cache_for_entity(
+                entity_type="context",
+                entity_id=context_id,
+                operation=CacheOperation.UPDATE,
+                user_id=self.user_id,
+                level="branch",
+                propagate=True
+            )
+            
             return self._to_entity(db_model)
     
     def delete(self, context_id: str) -> bool:
@@ -189,6 +210,18 @@ class BranchContextRepository(BaseORMRepository):
                 return False
             
             session.delete(db_model)
+            session.flush()
+            
+            # Invalidate cache after delete
+            self.invalidate_cache_for_entity(
+                entity_type="context",
+                entity_id=context_id,
+                operation=CacheOperation.DELETE,
+                user_id=self.user_id,
+                level="branch",
+                propagate=True
+            )
+            
             return True
     
     def list(self, filters: Optional[Dict[str, Any]] = None) -> List[BranchContext]:

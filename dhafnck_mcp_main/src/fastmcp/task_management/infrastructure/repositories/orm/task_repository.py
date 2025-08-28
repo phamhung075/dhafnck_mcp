@@ -25,11 +25,12 @@ from ....domain.value_objects.task_status import TaskStatus
 from ...database.models import Task, TaskAssignee, TaskDependency, TaskLabel
 from ..base_orm_repository import BaseORMRepository
 from ..base_user_scoped_repository import BaseUserScopedRepository
+from ...cache.cache_invalidation_mixin import CacheInvalidationMixin, CacheOperation
 
 logger = logging.getLogger(__name__)
 
 
-class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskRepository):
+class ORMTaskRepository(CacheInvalidationMixin, BaseORMRepository[Task], BaseUserScopedRepository, TaskRepository):
     """
     Task repository implementation using SQLAlchemy ORM.
     
@@ -251,6 +252,15 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
                 with self.get_db_session() as session:
                     task = self._load_task_with_relationships(session, task.id)
                 
+                # Invalidate cache after create
+                self.invalidate_cache_for_entity(
+                    entity_type="task",
+                    entity_id=task_id,
+                    operation=CacheOperation.CREATE,
+                    user_id=self.user_id,
+                    propagate=False
+                )
+                
                 return self._model_to_entity(task)
                 
         except Exception as e:
@@ -362,6 +372,15 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
                 with self.get_db_session() as session:
                     task = self._load_task_with_relationships(session, task_id)
                 
+                # Invalidate cache after update
+                self.invalidate_cache_for_entity(
+                    entity_type="task",
+                    entity_id=task_id,
+                    operation=CacheOperation.UPDATE,
+                    user_id=self.user_id,
+                    propagate=False
+                )
+                
                 return self._model_to_entity(task)
                 
         except Exception as e:
@@ -370,7 +389,19 @@ class ORMTaskRepository(BaseORMRepository[Task], BaseUserScopedRepository, TaskR
     
     def delete_task(self, task_id: str) -> bool:
         """Delete a task"""
-        return super().delete(task_id)
+        result = super().delete(task_id)
+        
+        if result:
+            # Invalidate cache after delete
+            self.invalidate_cache_for_entity(
+                entity_type="task",
+                entity_id=task_id,
+                operation=CacheOperation.DELETE,
+                user_id=self.user_id,
+                propagate=False
+            )
+        
+        return result
     
     def list_tasks(self, status: str | None = None, priority: str | None = None,
                   assignee_id: str | None = None, limit: int = 100,

@@ -15,10 +15,7 @@ This document provides comprehensive reference for all MCP tools available in th
 - [manage_git_branch](#manage_git_branch) - Branch operations and task trees
 
 ### Context Management
-- [manage_context](#manage_context) - Unified 4-tier hierarchical context system
-- [manage_context](#manage_context) - (Deprecated - use manage_context)
-- [validate_context_inheritance](#validate_context_inheritance) - Debug inheritance chains
-- [manage_delegation_queue](#manage_delegation_queue) - Manual delegation review
+- [manage_context](#manage_context) - Unified 4-tier hierarchical context system with inheritance and delegation
 
 > **⚠️ IMPORTANT UPDATE (January 2025)**: The context management system has been significantly improved with critical bug fixes:
 > - Fixed TaskId import scoping issues in repositories
@@ -480,27 +477,6 @@ mcp__dhafnck_mcp_http__manage_context(
 ```
 
 ---
-
-### validate_context_inheritance
-
-Debug and verify inheritance chains.
-
-#### Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| level | string | Yes | Context level: 'project', 'task' |
-| context_id | string | Yes | Context identifier to validate |
-
-#### Examples
-
-```bash
-# Debug inheritance issues
-mcp__dhafnck_mcp_http__validate_context_inheritance(
-    level="task",
-    context_id="task-uuid-123"
-)
-```
 
 ---
 

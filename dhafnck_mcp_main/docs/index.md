@@ -59,11 +59,13 @@ A comprehensive documentation management system with analysis tools, quality met
 ### 🔗 Context System
 Comprehensive documentation for the DhafnckMCP hierarchical context management system.
 
-- [**Context System Overview**](context-system/README.md) - Complete context system documentation hub
-- [Hierarchical Context System](context-system/hierarchical-context.md) - 4-tier context hierarchy (Global→Project→Branch→Task)
-- [Context Response Format](context-system/context-response-format.md) - Context API response structures
-- [Context System Audit](context-system/context_system_audit.md) - System validation and health checks
-- [Unified Context System Final](context-system/unified_context_system_final.md) - Final implementation specifications
+- [**Context System Overview**](context-system/index.md) - ⭐ **START HERE** - Complete context system documentation index
+- [**Complete Database Schema**](context-system/context-database-schema-complete.md) - ⭐ **CRITICAL** - Exact field mappings for all context levels
+- [Understanding MCP Context](context-system/00-understanding-mcp-context.md) - What the context system actually is
+- [Architecture](context-system/01-architecture.md) - System design and components
+- [API Reference](context-system/03-api-reference.md) - Complete API documentation
+- [Implementation Guide](context-system/04-implementation-guide.md) - How to implement context
+- [Workflow Patterns](context-system/05-workflow-patterns.md) - Common usage patterns
 
 ### 🧪 Testing & Quality
 Comprehensive testing documentation, QA procedures, and test results.
@@ -94,30 +96,7 @@ Product requirements, specifications, and strategic planning documents.
 - [**Product Requirements Overview**](product-requirements/README.md) - Complete product requirements hub
 - [Product Requirements Document (PRD)](product-requirements/PRD.md) - Complete product requirements and strategic objectives
 
-### 🎯 Vision System Documentation
-The Vision System is a CRITICAL component that transforms DhafnckMCP into a strategic execution platform.
 
-#### Core Vision Docs
-- [Vision System Overview](vision/README.md) - **START HERE** - Complete Vision System guide
-- [System Integration Guide](vision/SYSTEM_INTEGRATION_GUIDE.md) - **AUTHORITATIVE** - Resolves all conflicts
-- [Phase 6 Implementation Summary](vision/PHASE6_IMPLEMENTATION_SUMMARY.md) - Implementation completion status
-- [AI Phase Guide](vision/AI_PHASE_GUIDE.md) - Quick reference for AI implementation
-
-#### Vision Implementation
-- [Implementation Roadmap](vision/IMPLEMENTATION_ROADMAP.md) - Step-by-step implementation phases
-- [Consolidated MCP Vision Implementation](vision/consolidated-mcp-vision-implementation.md) - Main implementation guide
-- [Vision Hierarchy](vision/01-vision-hierarchy.md) - Hierarchical vision structure
-- [Vision Components](vision/02-vision-components.md) - Vision components framework
-- [Domain Models](vision/04-domain-models.md) - Domain model specifications
-
-#### Workflow & Guidance
-- [Workflow Guidance Detailed Spec](vision/WORKFLOW_GUIDANCE_DETAILED_SPEC.md) - Complete workflow guidance specification
-- [Workflow Guidance Quick Reference](vision/WORKFLOW_GUIDANCE_QUICK_REFERENCE.md) - Quick workflow reference
-- [Workflow Hints and Rules](vision/workflow-hints-and-rules.md) - Workflow guidance system
-- [Server-Side Context Tracking](vision/server-side-context-tracking.md) - Context tracking via MCP parameters
-- [Manual Context Updates with Vision](vision/manual-context-vision-updates.md) - Enforce context updates through parameters
-- [Implementation Guide Server Enrichment](vision/implementation-guide-server-enrichment.md) - Auto-enrich responses
-- [Subtask Manual Progress Tracking](vision/subtask-manual-progress-tracking.md) - Manual progress updates with enriched responses
 
 ### 🚨 Troubleshooting & Issues
 Comprehensive troubleshooting documentation for diagnosing and resolving issues.
@@ -153,7 +132,6 @@ System status reports, documentation health checks, and implementation status up
 - **🚨 Error Handling**: See [Error Handling and Logging](development-guides/error-handling-and-logging.md) for comprehensive error management
 - **💾 Database Setup**: See [Database Setup Guide](../DATABASE_SETUP.md) for PostgreSQL configuration
 - **📡 API Documentation**: See [API Reference](api-integration/api-reference.md) for MCP tools documentation
-- **👁️ Vision System**: See [Vision System Overview](vision/README.md) for strategic AI orchestration
 - **📄 Document Management**: See [Claude Document Management System](claude-document-management-system/README.md) for document management solution
 - **🐛 Troubleshooting**: See [Comprehensive Troubleshooting Guide](troubleshooting-guides/COMPREHENSIVE_TROUBLESHOOTING_GUIDE.md)
 
@@ -181,7 +159,6 @@ System status reports, documentation health checks, and implementation status up
   - Updated all cross-references and maintained proper documentation hierarchy
 - **Claude Document Management System**: Organized all system files into dedicated subfolder with structured organization
 - **Enhanced Navigation**: Added comprehensive README files for each category with clear descriptions
-- **Vision System Priority**: Highlighted Vision System as critical component with dedicated section
 - **Better Discoverability**: Organized docs into logical categories with consistent formatting and icons
 
 ### 2025-01-20

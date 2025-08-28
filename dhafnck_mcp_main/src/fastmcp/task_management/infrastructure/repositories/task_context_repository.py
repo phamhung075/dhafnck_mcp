@@ -13,11 +13,12 @@ import logging
 from ...domain.entities.context import TaskContextUnified as TaskContext
 from ...infrastructure.database.models import TaskContext as TaskContextModel
 from .base_orm_repository import BaseORMRepository
+from ..cache.cache_invalidation_mixin import CacheInvalidationMixin, CacheOperation
 
 logger = logging.getLogger(__name__)
 
 
-class TaskContextRepository(BaseORMRepository):
+class TaskContextRepository(CacheInvalidationMixin, BaseORMRepository):
     """Repository for task context operations."""
     
     def __init__(self, session_factory, user_id: Optional[str] = None):
@@ -86,6 +87,16 @@ class TaskContextRepository(BaseORMRepository):
             # Don't refresh to avoid UUID conversion issues with SQLite
             # session.refresh(db_model)
             
+            # Invalidate cache after create
+            self.invalidate_cache_for_entity(
+                entity_type="context",
+                entity_id=entity.id,
+                operation=CacheOperation.CREATE,
+                user_id=self.user_id,
+                level="task",
+                propagate=False  # Tasks don't need propagation
+            )
+            
             return self._to_entity(db_model)
     
     def get(self, context_id: str) -> Optional[TaskContext]:
@@ -130,6 +141,16 @@ class TaskContextRepository(BaseORMRepository):
             # Don't refresh to avoid UUID conversion issues with SQLite
             # session.refresh(db_model)
             
+            # Invalidate cache after update
+            self.invalidate_cache_for_entity(
+                entity_type="context",
+                entity_id=context_id,
+                operation=CacheOperation.UPDATE,
+                user_id=self.user_id,
+                level="task",
+                propagate=False  # Tasks don't need propagation
+            )
+            
             return self._to_entity(db_model)
     
     def delete(self, context_id: str) -> bool:
@@ -140,6 +161,18 @@ class TaskContextRepository(BaseORMRepository):
                 return False
             
             session.delete(db_model)
+            session.flush()
+            
+            # Invalidate cache after delete
+            self.invalidate_cache_for_entity(
+                entity_type="context",
+                entity_id=context_id,
+                operation=CacheOperation.DELETE,
+                user_id=self.user_id,
+                level="task",
+                propagate=False  # Tasks don't need propagation
+            )
+            
             return True
     
     def list(self, filters: Optional[Dict[str, Any]] = None) -> List[TaskContext]:

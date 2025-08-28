@@ -386,6 +386,41 @@ branch_context = mcp__dhafnck_mcp_http__manage_context(
 )
 ```
 
+### ⚠️ CRITICAL: Project Context Database Structure
+**PROJECT contexts have 4 predefined database columns:**
+- `team_preferences` - Team settings and preferences
+- `technology_stack` - Technology choices (NOT `technical_stack`!)
+- `project_workflow` - Workflow and process definitions
+- `local_standards` - Project standards and conventions
+
+**Any other fields are stored in `local_standards._custom`:**
+```python
+# ✅ CORRECT - Data goes to proper columns
+mcp__dhafnck_mcp_http__manage_context(
+    action="update",
+    level="project",
+    context_id=project_id,
+    data={
+        "team_preferences": {"review_required": True},
+        "technology_stack": {"frontend": ["React"], "backend": ["Python"]},
+        "project_workflow": {"phases": ["design", "develop", "test"]},
+        "local_standards": {"naming": "camelCase"}
+    }
+)
+
+# ⚠️ CUSTOM - Goes to local_standards._custom
+mcp__dhafnck_mcp_http__manage_context(
+    action="update",
+    level="project",
+    context_id=project_id,
+    data={
+        "project_info": {...},  # -> local_standards._custom.project_info
+        "core_features": {...},  # -> local_standards._custom.core_features
+        "technical_stack": {...}  # -> local_standards._custom.technical_stack (wrong key!)
+    }
+)
+```
+
 ### Search Tasks
 ```python
 # Find related work

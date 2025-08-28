@@ -22,10 +22,7 @@ class ToolConfig:
             "regenerate_auto_rule": True,
             "validate_tasks_json": True,
             "create_context_file": True,
-            "manage_context": True,
-            "manage_context": True,
-            "manage_delegation_queue": True,
-            "validate_context_inheritance": True
+            "manage_context": True
         },
         "debug_mode": False,
         "tool_logging": False

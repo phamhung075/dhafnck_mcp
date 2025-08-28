@@ -16,11 +16,12 @@ import logging
 from ...domain.entities.context import GlobalContext
 from ...infrastructure.database.models import GlobalContext as GlobalContextModel
 from .base_user_scoped_repository import BaseUserScopedRepository
+from ..cache.cache_invalidation_mixin import CacheInvalidationMixin, CacheOperation
 
 logger = logging.getLogger(__name__)
 
 
-class GlobalContextRepository(BaseUserScopedRepository):
+class GlobalContextRepository(CacheInvalidationMixin, BaseUserScopedRepository):
     """
     Repository for global context operations with user isolation.
     
@@ -128,6 +129,16 @@ class GlobalContextRepository(BaseUserScopedRepository):
             session.flush()
             session.refresh(db_model)
             
+            # Invalidate cache after create
+            self.invalidate_cache_for_entity(
+                entity_type="context",
+                entity_id=db_model.id,
+                operation=CacheOperation.CREATE,
+                user_id=self.user_id,
+                level="global",
+                propagate=True
+            )
+            
             return self._to_entity(db_model)
     
     def get(self, context_id: str) -> Optional[GlobalContext]:
@@ -206,6 +217,16 @@ class GlobalContextRepository(BaseUserScopedRepository):
             session.flush()
             session.refresh(db_model)
             
+            # Invalidate cache after update
+            self.invalidate_cache_for_entity(
+                entity_type="context",
+                entity_id=context_id,
+                operation=CacheOperation.UPDATE,
+                user_id=self.user_id,
+                level="global",
+                propagate=True
+            )
+            
             return self._to_entity(db_model)
     
     def delete(self, context_id: str) -> bool:
@@ -232,6 +253,17 @@ class GlobalContextRepository(BaseUserScopedRepository):
             self.log_access("delete", "global_context", context_id)
             
             session.delete(db_model)
+            
+            # Invalidate cache after delete
+            self.invalidate_cache_for_entity(
+                entity_type="context",
+                entity_id=context_id,
+                operation=CacheOperation.DELETE,
+                user_id=self.user_id,
+                level="global",
+                propagate=True
+            )
+            
             return True
     
     def list(self, filters: Optional[Dict[str, Any]] = None) -> List[GlobalContext]:

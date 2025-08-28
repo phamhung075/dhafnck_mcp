@@ -210,19 +210,12 @@ class FastMCP(Generic[LifespanResultT]):
                         }
                     }
                 
-                # Check if Vision System is enabled (default: True)
-                enable_vision = os.environ.get("DHAFNCK_ENABLE_VISION", "true").lower() == "true"
-                
+                # Vision System removed - using standard controllers only
                 self._consolidated_tools = DDDCompliantMCPTools(
                     projects_file_path=projects_file_path,
                     config_overrides=config_overrides,
-                    enable_vision_system=enable_vision
+                    enable_vision_system=False  # Vision System permanently disabled
                 )
-                
-                if enable_vision:
-                    logger.info("Vision System enabled - enhanced controllers will be available")
-                else:
-                    logger.info("Vision System disabled - using standard controllers only")
                 logger.info("Task management tools initialized successfully")
             except Exception as e:
                 logger.error(f"Failed to initialize task management tools: {e}")
