@@ -1,161 +1,48 @@
 # 💻 CODE AGENT SCRIPT - Task Workflow Schema
+you must correct probleme on  dhafnck_mcp_main/docs/architecture/working/RCHITECTURE_COMPLIANCE_REPORT_2025-08-28_V7.md
+## Workflow Steps
 
-## Schema Logic Flow
+- **Step 1: Initialize** - Load @coding_agent and verify MCP tool permissions
+- **Step 2: GetNextTask** - Retrieve next task  on dhafnck_mcp_main/docs/architecture/working/ARCHITECTURE_COMPLIANCE_REPORT_2025-08-28_V7.md
+- **Step 3: MarkInProgress** - Update task status to "in_progress" 
+- **Step 4: ReadContext** - Load branch and task context for current state
+- **Step 5: ExecuteWork** - Process task based on type (read files, apply fixes, validate)
+- **Step 6: UpdateContext** - Save progress to branch context (files modified, changes applied)
+- **Step 7: ValidateChanges** - Check files exist, no syntax errors, tests pass
+- **Step 8: CompleteTask** - Mark task complete with summary and testing notes
+- **Step 9: CheckForMore** - Look for additional tasks assigned to agent on dhafnck_mcp_main/docs/architecture/working/ARCHITECTURE_COMPLIANCE_REPORT_2025-08-28_V7.md
+- **Step 10: Loop** - Return to Step 2 if tasks available, else exit
 
-### 1. Initialize Agent
-```yaml
-agent:
-  load: "@coding_agent"
-  verify: capabilities.permissions.mcp_tools
-```
+## State Transitions
 
-### 2. Get Next Task
-```yaml
-task_retrieval:
-  action: "next"
-  filters:
-    git_branch_id: "${branch_id}"
-    assigned_agent: "@coding_agent"
-    include_context: true
-  retry:
-    if_empty: wait_300_seconds
-    max_attempts: 3
-```
+- **Pending** → In Progress (when agent picks up task)
+- **In Progress** → Blocked (if dependencies or errors)
+- **In Progress** → Completed (when work finished successfully)
+- **Blocked** → In Progress (when blocker resolved)
+- **Completed** → Final (no further transitions)
 
-### 3. Process Task
-```yaml
-task_processing:
-  mark_in_progress:
-    action: "update"
-    status: "in_progress"
-  
-  execute_work:
-    based_on: task.type
-    operations:
-      - read_files
-      - apply_fixes
-      - validate_changes
-  
-  update_context:
-    level: "branch"
-    data:
-      files_modified: []
-      changes_applied: []
-      status: "complete"
-```
+## Error Recovery
 
-### 4. Complete Task
-```yaml
-task_completion:
-  action: "complete"
-  required_fields:
-    completion_summary: string
-    testing_notes: string
-    files_modified: integer
-  update_context: true
-```
+- **OnFailure** - Log error, update status to blocked, notify planner
+- **Retry** - Wait 60 seconds, attempt task again (max 3 retries)
+- **Escalate** - After max retries, delegate to planner agent
 
-### 5. Loop Control
-```yaml
-workflow_loop:
-  condition: tasks_available
-  sequence:
-    - get_next_task
-    - process_task  
-    - complete_task
-    - check_for_more
-  exit_when: no_tasks_found
-```
+## Context Schema
 
-## Implementation Schema
+- **BranchContext** - Progress percentage, files modified list, violations fixed count
+- **TaskContext** - Start/end timestamps, duration, success boolean
+- **SharedContext** - Blockers list, next steps, agent notes
 
-### Task States
-```yaml
-states:
-  pending: waiting_for_agent
-  in_progress: agent_working
-  blocked: waiting_dependencies
-  completed: work_finished
-  failed: needs_retry
-```
+## Validation Points
 
-### Error Handling
-```yaml
-error_recovery:
-  on_failure:
-    - log_error
-    - update_task_status: "blocked"
-    - notify_planner_agent
-    - retry_after: 60_seconds
-  max_retries: 3
-```
+- **BeforeStart** - Verify agent permissions, task assignment, context access
+- **DuringWork** - File accessibility, syntax validity, dependency availability  
+- **BeforeComplete** - All changes applied, tests passing, lint clean
+- **AfterComplete** - Context updated, summary provided, files documented
 
-### Context Updates
-```yaml
-context_schema:
-  branch_context:
-    progress: percentage
-    files_modified: list
-    violations_fixed: count
-    blockers: list
-    next_steps: list
-  
-  task_context:
-    start_time: timestamp
-    end_time: timestamp
-    duration: seconds
-    success: boolean
-```
+## Integration Points
 
-### Validation Rules
-```yaml
-validation:
-  before_completion:
-    - all_files_exist
-    - no_syntax_errors
-    - tests_pass
-    - lint_clean
-  
-  required_for_success:
-    - completion_summary: not_empty
-    - files_modified: greater_than_0
-    - context_updated: true
-```
-
-## Workflow Dependencies
-
-### Input Requirements
-```yaml
-required_inputs:
-  branch_id: uuid
-  project_id: uuid
-  agent_permissions: object
-  task_filters: object
-```
-
-### Output Schema
-```yaml
-task_output:
-  task_id: uuid
-  status: string
-  completion_summary: string
-  files_modified: integer
-  context_updated: boolean
-  errors: list
-```
-
-### Integration Points
-```yaml
-integrations:
-  planner_agent:
-    receive: task_assignments
-    send: completion_status
-  
-  test_agent:
-    trigger_on: task_complete
-    provide: modified_files
-  
-  context_system:
-    update_on: each_operation
-    read_before: task_start
-```
+- **PlannerAgent** - Receive task assignments, send completion status
+- **TestAgent** - Trigger on task complete, provide modified files list
+- **ContextSystem** - Update on each operation, read before task start
+- **MonitoringAgent** - Report progress, errors, and blockers

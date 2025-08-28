@@ -4,7 +4,7 @@ import logging
 from dataclasses import dataclass
 from ...domain.repositories.agent_repository import AgentRepository
 from ...domain.exceptions import AgentNotFoundError, ProjectNotFoundError
-from ...infrastructure.repositories.orm.git_branch_repository import ORMGitBranchRepository
+from ...infrastructure.repositories.repository_factory import RepositoryFactory
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class AssignAgentUseCase:
     
     def __init__(self, agent_repository: AgentRepository):
         self._agent_repository = agent_repository
-        self._git_branch_repository = ORMGitBranchRepository()
+        self._git_branch_repository = RepositoryFactory.get_git_branch_repository()
     
     
     def execute(self, request: AssignAgentRequest) -> AssignAgentResponse:

@@ -80,9 +80,9 @@ class TaskContextSyncService:
             
             # If project_id not provided, try to get it from the task's git_branch
             if not project_id and hasattr(domain_task, 'git_branch_id'):
-                # Try to get project_id from git branch repository
-                from ....infrastructure.repositories.orm.git_branch_repository import ORMGitBranchRepository
-                git_branch_repo = ORMGitBranchRepository()
+                # Try to get project_id from git branch repository using factory
+                from ....infrastructure.repositories.repository_factory import RepositoryFactory
+                git_branch_repo = RepositoryFactory.get_git_branch_repository()
                 git_branch = git_branch_repo.find_by_id(domain_task.git_branch_id)
                 if git_branch and hasattr(git_branch, 'project_id'):
                     project_id = git_branch.project_id
