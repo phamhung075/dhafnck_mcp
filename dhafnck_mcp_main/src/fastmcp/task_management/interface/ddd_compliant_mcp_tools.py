@@ -226,86 +226,23 @@ class DDDCompliantMCPTools:
         self._rule_orchestration_controller = RuleOrchestrationController(self._rule_orchestration_facade)
         
         
-        # Initialize Vision System Enhanced Controllers if enabled
-        self._enable_vision_system = enable_vision_system
-        if self._enable_vision_system:
-            logger.info("Initializing Vision System enhanced controllers...")
-            
-            # Initialize Vision Services
-            from ...vision_orchestration.vision_enrichment_service import VisionEnrichmentService
-            from ..application.services.vision_analytics_service import VisionAnalyticsService
-            from ..application.services.hint_generation_service import HintGenerationService
-            from ..application.services.workflow_analysis_service import WorkflowAnalysisService
-            from ..application.services.progress_tracking_service import ProgressTrackingService
-            from ..application.services.agent_coordination_service import AgentCoordinationService
-            from ..application.services.work_distribution_service import WorkDistributionService
-            
-            # Initialize repositories for Vision System
-            # Note: Vision system will be refactored to use ORM repositories
-            self._vision_repository = None  # Vision repository pending refactor
-            self._hint_repository = None  # HintRepository is abstract
-            self._progress_event_store = None  # ProgressEventStore is abstract
-            self._agent_coordination_repository = None  # AgentCoordinationRepository removed
-            
-            # Initialize services with mock repository
-            self._vision_enrichment_service = VisionEnrichmentService(
-                task_repository=None,
-                vision_repository=self._vision_repository
-            )
-            self._vision_analytics_service = VisionAnalyticsService(
-                task_repository=None,
-                vision_repository=self._vision_repository,
-                enrichment_service=self._vision_enrichment_service
-            )
-            self._hint_generation_service = HintGenerationService(
-                task_repository=None,  # Using None for testing
-                context_repository=None,  # Using None for testing
-                event_store=None,
-                hint_repository=None
-            )
-            self._workflow_analysis_service = WorkflowAnalysisService(
-                task_repository=None,  # Using None for testing
-                context_repository=None,  # Using None for testing
-                event_store=None
-            )
-            self._progress_tracking_service = ProgressTrackingService(
-                task_repository=None,  # Using None for testing
-                context_repository=None,  # Using None for testing
-                event_bus=None
-            )
-            self._agent_coordination_service = AgentCoordinationService(
-                task_repository=None,  # Using None for testing
-                agent_repository=None,
-                event_bus=None,
-                coordination_repository=None
-            )
-            self._work_distribution_service = WorkDistributionService(
-                task_repository=None,  # Using None for testing
-                agent_repository=None,
-                coordination_service=None,
-                event_bus=None
-            )
-            
-            # Enhanced task controller functionality is now integrated into TaskMCPController
-            # No separate enhanced task controller needed
-            
-            # Context enforcing functionality is now integrated into TaskMCPController
-            # No need for a separate ContextEnforcingController
-            
-            # Initialize Vision System - skip project/branch creation since it requires async
-            # The project and branch will be created on first use
-            try:
-                # For now, skip Vision System initialization that requires project/branch
-                # This will be handled when the system is first used
-                logger.info("Vision System initialization deferred - will create project/branch on first use")
-                
-            except Exception as e:
-                logger.warning(f"Failed to initialize Vision System: {e}. Vision System features may be limited.")
-                # Continue without Vision System facades - non-critical error
-            
-            self._workflow_hint_enhancer = WorkflowHintEnhancer()
-            
-            logger.info("Vision System enhanced controllers initialized successfully.")
+        # Vision System Disabled (components removed as requested)
+        self._enable_vision_system = False
+        logger.info("Vision System disabled - using standard workflow without enhanced features")
+        
+        # Initialize service placeholders (Vision System removed)
+        self._vision_enrichment_service = None
+        self._vision_analytics_service = None
+        self._hint_generation_service = None
+        self._workflow_analysis_service = None
+        self._progress_tracking_service = None
+        self._agent_coordination_service = None
+        self._work_distribution_service = None
+        
+        # Initialize workflow hint enhancer (independent of Vision System)
+        self._workflow_hint_enhancer = WorkflowHintEnhancer()
+        
+        logger.info("Standard workflow controllers initialized successfully.")
         
         logger.info("DDD-compliant MCP tools initialized successfully.")
     

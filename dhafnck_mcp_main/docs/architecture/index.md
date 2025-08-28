@@ -16,15 +16,22 @@ This directory contains comprehensive architecture documentation for the Dhafnck
 - Environment configuration management
 - Implementation checklist and best practices
 
-#### 2. [Agent Architecture Implementation Guide](AGENT_ARCHITECTURE_PROMPT.md) ⭐ **NEW**
-**Purpose**: Comprehensive prompt for AI agents to follow correct architecture
-- Executive summary with mission statement
-- Visual architecture diagrams with complete flow
-- Step-by-step implementation guide for each layer
-- Repository switching logic (SQLite/Supabase)
-- Cache management with Redis toggle
-- Critical rules and anti-patterns to avoid
-- Performance considerations and debugging guide
+#### 2. [Agent Architecture Implementation Guide](AGENT_ARCHITECTURE_PROMPT.md) 🔥 **COMPLETE - ALL-IN-ONE**
+**Purpose**: Complete consolidated guide for AI agents with everything needed
+- **Executive summary** with mission statement and current violations (61 total)
+- **Multi-agent workflow** with visual diagrams and step-by-step process
+- **Architecture overview** with complete DDD flow diagrams
+- **ACTUAL CODE FIXES** for all violations (Phases 1-4 with exact code)
+  - Phase 1: Fix 11 controller files (exact before/after code)
+  - Phase 2: Implement repository factory (complete working code)
+  - Phase 3: Update 25 facades (specific changes needed)
+  - Phase 4: Add cache invalidation (28 methods with implementation)
+- **Compliance verification** with test scripts and success criteria
+- **Automated tools** including compliance checker script
+- **Multi-agent execution checklist** with pre/implementation/post phases
+- **Implementation tracking dashboard** with current vs target metrics
+- **Critical rules** and anti-patterns to avoid
+- **Everything consolidated** - no need to reference multiple files
 
 #### 3. [Repository Switching Strategy Guide](REPOSITORY_SWITCHING_GUIDE.md) ⭐ **NEW**
 **Purpose**: Detailed guide on automatic repository selection based on environment
@@ -35,7 +42,17 @@ This directory contains comprehensive architecture documentation for the Dhafnck
 - Testing strategies for different configurations
 - Monitoring and troubleshooting guide
 
-#### 4. [Repository Layer Architecture Analysis](REPOSITORY_LAYER_ARCHITECTURE_ANALYSIS.md)
+#### 4. [Architecture Issues Report](issues_report.md) 🚨 **CRITICAL - CURRENT VIOLATIONS**
+**Purpose**: Comprehensive analysis of all architecture violations with specific remediation tasks
+- Current compliance score: 20/100 (CRITICAL FAILURE)
+- 90 total violations (ALL HIGH SEVERITY)
+- Specific file names and line numbers for each violation
+- Organized by priority with clear task assignments for agents
+- Controller layer violations (direct infrastructure access)
+- Repository factory pattern failures (no environment switching)
+- Missing cache invalidation across all repositories
+
+#### 5. [Repository Layer Architecture Analysis](REPOSITORY_LAYER_ARCHITECTURE_ANALYSIS.md)
 **Purpose**: Verification that repository layer correctly implements DDD, ORM, and Redis cache
 - DDD architecture compliance checklist
 - ORM implementation patterns
@@ -44,13 +61,35 @@ This directory contains comprehensive architecture documentation for the Dhafnck
 - Performance optimizations
 - Architecture score: 95/100
 
+### Code Analysis & Verification Guides
+
+#### 6. [Code Flow Analysis Prompt](CODE_FLOW_ANALYSIS_PROMPT.md) ⭐ **NEW**
+**Purpose**: Systematic prompt for agents to analyze code paths and verify architecture compliance
+- Step-by-step analysis checklist for each code path
+- Layer compliance verification
+- Cache invalidation verification
+- Automated analysis script
+- Common flow patterns to verify
+- Red flags and violation patterns
+
+#### 7. [Visual Flow Verification Prompt](VISUAL_FLOW_VERIFICATION_PROMPT.md) ⭐ **NEW**
+**Purpose**: Visual approach to verify each code path follows correct architecture
+- Mermaid flow diagrams for verification
+- Specific code paths to analyze
+- Visual violation detection
+- Verification checklist matrix
+- Complete flow examples
+- Automated flow verification script
+
 ## 🎯 Quick Reference
 
 ### For AI Agents Starting New Work
-1. Read [Agent Architecture Implementation Guide](AGENT_ARCHITECTURE_PROMPT.md) first
-2. Understand the flow: Controller → Facade → Use Case → Repository Factory → Repository
-3. Follow the implementation checklist
-4. Never hardcode repository implementations
+1. **PRIMARY REFERENCE**: [Architecture Issues Report](issues_report.md) - **COMPREHENSIVE VIOLATIONS ANALYSIS**
+2. **SECONDARY REFERENCE**: [Agent Architecture Implementation Guide](AGENT_ARCHITECTURE_PROMPT.md) - **ALL-IN-ONE DOCUMENT**
+3. **Current Status**: 90 violations (ALL HIGH SEVERITY), 20/100 compliance score (CRITICAL FAILURE)
+4. **MUST FIX FIRST**: Follow the specific tasks in issues_report.md organized by priority
+5. **Architecture flow**: Controller → Facade → Use Case → Repository Factory → Repository
+6. **Never hardcode** repository implementations - always use factory
 
 ### For Understanding Repository Selection
 1. Check [Repository Switching Strategy Guide](REPOSITORY_SWITCHING_GUIDE.md)
@@ -63,6 +102,13 @@ This directory contains comprehensive architecture documentation for the Dhafnck
 2. Verify DDD compliance
 3. Check cache invalidation implementation
 4. Ensure proper layer separation
+
+### For Analyzing Code Paths (Chemins)
+1. Use [Code Flow Analysis Prompt](CODE_FLOW_ANALYSIS_PROMPT.md) for systematic analysis
+2. Apply [Visual Flow Verification Prompt](VISUAL_FLOW_VERIFICATION_PROMPT.md) for visual verification
+3. Run automated analysis scripts to detect violations
+4. Create flow diagrams for each MCP endpoint
+5. Verify each path follows: Controller → Facade → Factory → Repository
 
 ## 🔑 Key Concepts
 
@@ -108,28 +154,76 @@ def update_entity(entity):
 - ✅ Invalidate cache after data changes
 - ✅ Handle cache failures gracefully
 
-## 📊 Architecture Compliance Status
+## 📊 Architecture Compliance Status (Latest Analysis: 2025-08-28 V7 - COMPLETE CODE FLOW PATH ANALYSIS)
 
 | Component | Status | Score | Notes |
 |-----------|--------|-------|-------|
-| DDD Implementation | ✅ Complete | 95% | Proper separation of concerns |
-| Repository Pattern | ✅ Complete | 100% | Abstract interfaces, concrete implementations |
-| Factory Pattern | ✅ Complete | 100% | Environment-based selection |
-| ORM Abstraction | ✅ Complete | 95% | SQLAlchemy with proper patterns |
-| Redis Cache | ✅ Complete | 90% | Optional layer with fallback |
-| Cache Invalidation | ✅ Fixed | 100% | All repositories now invalidate properly |
+| DDD Implementation | ❌ Violated | 0% | 16 controllers with direct database/repository access |
+| Repository Pattern | ❌ Broken | 0% | Pattern exists but completely bypassed |
+| Factory Pattern | ❌ Non-functional | 0% | **27 factory files exist but ALL BROKEN - 0 check environment variables** |
+| ORM Abstraction | ✅ Complete | 95% | SQLAlchemy properly abstracted |
+| Redis Cache | ❌ Not Implemented | 0% | No cache wrapping, no Redis integration |
+| Cache Invalidation | ❌ Missing | 0% | 0/32 code paths have cache invalidation |
+| **Overall Compliance** | **❌ CRITICAL FAILURE** | **20/100** | **90 violations (ALL HIGH SEVERITY) - SYSTEM NOT FOLLOWING DDD** |
 
-## 🚀 Recent Updates (2025-08-28)
+## 🚀 Recent Updates (2025-08-28 - VERSION 7 COMPLETE CODE PATH ANALYSIS)
 
-### Fixed Issues
-1. **Cache Invalidation**: Previously commented out code has been fixed across all repositories
-2. **CacheInvalidationMixin**: Created reusable mixin for consistent implementation
-3. **Context Repositories**: All 4 levels (Global/Project/Branch/Task) now properly invalidate cache
+### Architecture Compliance Analysis - Latest Reports Available
+**COMPLETE Code Flow Path (Chemin) Analysis V7** (Latest execution: 16:09:00) 🔥 **LATEST WITH SYSTEMATIC PATH TRACING**:
+- **Latest V7 Report**: [ARCHITECTURE_COMPLIANCE_REPORT_2025-08-28_V7.md](ARCHITECTURE_COMPLIANCE_REPORT_2025-08-28_V7.md) ← **CURRENT V7**
+- **V7 Compliance Report**: [compliance_reports/compliance_report_20250828_160901.md](compliance_reports/compliance_report_20250828_160901.md)
+- **V7 JSON Report**: [compliance_reports/compliance_report_20250828_160901.json](compliance_reports/compliance_report_20250828_160901.json)
+- **Enhanced Script V7**: `scripts/analyze_architecture_compliance_v7.py` ✅ **V7 WITH COMPLETE CODE PATH ANALYSIS**
+
+**Previous V6 Analysis**:
+- **V6 Report**: [ARCHITECTURE_COMPLIANCE_REPORT_2025-08-28_V6.md](ARCHITECTURE_COMPLIANCE_REPORT_2025-08-28_V6.md)
+- **V6 Script**: `scripts/analyze_architecture_compliance_enhanced.py`
+
+**Previous V4 Analysis**:
+- **V4 Report**: [ARCHITECTURE_COMPLIANCE_REPORT_2025-08-28_V4.md](ARCHITECTURE_COMPLIANCE_REPORT_2025-08-28_V4.md)
+- Previous Reports:
+  - [ARCHITECTURE_COMPLIANCE_REPORT_2025-08-28_V3.md](ARCHITECTURE_COMPLIANCE_REPORT_2025-08-28_V3.md)
+  - [ARCHITECTURE_COMPLIANCE_REPORT_2025-08-28_V2.md](ARCHITECTURE_COMPLIANCE_REPORT_2025-08-28_V2.md)
+  - [ARCHITECTURE_COMPLIANCE_REPORT_2025-08-28_FINAL.md](ARCHITECTURE_COMPLIANCE_REPORT_2025-08-28_FINAL.md)
+  - [ARCHITECTURE_COMPLIANCE_REPORT_2025-08-28_AUTOMATED.md](ARCHITECTURE_COMPLIANCE_REPORT_2025-08-28_AUTOMATED.md)
+  - [ARCHITECTURE_COMPLIANCE_REPORT_2025-08-28_UPDATED.md](ARCHITECTURE_COMPLIANCE_REPORT_2025-08-28_UPDATED.md)
+  - [ARCHITECTURE_COMPLIANCE_REPORT_2025-08-28_COMPLETE.md](ARCHITECTURE_COMPLIANCE_REPORT_2025-08-28_COMPLETE.md)
+- Script: `scripts/analyze_architecture_compliance.py` ✅ **EXECUTED WITH ENHANCED ANALYSIS**
+- **Compliance Score: 0/100 (Grade F - Critical Failure)**
+- Total Violations: 39 (6 HIGH, 33 MEDIUM)
+- V4 analysis provides complete remediation plan with code templates
+
+### Critical Findings Summary (V5 ENHANCED - WITH LINE NUMBERS)
+1. **Repository Factory**: ⚠️ **7 FACTORIES EXIST but ALL BROKEN**
+   - ✅ Factory files found: TaskRepositoryFactory, ProjectRepositoryFactory, GitBranchRepositoryFactory, etc.
+   - ❌ ZERO environment variable checking across ALL factories
+   - ❌ No DATABASE_TYPE checking (always uses ORM)
+   - ❌ No REDIS_ENABLED checking (cache never wrapped)
+   - ❌ No test/production switching logic
+   - ❌ Facades don't properly use factories
+
+2. **Controller Violations**: 11 controllers directly violate DDD (14 HIGH severity violations)
+   - `git_branch_mcp_controller.py` - Direct repository imports (lines 491, 579, 612)
+   - `task_mcp_controller.py` - Direct database access (lines 1550, 1578)
+   - `context_id_detector_orm.py` - Direct database imports (lines 9-10)
+   - `subtask_mcp_controller.py` - Direct database access
+   - Plus 7 more controller violations with line-level detail
+
+3. **Facade Violations**: 25 facades missing factory pattern (47 MEDIUM severity violations)
+   - `task_application_facade.py` - Hardcoded `MockTaskContextRepository()` (line 82)
+   - 24 other services/facades not using factory pattern
+   - Missing imports of RepositoryFactory across all application layer
+
+4. **Cache Invalidation**: 25 repository methods missing invalidation
+   - 10 repository files with mutation methods lacking invalidation
+   - Methods affected: create, update, delete, save across context repositories
+   - Base repository classes not implementing cache invalidation mixin
 
 ### New Documentation
-1. **Agent Architecture Prompt**: Comprehensive guide for AI agents
-2. **Repository Switching Guide**: Detailed environment-based selection documentation
-3. **Architecture Index**: This index file for easy navigation
+1. **Architecture Compliance Report**: Detailed violation analysis and fixes
+2. **Agent Architecture Prompt**: Comprehensive guide for AI agents
+3. **Repository Switching Guide**: Detailed environment-based selection documentation
+4. **Architecture Index**: This index file for easy navigation
 
 ## 📝 Next Steps
 
@@ -150,7 +244,9 @@ For developers and AI agents working on this system:
 
 ---
 
-*Last Updated: 2025-08-28*
+*Last Updated: 2025-08-28 15:50*
 *Architecture Version: 2.0*
-*Cache Strategy: Redis with Optional Toggle*
-*Repository Pattern: Factory-based Selection*
+*Compliance Status: 0/100 - Critical Failure (V5 Enhanced Analysis)*
+*Total Violations: 61 (14 HIGH, 47 MEDIUM)*
+*Cache Strategy: Redis with Optional Toggle (Not Implemented)*
+*Repository Pattern: Factory-based Selection (Non-functional - 7 factories all broken)*

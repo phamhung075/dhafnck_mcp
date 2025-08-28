@@ -8,9 +8,19 @@ providing email verification, password reset, and OAuth capabilities.
 import os
 import logging
 from typing import Optional, Dict, Any
-from supabase import create_client, Client
 from dataclasses import dataclass
 from dotenv import load_dotenv
+
+try:
+    from supabase import create_client, Client
+    SUPABASE_AVAILABLE = True
+except ImportError:
+    SUPABASE_AVAILABLE = False
+    # Mock classes for when supabase is not available
+    class Client:
+        pass
+    def create_client(*args, **kwargs):
+        return None
 
 # Load environment variables
 load_dotenv()
@@ -33,12 +43,21 @@ class SupabaseAuthService:
     
     def __init__(self):
         """Initialize Supabase client with environment credentials"""
+        if not SUPABASE_AVAILABLE:
+            logger.warning("Supabase package not available - using mock implementation")
+            self.client = None
+            self.admin_client = None
+            return
+            
         self.supabase_url = os.getenv("SUPABASE_URL")
         self.supabase_anon_key = os.getenv("SUPABASE_ANON_KEY")
         self.supabase_service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
         
         if not self.supabase_url or not self.supabase_anon_key:
-            raise ValueError("Missing Supabase credentials in environment")
+            logger.warning("Missing Supabase credentials in environment - using mock implementation")
+            self.client = None
+            self.admin_client = None
+            return
         
         # Use anon key for client-side operations
         self.client: Client = create_client(self.supabase_url, self.supabase_anon_key)
@@ -60,6 +79,14 @@ class SupabaseAuthService:
         Returns:
             SupabaseAuthResult with user and session data
         """
+        if not SUPABASE_AVAILABLE or not self.client:
+            logger.error("Supabase not available - cannot perform sign up")
+            return SupabaseAuthResult(
+                success=False,
+                error="Supabase authentication not available",
+                user=None,
+                session=None
+            )
         try:
             # Prepare user metadata
             user_metadata = metadata or {}
@@ -130,6 +157,14 @@ class SupabaseAuthService:
         Returns:
             SupabaseAuthResult with session data
         """
+        if not SUPABASE_AVAILABLE or not self.client:
+            logger.error("Supabase not available - cannot perform sign in")
+            return SupabaseAuthResult(
+                success=False,
+                error="Supabase authentication not available",
+                user=None,
+                session=None
+            )
         try:
             response = self.client.auth.sign_in_with_password({
                 "email": email,

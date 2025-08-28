@@ -4,6 +4,133 @@
 
 **YOUR MISSION**: Implement features following the correct DDD architecture with proper repository switching (SQLite for tests, Supabase for production), optional Redis caching, and clean separation of concerns.
 
+## 📌 CRITICAL: System Has 61 Architecture Violations - MUST FIX
+
+**Current Status**: 
+- **Compliance Score**: 0/100 (Grade F - Critical Failure)
+- **Total Violations**: 61 (14 HIGH, 47 MEDIUM)
+- **Latest Report**: `compliance_reports/compliance_report_20250828_154945.md`
+
+### ⚠️ MANDATORY: Multi-Agent Workflow for Code Fixes
+
+**BEFORE implementing ANY feature, you MUST**:
+1. **Check compliance reports** for current violations
+2. **Create tasks** for fixing violations
+3. **Assign to specialist agents** (debugger, coding, testing)
+4. **IMPLEMENT ACTUAL CODE FIXES** (see Phase 1-4 below)
+5. **Verify compliance** after fixes
+
+### Quick Multi-Agent Process:
+```python
+# 1. Load Compliance Agent and check status
+compliance_agent = mcp__dhafnck_mcp_http__call_agent(name_agent="@architecture_compliance_agent")
+
+# 2. Create master task
+master_task = mcp__dhafnck_mcp_http__manage_task(
+    action="create",
+    title="Fix architecture violations",
+    description="Fix all 61 violations to achieve DDD compliance"
+)
+
+# 3. Load appropriate agent for each violation type
+debugger = mcp__dhafnck_mcp_http__call_agent(name_agent="@debugger_agent")  # For controllers
+coding = mcp__dhafnck_mcp_http__call_agent(name_agent="@coding_agent")      # For factory
+tester = mcp__dhafnck_mcp_http__call_agent(name_agent="@test_orchestrator_agent")  # For tests
+```
+
+## 🔄 Complete Multi-Agent Workflow Pattern
+
+```mermaid
+graph TD
+    A[User Request] --> B[Orchestrator Agent]
+    B --> C{Analyze Compliance}
+    C --> D[Architecture Compliance Agent]
+    D --> E[Task Planning Agent]
+    E --> F[Create Tasks]
+    F --> G[Assign to Specialist Agents]
+    G --> H[Coding Agent]
+    G --> I[Testing Agent]
+    G --> J[Debugger Agent]
+    H --> K[Update Context]
+    I --> K
+    J --> K
+    K --> L[Complete Task]
+    L --> M[Architecture Compliance Check]
+    M --> N[Generate Compliance Report]
+    N --> O[Update Documentation]
+```
+
+## 📋 Complete Multi-Agent Implementation Workflow
+
+### Phase 1: Architecture Analysis and Compliance Check
+```python
+# Load Architecture Compliance Agent
+compliance_agent = mcp__dhafnck_mcp_http__call_agent(name_agent="@architecture_compliance_agent")
+
+# Analyze existing architecture
+compliance_check = {
+    "action": "analyze",
+    "check_points": [
+        "controller_layer_compliance",  # Controllers only call facades
+        "facade_layer_compliance",      # Facades use repository factory
+        "repository_factory_exists",    # Factory pattern implemented
+        "cache_invalidation_present",   # Cache invalidation on mutations
+        "layer_separation_maintained"   # No cross-layer violations
+    ],
+    "report_path": "compliance_reports/compliance_report_20250828_155335.md"
+}
+
+# Current violations: 61 (14 HIGH, 47 MEDIUM)
+compliance_result = analyze_architecture_compliance(compliance_check)
+```
+
+### Phase 2: Task Creation and Planning
+```python
+# Load Task Planning Agent
+planning_agent = mcp__dhafnck_mcp_http__call_agent(name_agent="@task_planning_agent")
+
+# Create master task for the feature
+master_task = mcp__dhafnck_mcp_http__manage_task(
+    action="create",
+    git_branch_id=branch_id,
+    title="Fix 61 architecture violations for DDD compliance",
+    description="Fix controllers, factories, facades, and cache",
+    priority="critical"
+)
+
+# Create context for visibility
+mcp__dhafnck_mcp_http__manage_context(
+    action="create",
+    level="task",
+    context_id=master_task["task"]["id"],
+    git_branch_id=branch_id,
+    data={
+        "total_violations": 61,
+        "controller_violations": 14,
+        "factory_violations": 7,
+        "facade_violations": 25,
+        "cache_violations": 25
+    }
+)
+
+# Break down into subtasks
+subtasks = [
+    {"title": "Fix 11 Controller Files", "agent": "@debugger_agent"},
+    {"title": "Fix 7 Repository Factories", "agent": "@coding_agent"},
+    {"title": "Fix 25 Facades", "agent": "@coding_agent"},
+    {"title": "Add Cache to 25 Methods", "agent": "@coding_agent"},
+    {"title": "Write Compliance Tests", "agent": "@test_orchestrator_agent"}
+]
+
+for subtask in subtasks:
+    mcp__dhafnck_mcp_http__manage_subtask(
+        action="create",
+        task_id=master_task["task"]["id"],
+        title=subtask["title"],
+        assigned_agent=subtask["agent"]
+    )
+```
+
 ## 🏗️ Architecture Overview
 
 ```
@@ -663,6 +790,123 @@ class RepositoryFactory:
    - Ensure ENVIRONMENT=test for test runs
    - Check test configuration files
 
+## 🔧 ACTUAL CODE FIXES REQUIRED - PHASE 1-4
+
+### PHASE 1: Fix Controller Violations (11 files, 14 HIGH violations)
+
+**File: `git_branch_mcp_controller.py` (Lines 491, 579, 612)**
+```python
+# ❌ REMOVE THIS (Current violation):
+from infrastructure.repositories.orm import GitBranchRepository
+from infrastructure.repositories.orm import ProjectRepository
+self.repository = GitBranchRepository()
+
+# ✅ REPLACE WITH THIS:
+from application.facades import GitBranchApplicationFacade
+self.facade = GitBranchApplicationFacade()
+# Then use: self.facade.execute(request) instead of repository calls
+```
+
+**File: `task_mcp_controller.py` (Lines 1550, 1578)**
+```python
+# ❌ REMOVE THIS:
+from infrastructure.database import SessionLocal
+session = SessionLocal()
+
+# ✅ REPLACE WITH THIS:
+from application.facades import TaskApplicationFacade
+self.facade = TaskApplicationFacade()
+# Use facade methods, not direct database
+```
+
+### PHASE 2: Implement Working Repository Factory
+
+**CREATE NEW: `infrastructure/repositories/repository_factory.py`**
+```python
+import os
+from typing import Optional
+
+class RepositoryFactory:
+    """WORKING factory that actually checks environment variables"""
+    
+    @staticmethod
+    def get_task_repository():
+        # THIS IS WHAT'S MISSING - Environment checking!
+        env = os.getenv('ENVIRONMENT', 'production')
+        db_type = os.getenv('DATABASE_TYPE', 'supabase')
+        redis_enabled = os.getenv('REDIS_ENABLED', 'true').lower() == 'true'
+        
+        # Select repository based on environment
+        if env == 'test':
+            from .sqlite import SQLiteTaskRepository
+            base_repo = SQLiteTaskRepository()
+        elif db_type == 'supabase':
+            from .supabase import SupabaseTaskRepository
+            base_repo = SupabaseTaskRepository()
+        else:
+            from .postgresql import PostgreSQLTaskRepository
+            base_repo = PostgreSQLTaskRepository()
+        
+        # Wrap with cache if enabled
+        if redis_enabled and env != 'test':
+            from .cached import CachedTaskRepository
+            return CachedTaskRepository(base_repo)
+        
+        return base_repo
+```
+
+**FIX EXISTING: All 7 broken factory files**
+```python
+# ❌ CURRENT (ALL 7 factories have this problem):
+def create():
+    return TaskRepository()  # Always returns same thing!
+
+# ✅ FIX TO:
+def create():
+    return RepositoryFactory.get_task_repository()  # Use central factory
+```
+
+### PHASE 3: Update Facades to Use Factory (25 files)
+
+**File: `task_application_facade.py` (Line 82)**
+```python
+# ❌ REMOVE:
+self.repository = MockTaskContextRepository()  # Hardcoded
+
+# ✅ REPLACE:
+from infrastructure.repositories import RepositoryFactory
+self.repository = RepositoryFactory.get_task_repository()
+```
+
+### PHASE 4: Add Cache Invalidation (25 methods)
+
+**ADD to all mutation methods:**
+```python
+def create_task(self, task):
+    result = self.base_repo.create_task(task)
+    # ADD THIS:
+    if self.cache:
+        self.cache.invalidate(f"tasks:list:*")
+        self.cache.invalidate(f"tasks:branch:{task.branch_id}")
+    return result
+
+def update_task(self, task):
+    result = self.base_repo.update_task(task)
+    # ADD THIS:
+    if self.cache:
+        self.cache.invalidate(f"task:{task.id}")
+        self.cache.invalidate("tasks:list:*")
+    return result
+
+def delete_task(self, task_id):
+    result = self.base_repo.delete_task(task_id)
+    # ADD THIS:
+    if self.cache:
+        self.cache.invalidate(f"task:{task_id}")
+        self.cache.invalidate("tasks:*")
+    return result
+```
+
 ## 🎓 Summary for AI Agents
 
 **Remember these key points:**
@@ -686,5 +930,276 @@ class RepositoryFactory:
 - ❌ Assume cache is always available
 - ❌ Forget cache invalidation
 - ❌ Mix test and production databases
+
+## 🚨 MANDATORY: Architecture Compliance Verification
+
+### Current Compliance Status (V5 Analysis - 61 Violations)
+- **Score**: 0/100 (Critical Failure)
+- **Controller violations**: 11 files (14 HIGH)
+- **Factory broken**: 7 factories don't check environment
+- **Facade violations**: 25 files don't use factory
+- **Cache missing**: 25 methods lack invalidation
+
+### Required Actions BEFORE ANY New Feature:
+1. **Fix controllers** - Remove all direct DB/repository access
+2. **Fix factories** - Add environment checking logic
+3. **Fix facades** - Use RepositoryFactory not hardcoded repos
+4. **Add cache invalidation** - On all create/update/delete
+
+### Multi-Agent Execution Order:
+```python
+# Step 1: Analyze current violations
+compliance = mcp__dhafnck_mcp_http__call_agent(name_agent="@architecture_compliance_agent")
+# Check compliance_reports/compliance_report_20250828_154945.md
+
+# Step 2: Fix controllers (14 HIGH violations)
+debugger = mcp__dhafnck_mcp_http__call_agent(name_agent="@debugger_agent")
+# Fix all 11 controller files using Phase 1 code above
+
+# Step 3: Implement factory (7 broken factories)
+coding = mcp__dhafnck_mcp_http__call_agent(name_agent="@coding_agent")
+# Create central RepositoryFactory with environment checking
+# Update all 7 existing factories to use it
+
+# Step 4: Update facades (25 violations)
+# Replace hardcoded repositories with factory calls
+
+# Step 5: Add cache invalidation (25 methods)
+# Add invalidation to all mutation methods
+
+# Step 6: Test compliance
+tester = mcp__dhafnck_mcp_http__call_agent(name_agent="@test_orchestrator_agent")
+# Run architecture compliance tests
+
+# Step 7: Verify score improved
+# Target: 100/100 compliance score
+```
+
+### Compliance Test Script:
+```python
+# tests/test_architecture_compliance.py
+def test_no_direct_db_in_controllers():
+    """Controllers must not import database or repositories"""
+    for controller in Path('interface/controllers').glob('*.py'):
+        content = controller.read_text()
+        assert 'from infrastructure.database' not in content
+        assert 'from infrastructure.repositories' not in content
+        assert 'SessionLocal()' not in content
+
+def test_facades_use_factory():
+    """All facades must use RepositoryFactory"""
+    for facade in Path('application/facades').glob('*.py'):
+        content = facade.read_text()
+        if 'Repository()' in content:
+            assert 'RepositoryFactory' in content
+
+def test_factory_checks_environment():
+    """Factory must check ENVIRONMENT variable"""
+    factory = Path('infrastructure/repositories/repository_factory.py')
+    content = factory.read_text()
+    assert "os.getenv('ENVIRONMENT'" in content
+    assert "os.getenv('DATABASE_TYPE'" in content
+    assert "os.getenv('REDIS_ENABLED'" in content
+
+def test_cache_invalidation_exists():
+    """All mutation methods must invalidate cache"""
+    for repo in Path('infrastructure/repositories').rglob('*repository.py'):
+        content = repo.read_text()
+        if 'def create' in content:
+            assert 'invalidate' in content
+        if 'def update' in content:
+            assert 'invalidate' in content
+        if 'def delete' in content:
+            assert 'invalidate' in content
+```
+
+### Success Criteria:
+- ✅ 0 controller violations (currently 14)
+- ✅ All 7 factories check environment (currently 0)
+- ✅ All 25 facades use factory (currently 0)
+- ✅ All 25 mutation methods invalidate cache (currently 0)
+- ✅ Compliance score: 100/100 (currently 0/100)
+
+## 🤖 Multi-Agent Execution Checklist
+
+### Pre-Implementation (Analysis Phase)
+```python
+# 1. Check current compliance status
+compliance = mcp__dhafnck_mcp_http__call_agent(name_agent="@architecture_compliance_agent")
+# Review: compliance_reports/compliance_report_20250828_155335.md
+
+# 2. Create master task
+task = mcp__dhafnck_mcp_http__manage_task(
+    action="create",
+    title="Fix 61 architecture violations",
+    priority="critical"
+)
+
+# 3. Create context for tracking
+mcp__dhafnck_mcp_http__manage_context(
+    action="create",
+    level="task",
+    context_id=task["id"],
+    data={"violations": 61, "target_score": 100}
+)
+```
+
+### Implementation Phase (Code Fixes)
+```python
+# Phase 1: Fix Controllers (14 HIGH violations)
+debugger = mcp__dhafnck_mcp_http__call_agent(name_agent="@debugger_agent")
+# Apply controller fixes from Phase 1 section above
+
+# Phase 2: Fix Factories (7 broken factories)  
+coding = mcp__dhafnck_mcp_http__call_agent(name_agent="@coding_agent")
+# Implement RepositoryFactory with environment checking
+
+# Phase 3: Fix Facades (25 violations)
+# Update all facades to use RepositoryFactory
+
+# Phase 4: Add Cache (25 methods)
+# Add invalidation to all mutation methods
+
+# Phase 5: Test Compliance
+tester = mcp__dhafnck_mcp_http__call_agent(name_agent="@test_orchestrator_agent")
+# Run compliance tests
+```
+
+### Post-Implementation (Verification)
+```python
+# 1. Run compliance check
+final_check = analyze_architecture_compliance()
+
+# 2. Verify score improved
+assert final_check["score"] == 100
+
+# 3. Update context with results
+mcp__dhafnck_mcp_http__manage_context(
+    action="update",
+    level="project",
+    data={
+        "compliance_fixed": True,
+        "final_score": 100,
+        "violations_remaining": 0
+    }
+)
+
+# 4. Complete task
+mcp__dhafnck_mcp_http__complete_task_with_update(
+    task_id=task["id"],
+    completion_summary="Fixed all 61 violations, compliance score now 100/100"
+)
+```
+
+## 🚀 Automated Compliance Check Script
+
+Save this as `scripts/check_and_fix_compliance.py`:
+
+```python
+#!/usr/bin/env python
+"""
+Automated architecture compliance checker and fixer
+Run this to check violations and apply fixes
+"""
+
+import os
+import sys
+from pathlib import Path
+
+class ComplianceChecker:
+    def __init__(self):
+        self.violations = []
+        self.score = 0
+        
+    def check_controllers(self):
+        """Check for controller violations"""
+        controller_path = Path('src/fastmcp/task_management/interface/controllers')
+        for file in controller_path.glob('*.py'):
+            content = file.read_text()
+            if 'from infrastructure.database' in content:
+                self.violations.append(f"Controller {file.name}: Direct DB import")
+            if 'from infrastructure.repositories' in content:
+                self.violations.append(f"Controller {file.name}: Direct repo import")
+            if 'SessionLocal()' in content:
+                self.violations.append(f"Controller {file.name}: Creates DB session")
+    
+    def check_factories(self):
+        """Check if factories use environment variables"""
+        factory_path = Path('src/fastmcp/task_management/infrastructure/repositories')
+        for file in factory_path.glob('*factory.py'):
+            content = file.read_text()
+            checks_needed = [
+                "os.getenv('ENVIRONMENT'",
+                "os.getenv('DATABASE_TYPE'",
+                "os.getenv('REDIS_ENABLED'"
+            ]
+            for check in checks_needed:
+                if check not in content:
+                    self.violations.append(f"Factory {file.name}: Missing {check}")
+    
+    def check_facades(self):
+        """Check if facades use repository factory"""
+        facade_path = Path('src/fastmcp/task_management/application/facades')
+        for file in facade_path.glob('*.py'):
+            content = file.read_text()
+            if 'Repository()' in content and 'RepositoryFactory' not in content:
+                self.violations.append(f"Facade {file.name}: Not using factory")
+    
+    def check_cache_invalidation(self):
+        """Check for cache invalidation in mutations"""
+        repo_path = Path('src/fastmcp/task_management/infrastructure/repositories')
+        for file in repo_path.rglob('*repository.py'):
+            content = file.read_text()
+            mutations = ['def create', 'def update', 'def delete']
+            for mutation in mutations:
+                if mutation in content and 'invalidate' not in content:
+                    self.violations.append(f"Repo {file.name}: No cache invalidation in {mutation}")
+    
+    def calculate_score(self):
+        """Calculate compliance score"""
+        if not self.violations:
+            self.score = 100
+        else:
+            # Deduct points based on violations
+            self.score = max(0, 100 - (len(self.violations) * 2))
+    
+    def run_check(self):
+        """Run all compliance checks"""
+        print("🔍 Running Architecture Compliance Check...")
+        
+        self.check_controllers()
+        self.check_factories()
+        self.check_facades()
+        self.check_cache_invalidation()
+        self.calculate_score()
+        
+        print(f"\n📊 Compliance Score: {self.score}/100")
+        print(f"Total Violations: {len(self.violations)}")
+        
+        if self.violations:
+            print("\n❌ Violations Found:")
+            for i, violation in enumerate(self.violations, 1):
+                print(f"  {i}. {violation}")
+            print("\n⚠️ Run fixes using the code provided in AGENT_ARCHITECTURE_PROMPT.md")
+        else:
+            print("\n✅ All compliance checks passed!")
+        
+        return self.score == 100
+
+if __name__ == "__main__":
+    checker = ComplianceChecker()
+    success = checker.run_check()
+    sys.exit(0 if success else 1)
+```
+
+## 📊 Implementation Tracking Dashboard
+
+| Phase | Task | Current Status | Target | Agent |
+|-------|------|----------------|---------|-------|
+| 1 | Fix Controllers | 14 violations | 0 | @debugger_agent |
+| 2 | Fix Factories | 7 broken | 7 working | @coding_agent |
+| 3 | Fix Facades | 25 violations | 0 | @coding_agent |
+| 4 | Add Cache | 25 missing | 25 added | @coding_agent |
+| 5 | Test Compliance | 0/100 score | 100/100 | @test_orchestrator_agent |
 
 This architecture ensures clean separation, testability, flexibility, and performance optimization while maintaining simplicity and reliability.
