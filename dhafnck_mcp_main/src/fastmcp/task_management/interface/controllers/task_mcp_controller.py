@@ -34,18 +34,18 @@ from ...application.factories.unified_context_facade_factory import UnifiedConte
 from ...application.facades.task_application_facade import TaskApplicationFacade
 from ...application.facades.unified_context_facade import UnifiedContextFacade
 from ...application.factories.task_facade_factory import TaskFacadeFactory
-from ...application.services.context_validation_service import ContextValidationService
-from ...application.services.progress_tracking_service import ProgressTrackingService
-from ...application.services.hint_generation_service import HintGenerationService
-from ...application.services.workflow_analysis_service import WorkflowAnalysisService
-from ...application.services.agent_coordination_service import AgentCoordinationService
-from ...application.services.parameter_enforcement_service import (
+from ...application.orchestrators.services.context_validation_service import ContextValidationService
+from ...application.orchestrators.services.progress_tracking_service import ProgressTrackingService
+from ...application.orchestrators.services.hint_generation_service import HintGenerationService
+from ...application.orchestrators.services.workflow_analysis_service import WorkflowAnalysisService
+from ...application.orchestrators.services.agent_coordination_service import AgentCoordinationService
+from ...application.orchestrators.services.parameter_enforcement_service import (
     ParameterEnforcementService, 
     EnforcementLevel,
     EnforcementResult
 )
-from ...application.services.progressive_enforcement_service import ProgressiveEnforcementService
-from ...application.services.response_enrichment_service import (
+from ...application.orchestrators.services.progressive_enforcement_service import ProgressiveEnforcementService
+from ...application.orchestrators.services.response_enrichment_service import (
     ResponseEnrichmentService,
     ContextState,
     ContextStalnessLevel

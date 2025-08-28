@@ -3,7 +3,7 @@ Project Application Facade
 """
 from typing import Dict, Any, Optional
 
-from ..services.project_management_service import ProjectManagementService
+from ..orchestrators.services.project_management_service import ProjectManagementService
 from ...infrastructure.repositories.project_repository_factory import GlobalRepositoryManager
 
 class ProjectApplicationFacade:

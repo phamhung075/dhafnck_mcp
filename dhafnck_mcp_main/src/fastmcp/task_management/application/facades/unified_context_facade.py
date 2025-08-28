@@ -10,7 +10,7 @@ import asyncio
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timezone
 
-from ..services.unified_context_service import UnifiedContextService
+from ..orchestrators.services.unified_context_service import UnifiedContextService
 from ...domain.exceptions.base_exceptions import ValidationException
 
 logger = logging.getLogger(__name__)

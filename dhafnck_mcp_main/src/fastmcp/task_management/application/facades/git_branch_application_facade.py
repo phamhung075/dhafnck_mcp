@@ -3,7 +3,7 @@ Git Branch Application Facade (for Task Trees)
 """
 from typing import Dict, Any, Optional
 
-from ..services.git_branch_service import GitBranchService
+from ..orchestrators.services.git_branch_service import GitBranchService
 from ...domain.repositories.project_repository import ProjectRepository
 
 class GitBranchApplicationFacade:

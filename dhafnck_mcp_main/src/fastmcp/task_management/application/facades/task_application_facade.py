@@ -11,7 +11,7 @@ from ..dtos.task.update_task_request import UpdateTaskRequest
 from ..dtos.task.task_list_item_response import TaskListItemResponse
 from ..factories.context_response_factory import ContextResponseFactory
 
-from ..services.task_application_service import TaskApplicationService
+from ..orchestrators.services.task_application_service import TaskApplicationService
 
 from ..use_cases.create_task import CreateTaskUseCase
 from ..use_cases.update_task import UpdateTaskUseCase
@@ -29,7 +29,7 @@ from ...domain.repositories.git_branch_repository import GitBranchRepository
 from ...domain.exceptions import TaskNotFoundError, AutoRuleGenerationError
 
 from ...domain.value_objects.task_id import TaskId
-from ..services.unified_context_service import UnifiedContextService
+from ..orchestrators.services.unified_context_service import UnifiedContextService
 
 logger = logging.getLogger(__name__)
 
@@ -93,11 +93,11 @@ class TaskApplicationFacade:
         self._do_next_use_case = NextTaskUseCase(task_repository, context_service)
         
         # Dedicated service for context creation & sync
-        from ..services.task_context_sync_service import TaskContextSyncService
+        from ..orchestrators.services.task_context_sync_service import TaskContextSyncService
         self._task_context_sync_service = TaskContextSyncService(task_repository, context_service)
         
         # Initialize dependency resolver service
-        from ..services.dependency_resolver_service import DependencyResolverService
+        from ..orchestrators.services.dependency_resolver_service import DependencyResolverService
         self._dependency_resolver = DependencyResolverService(task_repository)
     
     async def _derive_context_from_git_branch_id(self, git_branch_id: str) -> Dict[str, Optional[str]]:
@@ -119,7 +119,7 @@ class TaskApplicationFacade:
             
             # If not found in git branch repository, try project manager
             # This provides fallback for new git_branchs structure
-            from ..services.project_management_service import ProjectManagementService
+            from ..orchestrators.services.project_management_service import ProjectManagementService
             project_manager = ProjectManagementService()
             result = project_manager.get_git_branch_by_id(git_branch_id)
             

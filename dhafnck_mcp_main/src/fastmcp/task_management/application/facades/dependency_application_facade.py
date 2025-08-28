@@ -7,7 +7,7 @@ import logging
 from typing import Dict, Any
 
 from ..dtos.dependency.add_dependency_request import AddDependencyRequest
-from ..services.dependencie_application_service import DependencieApplicationService
+from ..orchestrators.services.dependencie_application_service import DependencieApplicationService
 from ...domain.repositories.task_repository import TaskRepository
 from ...domain.exceptions import TaskNotFoundError
 

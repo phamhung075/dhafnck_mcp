@@ -50,35 +50,35 @@ class DependencieApplicationService:
 
     def add_dependency(self, request: AddDependencyRequest) -> DependencyResponse:
         if self._add_dependency_use_case is None:
-            from ..use_cases.add_dependency import AddDependencyUseCase
+            from ...use_cases.add_dependency import AddDependencyUseCase
             repo = self._get_user_scoped_repository(self._task_repository)
             self._add_dependency_use_case = AddDependencyUseCase(repo)
         return self._add_dependency_use_case.execute(request)
 
     def remove_dependency(self, task_id: str, dependency_id: str) -> DependencyResponse:
         if self._remove_dependency_use_case is None:
-            from ..use_cases.remove_dependency import RemoveDependencyUseCase
+            from ...use_cases.remove_dependency import RemoveDependencyUseCase
             repo = self._get_user_scoped_repository(self._task_repository)
             self._remove_dependency_use_case = RemoveDependencyUseCase(repo)
         return self._remove_dependency_use_case.execute(task_id, dependency_id)
 
     def get_dependencies(self, task_id: str) -> Dict[str, Any]:
         if self._get_dependencies_use_case is None:
-            from ..use_cases.get_dependencies import GetDependenciesUseCase
+            from ...use_cases.get_dependencies import GetDependenciesUseCase
             repo = self._get_user_scoped_repository(self._task_repository)
             self._get_dependencies_use_case = GetDependenciesUseCase(repo)
         return self._get_dependencies_use_case.execute(task_id)
 
     def clear_dependencies(self, task_id: str) -> DependencyResponse:
         if self._clear_dependencies_use_case is None:
-            from ..use_cases.clear_dependencies import ClearDependenciesUseCase
+            from ...use_cases.clear_dependencies import ClearDependenciesUseCase
             repo = self._get_user_scoped_repository(self._task_repository)
             self._clear_dependencies_use_case = ClearDependenciesUseCase(repo)
         return self._clear_dependencies_use_case.execute(task_id)
 
     def get_blocking_tasks(self, task_id: str) -> Dict[str, Any]:
         if self._get_blocking_tasks_use_case is None:
-            from ..use_cases.get_blocking_tasks import GetBlockingTasksUseCase
+            from ...use_cases.get_blocking_tasks import GetBlockingTasksUseCase
             repo = self._get_user_scoped_repository(self._task_repository)
             self._get_blocking_tasks_use_case = GetBlockingTasksUseCase(repo)
         return self._get_blocking_tasks_use_case.execute(task_id) 
