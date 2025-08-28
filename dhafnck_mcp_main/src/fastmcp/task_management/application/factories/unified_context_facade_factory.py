@@ -8,15 +8,15 @@ import logging
 from typing import Optional
 
 from ..facades.unified_context_facade import UnifiedContextFacade
-from ..services.unified_context_service import UnifiedContextService
+from ..orchestrators.services.unified_context_service import UnifiedContextService
 from ...infrastructure.repositories.global_context_repository import GlobalContextRepository
 from ...infrastructure.repositories.project_context_repository import ProjectContextRepository
 from ...infrastructure.repositories.branch_context_repository import BranchContextRepository
 from ...infrastructure.repositories.task_context_repository import TaskContextRepository
-from ..services.context_cache_service import ContextCacheService
-from ..services.context_inheritance_service import ContextInheritanceService
-from ..services.context_delegation_service import ContextDelegationService
-from ..services.context_validation_service import ContextValidationService
+from ..orchestrators.services.context_cache_service import ContextCacheService
+from ..orchestrators.services.context_inheritance_service import ContextInheritanceService
+from ..orchestrators.services.context_delegation_service import ContextDelegationService
+from ..orchestrators.services.context_validation_service import ContextValidationService
 from ...infrastructure.database.database_config import get_db_config
 # GLOBAL_SINGLETON_UUID removed - each user has their own global context
 

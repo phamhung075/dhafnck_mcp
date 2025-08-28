@@ -7,7 +7,7 @@ import asyncio
 
 from ...domain import TaskRepository
 from ...infrastructure.services.agent_doc_generator import generate_agent_docs, generate_docs_for_assignees
-from ...application.services.unified_context_service import UnifiedContextService
+from ...application.orchestrators.services.unified_context_service import UnifiedContextService
 from ...domain.value_objects.task_status import TaskStatus
 from ...domain.value_objects.priority import Priority
 from ...application.dtos.context import GetContextRequest
