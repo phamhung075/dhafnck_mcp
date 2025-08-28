@@ -488,20 +488,29 @@ class GitBranchMCPController(ContextPropagationMixin):
         try:
             # Get the project_id from facade context or find it from the branch
             # Since we need the repository directly, let's use it
-            from ...infrastructure.repositories.orm.git_branch_repository import ORMGitBranchRepository
+            # Use facade methods instead of direct repository access
+            # The facade already has methods to get branch data and statistics
             
-            # Create repository instance
-            repo = ORMGitBranchRepository()
-            
-            # Get branch statistics with proper context propagation
-            async def _get_statistics_async():
-                # Get branch with correct parameters
-                branch = await repo.find_by_id(project_id, git_branch_id)
-                if branch:
-                    # Get statistics
-                    return await repo.get_branch_statistics(project_id, git_branch_id)
+            # Get branch statistics using facade
+            try:
+                # First get the branch to ensure it exists
+                branch_data = facade.get_git_branch_by_id(git_branch_id)
+                if branch_data and 'git_branch' in branch_data:
+                    # Return statistics based on branch data
+                    branch = branch_data['git_branch']
+                    return {
+                        "git_branch_id": git_branch_id,
+                        "project_id": project_id,
+                        "name": branch.get('name'),
+                        "task_count": branch.get('task_count', 0),
+                        "completed_tasks": branch.get('completed_tasks', 0),
+                        "in_progress_tasks": branch.get('in_progress_tasks', 0),
+                        "todo_tasks": branch.get('todo_tasks', 0)
+                    }
                 else:
                     return {"error": f"Branch {git_branch_id} not found in project {project_id}"}
+            except Exception as e:
+                return {"error": f"Failed to get statistics: {e}"}
             
             result = self._run_async_with_context(_get_statistics_async)
                 
@@ -576,21 +585,13 @@ class GitBranchMCPController(ContextPropagationMixin):
         """
         try:
             # Use the git branch repository directly to find the branch by name
-            from ...infrastructure.repositories.orm.git_branch_repository import ORMGitBranchRepository
-            
-            repo = ORMGitBranchRepository()
-            
-            # Handle async operation with proper context propagation
-            async def _resolve_name_async():
-                git_branch = await repo.find_by_name(project_id, git_branch_name)
-                return git_branch.id if git_branch else None
-            
-            try:
-                result = self._run_async_with_context(_resolve_name_async)
-                return result
-            except Exception as exception:
-                logger.error(f"Error resolving branch name to ID: {exception}")
-                return None
+            # Use facade to list branches and find by name
+            branches_data = self._facade.list_git_branches(project_id)
+            if branches_data and 'git_branches' in branches_data:
+                for branch in branches_data['git_branches']:
+                    if branch.get('name') == git_branch_name:
+                        return branch.get('id')
+            return None
             
         except Exception as e:
             logger.error(f"Error in _resolve_branch_name_to_id: {e}")
@@ -609,21 +610,11 @@ class GitBranchMCPController(ContextPropagationMixin):
         """
         try:
             # Use the git branch repository directly to find the branch by ID
-            from ...infrastructure.repositories.orm.git_branch_repository import ORMGitBranchRepository
-            
-            repo = ORMGitBranchRepository()
-            
-            # Handle async operation with proper context propagation
-            async def _resolve_id_async():
-                git_branch = await repo.find_by_id(project_id, git_branch_id)
-                return git_branch.name if git_branch else None
-            
-            try:
-                result = self._run_async_with_context(_resolve_id_async)
-                return result
-            except Exception as exception:
-                logger.error(f"Error resolving branch ID to name: {exception}")
-                return None
+            # Use facade to get branch by ID
+            branch_data = self._facade.get_git_branch_by_id(git_branch_id)
+            if branch_data and 'git_branch' in branch_data:
+                return branch_data['git_branch'].get('name')
+            return None
             
         except Exception as e:
             logger.error(f"Error in _resolve_branch_id_to_name: {e}")

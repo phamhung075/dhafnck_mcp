@@ -119,22 +119,9 @@ class TaskRepositoryFactory:
         if not user_id:
             user_id = self.default_user_id
         
-        # Try to use ORM, fallback to mock if database not available
-        try:
-            from ..database.database_config import get_db_config
-            # Try to get database config to check if it's available
-            db_config = get_db_config()
-            if db_config and db_config.engine:
-                return ORMTaskRepository(
-                    project_id=project_id,
-                    git_branch_name=git_branch_name,
-                    user_id=user_id
-                )
-        except Exception as e:
-            logger.warning(f"Database not available, using mock repository: {e}")
-        
-        # Fallback to mock repository
-        return MockTaskRepository()
+        # Use central RepositoryFactory for environment-based selection
+        from .repository_factory import RepositoryFactory
+        return RepositoryFactory.get_task_repository(project_id, git_branch_name, user_id)
 
     def create_repository_with_git_branch_id(self, project_id: str, git_branch_name: str, user_id: str, git_branch_id: str) -> TaskRepository:
         """
@@ -152,23 +139,9 @@ class TaskRepositoryFactory:
         Returns:
             TaskRepository instance scoped to the git_branch_id
         """
-        # Try to use ORM, fallback to mock if database not available
-        try:
-            from ..database.database_config import get_db_config
-            # Try to get database config to check if it's available
-            db_config = get_db_config()
-            if db_config and db_config.engine:
-                return ORMTaskRepository(
-                    git_branch_id=git_branch_id,
-                    project_id=project_id,
-                    git_branch_name=git_branch_name,
-                    user_id=user_id
-                )
-        except Exception as e:
-            logger.warning(f"Database not available, using mock repository: {e}")
-        
-        # Fallback to mock repository
-        return MockTaskRepository()
+        # Use central RepositoryFactory for environment-based selection
+        from .repository_factory import RepositoryFactory
+        return RepositoryFactory.get_task_repository(project_id, git_branch_name, user_id)
     
     def create_sqlite_task_repository(self, project_id: str, git_branch_name: str = "main", 
                                      user_id: Optional[str] = None, db_path: Optional[str] = None) -> TaskRepository:

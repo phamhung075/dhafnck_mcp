@@ -97,15 +97,27 @@ class ProjectRepositoryFactory:
     @classmethod
     def _get_default_type(cls) -> RepositoryType:
         """Get default repository type from environment"""
-        # Try to use ORM, fallback to mock if database not available
+        # Check environment variables properly
+        env = os.getenv('ENVIRONMENT', 'production')
+        db_type = os.getenv('DATABASE_TYPE', 'supabase')
+        
+        logger.debug(f"[ProjectRepositoryFactory] Environment: {env}, Database Type: {db_type}")
+        
+        # Test environment - use mock
+        if env == 'test':
+            logger.info("[ProjectRepositoryFactory] Test environment detected, using MOCK")
+            return RepositoryType.MOCK
+        
+        # Production/development - use ORM
+        # Try to verify database is available
         try:
             from ..database.database_config import get_db_config
-            # Try to get database config to check if it's available
             db_config = get_db_config()
             if db_config and db_config.engine:
+                logger.info("[ProjectRepositoryFactory] Database available, using ORM")
                 return RepositoryType.ORM
         except Exception as e:
-            logger.warning(f"Database not available, using mock repository: {e}")
+            logger.warning(f"Database not available, falling back to mock: {e}")
         
         return RepositoryType.MOCK
     

@@ -1547,23 +1547,24 @@ class TaskMCPController(ContextPropagationMixin):
         if git_branch_id:
             logger.debug(f"Looking up project_id for git_branch_id {git_branch_id}")
             try:
-                from ...infrastructure.database.session_manager import get_session_manager
-                from sqlalchemy import text
+                # Use GitBranchApplicationFacade with proper factory pattern
+                from ...application.facades.git_branch_application_facade import GitBranchApplicationFacade
+                from ...infrastructure.repositories.repository_factory import RepositoryFactory
                 
-                session_manager = get_session_manager()
-                with session_manager.get_session() as session:
-                    # Look up project_id and branch name from git_branch_id
-                    result = session.execute(
-                        text('SELECT project_id, name FROM project_git_branchs WHERE id = :git_branch_id'),
-                        {'git_branch_id': git_branch_id}
-                    ).fetchone()
-                    
-                    if result:
-                        actual_project_id, git_branch_name = result
+                git_branch_facade = GitBranchApplicationFacade(
+                    git_branch_repository=RepositoryFactory.get_git_branch_repository()
+                )
+                
+                try:
+                    git_branch_data = git_branch_facade.get_git_branch_by_id(git_branch_id)
+                    if git_branch_data and 'git_branch' in git_branch_data:
+                        branch = git_branch_data['git_branch']
+                        actual_project_id = branch.get('project_id')
+                        git_branch_name = branch.get('name')
                         logger.debug(f"Found project_id {actual_project_id} and branch name '{git_branch_name}' for git_branch_id {git_branch_id}")
                         return (actual_project_id, git_branch_name, user_id)
-                    else:
-                        logger.warning(f"Git branch {git_branch_id} not found in project_git_branchs table")
+                except Exception:
+                    logger.warning(f"Git branch {git_branch_id} not found")
             except Exception as e:
                 logger.warning(f"Failed to look up project_id for git_branch_id {git_branch_id}: {e}")
             
@@ -1575,18 +1576,11 @@ class TaskMCPController(ContextPropagationMixin):
         if task_id:
             logger.debug(f"Deriving context for task_id {task_id}")
             try:
-                from ...infrastructure.database.session_manager import get_session_manager
-                from sqlalchemy import text
-                
-                session_manager = get_session_manager()
-                with session_manager.get_session() as session:
-                    result = session.execute(
-                        text('SELECT git_branch_id FROM tasks WHERE id = :task_id'),
-                        {'task_id': task_id}
-                    ).fetchone()
-                    
-                    if result and result[0]:
-                        found_git_branch_id = result[0]
+                # Use TaskApplicationFacade instead of direct database access
+                task_data = self._task_facade.get_task(task_id, include_context=False)
+                if task_data and 'task' in task_data:
+                    found_git_branch_id = task_data['task'].get('git_branch_id')
+                    if found_git_branch_id:
                         logger.debug(f"Found git_branch_id {found_git_branch_id} for task {task_id}")
                         # Store the git_branch_id for later use
                         self._resolved_git_branch_id = found_git_branch_id

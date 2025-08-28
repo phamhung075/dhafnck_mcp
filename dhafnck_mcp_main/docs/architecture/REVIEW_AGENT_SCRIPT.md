@@ -2,7 +2,7 @@
 
 ## Executive Summary for Review Agent
 
-**YOUR MISSION**: Review code and test implementations, verify compliance, and update `issues_report.md` with fixed issues or work that needs to be redone.
+**YOUR MISSION**: Review code and test implementations, verify compliance, and APPEND all reviews to the SAME SINGLE `issues_report.md` file where analyze agent writes. NO SEPARATE REPORT FILES.
 
 ## 🔄 Review Agent Workflow
 
@@ -510,7 +510,7 @@ elif available_tasks["task"]["title"].contains("Review") and "Test" in available
 
 ```python
 def update_issues_report_with_review(component_type, review_data):
-    """Update issues_report.md with review findings"""
+    """APPEND review findings to the SAME SINGLE issues_report.md file (no separate files)"""
     
     try:
         # Read current report
@@ -754,11 +754,13 @@ The review agent updates `issues_report.md` with:
 
 ## 🎯 Success Criteria
 
+- ✅ **APPEND TO SAME FILE**: All reviews added to existing `issues_report.md`
+- ✅ **NO NEW FILES**: Never create separate review reports
 - ✅ All code implementations reviewed for DDD compliance
 - ✅ All test implementations reviewed for quality and coverage
-- ✅ `issues_report.md` updated with detailed review findings
+- ✅ `issues_report.md` updated with detailed review findings (in same file)
 - ✅ Issues marked as FIXED when compliant or NEEDS_REWORK when not
 - ✅ Final compliance review conducted when all components complete
-- ✅ Production readiness decision documented in report
+- ✅ Production readiness decision documented in same report file
 
-The review agent serves as the quality gate, ensuring all fixes meet architecture standards before marking the system as production-ready.
+**⚠️ CRITICAL**: The review agent serves as the quality gate and MUST append all findings to the SAME SINGLE FILE where analyze agent writes - never create separate files.

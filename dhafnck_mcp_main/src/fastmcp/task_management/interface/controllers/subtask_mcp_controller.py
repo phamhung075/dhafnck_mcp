@@ -1014,34 +1014,39 @@ class SubtaskMCPController(ContextPropagationMixin):
         if task_id:
             logger.debug(f"Deriving context for subtask operations on task_id {task_id}")
             try:
-                from ...infrastructure.database.session_manager import get_session_manager
-                from sqlalchemy import text
+                # Use TaskApplicationFacade with proper factory pattern
+                from ...application.facades.task_application_facade import TaskApplicationFacade
+                from ...infrastructure.repositories.repository_factory import RepositoryFactory
                 
-                session_manager = get_session_manager()
-                with session_manager.get_session() as session:
-                    # Look up project context from task
-                    result = session.execute(
-                        text('SELECT git_branch_id FROM tasks WHERE id = :task_id'),
-                        {'task_id': task_id}
-                    ).fetchone()
-                    
-                    if result:
-                        git_branch_id = result[0]
+                task_facade = TaskApplicationFacade(
+                    task_repository=RepositoryFactory.get_task_repository()
+                )
+                
+                task_data = task_facade.get_task(task_id, include_context=False)
+                if task_data and 'task' in task_data:
+                    git_branch_id = task_data['task'].get('git_branch_id')
+                    if git_branch_id:
                         logger.debug(f"Found git_branch_id {git_branch_id} for task_id {task_id}")
                         
-                        # Look up project_id from git_branch_id
-                        branch_result = session.execute(
-                            text('SELECT project_id FROM project_git_branchs WHERE id = :git_branch_id'),
-                            {'git_branch_id': git_branch_id}
-                        ).fetchone()
+                        # Look up project_id from git_branch_id using facade with factory
+                        from ...application.facades.git_branch_application_facade import GitBranchApplicationFacade
+                        from ...infrastructure.repositories.repository_factory import RepositoryFactory
                         
-                        if branch_result:
-                            project_id = branch_result[0]
-                            logger.debug(f"Found project_id {project_id} for git_branch_id {git_branch_id}")
-                        else:
+                        git_branch_facade = GitBranchApplicationFacade(
+                            git_branch_repository=RepositoryFactory.get_git_branch_repository()
+                        )
+                        
+                        try:
+                            branch_data = git_branch_facade.get_git_branch_by_id(git_branch_id)
+                            if branch_data and 'git_branch' in branch_data:
+                                project_id = branch_data['git_branch'].get('project_id')
+                                logger.debug(f"Found project_id {project_id} for git_branch_id {git_branch_id}")
+                            else:
+                                logger.warning(f"Project not found for git_branch_id {git_branch_id}, using default")
+                        except Exception:
                             logger.warning(f"Project not found for git_branch_id {git_branch_id}, using default")
-                    else:
-                        logger.warning(f"Task {task_id} not found, using default project")
+                else:
+                    logger.warning(f"Task {task_id} not found, using default project")
             except Exception as e:
                 logger.warning(f"Failed to derive project context for task_id {task_id}: {e}")
                 logger.debug(f"Using default project for subtask operations")

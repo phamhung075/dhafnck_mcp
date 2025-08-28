@@ -13,6 +13,7 @@ from sqlalchemy.orm import joinedload
 
 from ..base_orm_repository import BaseORMRepository
 from ..base_user_scoped_repository import BaseUserScopedRepository
+from ...cache.cache_invalidation_mixin import CacheInvalidationMixin, CacheOperation
 from ...database.models import Project, ProjectGitBranch
 from ....domain.repositories.project_repository import ProjectRepository
 from ....domain.entities.project import Project as ProjectEntity
@@ -25,7 +26,7 @@ from ....domain.exceptions.base_exceptions import (
 logger = logging.getLogger(__name__)
 
 
-class ORMProjectRepository(BaseORMRepository[Project], BaseUserScopedRepository, ProjectRepository):
+class ORMProjectRepository(BaseORMRepository[Project], BaseUserScopedRepository, CacheInvalidationMixin, ProjectRepository):
     """
     Project repository implementation using SQLAlchemy ORM.
     
@@ -389,6 +390,14 @@ class ORMProjectRepository(BaseORMRepository[Project], BaseUserScopedRepository,
                     metadata={}
                 )
                 
+                # Invalidate cache after create
+                self.invalidate_cache_for_entity(
+                    entity_type="project",
+                    entity_id=project_id,
+                    operation=CacheOperation.CREATE,
+                    user_id=user_id
+                )
+                
                 return self._model_to_entity(project)
         except Exception as e:
             logger.error(f"Failed to create project: {e}")
@@ -421,6 +430,13 @@ class ORMProjectRepository(BaseORMRepository[Project], BaseUserScopedRepository,
                         resource_id=project_id
                     )
                 
+                # Invalidate cache after update
+                self.invalidate_cache_for_entity(
+                    entity_type="project",
+                    entity_id=project_id,
+                    operation=CacheOperation.UPDATE
+                )
+                
                 return self._model_to_entity(updated_project)
         except Exception as e:
             logger.error(f"Failed to update project {project_id}: {e}")
@@ -435,6 +451,15 @@ class ORMProjectRepository(BaseORMRepository[Project], BaseUserScopedRepository,
         logger.info(f"delete_project called for {project_id}, calling super().delete()")
         result = super().delete(project_id)
         logger.info(f"super().delete() returned: {result} for project {project_id}")
+        
+        # Invalidate cache after delete
+        if result:
+            self.invalidate_cache_for_entity(
+                entity_type="project",
+                entity_id=project_id,
+                operation=CacheOperation.DELETE
+            )
+        
         return result
     
     def list_projects(self, status: Optional[str] = None, limit: int = 100, offset: int = 0) -> List[ProjectEntity]:

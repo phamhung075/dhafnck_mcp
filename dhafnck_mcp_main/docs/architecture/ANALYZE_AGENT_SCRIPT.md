@@ -9,7 +9,7 @@
 **Critical Status**: 
 - **Compliance Score**: 20/100 (Grade F - Critical Failure)
 - **Total Violations**: 90 (ALL HIGH SEVERITY)
-- **Latest Report**: `ARCHITECTURE_COMPLIANCE_REPORT_2025-08-28_V7`
+- **Single Report File**: `dhafnck_mcp_main/docs/architecture/issues_report.md` (ALL REPORTS IN ONE FILE)
 
 ## 🤖 Analyze Agent Workflow
 
@@ -25,13 +25,15 @@ print("📝 Will update issues_report.md continuously")
 ### Phase 2: Create/Initialize Issues Report
 
 ```python
-# Create or update the central issues report
-issues_report_template = '''# Architecture Issues Report
+# Create or update the SINGLE CONSOLIDATED issues report
+issues_report_template = '''# 📋 CONSOLIDATED ARCHITECTURE ISSUES REPORT
+## ⚠️ SINGLE FILE FOR ALL REPORTS, REVIEWS, AND UPDATES
 
 **Report Status**: ACTIVE ANALYSIS
 **Last Updated**: {timestamp}
 **Compliance Score**: 20/100 (Critical Failure)
 **Total Violations**: 90 (ALL HIGH SEVERITY)
+**File Purpose**: ALL analysis, reviews, and status updates go in this ONE file
 
 ## 🚨 CRITICAL ISSUES IDENTIFIED
 
@@ -467,10 +469,12 @@ The analyze agent continuously updates `issues_report.md` with:
 
 ## 🎯 Success Criteria
 
+- ✅ **SINGLE FILE**: Only `dhafnck_mcp_main/docs/architecture/issues_report.md` used
+- ✅ **NO SEPARATE FILES**: All analysis, reviews, and updates in ONE file
 - ✅ `issues_report.md` created and continuously updated
 - ✅ All 90 violations identified and documented
 - ✅ Clear tasks defined for code, test, and review agents
 - ✅ Analysis runs every 5 minutes until 100/100 compliance
 - ✅ Final report marks system as production-ready
 
-The analyze agent serves as the central coordinator, ensuring all other agents have up-to-date information to work with.
+**⚠️ CRITICAL**: The analyze agent serves as the central coordinator, ensuring ALL agents write to the SAME SINGLE FILE - no separate reports allowed.
