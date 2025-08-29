@@ -15,6 +15,7 @@ from ..infrastructure.supabase_auth import SupabaseAuthService
 from ..domain.entities.user import User
 from ..infrastructure.repositories.user_repository import UserRepository
 from .fastapi_auth import get_db
+from fastapi import Request
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,83 @@ def get_supabase_auth():
     if supabase_auth is None:
         supabase_auth = SupabaseAuthService()
     return supabase_auth
+
+
+async def get_current_user_from_middleware(
+    request: Request,
+    db: Session = Depends(get_db)
+) -> User:
+    """
+    Get current user from middleware authentication context.
+    
+    This dependency uses the user authentication processed by DualAuthMiddleware
+    instead of re-validating tokens.
+    
+    Args:
+        request: FastAPI request object
+        db: Database session
+        
+    Returns:
+        Current user object
+        
+    Raises:
+        HTTPException: 401 if not authenticated
+    """
+    # Check if middleware has processed authentication
+    if not hasattr(request.state, 'user_id') or not request.state.user_id:
+        logger.warning("No authentication found in request state - middleware may not be working")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required - no user context found",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    user_id = request.state.user_id
+    logger.debug(f"Retrieved user_id from middleware: {user_id}")
+    
+    # Get user from database
+    try:
+        user_repository = UserRepository(db)
+        user = user_repository.find_by_id(user_id)
+        
+        if not user:
+            # If user doesn't exist in local DB, create from auth info
+            auth_info = getattr(request.state, 'auth_info', {})
+            email = auth_info.get('email') if isinstance(auth_info, dict) else None
+            
+            if email:
+                logger.info(f"Creating new user record for authenticated user: {user_id}")
+                
+                from ..domain.entities.user import UserStatus, UserRole
+                
+                # Create domain user  
+                domain_user = User(
+                    id=user_id,
+                    email=email,
+                    username=email.split('@')[0],  # Use email prefix as username
+                    password_hash="",  # Empty for JWT-authenticated users
+                    status=UserStatus.ACTIVE,
+                    roles=[UserRole.USER]  # Fixed: roles is a list, not singular role
+                )
+                
+                # Save to database
+                user = await user_repository.save(domain_user)
+                logger.info(f"Created new user: {user.id}")
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="User not found in database and no email available for creation",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+        
+        return user
+        
+    except Exception as e:
+        logger.error(f"Error retrieving user {user_id} from database: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error while retrieving user"
+        )
 
 
 async def get_current_user_supabase(
@@ -130,5 +208,5 @@ async def get_current_user_supabase(
         )
 
 
-# Alias for backward compatibility
-get_current_user = get_current_user_supabase
+# Use middleware-based authentication for better compatibility
+get_current_user = get_current_user_from_middleware

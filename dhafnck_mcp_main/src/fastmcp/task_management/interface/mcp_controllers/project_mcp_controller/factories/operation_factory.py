@@ -26,19 +26,19 @@ class ProjectOperationFactory:
         
         logger.info("ProjectOperationFactory initialized with modular handlers")
     
-    def handle_operation(self, operation: str, facade: ProjectApplicationFacade, 
+    async def handle_operation(self, operation: str, facade: ProjectApplicationFacade, 
                         **kwargs) -> Dict[str, Any]:
         """Route operation to appropriate handler."""
         
         try:
             # CRUD Operations
             if operation in ["create", "get", "list", "update", "delete"]:
-                return self._handle_crud_operation(operation, facade, **kwargs)
+                return await self._handle_crud_operation(operation, facade, **kwargs)
             
             # Maintenance Operations
             elif operation in ["project_health_check", "cleanup_obsolete", 
                               "validate_integrity", "rebalance_agents"]:
-                return self._handle_maintenance_operation(operation, facade, **kwargs)
+                return await self._handle_maintenance_operation(operation, facade, **kwargs)
             
             else:
                 return self._response_formatter.create_error_response(
@@ -61,12 +61,12 @@ class ProjectOperationFactory:
                 metadata={"operation": operation}
             )
     
-    def _handle_crud_operation(self, operation: str, facade: ProjectApplicationFacade, 
+    async def _handle_crud_operation(self, operation: str, facade: ProjectApplicationFacade, 
                               **kwargs) -> Dict[str, Any]:
         """Handle CRUD operations."""
         
         if operation == "create":
-            return self._crud_handler.create_project(
+            return await self._crud_handler.create_project(
                 facade=facade,
                 name=kwargs.get('name'),
                 description=kwargs.get('description'),
@@ -74,17 +74,17 @@ class ProjectOperationFactory:
             )
         
         elif operation == "get":
-            return self._crud_handler.get_project(
+            return await self._crud_handler.get_project(
                 facade=facade,
                 project_id=kwargs.get('project_id'),
                 name=kwargs.get('name')
             )
         
         elif operation == "list":
-            return self._crud_handler.list_projects(facade=facade)
+            return await self._crud_handler.list_projects(facade=facade)
         
         elif operation == "update":
-            return self._crud_handler.update_project(
+            return await self._crud_handler.update_project(
                 facade=facade,
                 project_id=kwargs.get('project_id'),
                 name=kwargs.get('name'),
@@ -92,7 +92,7 @@ class ProjectOperationFactory:
             )
         
         elif operation == "delete":
-            return self._crud_handler.delete_project(
+            return await self._crud_handler.delete_project(
                 facade=facade,
                 project_id=kwargs.get('project_id'),
                 force=kwargs.get('force')
@@ -105,7 +105,7 @@ class ProjectOperationFactory:
                 error_code=ErrorCodes.INVALID_OPERATION
             )
     
-    def _handle_maintenance_operation(self, operation: str, facade: ProjectApplicationFacade, 
+    async def _handle_maintenance_operation(self, operation: str, facade: ProjectApplicationFacade, 
                                     **kwargs) -> Dict[str, Any]:
         """Handle maintenance operations."""
         
@@ -114,14 +114,14 @@ class ProjectOperationFactory:
         user_id = kwargs.get('user_id')
         
         if operation == "project_health_check":
-            return self._maintenance_handler.project_health_check(
+            return await self._maintenance_handler.project_health_check(
                 facade=facade,
                 project_id=project_id,
                 user_id=user_id
             )
         
         elif operation == "cleanup_obsolete":
-            return self._maintenance_handler.cleanup_obsolete(
+            return await self._maintenance_handler.cleanup_obsolete(
                 facade=facade,
                 project_id=project_id,
                 force=force,
@@ -129,7 +129,7 @@ class ProjectOperationFactory:
             )
         
         elif operation == "validate_integrity":
-            return self._maintenance_handler.validate_integrity(
+            return await self._maintenance_handler.validate_integrity(
                 facade=facade,
                 project_id=project_id,
                 force=force,
@@ -137,7 +137,7 @@ class ProjectOperationFactory:
             )
         
         elif operation == "rebalance_agents":
-            return self._maintenance_handler.rebalance_agents(
+            return await self._maintenance_handler.rebalance_agents(
                 facade=facade,
                 project_id=project_id,
                 force=force,

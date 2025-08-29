@@ -532,13 +532,14 @@ def create_dhafnck_mcp_server() -> FastMCP:
     
     # Register DDD-compliant connection management tools
     try:
-        from ..connection_management.interface.ddd_compliant_connection_tools import register_ddd_connection_tools
+        # Import with proper absolute path since this is run as a script
+        from fastmcp.connection_management.interface.ddd_compliant_connection_tools import register_ddd_connection_tools
         register_ddd_connection_tools(server)
         logger.info("DDD-compliant connection management tools registered")
     except ImportError as e:
         logger.warning(f"Could not import DDD connection tools, falling back to legacy: {e}")
         # Fallback to legacy connection management tools
-        from .manage_connection_tool import register_manage_connection_tool
+        from fastmcp.server.manage_connection_tool import register_manage_connection_tool
         register_manage_connection_tool(server)
         logger.info("Legacy connection management tools registered")
     

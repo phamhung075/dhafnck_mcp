@@ -7,6 +7,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 ## [Unreleased]
 
 ### Added
+- **MCP Tools Comprehensive Validation Testing** - Conducted direct API testing of all dhafnck_mcp_http MCP tools [2025-08-29]
+  - **Test Results**: Identified 6 critical issues affecting 67% of tested tools
+  - **Issues Found**:
+    - Authentication inconsistency: tools require user_id despite MVP mode enabled
+    - Git branch operations fail with StandardResponseFormatter parameter errors
+    - Task management blocked by asyncio event loop conflicts
+    - Project get operation has dict attribute access errors
+    - Context management has conflicting user_id parameter validation
+    - Compliance tools require authentication despite system configuration
+  - **Documentation**: Created comprehensive test results with fix prompts at `dhafnck_mcp_main/docs/TROUBLESHOOTING/mcp-tools-validation-test-results.md`
+  - **Next Steps**: Use provided fix prompts to resolve each issue systematically
+  - Files: MCP controllers, authentication middleware, response formatters, async handlers
+
+### Added
 - **Extended Modular Refactoring to All Remaining MCP Controllers and API Controllers** - Completed comprehensive modular refactoring [2025-08-29]
   - **Authentication and Utility Controllers**:
     - Refactored `auth_helper.py` (324 lines → 5 lines) with extractors, services, and debug utilities

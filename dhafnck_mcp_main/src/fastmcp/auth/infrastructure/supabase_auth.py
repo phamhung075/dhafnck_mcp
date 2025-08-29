@@ -52,6 +52,7 @@ class SupabaseAuthService:
         self.supabase_url = os.getenv("SUPABASE_URL")
         self.supabase_anon_key = os.getenv("SUPABASE_ANON_KEY")
         self.supabase_service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+        self.supabase_jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
         
         if not self.supabase_url or not self.supabase_anon_key:
             logger.warning("Missing Supabase credentials in environment - using mock implementation")
@@ -314,31 +315,76 @@ class SupabaseAuthService:
             SupabaseAuthResult with user data if valid
         """
         try:
-            # The Supabase client's get_user method requires the token to be set as the session first
-            # Or we can use the admin client to verify the token
-            if hasattr(self, 'admin_client') and self.admin_client:
-                # Use admin client to get user by JWT
-                response = self.admin_client.auth.get_user(access_token)
-            else:
-                # Regular client - set session then get user
-                # Note: get_user expects just the token, not "Bearer " prefix
-                response = self.client.auth.get_user(access_token)
+            # WORKAROUND: The Supabase Go client has issues with the `amr` field format
+            # from frontend Supabase tokens (array format vs expected struct).
+            # Use Python JWT validation directly as a fallback.
             
-            if response and response.user:
-                return SupabaseAuthResult(
-                    success=True,
-                    user=response.user
-                )
-            else:
-                return SupabaseAuthResult(
-                    success=False,
-                    error_message="Invalid or expired token"
-                )
+            # First try the native Supabase client
+            if hasattr(self, 'admin_client') and self.admin_client:
+                try:
+                    # Use admin client to get user by JWT
+                    response = self.admin_client.auth.get_user(access_token)
+                    if response and response.user:
+                        return SupabaseAuthResult(
+                            success=True,
+                            user=response.user
+                        )
+                except Exception as supabase_error:
+                    logger.debug(f"Supabase native client failed, trying manual JWT validation: {supabase_error}")
+                    
+            # Fallback to manual JWT validation with Python library
+            # This bypasses the Go client parsing issues
+            import jwt as pyjwt
+            
+            # Validate using Supabase JWT secret
+            if self.supabase_jwt_secret:  # Use JWT secret for JWT verification
+                try:
+                    payload = pyjwt.decode(
+                        access_token,
+                        self.supabase_jwt_secret,
+                        algorithms=["HS256"],
+                        audience="authenticated",
+                        options={
+                            "verify_iss": False  # Skip issuer verification for broader compatibility
+                        }
+                    )
+                    
+                    # Create user object from JWT payload
+                    user_data = {
+                        'id': payload.get('sub'),
+                        'email': payload.get('email'),
+                        'phone': payload.get('phone', ''),
+                        'user_metadata': payload.get('user_metadata', {}),
+                        'app_metadata': payload.get('app_metadata', {}),
+                        'role': payload.get('role', 'authenticated'),
+                        'aal': payload.get('aal'),
+                        'amr': payload.get('amr', []),  # Handle array format correctly
+                        'session_id': payload.get('session_id'),
+                        'is_anonymous': payload.get('is_anonymous', False),
+                        'confirmed_at': True,  # Assume confirmed if token is valid
+                        'email_confirmed_at': True
+                    }
+                    
+                    logger.info(f"Manual JWT validation successful for user: {user_data['email']}")
+                    
+                    return SupabaseAuthResult(
+                        success=True,
+                        user=user_data
+                    )
+                    
+                except pyjwt.InvalidTokenError as jwt_error:
+                    logger.warning(f"Manual JWT validation failed: {jwt_error}")
+                except Exception as jwt_error:
+                    logger.warning(f"Manual JWT validation error: {jwt_error}")
+            
+            # If manual validation also fails, return error
+            return SupabaseAuthResult(
+                success=False,
+                error_message="Invalid or expired token"
+            )
                 
         except Exception as e:
             logger.error(f"Token verification error: {e}")
-            # Don't decode without verification - this is a security risk!
-            # If Supabase can't verify the token, it's invalid
             return SupabaseAuthResult(
                 success=False,
                 error_message="Invalid or expired token"

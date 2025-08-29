@@ -95,7 +95,7 @@ class ProjectMCPController(ContextPropagationMixin):
         # Load description
         tool_description = MANAGE_PROJECT_DESCRIPTION
         
-        def manage_project(
+        async def manage_project(
             action: Annotated[str, "Project management action"],
             project_id: Annotated[Optional[str], "Project ID"] = None,
             name: Annotated[Optional[str], "Project name"] = None,
@@ -104,14 +104,14 @@ class ProjectMCPController(ContextPropagationMixin):
             user_id: Annotated[Optional[str], "User ID"] = None
         ) -> Dict[str, Any]:
             """Main project management function with all parameters."""
-            return self.manage_project(
+            return await self.manage_project(
                 action=action, project_id=project_id, name=name,
                 description=description, force=force, user_id=user_id
             )
         
         mcp.tool(description=tool_description)(manage_project)
 
-    def manage_project(self, action: str, user_id: Optional[str] = None, **kwargs) -> Dict[str, Any]:
+    async def manage_project(self, action: str, user_id: Optional[str] = None, **kwargs) -> Dict[str, Any]:
         """Main entry point for project management operations."""
         
         try:
@@ -131,7 +131,7 @@ class ProjectMCPController(ContextPropagationMixin):
                 return validation_error
             
             # Execute operation using factory
-            result = self._operation_factory.handle_operation(
+            result = await self._operation_factory.handle_operation(
                 operation=action,
                 facade=facade,
                 user_id=user_id,

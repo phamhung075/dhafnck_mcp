@@ -11,11 +11,19 @@ class DebugService:
     def __init__(self, context_service):
         self.context_service = context_service
     
-    def log_authentication_details(self):
+    def log_authentication_details(self, user_id=None, operation=None):
         """
         Log current authentication state for debugging purposes.
+        
+        Args:
+            user_id: Optional user ID for context
+            operation: Optional operation name for context
         """
         try:
+            # Log provided parameters
+            if user_id or operation:
+                logger.debug(f"🔍 Auth debug called - user_id: {user_id}, operation: {operation}")
+            
             # Check custom context
             if self.context_service.user_context_available:
                 context_user_id = self.context_service.get_current_user_id()

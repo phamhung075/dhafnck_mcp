@@ -3,7 +3,7 @@
 
 import Cookies from 'js-cookie';
 
-const API_BASE = "http://localhost:8000/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // Helper function to get auth headers
 function getAuthHeaders(): HeadersInit {
@@ -136,7 +136,7 @@ export interface BranchSummariesResponse {
  */
 export async function getBranchSummaries(project_id: string): Promise<BranchSummariesResponse> {
   try {
-    const response = await fetch(`${API_BASE}/branches/summaries`, {
+    const response = await fetch(`${API_BASE_URL}/api/branches/summaries`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({ project_id })
@@ -186,9 +186,9 @@ export async function getTaskSummaries(params: {
   
   // Try the lightweight endpoint first
   try {
-    const response = await fetch(`${API_BASE}/tasks/summaries`, {
+    const response = await fetch(`${API_BASE_URL}/api/tasks/summaries`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify({
         git_branch_id: params.git_branch_id,
         page: params.page || 1,
@@ -257,9 +257,9 @@ export async function getFullTask(taskId: string) {
   
   // Try the lightweight endpoint first
   try {
-    const response = await fetch(`${API_BASE}/tasks/${taskId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' }
+      headers: getAuthHeaders()
     });
 
     if (response.ok) {
@@ -282,7 +282,7 @@ export async function getSubtaskSummaries(parentTaskId: string): Promise<Subtask
   
   // Try the v2 endpoint with proper authentication
   try {
-    const response = await fetch(`${API_BASE}/v2/tasks/${parentTaskId}/subtasks/summaries`, {
+    const response = await fetch(`${API_BASE_URL}/api/v2/tasks/${parentTaskId}/subtasks/summaries`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({
@@ -355,9 +355,9 @@ export async function getTaskContextSummary(taskId: string): Promise<{
 }> {
   
   try {
-    const response = await fetch(`${API_BASE}/tasks/${taskId}/context/summary`, {
+    const response = await fetch(`${API_BASE_URL}/api/tasks/${taskId}/context/summary`, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' }
+      headers: getAuthHeaders()
     });
 
     if (response.ok) {

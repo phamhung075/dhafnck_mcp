@@ -19,24 +19,20 @@ class ProjectCRUDHandler:
     def __init__(self, response_formatter: StandardResponseFormatter):
         self._response_formatter = response_formatter
     
-    def create_project(self, facade: ProjectApplicationFacade, name: str, 
+    async def create_project(self, facade: ProjectApplicationFacade, name: str, 
                       description: Optional[str] = None, user_id: Optional[str] = None) -> Dict[str, Any]:
         """Create a new project."""
         
-        async def _run_async(facade, name, description, user_id):
-            return await facade.create_project(
+        try:
+            result = await facade.create_project(
                 name=name,
                 description=description,
                 user_id=user_id
             )
-        
-        try:
-            result = asyncio.run(_run_async(facade, name, description, user_id))
             
             return self._response_formatter.create_success_response(
                 operation="create",
                 data=result,
-                message=f"Project '{name}' created successfully",
                 metadata={
                     "project_name": name,
                     "user_id": user_id
@@ -52,11 +48,11 @@ class ProjectCRUDHandler:
                 metadata={"project_name": name, "user_id": user_id}
             )
     
-    def get_project(self, facade: ProjectApplicationFacade, 
+    async def get_project(self, facade: ProjectApplicationFacade, 
                    project_id: Optional[str] = None, name: Optional[str] = None) -> Dict[str, Any]:
         """Get a project by ID or name."""
         
-        async def _run_async(facade, project_id, name, controller_self):
+        try:
             if project_id:
                 result = await facade.get_project(project_id=project_id)
             elif name:
@@ -66,17 +62,11 @@ class ProjectCRUDHandler:
             
             # Include project context
             if result and isinstance(result, dict):
-                result = controller_self._include_project_context(result)
-            
-            return result
-        
-        try:
-            result = asyncio.run(_run_async(facade, project_id, name, self))
+                result = self._include_project_context(result)
             
             return self._response_formatter.create_success_response(
                 operation="get",
                 data=result,
-                message="Project retrieved successfully",
                 metadata={
                     "project_id": project_id,
                     "project_name": name
@@ -92,19 +82,15 @@ class ProjectCRUDHandler:
                 metadata={"project_id": project_id, "project_name": name}
             )
     
-    def list_projects(self, facade: ProjectApplicationFacade) -> Dict[str, Any]:
+    async def list_projects(self, facade: ProjectApplicationFacade) -> Dict[str, Any]:
         """List all projects."""
         
-        async def _run_async(facade):
-            return await facade.list_projects()
-        
         try:
-            result = asyncio.run(_run_async(facade))
+            result = await facade.list_projects()
             
             return self._response_formatter.create_success_response(
                 operation="list",
                 data=result,
-                message=f"Retrieved {len(result.get('projects', []))} projects",
                 metadata={"project_count": len(result.get('projects', []))}
             )
             
@@ -117,24 +103,20 @@ class ProjectCRUDHandler:
                 metadata={}
             )
     
-    def update_project(self, facade: ProjectApplicationFacade, project_id: str,
+    async def update_project(self, facade: ProjectApplicationFacade, project_id: str,
                       name: Optional[str] = None, description: Optional[str] = None) -> Dict[str, Any]:
         """Update an existing project."""
         
-        async def _run_async(facade, project_id, name, description):
-            return await facade.update_project(
+        try:
+            result = await facade.update_project(
                 project_id=project_id,
                 name=name,
                 description=description
             )
-        
-        try:
-            result = asyncio.run(_run_async(facade, project_id, name, description))
             
             return self._response_formatter.create_success_response(
                 operation="update",
                 data=result,
-                message="Project updated successfully",
                 metadata={
                     "project_id": project_id,
                     "name": name
@@ -150,20 +132,16 @@ class ProjectCRUDHandler:
                 metadata={"project_id": project_id}
             )
     
-    def delete_project(self, facade: ProjectApplicationFacade, project_id: str,
+    async def delete_project(self, facade: ProjectApplicationFacade, project_id: str,
                       force: Optional[bool] = False) -> Dict[str, Any]:
         """Delete a project."""
         
-        async def _run_async(facade, project_id, force):
-            return await facade.delete_project(project_id=project_id, force=force)
-        
         try:
-            result = asyncio.run(_run_async(facade, project_id, force))
+            result = await facade.delete_project(project_id=project_id, force=force)
             
             return self._response_formatter.create_success_response(
                 operation="delete",
                 data=result,
-                message="Project deleted successfully",
                 metadata={
                     "project_id": project_id,
                     "force": force

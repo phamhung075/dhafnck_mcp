@@ -5,6 +5,7 @@ from typing import Dict, Any, Optional
 
 from ..orchestrators.services.project_management_service import ProjectManagementService
 from ...domain.interfaces.repository_factory import IProjectRepositoryFactory
+from ...infrastructure.repositories.project_repository_factory import GlobalRepositoryManager
 
 class ProjectApplicationFacade:
     def __init__(self, project_service: Optional[ProjectManagementService] = None, user_id: Optional[str] = None):
@@ -98,4 +99,107 @@ class ProjectApplicationFacade:
         Returns:
             Response with project details
         """
-        return await self.manage_project("get", project_id=project_id) 
+        return await self.manage_project("get", project_id=project_id)
+    
+    async def get_project_by_name(self, name: str) -> Dict[str, Any]:
+        """
+        Get project details by name.
+        
+        Args:
+            name: Project name
+            
+        Returns:
+            Response with project details
+        """
+        return await self.manage_project("get", name=name)
+    
+    async def list_projects(self) -> Dict[str, Any]:
+        """
+        List all projects.
+        
+        Returns:
+            Response with project list
+        """
+        return await self.manage_project("list")
+    
+    async def update_project(self, project_id: str, name: Optional[str] = None, description: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Update an existing project.
+        
+        Args:
+            project_id: Project identifier
+            name: New project name (optional)
+            description: New project description (optional)
+            
+        Returns:
+            Response with updated project details
+        """
+        return await self.manage_project("update", project_id=project_id, name=name, description=description)
+    
+    async def delete_project(self, project_id: str, force: bool = False) -> Dict[str, Any]:
+        """
+        Delete a project.
+        
+        Args:
+            project_id: Project identifier
+            force: Force deletion even if project has dependencies
+            
+        Returns:
+            Response confirming deletion
+        """
+        return await self.manage_project("delete", project_id=project_id, force=force)
+    
+    async def project_health_check(self, project_id: str, user_id: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Perform a health check on a project.
+        
+        Args:
+            project_id: Project identifier
+            user_id: User identifier (optional)
+            
+        Returns:
+            Response with health check results
+        """
+        return await self.manage_project("project_health_check", project_id=project_id, user_id=user_id)
+    
+    async def cleanup_obsolete(self, project_id: str, force: bool = False, user_id: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Clean up obsolete project data.
+        
+        Args:
+            project_id: Project identifier
+            force: Force cleanup operation
+            user_id: User identifier (optional)
+            
+        Returns:
+            Response with cleanup results
+        """
+        return await self.manage_project("cleanup_obsolete", project_id=project_id, force=force, user_id=user_id)
+    
+    async def validate_integrity(self, project_id: str, force: bool = False, user_id: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Validate project data integrity.
+        
+        Args:
+            project_id: Project identifier
+            force: Force validation operation
+            user_id: User identifier (optional)
+            
+        Returns:
+            Response with validation results
+        """
+        return await self.manage_project("validate_integrity", project_id=project_id, force=force, user_id=user_id)
+    
+    async def rebalance_agents(self, project_id: str, force: bool = False, user_id: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Rebalance agents across the project.
+        
+        Args:
+            project_id: Project identifier
+            force: Force rebalancing operation
+            user_id: User identifier (optional)
+            
+        Returns:
+            Response with rebalancing results
+        """
+        return await self.manage_project("rebalance_agents", project_id=project_id, force=force, user_id=user_id) 

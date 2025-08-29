@@ -108,8 +108,12 @@ def get_authenticated_user_id(provided_user_id: Optional[str] = None, operation_
     """
     return _get_auth_service().get_authenticated_user_id(provided_user_id, operation_name)
 
-def log_authentication_details():
+def log_authentication_details(user_id=None, operation=None):
     """
     Log current authentication state for debugging purposes.
+    
+    Args:
+        user_id: Optional user ID for context
+        operation: Optional operation name for context
     """
-    _get_debug_service().log_authentication_details()
+    _get_debug_service().log_authentication_details(user_id, operation)
