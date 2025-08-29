@@ -7,11 +7,99 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 ## [Unreleased]
 
 ### Added
+- **Comprehensive Test Automation** - Executed automated test creation for all missing test files [2025-08-29]
+  - Created test for `dhafnck_mcp_main/src/fastmcp/__init__.py` at `dhafnck_mcp_main/src/tests/__init___test.py`
+    - Tests module initialization, settings, version handling, and exports
+    - Includes 8 test methods covering all module functionality
+  - Created test for `dhafnck_mcp_main/src/fastmcp/server/routes/user_scoped_task_routes.py` at `dhafnck_mcp_main/src/tests/server/routes/user_scoped_task_routes_test.py`
+    - Comprehensive test suite with 45 test methods across 8 test classes
+    - Tests authentication, data isolation, CRUD operations, advanced features, bulk operations, error handling, validation, and integration
+    - Ensures proper multi-tenancy and user-scoped data access
+  - Created test for `dhafnck_mcp_main/src/fastmcp/task_management/application/facades/subtask_application_facade.py` at `dhafnck_mcp_main/src/tests/task_management/application/facades/subtask_application_facade_test.py`
+    - Tests subtask operations including create, update, delete, list, and complete
+    - Tests context derivation from parent tasks and git branches
+    - Tests backward compatibility with legacy call signatures
+    - Includes 21 test methods across 8 test classes
+
+- **Application Service and Use Case Test Suites** - Created comprehensive test coverage for remaining source files [2025-08-29]
+  - Created `dhafnck_mcp_main/src/tests/task_management/application/orchestrators/services/project_application_service_test.py`
+    - Tests project management operations including create, update, delete, list projects
+    - Tests agent registration, assignment, and unregistration functionality
+    - Tests cleanup of obsolete project data and user-scoped repository handling
+    - Includes 35 test methods covering all project application service functionality
+  - Created `dhafnck_mcp_main/src/tests/task_management/application/orchestrators/services/rule_application_service_test.py`
+    - Tests rule management operations including CRUD operations on rules
+    - Tests rule validation, backup/restore, and statistics functionality
+    - Tests rule dependency analysis and rule filtering by type/tag
+    - Includes 30 test methods covering all rule application service functionality
+  - Created `dhafnck_mcp_main/src/tests/task_management/application/orchestrators/services/task_context_sync_service_test.py`
+    - Tests task context synchronization between task completion and context systems
+    - Tests auto-creation of context hierarchy during task operations
+    - Tests user authentication requirements and validation
+    - Includes 15 test methods covering context sync scenarios
+  - Created `dhafnck_mcp_main/src/tests/task_management/application/orchestrators/services/unified_context_service_test.py`
+    - Tests unified context management across all hierarchy levels (global, project, branch, task)
+    - Tests context inheritance, delegation, and caching functionality
+    - Tests JSON serialization of complex data types (UUID, datetime, Decimal)
+    - Tests context normalization and auto-parent creation features
+    - Includes 40 test methods covering comprehensive context management scenarios
+  - Created `dhafnck_mcp_main/src/tests/task_management/application/use_cases/complete_task_test.py`
+    - Tests task completion workflow including Vision System requirements
+    - Tests subtask validation and dependency checking
+    - Tests context auto-creation and update during completion
+    - Tests domain event handling and dependent task updates
+    - Includes 25 test methods covering all task completion scenarios
+  - Created `dhafnck_mcp_main/src/tests/task_management/application/use_cases/delete_task_test.py`
+    - Tests task deletion workflow with proper cleanup
+    - Tests branch task count updates and domain event handling
+    - Tests error handling for missing tasks and database failures
+    - Includes 15 test methods covering all deletion scenarios
+
+- **Compliance Orchestrator Test Suite** - Created comprehensive test coverage for compliance operations [2025-08-29]
+  - Created `dhafnck_mcp_main/src/tests/task_management/application/orchestrators/compliance_orchestrator_test.py`
+  - Tests compliance checking operations, rule evaluation, and validation logic
+  - Added 25 test methods covering initialization, validation, dashboard, execution, audit trail, and error scenarios
+  - Tests compliance level determination (CRITICAL, HIGH, MEDIUM, LOW) for different operations
+  - Includes integration scenarios testing full compliance workflows
+  - Verifies process monitoring, timeout enforcement, and security rule enforcement
+  - Uses mocked ComplianceService, AuditService, and ProcessMonitor for isolated testing
+
+### Fixed
+- **Task Application Facade Test Suite** - Fixed authentication and mocking issues in test suite [2025-08-29]
+  - Updated authentication mocking to use fallback authentication pattern in `dhafnck_mcp_main/src/tests/task_management/application/facades/task_application_facade_test.py`
+  - Fixed dataclass mocking issues for task creation tests by using proper dataclass instances
+  - Resolved import path issues for unified context factory and other dependencies
+  - Added proper async handling for coroutine mocking in tests
+  - Added new test case for BackwardCompatUserContext object handling
+  - Fixed mock factory configuration to properly return unified context service
+  - Tests now properly handle authentication fallback to request.user_id
+
+- **Frontend API Headers** - Fixed Content-Type header issue preventing project CRUD operations [2025-08-29]
+  - Fixed async/await issue with withMcpHeaders() function in `dhafnck-frontend/src/api.ts`
+  - All MCP API calls now properly send application/json header instead of text/plain
+  - Resolves 415 Unsupported Media Type errors when creating/updating/deleting projects from frontend
+
+### Added
 - **MCP HTTP Server Implementation** - Created HTTP API server for MCP tools [2025-08-29]
   - Created `dhafnck_mcp_main/src/mcp_http_server.py` to expose MCP tools via REST API
   - Implements endpoints for task, context, project, git branch, and subtask management
   - Added CORS support for frontend integration
   - Provides `/mcp/tools` endpoint to list available MCP functions
+
+### Changed
+- **Enhanced DDD Architecture Schema Documentation** - Refactored to focus on flow diagrams [2025-08-29]
+  - Removed all code examples to focus on pure schema and flow documentation
+  - Expanded system architecture overview with granular layer details
+  - Added comprehensive request/response flow sequences
+  - Created detailed layer interaction flows (Interface → Application → Domain → Infrastructure)
+  - Added complete error handling pipeline flow
+  - Documented event flow architecture with domain event lifecycle
+  - Added security flow with authentication and authorization pipeline
+  - Included performance optimization flows (caching, query optimization)
+  - Added transaction management and distributed coordination flows
+  - Documented monitoring and observability pipeline
+  - Created dependency resolution and injection flows
+  - File: `dhafnck_mcp_main/docs/architecture-design/DDD-schema.md`
 
 ### Added
 - **Simplified Health Check Server** - Added temporary simple server for basic health checks [2025-08-29]

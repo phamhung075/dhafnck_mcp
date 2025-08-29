@@ -83,7 +83,15 @@ class SupabaseConfig:
                 database_url = f"postgresql://{db_user}:{urllib.parse.quote(db_password)}@{db_host}:{db_port}/{db_name}"
                 
                 # Add SSL mode for Supabase (always required)
-                database_url += "?sslmode=require"
+                # Check if SSL certificate exists
+                ssl_cert_env = os.getenv("SUPABASE_SSL_CERT_PATH", "prod-ca-2021.crt")
+                ssl_cert_path = os.path.abspath(ssl_cert_env)
+                if os.path.exists(ssl_cert_path):
+                    database_url += f"?sslmode=require&sslrootcert={ssl_cert_path}"
+                    logger.info(f"🔒 Using SSL certificate: {ssl_cert_path}")
+                else:
+                    database_url += "?sslmode=require"
+                    logger.warning(f"⚠️ SSL certificate not found at {ssl_cert_path}, using sslmode=require without certificate")
                 
                 logger.info(f"🔧 Constructed Supabase connection for project: {project_ref}")
                 return database_url

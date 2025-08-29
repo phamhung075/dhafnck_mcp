@@ -4,9 +4,10 @@
 
 set -euo pipefail
 
-# Get script directory
+# Get script directory and project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOCKER_DIR="${SCRIPT_DIR}/docker"
+PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
 
 # Check and stop conflicting containers on required ports
 check_and_free_ports() {
@@ -116,6 +117,11 @@ show_main_menu() {
     echo "  1) 🐘 PostgreSQL Local (Backend + Frontend)"
     echo "  2) ☁️  Supabase Cloud (No Redis)"
     echo "  3) ☁️🔴 Supabase Cloud + Redis (Full Stack)"
+    echo ""
+    echo -e "${CYAN}${BOLD}💻 Development Mode (Non-Docker)${RESET}"
+    echo "────────────────────────────────────────────────"
+    echo "  D) 🚀 Start Dev Mode (Backend + Frontend locally)"
+    echo "  R) 🔄 Restart Dev Mode (Apply new changes)"
     echo ""
     echo -e "${GREEN}${BOLD}⚡ Performance Mode (Low-Resource PC)${RESET}"
     echo "────────────────────────────────────────────────"
@@ -280,10 +286,16 @@ show_service_status() {
 # Stop all services
 stop_all_services() {
     echo -e "${YELLOW}🛑 Stopping all services...${RESET}"
-    cd "$DOCKER_DIR"
     
-    # Stop all services using the unified docker-compose
-    echo "Stopping services..."
+    # Check if dev mode services are running
+    if [[ -f "../dev-backend.pid" ]] || [[ -f "../dev-frontend.pid" ]]; then
+        echo "Detected development mode services running..."
+        stop_dev_mode
+    fi
+    
+    # Stop Docker services
+    cd "$DOCKER_DIR"
+    echo "Stopping Docker services..."
     docker-compose --env-file ../../.env -f ../docker-compose.yml down 2>/dev/null || true
     
     echo -e "${GREEN}✅ All services stopped${RESET}"
@@ -625,6 +637,273 @@ monitor_performance() {
     done
 }
 
+# Start Development Mode (Non-Docker)
+start_dev_mode() {
+    echo -e "${CYAN}${BOLD}💻 Starting Development Mode (Non-Docker)${RESET}"
+    echo -e "${YELLOW}This will start:${RESET}"
+    echo "  • Backend: Python FastAPI server on port 8000"
+    echo "  • Frontend: React dev server on port 3800"
+    echo ""
+    
+    # Check prerequisites
+    echo -e "${CYAN}🔍 Checking prerequisites...${RESET}"
+    
+    # Check Python
+    if ! command -v python3 &> /dev/null; then
+        echo -e "${RED}❌ Python 3 is not installed${RESET}"
+        return 1
+    fi
+    echo -e "${GREEN}✅ Python 3 found: $(python3 --version)${RESET}"
+    
+    # Check Node.js
+    if ! command -v node &> /dev/null; then
+        echo -e "${RED}❌ Node.js is not installed${RESET}"
+        return 1
+    fi
+    echo -e "${GREEN}✅ Node.js found: $(node --version)${RESET}"
+    
+    # Check npm
+    if ! command -v npm &> /dev/null; then
+        echo -e "${RED}❌ npm is not installed${RESET}"
+        return 1
+    fi
+    echo -e "${GREEN}✅ npm found: $(npm --version)${RESET}"
+    
+    # Check for .env file
+    if [[ ! -f "${PROJECT_ROOT}/.env" ]]; then
+        echo -e "${RED}❌ .env file not found at project root${RESET}"
+        echo -e "${YELLOW}Please create .env file with database configuration${RESET}"
+        return 1
+    fi
+    echo -e "${GREEN}✅ .env file found${RESET}"
+    
+    # Kill any existing processes on ports
+    echo -e "${YELLOW}🔍 Checking for processes on ports 8000 and 3800...${RESET}"
+    if lsof -Pi :8000 -sTCP:LISTEN -t >/dev/null 2>&1; then
+        echo -e "${YELLOW}⚠️  Port 8000 is in use. Killing process...${RESET}"
+        kill -9 $(lsof -Pi :8000 -sTCP:LISTEN -t) 2>/dev/null || true
+    fi
+    if lsof -Pi :3800 -sTCP:LISTEN -t >/dev/null 2>&1; then
+        echo -e "${YELLOW}⚠️  Port 3800 is in use. Killing process...${RESET}"
+        kill -9 $(lsof -Pi :3800 -sTCP:LISTEN -t) 2>/dev/null || true
+    fi
+    echo -e "${GREEN}✅ Ports are available${RESET}"
+    
+    # Start Backend
+    echo ""
+    echo -e "${CYAN}🚀 Starting Backend Server...${RESET}"
+    echo -e "${YELLOW}Installing Python dependencies...${RESET}"
+    
+    # Get to the backend directory
+    cd "${PROJECT_ROOT}/dhafnck_mcp_main"
+    
+    # Check if uv is available (preferred)
+    if command -v uv &> /dev/null; then
+        echo -e "${GREEN}✅ Using uv for dependency management${RESET}"
+        
+        # Install dependencies with uv
+        if [[ ! -d ".venv" ]]; then
+            echo "Creating Python virtual environment with uv..."
+            uv venv
+        fi
+        
+        echo "Installing dependencies with uv..."
+        uv pip install -e . 2>/dev/null || {
+            echo -e "${YELLOW}Installing dependencies (this may take a moment)...${RESET}"
+            uv pip install -e .
+        }
+        
+        # Activate uv virtual environment
+        source .venv/bin/activate
+        export VIRTUAL_ENV="${PROJECT_ROOT}/dhafnck_mcp_main/.venv"
+    else
+        # Fallback to regular pip
+        echo -e "${YELLOW}uv not found, using pip${RESET}"
+        
+        # Create virtual environment if it doesn't exist
+        if [[ ! -d "venv" ]]; then
+            echo "Creating Python virtual environment..."
+            python3 -m venv venv
+        fi
+        
+        # Activate virtual environment and install dependencies
+        source venv/bin/activate
+        
+        # Install from pyproject.toml
+        pip install -q -e . 2>/dev/null || {
+            echo -e "${YELLOW}Installing dependencies (this may take a moment)...${RESET}"
+            pip install -e .
+        }
+    fi
+    
+    # Create logs directory if it doesn't exist
+    mkdir -p "${PROJECT_ROOT}/logs"
+    
+    # Start backend in background with hot reload
+    echo -e "${GREEN}Starting FastAPI backend with hot reload...${RESET}"
+    # Use Supabase database for development to access existing projects
+    export DATABASE_TYPE=supabase
+    export APP_ENV=development
+    export APP_DEBUG=true
+    export PYTHONDONTWRITEBYTECODE=1
+    export PYTHONPATH="${PWD}/src:${PYTHONPATH:-}"
+    # Ensure we're not in test mode
+    unset PYTEST_CURRENT_TEST
+    unset TEST_MODE
+    
+    # Run the same entry point as Docker for consistency
+    echo -e "${CYAN}Using MCP entry point (same as Docker)...${RESET}"
+    cd src
+    # Use the activated virtual environment's Python
+    if [[ -f "${PROJECT_ROOT}/dhafnck_mcp_main/.venv/bin/python" ]]; then
+        echo -e "${GREEN}Using virtual environment Python${RESET}"
+        nohup "${PROJECT_ROOT}/dhafnck_mcp_main/.venv/bin/python" -m fastmcp.server.mcp_entry_point > "${PROJECT_ROOT}/logs/backend.log" 2>&1 &
+    else
+        echo -e "${YELLOW}Using system Python${RESET}"
+        nohup python -m fastmcp.server.mcp_entry_point > "${PROJECT_ROOT}/logs/backend.log" 2>&1 &
+    fi
+    BACKEND_PID=$!
+    echo "Backend PID: $BACKEND_PID (with dual auth support)"
+    cd ..
+    
+    # Start Frontend
+    echo ""
+    echo -e "${CYAN}🚀 Starting Frontend Server...${RESET}"
+    
+    # Get to the frontend directory
+    cd "${PROJECT_ROOT}/dhafnck-frontend"
+    
+    # Install frontend dependencies if needed
+    if [[ ! -d "node_modules" ]]; then
+        echo -e "${YELLOW}Installing frontend dependencies...${RESET}"
+        npm install
+    fi
+    
+    # Start frontend in background with hot reload (Vite has HMR by default)
+    echo -e "${GREEN}Starting React development server with hot reload...${RESET}"
+    export VITE_API_URL=http://localhost:8000
+    nohup npm start -- --port 3800 --host 0.0.0.0 > "${PROJECT_ROOT}/logs/frontend.log" 2>&1 &
+    FRONTEND_PID=$!
+    echo "Frontend PID: $FRONTEND_PID (with HMR enabled)"
+    
+    # Save PIDs to file for later stopping
+    echo "$BACKEND_PID" > "${PROJECT_ROOT}/dev-backend.pid"
+    echo "$FRONTEND_PID" > "${PROJECT_ROOT}/dev-frontend.pid"
+    
+    # Wait for services to start
+    echo ""
+    echo -e "${YELLOW}⏳ Waiting for services to start...${RESET}"
+    sleep 5
+    
+    # Check if services are running
+    echo -e "${CYAN}🏥 Checking service health...${RESET}"
+    
+    if kill -0 $BACKEND_PID 2>/dev/null; then
+        echo -e "${GREEN}✅ Backend is running (PID: $BACKEND_PID)${RESET}"
+    else
+        echo -e "${RED}❌ Backend failed to start. Check backend.log for errors${RESET}"
+    fi
+    
+    if kill -0 $FRONTEND_PID 2>/dev/null; then
+        echo -e "${GREEN}✅ Frontend is running (PID: $FRONTEND_PID)${RESET}"
+    else
+        echo -e "${RED}❌ Frontend failed to start. Check frontend.log for errors${RESET}"
+    fi
+    
+    # Try health check
+    if curl -s http://localhost:8000/health > /dev/null 2>&1; then
+        echo -e "${GREEN}✅ Backend API is healthy${RESET}"
+    else
+        echo -e "${YELLOW}⚠️  Backend API not responding yet (may still be starting)${RESET}"
+    fi
+    
+    echo ""
+    echo -e "${GREEN}✅ Development servers started!${RESET}"
+    echo "Backend: http://localhost:8000"
+    echo "Frontend: http://localhost:3800"
+    echo "Database: SQLite (./dhafnck_mcp_dev.db)"
+    echo ""
+    echo -e "${CYAN}🔥 Hot Reload Enabled:${RESET}"
+    echo "  • Backend: Auto-reloads on Python changes"
+    echo "  • Frontend: HMR (Hot Module Replacement) active"
+    echo ""
+    echo -e "${CYAN}📝 Logs:${RESET}"
+    echo "  Backend log: tail -f logs/backend.log"
+    echo "  Frontend log: tail -f logs/frontend.log"
+    echo ""
+    echo -e "${YELLOW}💡 Quick Commands:${RESET}"
+    echo "  Stop: ./docker-menu.sh stop-dev"
+    echo "  Restart: ./docker-menu.sh restart-dev (or option R)"
+    echo "  Start: ./docker-menu.sh start-dev"
+    
+    # Return to script directory
+    cd "${SCRIPT_DIR}"
+}
+
+# Stop Development Mode services
+stop_dev_mode() {
+    echo -e "${YELLOW}🛑 Stopping Development Mode services...${RESET}"
+    
+    # Stop backend
+    if [[ -f "${PROJECT_ROOT}/dev-backend.pid" ]]; then
+        BACKEND_PID=$(cat "${PROJECT_ROOT}/dev-backend.pid")
+        if kill -0 $BACKEND_PID 2>/dev/null; then
+            echo "Stopping backend (PID: $BACKEND_PID)..."
+            kill $BACKEND_PID
+            rm "${PROJECT_ROOT}/dev-backend.pid"
+        fi
+    fi
+    
+    # Stop frontend
+    if [[ -f "${PROJECT_ROOT}/dev-frontend.pid" ]]; then
+        FRONTEND_PID=$(cat "${PROJECT_ROOT}/dev-frontend.pid")
+        if kill -0 $FRONTEND_PID 2>/dev/null; then
+            echo "Stopping frontend (PID: $FRONTEND_PID)..."
+            kill $FRONTEND_PID
+            rm "${PROJECT_ROOT}/dev-frontend.pid"
+        fi
+    fi
+    
+    # Also check for any orphaned processes
+    echo "Checking for orphaned processes..."
+    pkill -f "uvicorn.*8000" 2>/dev/null || true
+    pkill -f "npm.*dev.*3800" 2>/dev/null || true
+    pkill -f "vite.*3800" 2>/dev/null || true
+    
+    echo -e "${GREEN}✅ Development services stopped${RESET}"
+}
+
+# Restart Development Mode services
+restart_dev_mode() {
+    echo -e "${CYAN}${BOLD}🔄 Restarting Development Mode${RESET}"
+    echo -e "${YELLOW}This will:${RESET}"
+    echo "  • Stop current development servers"
+    echo "  • Apply any code changes"
+    echo "  • Restart with hot reload enabled"
+    echo ""
+    
+    # First stop existing services
+    echo -e "${YELLOW}Stopping existing services...${RESET}"
+    stop_dev_mode
+    
+    # Wait a moment for ports to be released
+    sleep 2
+    
+    # Start services again
+    echo -e "${GREEN}Starting services with new changes...${RESET}"
+    start_dev_mode
+    
+    echo ""
+    echo -e "${GREEN}✅ Development services restarted!${RESET}"
+    echo -e "${CYAN}💡 Note: Hot reload is enabled, so most changes don't require restart${RESET}"
+    echo "  • Backend: Auto-reloads on Python file changes"
+    echo "  • Frontend: Auto-reloads with HMR on file changes"
+    echo "  • Use restart only for:"
+    echo "    - Dependency changes (new packages)"
+    echo "    - Environment variable changes"
+    echo "    - Major configuration changes"
+}
+
 # Clean Docker system
 clean_docker() {
     echo -e "${YELLOW}🧹 Docker System Cleanup${RESET}"
@@ -652,6 +931,16 @@ clean_docker() {
 
 # Main loop
 main() {
+    # Handle command line arguments for quick actions
+    if [[ $# -gt 0 ]]; then
+        case $1 in
+            stop-dev) stop_dev_mode; exit 0 ;;
+            restart-dev) restart_dev_mode; exit 0 ;;
+            start-dev) start_dev_mode; exit 0 ;;
+            *) echo "Unknown argument: $1"; exit 1 ;;
+        esac
+    fi
+    
     while true; do
         show_header
         show_main_menu
@@ -662,6 +951,8 @@ main() {
             1) start_postgresql_local ;;
             2) start_supabase_cloud ;;
             3) start_redis_supabase ;;
+            [Dd]) start_dev_mode ;;
+            [Rr]) restart_dev_mode ;;
             [Pp]) start_optimized_mode ;;
             [Mm]) monitor_performance ;;
             4) show_service_status ;;
@@ -687,5 +978,5 @@ main() {
     done
 }
 
-# Run main function
-main
+# Run main function with all arguments
+main "$@"

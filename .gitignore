@@ -172,3 +172,7 @@ CV-Developer-AI-Automation.md
 .mcp.json
 !.git/hooks/*
 .automation/default-prompt.md
+# Development logs
+logs/
+*.log
+dev-*.pid

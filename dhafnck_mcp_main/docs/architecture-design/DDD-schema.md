@@ -1,1671 +1,886 @@
- 
-Your job is call agent to  **analyze, detect and modify code** so it fully respects Domain-Driven Design (DDD) principles while keeping the original business logic intact.
+# DDD Architecture Schema - Detailed Flow Documentation
 
-## Rules:
-1. Always check if the code respects the 4-layer DDD structure
-2. If any code violates these boundaries (e.g., domain depending on infrastructure), refactor it to respect boundaries.
-3. Detect large classes/functions → refactor into smaller, single-responsibility units.
-4. Detect duplicated or similar code → extract a **factory, utility, or shared service**.
-5. Propose better naming and module organization to align with **ubiquitous language**.
-6. Update changelog for every detected issue:
-   - Explain why it violates DDD
-   - If reusable, create a **factory/service/abstract class**
-   - If too large, split into multiple smaller files/components.
+## 🏗️ System Architecture Overview
 
-## Output format:
-- ✅ Compliant parts: mention what already respects DDD
-- ⚠️ Violations: explain the issue + show refactor on changelog
-- 🏭 Factory candidates: show extracted code for reuse
-- ✂️ Large code: show the split plan and refactored code
-
-## Important:
-- Always keep the **original business logic intact**.
-- Prefer **small, explicit refactors** over massive rewrites.
-- Code must be ready-to-run after modification.
-- Use clean naming conventions consistent with DDD.
-
-## 🏗️ Architecture Overview
-
-### System Architecture Diagram
+### Complete System Flow Diagram
 ```
 ┌──────────────────────────────────────────────────────┐
-│                  MCP Request Entry                   │
-│            (FastMCP Protocol Layer)                 │
+│                  MCP Client Request                   │
+│         (Claude, VS Code, Other MCP Clients)         │
 └────────────────────┬─────────────────────────────────┘
                      ↓
 ┌──────────────────────────────────────────────────────┐
-│         INTERFACE LAYER (Controllers)                │
-│  • MCP Protocol Handlers                            │
-│  • Request/Response Serialization                   │
-│  • Parameter Validation & Coercion                  │
-│  • Authentication Middleware                        │
-│  • Error Response Formatting                        │
+│              MCP Protocol Transport Layer             │
+│  • WebSocket Connection Establishment                │
+│  • HTTP/2 Request Handling                          │
+│  • Connection Keep-Alive Management                 │
+│  • Request ID Generation & Tracking                 │
+└────────────────────┬─────────────────────────────────┘
+                     ↓
+┌──────────────────────────────────────────────────────┐
+│              FastMCP Server Entry Point              │
+│  • Server Instance Creation                         │
+│  • Environment Configuration Loading                │
+│  • Tool Registration Process                        │
+│  • Middleware Stack Initialization                  │
+└────────────────────┬─────────────────────────────────┘
+                     ↓
+┌──────────────────────────────────────────────────────┐
+│            Authentication & Authorization             │
+│  • JWT Token Extraction from Headers                │
+│  • Token Signature Verification                     │
+│  • User ID & Permissions Extraction                 │
+│  • Request Context Enrichment                       │
+│  • Rate Limiting Check                             │
+│  • API Key Validation (if configured)              │
+└────────────────────┬─────────────────────────────────┘
+                     ↓
+┌──────────────────────────────────────────────────────┐
+│         INTERFACE LAYER (MCP Controllers)            │
+│                                                      │
+│  Request Reception & Initial Processing:            │
+│  ├─ Parse MCP Tool Name & Action                    │
+│  ├─ Extract Raw Parameters from Request             │
+│  ├─ Identify Target Controller                      │
+│  └─ Route to Appropriate Handler                    │
+│                                                      │
+│  Parameter Validation & Transformation:             │
+│  ├─ Type Coercion (string → bool/int/list)         │
+│  ├─ Required Parameter Validation                   │
+│  ├─ Format Validation (UUID, dates, enums)         │
+│  ├─ Default Value Application                       │
+│  └─ Parameter Sanitization                          │
+│                                                      │
+│  Request DTO Construction:                          │
+│  ├─ Map MCP Parameters to DTO Fields               │
+│  ├─ Apply Business Context (user_id, project_id)   │
+│  ├─ Add Metadata & Timestamps                      │
+│  └─ Create Immutable Request Object                │
+│                                                      │
+│  Error Handling Setup:                              │
+│  ├─ Exception Handler Registration                  │
+│  ├─ Timeout Configuration                           │
+│  └─ Transaction Boundary Setup                      │
 └────────────────────┬─────────────────────────────────┘
                      ↓
 ┌──────────────────────────────────────────────────────┐
 │      APPLICATION LAYER (Facades & Use Cases)         │
-│  • Application Facades (Entry Points)               │
-│  • Use Case Orchestration                           │
-│  • Transaction Management                           │
-│  • DTO Transformations                              │
-│  • Cross-Cutting Concerns (Logging, Validation)     │
-│  • Event Handling & Publishing                      │
-└────────────────────┬─────────────────────────────────┘
-                     ↓
-┌──────────────────────────────────────────────────────┐
-│         DOMAIN LAYER (Business Logic)                │
-│  • Domain Entities (Task, Project, Agent, etc.)     │
-│  • Value Objects (TaskId, Priority, Status)         │
-│  • Domain Services (Validation, State Transitions)  │
-│  • Domain Events (TaskCreated, ProgressUpdated)     │
-│  • Repository Interfaces (Abstractions)             │
-│  • Domain Specifications & Business Rules           │
-└────────────────────┬─────────────────────────────────┘
-                     ↓
-┌──────────────────────────────────────────────────────┐
-│     INFRASTRUCTURE LAYER (Implementations)           │
 │                                                      │
-│  ┌─────────────────────────────────────────┐         │
-│  │         Repository Factory               │        │
-│  │  Environment-Based Implementation       │        │
-│  │  Selection (Test/Dev/Prod)              │        │
-│  └──────────────┬──────────────────────────┘         │
-│                 ↓                                    │
-│  ┌──────────────────────────────────────────┐        │
-│  │     Environment & Config Detection       │        │
-│  │  DATABASE_TYPE, REDIS_ENABLED, etc.     │        │
-│  └──────┬───────────────────┬───────────────┘        │
-│         ↓                   ↓                        │
-│    TEST MODE           PRODUCTION MODE               │
-│         ↓                   ↓                        │
-│  ┌──────────────┐   ┌──────────────┐                 │
-│  │   SQLite     │   │   Supabase   │                 │
-│  │  Repository  │   │  Repository  │                 │
-│  │   (Local)    │   │  (Cloud DB)  │                 │
-│  └──────────────┘   └───────┬──────┘                 │
-│                             ↓                        │
-│                    ┌─────────────────┐               │
-│                    │ Cache Layer?    │               │
-│                    │ (Redis/Memory)  │               │
-│                    └────┬──────┬─────┘               │
-│                        YES     NO                    │
-│                         ↓       ↓                    │
-│                  ┌─────────┐  ┌──────────┐           │
-│                  │ Cached  │  │  Direct  │           │
-│                  │  Repos  │  │   DB     │           │
-│                  └─────────┘  └──────────┘           │
+│  Facade Entry & Orchestration:                      │
+│  ├─ Receive Request DTO from Interface              │
+│  ├─ Begin Database Transaction                      │
+│  ├─ Initialize Audit Trail                          │
+│  └─ Setup Event Collection                          │
+│                                                      │
+│  Use Case Selection & Execution:                    │
+│  ├─ Identify Required Use Cases                     │
+│  ├─ Resolve Dependencies Between Use Cases          │
+│  ├─ Execute Use Cases in Correct Order              │
+│  └─ Collect Intermediate Results                    │
+│                                                      │
+│  Cross-Cutting Concerns:                            │
+│  ├─ Logging & Monitoring                           │
+│  ├─ Performance Metrics Collection                  │
+│  ├─ Security Context Validation                     │
+│  └─ Business Rule Pre-validation                    │
+│                                                      │
+│  Domain Service Coordination:                       │
+│  ├─ Instantiate Required Domain Services            │
+│  ├─ Prepare Domain Entity Collections               │
+│  ├─ Configure Service Dependencies                  │
+│  └─ Execute Domain Operations                       │
+│                                                      │
+│  Infrastructure Service Usage:                      │
+│  ├─ Repository Factory Selection                    │
+│  ├─ Cache Strategy Determination                    │
+│  ├─ External Service Integration                    │
+│  └─ Event Bus Configuration                         │
+└────────────────────┬─────────────────────────────────┘
+                     ↓
+┌──────────────────────────────────────────────────────┐
+│         DOMAIN LAYER (Business Logic Core)           │
+│                                                      │
+│  Entity Lifecycle Management:                       │
+│  ├─ Entity Creation with Validation                 │
+│  ├─ Identity Generation (UUID)                      │
+│  ├─ State Initialization                           │
+│  └─ Invariant Enforcement                          │
+│                                                      │
+│  Business Rule Execution:                          │
+│  ├─ Pre-condition Validation                       │
+│  ├─ Business Logic Application                     │
+│  ├─ State Transition Management                    │
+│  └─ Post-condition Verification                    │
+│                                                      │
+│  Domain Service Operations:                        │
+│  ├─ Complex Business Calculations                  │
+│  ├─ Multi-Entity Coordination                      │
+│  ├─ Business Process Orchestration                 │
+│  └─ Domain Event Generation                        │
+│                                                      │
+│  Value Object Processing:                          │
+│  ├─ Immutable Object Creation                      │
+│  ├─ Value Validation & Constraints                 │
+│  ├─ Business Meaning Enforcement                   │
+│  └─ Type Safety Guarantees                         │
+│                                                      │
+│  Specification Pattern Application:                 │
+│  ├─ Business Rule Composition                      │
+│  ├─ Complex Condition Evaluation                   │
+│  ├─ Reusable Logic Encapsulation                  │
+│  └─ Query Criteria Building                        │
+└────────────────────┬─────────────────────────────────┘
+                     ↓
+┌──────────────────────────────────────────────────────┐
+│     INFRASTRUCTURE LAYER (Technical Services)        │
+│                                                      │
+│  Repository Pattern Implementation:                 │
+│  ├─ Environment Detection                          │
+│  │   ├─ Check DATABASE_TYPE Variable               │
+│  │   ├─ Verify Redis Availability                  │
+│  │   └─ Select Repository Strategy                 │
+│  │                                                  │
+│  ├─ Repository Factory Selection                    │
+│  │   ├─ Test: MockRepository                       │
+│  │   ├─ Local: SQLiteRepository                    │
+│  │   ├─ Cloud: SupabaseRepository                  │
+│  │   └─ Cached: RedisDecoratedRepository           │
+│  │                                                  │
+│  ├─ Database Operations                            │
+│  │   ├─ Connection Pool Management                 │
+│  │   ├─ Query Optimization                         │
+│  │   ├─ Transaction Handling                       │
+│  │   └─ Lazy Loading Strategy                      │
+│  │                                                  │
+│  └─ ORM Mapping                                    │
+│      ├─ Entity to Model Conversion                 │
+│      ├─ Model to Entity Conversion                 │
+│      ├─ Relationship Management                    │
+│      └─ Data Type Mapping                          │
+│                                                      │
+│  Caching Layer:                                     │
+│  ├─ Cache Key Generation                           │
+│  ├─ TTL Management                                 │
+│  ├─ Cache Invalidation Strategy                    │
+│  ├─ Multi-Level Cache Coordination                 │
+│  └─ Cache Warming & Preloading                     │
+│                                                      │
+│  External Service Integration:                      │
+│  ├─ API Client Configuration                       │
+│  ├─ Authentication & Authorization                 │
+│  ├─ Request/Response Transformation                │
+│  ├─ Error Handling & Retry Logic                   │
+│  └─ Circuit Breaker Pattern                        │
+│                                                      │
+│  Event Infrastructure:                              │
+│  ├─ Event Bus Implementation                       │
+│  ├─ Event Persistence                              │
+│  ├─ Event Replay Capability                        │
+│  └─ Event Subscription Management                  │
 └──────────────────────────────────────────────────────┘
 ```
 
-### FastMCP Server Integration
+## 📊 Detailed Request Flow Sequence
+
+### 1. MCP Tool Request Flow (manage_task example)
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│ MCP Client  │     │   FastMCP   │     │ Application │     │   Domain    │
+│             │     │   Server    │     │    Layer    │     │    Layer    │
+└──────┬──────┘     └──────┬──────┘     └──────┬──────┘     └──────┬──────┘
+       │                    │                    │                    │
+       │ 1. Tool Request    │                    │                    │
+       │ manage_task(       │                    │                    │
+       │   action="create", │                    │                    │
+       │   title="Task",    │                    │                    │
+       │   branch_id="xyz") │                    │                    │
+       ├───────────────────>│                    │                    │
+       │                    │                    │                    │
+       │                    │ 2. Auth Check      │                    │
+       │                    ├──────────┐         │                    │
+       │                    │          │         │                    │
+       │                    │<─────────┘         │                    │
+       │                    │                    │                    │
+       │                    │ 3. Route to        │                    │
+       │                    │    Controller      │                    │
+       │                    ├──────────┐         │                    │
+       │                    │          │         │                    │
+       │                    │<─────────┘         │                    │
+       │                    │                    │                    │
+       │                    │ 4. Create DTO      │                    │
+       │                    │    & Validate      │                    │
+       │                    ├───────────────────>│                    │
+       │                    │                    │                    │
+       │                    │                    │ 5. Execute         │
+       │                    │                    │    Use Case       │
+       │                    │                    ├──────────┐         │
+       │                    │                    │          │         │
+       │                    │                    │<─────────┘         │
+       │                    │                    │                    │
+       │                    │                    │ 6. Domain Logic    │
+       │                    │                    ├───────────────────>│
+       │                    │                    │                    │
+       │                    │                    │                    ├──┐
+       │                    │                    │                    │  │ 7. Business
+       │                    │                    │                    │  │    Rules
+       │                    │                    │                    │<─┘
+       │                    │                    │                    │
+       │                    │                    │ 8. Entity Created  │
+       │                    │                    │<───────────────────┤
+       │                    │                    │                    │
+       │                    │                    │ 9. Persist         │
+       │                    │                    │    to Repository   │
+       │                    │                    ├──────────┐         │
+       │                    │                    │          │         │
+       │                    │                    │          ↓         │
+       │                    │                    │    Infrastructure  │
+       │                    │                    │        Layer       │
+       │                    │                    │          │         │
+       │                    │                    │<─────────┘         │
+       │                    │                    │                    │
+       │                    │ 10. Response DTO   │                    │
+       │                    │<───────────────────┤                    │
+       │                    │                    │                    │
+       │ 11. MCP Response   │                    │                    │
+       │<───────────────────┤                    │                    │
+       │                    │                    │                    │
+```
+
+## 🔄 Layer Interaction Flows
+
+### Interface → Application Flow
+```
+Interface Layer (Controller)
+│
+├─ 1. Receive MCP Request
+│    └─ Extract tool name, action, parameters
+│
+├─ 2. Parameter Processing Pipeline
+│    ├─ Raw Parameter Extraction
+│    ├─ Type Detection & Coercion
+│    │   ├─ String → Boolean ("true", "1", "yes" → true)
+│    │   ├─ String → Integer ("123" → 123)
+│    │   ├─ String → List ("[1,2,3]" or "1,2,3" → [1,2,3])
+│    │   └─ JSON String → Object ('{"key":"value"}' → {key: "value"})
+│    │
+│    ├─ Validation Pipeline
+│    │   ├─ Required Field Check
+│    │   ├─ Format Validation (UUID, Email, URL)
+│    │   ├─ Range Validation (0-100 for percentages)
+│    │   ├─ Enum Validation (status in allowed values)
+│    │   └─ Business Context Validation
+│    │
+│    └─ Default Value Application
+│
+├─ 3. Request DTO Construction
+│    ├─ Map Parameters to DTO Fields
+│    ├─ Add System Context (user_id, timestamp)
+│    ├─ Apply Security Context
+│    └─ Create Immutable Request Object
+│
+├─ 4. Facade Selection
+│    ├─ Determine Target Facade
+│    ├─ Resolve Facade Dependencies
+│    └─ Get Facade Instance
+│
+└─ 5. Delegate to Application Layer
+     ├─ Pass Request DTO
+     ├─ Handle Response
+     └─ Format MCP Response
+```
+
+### Application → Domain Flow
+```
+Application Layer (Facade/Use Case)
+│
+├─ 1. Receive Request DTO
+│    └─ Validate Application-Level Rules
+│
+├─ 2. Transaction Management
+│    ├─ Begin Transaction
+│    ├─ Setup Rollback Handlers
+│    └─ Configure Isolation Level
+│
+├─ 3. Use Case Orchestration
+│    ├─ Identify Required Use Cases
+│    ├─ Resolve Dependencies
+│    ├─ Execute in Order
+│    │   ├─ CreateTaskUseCase
+│    │   ├─ AssignAgentUseCase
+│    │   └─ UpdateContextUseCase
+│    └─ Aggregate Results
+│
+├─ 4. Domain Service Invocation
+│    ├─ Get Domain Services
+│    ├─ Prepare Domain Entities
+│    ├─ Execute Domain Logic
+│    │   ├─ Entity Creation
+│    │   ├─ Business Rule Validation
+│    │   ├─ State Transitions
+│    │   └─ Event Generation
+│    └─ Collect Domain Events
+│
+├─ 5. Repository Interaction
+│    ├─ Get Repository Instance
+│    ├─ Execute Persistence
+│    └─ Handle Persistence Errors
+│
+└─ 6. Response Preparation
+     ├─ Convert Entities to DTOs
+     ├─ Add Metadata
+     └─ Return Response
+```
+
+### Domain → Infrastructure Flow
+```
+Domain Layer
+│
+├─ 1. Repository Interface Usage
+│    ├─ Define Repository Contract
+│    ├─ Request Data Operation
+│    └─ Receive Domain Entities
+│
+├─ 2. Domain Service Requirements
+│    ├─ Specify Service Interface
+│    ├─ Define Expected Behavior
+│    └─ Handle Service Results
+│
+└─ 3. Event Publishing
+     ├─ Generate Domain Events
+     ├─ Pass to Event Bus Interface
+     └─ No Knowledge of Subscribers
+
+Infrastructure Layer (Implementing Domain Interfaces)
+│
+├─ 1. Repository Implementation
+│    ├─ Environment Detection
+│    │   ├─ Test Environment → MockRepository
+│    │   ├─ Local Development → SQLiteRepository
+│    │   └─ Production → SupabaseRepository
+│    │
+│    ├─ Database Operations
+│    │   ├─ Connection Management
+│    │   ├─ Query Execution
+│    │   ├─ Transaction Handling
+│    │   └─ Error Recovery
+│    │
+│    └─ Caching Layer
+│         ├─ Check Cache First
+│         ├─ Database Fallback
+│         └─ Cache Update
+│
+├─ 2. External Service Integration
+│    ├─ API Configuration
+│    ├─ Request Transformation
+│    ├─ Response Mapping
+│    └─ Error Handling
+│
+└─ 3. Event Infrastructure
+     ├─ Event Bus Implementation
+     ├─ Event Storage
+     └─ Event Distribution
+```
+
+## 🔀 Complete Request/Response Flow
+
+### Detailed Step-by-Step Flow
+```
+1. CLIENT INITIATES REQUEST
+   ↓
+2. MCP PROTOCOL TRANSPORT
+   ├─ WebSocket: Persistent connection, bi-directional
+   └─ HTTP/2: Request-response pattern
+   ↓
+3. FASTMCP SERVER RECEIVES
+   ├─ Connection validation
+   ├─ Protocol version check
+   └─ Request queue management
+   ↓
+4. AUTHENTICATION MIDDLEWARE
+   ├─ Extract auth token
+   ├─ Validate signature
+   ├─ Load user context
+   └─ Check permissions
+   ↓
+5. RATE LIMITING
+   ├─ Check request count
+   ├─ Validate time window
+   └─ Apply throttling if needed
+   ↓
+6. REQUEST ROUTING
+   ├─ Parse tool name
+   ├─ Extract action
+   └─ Route to controller
+   ↓
+7. CONTROLLER PROCESSING
+   ├─ Parameter extraction
+   ├─ Type coercion
+   ├─ Validation
+   └─ DTO creation
+   ↓
+8. FACADE ORCHESTRATION
+   ├─ Transaction start
+   ├─ Use case selection
+   ├─ Service coordination
+   └─ Event collection
+   ↓
+9. DOMAIN LOGIC EXECUTION
+   ├─ Entity operations
+   ├─ Business rules
+   ├─ State management
+   └─ Event generation
+   ↓
+10. INFRASTRUCTURE OPERATIONS
+    ├─ Database queries
+    ├─ Cache management
+    ├─ External services
+    └─ Event publishing
+    ↓
+11. RESPONSE CONSTRUCTION
+    ├─ Entity to DTO mapping
+    ├─ Success/error formatting
+    ├─ Metadata addition
+    └─ Response validation
+    ↓
+12. TRANSACTION COMPLETION
+    ├─ Commit/rollback
+    ├─ Event dispatch
+    └─ Cache invalidation
+    ↓
+13. RESPONSE TRANSFORMATION
+    ├─ DTO to MCP format
+    ├─ Add protocol headers
+    └─ Serialize response
+    ↓
+14. SEND TO CLIENT
+    ├─ Protocol transport
+    ├─ Connection management
+    └─ Acknowledgment
+```
+
+## 🔄 Error Flow Sequence
+
+### Error Handling Pipeline
+```
+ERROR OCCURRENCE
+│
+├─ DOMAIN LAYER ERRORS
+│   ├─ Business Rule Violation
+│   │   ├─ Capture violation details
+│   │   ├─ Generate domain error event
+│   │   └─ Throw domain exception
+│   │
+│   ├─ Entity Validation Failure
+│   │   ├─ Collect validation errors
+│   │   ├─ Create validation result
+│   │   └─ Return to application layer
+│   │
+│   └─ State Transition Error
+│       ├─ Log invalid transition
+│       ├─ Preserve current state
+│       └─ Raise state exception
+│
+├─ APPLICATION LAYER ERRORS
+│   ├─ Use Case Failure
+│   │   ├─ Rollback transaction
+│   │   ├─ Log failure context
+│   │   └─ Create error response
+│   │
+│   ├─ Service Coordination Error
+│   │   ├─ Compensate completed operations
+│   │   ├─ Release resources
+│   │   └─ Build error details
+│   │
+│   └─ Authorization Failure
+│       ├─ Log security event
+│       ├─ Clear sensitive data
+│       └─ Return forbidden response
+│
+├─ INFRASTRUCTURE LAYER ERRORS
+│   ├─ Database Connection Error
+│   │   ├─ Attempt reconnection
+│   │   ├─ Switch to fallback
+│   │   └─ Queue for retry
+│   │
+│   ├─ External Service Error
+│   │   ├─ Apply circuit breaker
+│   │   ├─ Use cached data
+│   │   └─ Return degraded response
+│   │
+│   └─ Cache Failure
+│       ├─ Bypass cache
+│       ├─ Direct database query
+│       └─ Log cache issue
+│
+└─ INTERFACE LAYER ERRORS
+    ├─ Validation Error
+    │   ├─ Format error details
+    │   ├─ Include field information
+    │   └─ Return 400 response
+    │
+    ├─ Authentication Error
+    │   ├─ Clear auth context
+    │   ├─ Log attempt
+    │   └─ Return 401 response
+    │
+    └─ Protocol Error
+        ├─ Log protocol violation
+        ├─ Send error frame
+        └─ Close connection
+```
+
+## 🎯 Event Flow Architecture
+
+### Domain Event Flow
+```
+DOMAIN EVENT GENERATION
+│
+├─ 1. Event Creation
+│    ├─ Entity State Change
+│    ├─ Business Process Completion
+│    └─ Domain Rule Trigger
+│
+├─ 2. Event Properties
+│    ├─ Event ID (UUID)
+│    ├─ Event Type
+│    ├─ Aggregate ID
+│    ├─ Timestamp
+│    ├─ User Context
+│    └─ Event Payload
+│
+├─ 3. Event Collection
+│    ├─ In-Memory Queue
+│    ├─ Transaction Scope
+│    └─ Order Preservation
+│
+├─ 4. Event Publishing (Post-Transaction)
+│    ├─ Transaction Commit
+│    ├─ Event Bus Dispatch
+│    └─ Async Processing
+│
+├─ 5. Event Subscription
+│    ├─ Handler Registration
+│    ├─ Filter Application
+│    └─ Priority Ordering
+│
+├─ 6. Event Processing
+│    ├─ Handler Invocation
+│    ├─ Error Isolation
+│    └─ Retry Logic
+│
+└─ 7. Event Storage
+     ├─ Event Store Write
+     ├─ Event Replay Support
+     └─ Audit Trail
+```
+
+## 📊 Data Flow Through Layers
+
+### Request Data Transformation
+```
+RAW MCP REQUEST
+│
+├─ Interface Layer Transform
+│   Raw Parameters → Validated Parameters → Request DTO
+│
+├─ Application Layer Transform
+│   Request DTO → Domain Commands → Use Case Input
+│
+├─ Domain Layer Transform
+│   Commands → Entities → Value Objects → Events
+│
+└─ Infrastructure Layer Transform
+    Entities → ORM Models → Database Records
+
+RESPONSE PATH (Reverse)
+│
+├─ Infrastructure Layer Transform
+│   Database Records → ORM Models → Entities
+│
+├─ Domain Layer Transform
+│   Entities → Domain Results → Events
+│
+├─ Application Layer Transform
+│   Domain Results → Response DTOs → Service Results
+│
+└─ Interface Layer Transform
+    Response DTOs → MCP Response → JSON Output
+```
+
+## 🔐 Security Flow
+
+### Authentication & Authorization Pipeline
+```
+REQUEST SECURITY CHECK
+│
+├─ 1. Transport Security
+│    ├─ TLS/SSL Verification
+│    ├─ Certificate Validation
+│    └─ Encryption Check
+│
+├─ 2. Authentication
+│    ├─ Token Extraction
+│    │   ├─ Bearer Token (Header)
+│    │   ├─ API Key (Header/Query)
+│    │   └─ Session Cookie
+│    │
+│    ├─ Token Validation
+│    │   ├─ Signature Verification
+│    │   ├─ Expiry Check
+│    │   └─ Revocation Check
+│    │
+│    └─ Identity Resolution
+│        ├─ User ID Extraction
+│        ├─ User Profile Load
+│        └─ Context Enrichment
+│
+├─ 3. Authorization
+│    ├─ Permission Check
+│    │   ├─ Resource Access
+│    │   ├─ Action Permission
+│    │   └─ Data Scope
+│    │
+│    ├─ Role Validation
+│    │   ├─ Role Assignment
+│    │   ├─ Role Hierarchy
+│    │   └─ Role Constraints
+│    │
+│    └─ Policy Enforcement
+│        ├─ Business Rules
+│        ├─ Compliance Requirements
+│        └─ Audit Requirements
+│
+└─ 4. Security Context
+     ├─ User Context Creation
+     ├─ Permission Matrix
+     ├─ Audit Trail Start
+     └─ Security Token Generation
+```
+
+## 🚀 Performance Optimization Flows
+
+### Caching Strategy Flow
+```
+REQUEST WITH CACHING
+│
+├─ 1. Cache Check Pipeline
+│    ├─ Generate Cache Key
+│    ├─ Check L1 Cache (In-Memory)
+│    ├─ Check L2 Cache (Redis)
+│    └─ Check L3 Cache (CDN)
+│
+├─ 2. Cache Hit Path
+│    ├─ Validate Cache Entry
+│    ├─ Check TTL
+│    ├─ Return Cached Data
+│    └─ Update Access Metrics
+│
+├─ 3. Cache Miss Path
+│    ├─ Execute Full Request
+│    ├─ Generate Response
+│    ├─ Update All Cache Levels
+│    └─ Set Appropriate TTL
+│
+├─ 4. Cache Invalidation
+│    ├─ Entity Update Trigger
+│    ├─ Cascade Invalidation
+│    ├─ Related Cache Clear
+│    └─ Cache Rebuild Queue
+│
+└─ 5. Cache Warming
+     ├─ Predictive Loading
+     ├─ Batch Processing
+     ├─ Off-Peak Scheduling
+     └─ Priority Queuing
+```
+
+### Database Query Optimization Flow
+```
+DATABASE OPERATION
+│
+├─ 1. Query Planning
+│    ├─ Parse Request
+│    ├─ Analyze Indexes
+│    ├─ Choose Execution Plan
+│    └─ Estimate Cost
+│
+├─ 2. Connection Management
+│    ├─ Get from Pool
+│    ├─ Health Check
+│    ├─ Transaction Start
+│    └─ Isolation Level
+│
+├─ 3. Query Execution
+│    ├─ Prepared Statement
+│    ├─ Parameter Binding
+│    ├─ Batch Processing
+│    └─ Result Streaming
+│
+├─ 4. Lazy Loading
+│    ├─ Initial Entity Load
+│    ├─ Relationship Proxies
+│    ├─ On-Demand Fetch
+│    └─ N+1 Prevention
+│
+└─ 5. Result Processing
+     ├─ Row Mapping
+     ├─ Entity Hydration
+     ├─ Collection Building
+     └─ Memory Management
+```
+
+## 🔄 Transaction Management Flow
+
+### Distributed Transaction Coordination
+```
+TRANSACTION LIFECYCLE
+│
+├─ 1. Transaction Initiation
+│    ├─ Begin Transaction
+│    ├─ Set Isolation Level
+│    ├─ Create Save Points
+│    └─ Register Participants
+│
+├─ 2. Operation Execution
+│    ├─ Domain Operations
+│    │   ├─ Entity Updates
+│    │   ├─ State Changes
+│    │   └─ Event Generation
+│    │
+│    ├─ Infrastructure Operations
+│    │   ├─ Database Writes
+│    │   ├─ Cache Updates
+│    │   └─ External Calls
+│    │
+│    └─ Compensation Tracking
+│        ├─ Rollback Actions
+│        ├─ Undo Operations
+│        └─ State Restoration
+│
+├─ 3. Commit Phase
+│    ├─ Pre-Commit Validation
+│    ├─ Two-Phase Commit
+│    │   ├─ Prepare Phase
+│    │   └─ Commit Phase
+│    ├─ Event Publishing
+│    └─ Cache Invalidation
+│
+└─ 4. Rollback Handling
+     ├─ Error Detection
+     ├─ Rollback Execution
+     ├─ Compensation Actions
+     ├─ State Cleanup
+     └─ Error Reporting
+```
+
+## 📈 Monitoring & Observability Flow
+
+### Request Tracing Pipeline
+```
+REQUEST MONITORING
+│
+├─ 1. Trace Initiation
+│    ├─ Generate Trace ID
+│    ├─ Create Root Span
+│    ├─ Set Context
+│    └─ Start Timer
+│
+├─ 2. Layer Instrumentation
+│    ├─ Interface Layer
+│    │   ├─ Request Receipt
+│    │   ├─ Validation Time
+│    │   └─ DTO Creation
+│    │
+│    ├─ Application Layer
+│    │   ├─ Use Case Duration
+│    │   ├─ Service Calls
+│    │   └─ Transaction Time
+│    │
+│    ├─ Domain Layer
+│    │   ├─ Business Logic
+│    │   ├─ Rule Evaluation
+│    │   └─ Event Generation
+│    │
+│    └─ Infrastructure Layer
+│        ├─ Database Queries
+│        ├─ Cache Operations
+│        └─ External APIs
+│
+├─ 3. Metrics Collection
+│    ├─ Performance Metrics
+│    │   ├─ Response Time
+│    │   ├─ Throughput
+│    │   └─ Error Rate
+│    │
+│    ├─ Business Metrics
+│    │   ├─ Task Creation Rate
+│    │   ├─ Completion Rate
+│    │   └─ User Activity
+│    │
+│    └─ System Metrics
+│        ├─ CPU Usage
+│        ├─ Memory Usage
+│        └─ Connection Pool
+│
+└─ 4. Log Aggregation
+     ├─ Structured Logging
+     ├─ Context Propagation
+     ├─ Error Tracking
+     └─ Audit Trail
+```
+
+## 🔧 Dependency Resolution Flow
+
+### Module Dependency Rules
+```
+DEPENDENCY DIRECTION RULES
+
+Interface Layer
+    ↓ (depends on)
+Application Layer
+    ↓ (depends on)
+Domain Layer
+    ↑ (implemented by)
+Infrastructure Layer
+
+FORBIDDEN DEPENDENCIES:
+- Domain → Application (❌)
+- Domain → Interface (❌)
+- Domain → Infrastructure (❌)
+- Application → Interface (❌)
+
+ALLOWED DEPENDENCIES:
+- Interface → Application (✅)
+- Application → Domain (✅)
+- Infrastructure → Domain (✅)
+- Infrastructure → Infrastructure (✅)
+```
+
+### Dependency Injection Flow
+```
+DEPENDENCY INJECTION CONTAINER
+│
+├─ 1. Registration Phase
+│    ├─ Interface Registration
+│    ├─ Implementation Binding
+│    ├─ Lifetime Management
+│    └─ Factory Registration
+│
+├─ 2. Resolution Phase
+│    ├─ Dependency Graph Build
+│    ├─ Circular Check
+│    ├─ Instance Creation
+│    └─ Property Injection
+│
+├─ 3. Scope Management
+│    ├─ Singleton Scope
+│    ├─ Request Scope
+│    ├─ Transient Scope
+│    └─ Custom Scopes
+│
+└─ 4. Disposal Phase
+     ├─ Reverse Order Disposal
+     ├─ Resource Cleanup
+     ├─ Connection Close
+     └─ Memory Release
 ```
-┌─────────────────────────────────────────────────────┐
-│                FastMCP Server                       │
-│  ┌─────────────────────────────────────────────┐    │
-│  │            MCP Protocol Handler             │    │
-│  │  • Tool Registration & Discovery           │    │
-│  │  • Request Routing & Dispatch              │    │
-│  │  • WebSocket/HTTP Transport                │    │
-│  │  • Session Management                      │    │
-│  └─────────────────────────────────────────────┘    │
-│  ┌─────────────────────────────────────────────┐    │
-│  │         Authentication Layer                │    │
-│  │  • JWT Token Validation                    │    │
-│  │  • Bearer Token Authentication             │    │
-│  │  • Rate Limiting & Security                │    │
-│  │  • User Context Propagation                │    │
-│  └─────────────────────────────────────────────┘    │
-│  ┌─────────────────────────────────────────────┐    │
-│  │    Consolidated MCP Tools Registration      │    │
-│  │  • Task Management Tools                   │    │
-│  │  • Project Management Tools                │    │
-│  │  • Context Management Tools                │    │
-│  │  • Agent Management Tools                  │    │
-│  │  • Connection Management Tools             │    │
-│  └─────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────┘
-```
-
-## 🏛️ Domain-Driven Design Components
-
-### 1. Domain Entities
-Domain entities represent the core business objects with identity and lifecycle management:
-
-#### Task Entity
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/domain/entities/task.py
-@dataclass
-class Task:
-    """Task domain entity with business logic"""
-    
-    title: str
-    description: str
-    id: TaskId | None = None
-    status: TaskStatus | None = None
-    priority: Priority | None = None
-    git_branch_id: str | None = None
-    
-    # Business methods
-    def can_be_completed(self) -> bool
-    def update_progress(self, percentage: int) -> None
-    def assign_to_agent(self, agent_id: str) -> None
-    def add_dependency(self, task_id: TaskId) -> None
-```
-
-#### Project Entity
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/domain/entities/project.py
-@dataclass
-class Project:
-    """Project aggregate root managing project lifecycle"""
-    
-    name: str
-    description: str
-    id: str | None = None
-    created_at: datetime | None = None
-    
-    # Aggregate methods
-    def create_branch(self, branch_name: str) -> GitBranch
-    def assign_agent(self, agent_id: str, branch_id: str) -> None
-    def health_check(self) -> ProjectHealthStatus
-```
-
-#### Agent Entity
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/domain/entities/agent.py
-@dataclass
-class Agent:
-    """Agent entity representing AI assistants"""
-    
-    name: str
-    capabilities: List[str]
-    assigned_branches: List[str] = field(default_factory=list)
-    
-    # Domain logic
-    def can_handle_task_type(self, task_type: str) -> bool
-    def assign_to_branch(self, branch_id: str) -> None
-```
-
-### 2. Value Objects
-Immutable objects representing concepts without identity:
-
-#### TaskId Value Object
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/domain/value_objects/task_id.py
-@dataclass(frozen=True)
-class TaskId:
-    """Immutable task identifier"""
-    value: str
-    
-    def __post_init__(self):
-        if not self.value or len(self.value.strip()) == 0:
-            raise ValueError("TaskId cannot be empty")
-```
-
-#### Priority Value Object
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/domain/value_objects/priority.py
-@dataclass(frozen=True)
-class Priority:
-    """Task priority value object with business rules"""
-    level: PriorityLevel
-    
-    def is_higher_than(self, other: 'Priority') -> bool
-    def can_override(self, other: 'Priority') -> bool
-```
-
-#### TaskStatus Value Object
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/domain/value_objects/task_status.py
-@dataclass(frozen=True)
-class TaskStatus:
-    """Task status with state transition rules"""
-    status: TaskStatusEnum
-    
-    def can_transition_to(self, new_status: TaskStatusEnum) -> bool
-    def get_valid_transitions(self) -> List[TaskStatusEnum]
-```
-
-### 3. Domain Services
-Stateless services containing business logic that doesn't belong to a single entity:
-
-#### Task Validation Service
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/domain/services/task_validation_service.py
-class TaskValidationService:
-    """Domain service for complex task business validation"""
-    
-    def validate_task_dependencies(self, task: Task, 
-                                 dependency_tasks: List[Task]) -> ValidationResult
-    
-    def validate_agent_assignment(self, task: Task, 
-                                agent: Agent) -> ValidationResult
-    
-    def validate_task_completion_requirements(self, task: Task) -> ValidationResult
-```
-
-#### Task State Transition Service
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/domain/services/task_state_transition_service.py
-class TaskStateTransitionService:
-    """Manages complex task state transitions"""
-    
-    def transition_task_status(self, task: Task, 
-                             new_status: TaskStatus) -> TransitionResult
-    
-    def calculate_dependent_task_impacts(self, task: Task) -> List[TaskId]
-    
-    def validate_completion_prerequisites(self, task: Task) -> bool
-```
-
-#### Dependency Validation Service
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/domain/services/dependency_validation_service.py
-class DependencyValidationService:
-    """Validates task dependency graphs"""
-    
-    def detect_circular_dependencies(self, task_id: TaskId, 
-                                   dependencies: List[TaskId]) -> bool
-    
-    def validate_dependency_chain(self, task_chain: List[Task]) -> ValidationResult
-```
-
-### 4. Domain Events
-Events representing significant business occurrences:
-
-#### Task Events
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/domain/events/task_events.py
-@dataclass
-class TaskCreated:
-    """Event fired when a new task is created"""
-    task_id: TaskId
-    project_id: str
-    created_by: str
-    created_at: datetime
-
-@dataclass
-class TaskCompleted:
-    """Event fired when a task is completed"""
-    task_id: TaskId
-    completion_summary: str
-    completed_by: str
-    completed_at: datetime
-```
-
-#### Progress Events
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/domain/events/progress_events.py
-@dataclass
-class ProgressUpdated:
-    """Event fired when task progress changes"""
-    task_id: TaskId
-    old_progress: int
-    new_progress: int
-    updated_by: str
-
-@dataclass
-class ProgressMilestoneReached:
-    """Event fired when significant progress milestones are hit"""
-    task_id: TaskId
-    milestone: int
-    achieved_at: datetime
-```
-
-### 5. Domain Specifications
-Business rules expressed as reusable specifications:
-
-#### Task Completion Specification
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/domain/specifications/task_completion_spec.py
-class TaskCompletionSpecification:
-    """Specification for task completion requirements"""
-    
-    def is_satisfied_by(self, task: Task) -> bool:
-        return (
-            task.status.can_transition_to(TaskStatusEnum.DONE) and
-            self._all_dependencies_completed(task) and
-            self._has_valid_completion_summary(task)
-        )
-```
-
-### 6. Domain Factories
-Complex object creation logic:
-
-#### Task Factory
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/domain/factories/task_factory.py
-class TaskFactory:
-    """Factory for creating domain objects with business rules"""
-    
-    @staticmethod
-    def create_task(title: str, description: str, 
-                   git_branch_id: str, **kwargs) -> Task:
-        """Create task with proper validation and defaults"""
-        
-        # Validate business rules
-        if not title or len(title.strip()) == 0:
-            raise TaskCreationError("Task title cannot be empty")
-            
-        # Apply domain defaults
-        task_id = TaskId.generate()
-        status = TaskStatus(TaskStatusEnum.TODO)
-        priority = Priority(PriorityLevel.MEDIUM)
-        
-        return Task(
-            id=task_id,
-            title=title,
-            description=description,
-            status=status,
-            priority=priority,
-            git_branch_id=git_branch_id,
-            created_at=datetime.now(timezone.utc)
-        )
-```
-
-## 🎯 Application Layer Components
-
-### 1. Application Services vs Domain Services
-
-#### Application Services (Orchestration)
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/application/facades/task_application_facade.py
-class TaskApplicationFacade:
-    """Application service orchestrating use cases and infrastructure"""
-    
-    def __init__(self, task_repository: TaskRepository, 
-                 validation_service: TaskValidationService,
-                 event_bus: EventBus):
-        self._task_repository = task_repository
-        self._validation_service = validation_service
-        self._event_bus = event_bus
-    
-    def create_task(self, request: CreateTaskRequest) -> CreateTaskResponse:
-        """Orchestrates task creation across multiple layers"""
-        # Use case orchestration
-        use_case = CreateTaskUseCase(self._task_repository)
-        result = use_case.execute(request)
-        
-        # Publish domain events
-        self._event_bus.publish(TaskCreated(...))
-        
-        # Return application response
-        return result
-```
-
-#### Domain Services (Business Logic)
-```python
-# Domain services contain pure business logic without infrastructure concerns
-class TaskValidationService:
-    """Pure domain logic for task validation"""
-    
-    def validate_task_creation(self, task_data: dict) -> ValidationResult:
-        """Business validation rules - no infrastructure dependencies"""
-        pass
-```
-
-### 2. Use Cases
-Specific application operations representing user intentions:
-
-#### Create Task Use Case
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/application/use_cases/create_task.py
-class CreateTaskUseCase:
-    """Use case for creating a new task"""
-    
-    def __init__(self, task_repository: TaskRepository):
-        self._task_repository = task_repository
-    
-    def execute(self, request: CreateTaskRequest) -> CreateTaskResponse:
-        """Execute task creation with domain validation"""
-        # Generate domain objects
-        task_id = self._task_repository.get_next_id()
-        task = TaskFactory.create_task(
-            title=request.title,
-            description=request.description,
-            git_branch_id=request.git_branch_id
-        )
-        
-        # Persist through repository
-        created_task = self._task_repository.save(task)
-        
-        # Return response DTO
-        return CreateTaskResponse(
-            success=True,
-            task=TaskResponse.from_entity(created_task)
-        )
-```
-
-#### Complete Task Use Case
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/application/use_cases/complete_task.py
-class CompleteTaskUseCase:
-    """Use case for completing a task with business validation"""
-    
-    def execute(self, request: CompleteTaskRequest) -> CompleteTaskResponse:
-        # Retrieve task
-        task = self._task_repository.get_by_id(request.task_id)
-        
-        # Apply domain business rules
-        completion_spec = TaskCompletionSpecification()
-        if not completion_spec.is_satisfied_by(task):
-            raise TaskCompletionError("Task cannot be completed")
-        
-        # Execute domain logic
-        task.complete(request.completion_summary)
-        
-        # Persist changes
-        self._task_repository.save(task)
-        
-        # Publish events
-        self._event_bus.publish(TaskCompleted(...))
-```
-
-### 3. Application Factories
-Factory pattern for creating application-layer objects:
-
-#### Task Facade Factory
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/application/factories/task_facade_factory.py
-class TaskFacadeFactory:
-    """Factory for creating task application facades"""
-    
-    @staticmethod
-    def create_task_facade(user_id: str = None, 
-                          project_id: str = None) -> TaskApplicationFacade:
-        """Create properly configured task facade"""
-        
-        # Get repository from infrastructure factory
-        repository = RepositoryFactory.get_task_repository(
-            user_id=user_id, 
-            project_id=project_id
-        )
-        
-        # Create domain services
-        validation_service = TaskValidationService()
-        state_service = TaskStateTransitionService()
-        
-        # Create application facade
-        return TaskApplicationFacade(
-            task_repository=repository,
-            validation_service=validation_service,
-            state_transition_service=state_service
-        )
-```
-
-### 4. DTOs (Data Transfer Objects)
-Objects for transferring data between layers:
-
-## 📋 Detailed Request DTOs
-
-### Task Management Request DTOs
-
-#### CreateTaskRequest
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/application/dtos/task_dtos.py
-@dataclass
-class CreateTaskRequest:
-    """Request DTO for task creation"""
-    title: str                              # Required: Task title
-    description: str                        # Required: Task description
-    git_branch_id: str                      # Required: Branch UUID identifier
-    priority: str | None = None            # Optional: "low", "medium", "high", "critical"
-    assignees: List[str] = field(default_factory=list)  # Optional: List of agent IDs
-    tags: List[str] = field(default_factory=list)       # Optional: Task tags
-    due_date: datetime | None = None       # Optional: Task deadline
-    parent_task_id: str | None = None      # Optional: Parent task for subtasks
-    dependencies: List[str] = field(default_factory=list)  # Optional: Task dependency IDs
-    metadata: dict = field(default_factory=dict)           # Optional: Additional metadata
-```
-
-#### UpdateTaskRequest
-```python
-@dataclass
-class UpdateTaskRequest:
-    """Request DTO for task updates"""
-    task_id: str                           # Required: Task UUID
-    title: str | None = None               # Optional: New title
-    description: str | None = None         # Optional: New description
-    status: str | None = None              # Optional: "todo", "in_progress", "review", "done"
-    priority: str | None = None            # Optional: New priority level
-    assignees: List[str] | None = None     # Optional: Replace assignees
-    add_assignees: List[str] | None = None # Optional: Add to assignees
-    remove_assignees: List[str] | None = None  # Optional: Remove from assignees
-    tags: List[str] | None = None          # Optional: Replace tags
-    add_tags: List[str] | None = None      # Optional: Add tags
-    remove_tags: List[str] | None = None   # Optional: Remove tags
-    progress_percentage: int | None = None # Optional: Progress 0-100
-    details: str | None = None             # Optional: Progress details
-    metadata: dict | None = None           # Optional: Update metadata
-```
-
-#### CompleteTaskRequest
-```python
-@dataclass
-class CompleteTaskRequest:
-    """Request DTO for task completion"""
-    task_id: str                           # Required: Task UUID
-    completion_summary: str                # Required: Completion summary
-    testing_notes: str | None = None       # Optional: Testing results
-    lessons_learned: str | None = None     # Optional: Lessons learned
-    artifacts: List[str] = field(default_factory=list)  # Optional: Output artifacts
-    final_progress: int = 100              # Default: 100% complete
-    completed_by: str | None = None        # Optional: Agent/user ID
-    completion_metadata: dict = field(default_factory=dict)  # Optional: Metadata
-```
-
-#### SearchTaskRequest
-```python
-@dataclass
-class SearchTaskRequest:
-    """Request DTO for task search"""
-    query: str | None = None               # Optional: Search text
-    git_branch_id: str | None = None       # Optional: Filter by branch
-    project_id: str | None = None          # Optional: Filter by project
-    status: List[str] | None = None        # Optional: Filter by statuses
-    priority: List[str] | None = None      # Optional: Filter by priorities
-    assignees: List[str] | None = None     # Optional: Filter by assignees
-    tags: List[str] | None = None          # Optional: Filter by tags
-    created_after: datetime | None = None  # Optional: Created after date
-    created_before: datetime | None = None # Optional: Created before date
-    include_subtasks: bool = False         # Optional: Include subtasks
-    include_dependencies: bool = False     # Optional: Include dependencies
-    limit: int = 50                        # Optional: Result limit
-    offset: int = 0                        # Optional: Pagination offset
-```
-
-### Project Management Request DTOs
-
-#### CreateProjectRequest
-```python
-@dataclass
-class CreateProjectRequest:
-    """Request DTO for project creation"""
-    name: str                              # Required: Project name
-    description: str                       # Required: Project description
-    team_preferences: dict | None = None   # Optional: Team settings
-    technology_stack: dict | None = None   # Optional: Tech stack definition
-    project_workflow: dict | None = None   # Optional: Workflow configuration
-    local_standards: dict | None = None    # Optional: Coding standards
-    repository_url: str | None = None      # Optional: Git repository URL
-    project_type: str | None = None        # Optional: "web", "mobile", "backend", etc.
-    visibility: str = "private"            # Default: "private" or "public"
-    owner_id: str | None = None            # Optional: Project owner
-```
-
-#### AssignAgentRequest
-```python
-@dataclass
-class AssignAgentRequest:
-    """Request DTO for agent assignment"""
-    project_id: str                        # Required: Project UUID
-    git_branch_id: str                     # Required: Branch UUID
-    agent_id: str                          # Required: Agent identifier
-    permissions: List[str] = field(default_factory=list)  # Optional: Permissions
-    assignment_reason: str | None = None   # Optional: Assignment reason
-    assigned_by: str | None = None         # Optional: Assigner ID
-```
-
-### Context Management Request DTOs
-
-#### CreateContextRequest
-```python
-@dataclass
-class CreateContextRequest:
-    """Request DTO for context creation"""
-    level: str                             # Required: "global", "project", "branch", "task"
-    context_id: str                        # Required: Context UUID
-    project_id: str | None = None          # Required for project/branch/task levels
-    git_branch_id: str | None = None       # Required for branch/task levels
-    data: dict                             # Required: Context data
-    metadata: dict = field(default_factory=dict)  # Optional: Metadata
-    inherit_from_parent: bool = True       # Default: Inherit parent context
-```
-
-#### UpdateContextRequest
-```python
-@dataclass
-class UpdateContextRequest:
-    """Request DTO for context updates"""
-    level: str                             # Required: Context level
-    context_id: str                        # Required: Context UUID
-    data: dict                             # Required: New/updated data
-    merge_strategy: str = "deep"           # Default: "deep", "shallow", "replace"
-    propagate_changes: bool = False        # Optional: Propagate to children
-    update_metadata: dict | None = None    # Optional: Update metadata
-```
-
-#### DelegateContextRequest
-```python
-@dataclass
-class DelegateContextRequest:
-    """Request DTO for context delegation"""
-    level: str                             # Required: Source level
-    context_id: str                        # Required: Source context UUID
-    delegate_to: str                       # Required: Target level
-    delegate_data: dict                    # Required: Data to delegate
-    delegation_reason: str                 # Required: Reason for delegation
-    preserve_source: bool = True           # Default: Keep in source context
-```
-
-### Agent Management Request DTOs
-
-#### CallAgentRequest
-```python
-@dataclass
-class CallAgentRequest:
-    """Request DTO for agent invocation"""
-    name_agent: str                        # Required: Agent identifier
-    task_id: str | None = None             # Optional: Associated task
-    parameters: dict = field(default_factory=dict)  # Optional: Agent parameters
-    context_override: dict | None = None   # Optional: Override context
-    timeout_seconds: int = 300             # Default: 5 minute timeout
-```
-
-#### ManageAgentRequest
-```python
-@dataclass
-class ManageAgentRequest:
-    """Request DTO for agent management"""
-    action: str                            # Required: "create", "update", "delete", "list"
-    agent_id: str | None = None            # Required for update/delete
-    name: str | None = None                # Required for create
-    capabilities: List[str] | None = None  # Optional: Agent capabilities
-    configuration: dict | None = None      # Optional: Agent config
-    metadata: dict | None = None           # Optional: Agent metadata
-```
-
-## 📤 Detailed Response DTOs
-
-### Task Management Response DTOs
-
-#### TaskResponse
-```python
-@dataclass
-class TaskResponse:
-    """Response DTO for task data"""
-    id: str                                # Task UUID
-    title: str                             # Task title
-    description: str                       # Task description
-    status: str                            # Current status
-    priority: str                          # Priority level
-    git_branch_id: str                     # Branch UUID
-    progress_percentage: int               # Progress 0-100
-    assignees: List[str]                   # Assigned agents
-    tags: List[str]                        # Task tags
-    created_at: datetime                   # Creation timestamp
-    updated_at: datetime                   # Last update timestamp
-    completed_at: datetime | None          # Completion timestamp
-    dependencies: List[str]                # Dependency task IDs
-    subtasks: List['TaskResponse'] | None  # Nested subtasks
-    metadata: dict                         # Additional metadata
-    
-    @classmethod
-    def from_entity(cls, task: Task) -> 'TaskResponse':
-        """Convert domain entity to response DTO"""
-        return cls(
-            id=task.id.value,
-            title=task.title,
-            description=task.description,
-            status=task.status.status.value,
-            priority=task.priority.level.value,
-            git_branch_id=task.git_branch_id,
-            progress_percentage=task.progress_percentage,
-            assignees=[a.id for a in task.assignees],
-            tags=task.tags,
-            created_at=task.created_at,
-            updated_at=task.updated_at,
-            completed_at=task.completed_at,
-            dependencies=[d.value for d in task.dependencies],
-            subtasks=None,  # Loaded separately if requested
-            metadata=task.metadata
-        )
-```
-
-#### CreateTaskResponse
-```python
-@dataclass
-class CreateTaskResponse:
-    """Response DTO for task creation"""
-    success: bool                          # Operation success
-    task: TaskResponse                     # Created task data
-    message: str                           # Success/error message
-    created_context: bool                  # Context auto-created
-    validation_warnings: List[str] = field(default_factory=list)  # Warnings
-```
-
-#### UpdateTaskResponse
-```python
-@dataclass
-class UpdateTaskResponse:
-    """Response DTO for task updates"""
-    success: bool                          # Operation success
-    task: TaskResponse                     # Updated task data
-    message: str                           # Success/error message
-    changed_fields: List[str]              # Fields that were updated
-    triggered_events: List[str] = field(default_factory=list)  # Events triggered
-```
-
-#### CompleteTaskResponse
-```python
-@dataclass
-class CompleteTaskResponse:
-    """Response DTO for task completion"""
-    success: bool                          # Operation success
-    task: TaskResponse                     # Completed task data
-    message: str                           # Success/error message
-    completion_summary: str                # Completion details
-    vision_enrichment: dict | None         # AI-generated insights
-    context_updated: bool                  # Context auto-updated
-    dependent_tasks_affected: List[str]    # Affected dependencies
-```
-
-#### SearchTaskResponse
-```python
-@dataclass
-class SearchTaskResponse:
-    """Response DTO for task search"""
-    success: bool                          # Operation success
-    tasks: List[TaskResponse]              # Found tasks
-    total_count: int                       # Total matching tasks
-    returned_count: int                    # Tasks in this response
-    has_more: bool                         # More results available
-    next_offset: int | None                # Offset for next page
-    search_metadata: dict                  # Search execution details
-```
-
-### Project Management Response DTOs
-
-#### ProjectResponse
-```python
-@dataclass
-class ProjectResponse:
-    """Response DTO for project data"""
-    id: str                                # Project UUID
-    name: str                              # Project name
-    description: str                       # Project description
-    created_at: datetime                   # Creation timestamp
-    updated_at: datetime                   # Last update timestamp
-    branches: List[GitBranchResponse]      # Project branches
-    team_preferences: dict                 # Team settings
-    technology_stack: dict                 # Tech stack
-    project_workflow: dict                 # Workflow config
-    local_standards: dict                  # Coding standards
-    health_status: ProjectHealthResponse | None  # Health check result
-    statistics: ProjectStatisticsResponse | None  # Project stats
-```
-
-#### GitBranchResponse
-```python
-@dataclass
-class GitBranchResponse:
-    """Response DTO for git branch data"""
-    id: str                                # Branch UUID
-    project_id: str                        # Parent project UUID
-    git_branch_name: str                   # Git branch name
-    assigned_agent: str | None             # Assigned agent ID
-    created_at: datetime                   # Creation timestamp
-    task_count: int                        # Number of tasks
-    completion_rate: float                 # Completion percentage
-    metadata: dict                         # Additional metadata
-```
-
-#### ProjectHealthResponse
-```python
-@dataclass
-class ProjectHealthResponse:
-    """Response DTO for project health check"""
-    project_id: str                        # Project UUID
-    health_score: float                    # Health score 0-100
-    status: str                            # "healthy", "warning", "critical"
-    active_tasks: int                      # Active task count
-    completed_tasks: int                   # Completed task count
-    blocked_tasks: int                     # Blocked task count
-    overdue_tasks: int                     # Overdue task count
-    agent_utilization: dict                # Agent workload
-    issues: List[str]                      # Health issues
-    recommendations: List[str]             # Improvement suggestions
-    checked_at: datetime                   # Check timestamp
-```
-
-### Context Management Response DTOs
-
-#### ContextResponse
-```python
-@dataclass
-class ContextResponse:
-    """Response DTO for context data"""
-    level: str                             # Context level
-    context_id: str                        # Context UUID
-    data: dict                             # Context data
-    inherited_data: dict | None            # Data from parent contexts
-    resolved_data: dict | None             # Merged context data
-    metadata: dict                         # Context metadata
-    created_at: datetime                   # Creation timestamp
-    updated_at: datetime                   # Last update timestamp
-    delegation_history: List[DelegationRecord]  # Delegation records
-```
-
-#### DelegationRecord
-```python
-@dataclass
-class DelegationRecord:
-    """Record of context delegation"""
-    from_level: str                        # Source level
-    from_id: str                           # Source context ID
-    to_level: str                          # Target level
-    to_id: str                             # Target context ID
-    delegated_data: dict                   # Delegated data
-    delegation_reason: str                 # Reason
-    delegated_at: datetime                 # Delegation timestamp
-    delegated_by: str | None               # Delegator ID
-```
-
-### Agent Management Response DTOs
-
-#### AgentResponse
-```python
-@dataclass
-class AgentResponse:
-    """Response DTO for agent data"""
-    agent_info: AgentInfoResponse          # Basic agent info
-    yaml_content: AgentYamlResponse        # Full YAML specification
-    capabilities: AgentCapabilitiesResponse # Agent capabilities
-    success: bool                          # Operation success
-    message: str | None                    # Status message
-```
-
-#### AgentInfoResponse
-```python
-@dataclass
-class AgentInfoResponse:
-    """Basic agent information"""
-    name: str                              # Agent identifier
-    description: str                       # Agent description
-    model: str                             # Preferred AI model
-    status: str                            # "active", "inactive", "error"
-    capabilities_summary: dict             # Capability summary
-```
-
-#### AgentYamlResponse
-```python
-@dataclass
-class AgentYamlResponse:
-    """Agent YAML specification"""
-    config: dict                           # Agent configuration
-    contexts: List[dict]                   # Operational contexts
-    rules: List[dict]                      # Behavioral rules
-    output_formats: List[dict]             # Expected outputs
-    metadata: AgentMetadataResponse        # Agent metadata
-```
-
-#### AgentMetadataResponse
-```python
-@dataclass
-class AgentMetadataResponse:
-    """Agent metadata details"""
-    name: str                              # Canonical name
-    description: str                       # Full description
-    model: str                             # AI model preference
-    color: str                             # UI color theme
-    migration: dict                        # Migration history
-    validation: dict                       # Validation status
-```
-
-#### AgentCapabilitiesResponse
-```python
-@dataclass
-class AgentCapabilitiesResponse:
-    """Agent capabilities details"""
-    available_actions: List[str]           # Available actions
-    mcp_tools: dict                        # MCP tool access
-    permissions: dict                      # Permission matrix
-    constraints: dict                      # Operational constraints
-```
-
-## 🔌 Interface Layer Components
-
-### 1. MCP Controllers
-Controllers handle MCP protocol requests and delegate to application layer:
-
-#### Task MCP Controller
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/task_mcp_controller.py
-class TaskMCPController:
-    """MCP controller for task management operations"""
-    
-    def __init__(self, task_facade: TaskApplicationFacade):
-        self._task_facade = task_facade
-    
-    def handle_create_task(self, **kwargs) -> dict:
-        """Handle MCP create_task request"""
-        try:
-            # Validate and parse MCP parameters
-            request = CreateTaskRequest(
-                title=kwargs.get('title'),
-                description=kwargs.get('description', ''),
-                git_branch_id=kwargs.get('git_branch_id')
-            )
-            
-            # Delegate to application layer
-            response = self._task_facade.create_task(request)
-            
-            # Format MCP response
-            return {
-                "success": response.success,
-                "task": response.task.__dict__,
-                "message": "Task created successfully"
-            }
-            
-        except Exception as e:
-            return self._format_error_response(e)
-```
-
-### 2. MCP Tool Registration
-Registration of MCP tools with the FastMCP server:
-
-#### DDD-Compliant MCP Tools
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/interface/ddd_compliant_mcp_tools.py
-class DDDCompliantMCPTools:
-    """DDD-compliant MCP tools registration"""
-    
-    def register_tools(self, mcp: FastMCP):
-        """Register all task management tools following DDD principles"""
-        
-        # Task management tools
-        self._register_task_tools(mcp)
-        self._register_project_tools(mcp)
-        self._register_context_tools(mcp)
-        self._register_agent_tools(mcp)
-    
-    def _register_task_tools(self, mcp: FastMCP):
-        """Register task-related MCP tools"""
-        
-        @mcp.tool()
-        def manage_task(action: str, **kwargs) -> dict:
-            """MCP tool for task management operations"""
-            
-            # Create controller with proper dependencies
-            facade = TaskFacadeFactory.create_task_facade()
-            controller = TaskMCPController(facade)
-            
-            # Route to appropriate handler
-            if action == "create":
-                return controller.handle_create_task(**kwargs)
-            elif action == "update":
-                return controller.handle_update_task(**kwargs)
-            elif action == "complete":
-                return controller.handle_complete_task(**kwargs)
-            # ... other actions
-```
-
-### 3. Parameter Validation and Coercion
-Interface layer handles MCP protocol specifics:
-
-#### Parameter Coercion Service
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/interface/parameter_coercion.py
-class MCPParameterCoercer:
-    """Handles MCP parameter validation and type coercion"""
-    
-    def coerce_boolean(self, value: Any) -> bool:
-        """Convert various formats to boolean"""
-        if isinstance(value, bool):
-            return value
-        if isinstance(value, str):
-            return value.lower() in ('true', 'yes', '1', 'on')
-        return bool(value)
-    
-    def coerce_list(self, value: Any) -> list:
-        """Convert various formats to list"""
-        if isinstance(value, list):
-            return value
-        if isinstance(value, str):
-            if value.startswith('['):
-                return json.loads(value)
-            return [item.strip() for item in value.split(',')]
-        return [value] if value else []
-```
-
-## 🔧 Infrastructure Layer Components
-
-### 1. Repository Implementations
-Concrete implementations of domain repository interfaces:
-
-#### Repository Factory Pattern
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/repository_factory.py
-class RepositoryFactory:
-    """Environment-based repository selection"""
-    
-    @staticmethod
-    def get_task_repository(user_id: str = None) -> TaskRepository:
-        """Get task repository based on environment"""
-        
-        config = RepositoryFactory.get_environment_config()
-        
-        # Test environment - mock repositories
-        if config['environment'] == 'test':
-            return MockTaskRepository()
-        
-        # Production environment - choose database
-        if config['database_type'] == 'supabase':
-            base_repo = SupabaseTaskRepository(user_id)
-        else:
-            base_repo = SQLiteTaskRepository(user_id)
-        
-        # Add caching layer if enabled
-        if config['redis_enabled']:
-            return CachedTaskRepository(base_repo)
-        
-        return base_repo
-```
-
-#### ORM Repository Implementation
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/task_repository.py
-class ORMTaskRepository(TaskRepository):
-    """SQLAlchemy ORM implementation of TaskRepository"""
-    
-    def __init__(self, session: Session):
-        self._session = session
-    
-    def save(self, task: Task) -> Task:
-        """Save task entity to database"""
-        
-        # Convert domain entity to ORM model
-        task_model = TaskModel(
-            id=task.id.value,
-            title=task.title,
-            description=task.description,
-            status=task.status.status.value,
-            priority=task.priority.level.value
-        )
-        
-        self._session.add(task_model)
-        self._session.commit()
-        
-        # Convert back to domain entity
-        return self._model_to_entity(task_model)
-    
-    def get_by_id(self, task_id: TaskId) -> Task:
-        """Retrieve task by ID"""
-        
-        model = self._session.query(TaskModel).filter_by(
-            id=task_id.value
-        ).first()
-        
-        if not model:
-            raise TaskNotFoundError(f"Task {task_id.value} not found")
-        
-        return self._model_to_entity(model)
-```
-
-#### Cached Repository Decorator
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/cached/cached_task_repository.py
-class CachedTaskRepository(TaskRepository):
-    """Redis-cached decorator for task repository"""
-    
-    def __init__(self, base_repository: TaskRepository, 
-                 cache_manager: CacheManager):
-        self._base_repository = base_repository
-        self._cache = cache_manager
-    
-    def get_by_id(self, task_id: TaskId) -> Task:
-        """Get task with caching"""
-        
-        cache_key = f"task:{task_id.value}"
-        
-        # Try cache first
-        cached_task = self._cache.get(cache_key)
-        if cached_task:
-            return Task.from_dict(cached_task)
-        
-        # Fall back to database
-        task = self._base_repository.get_by_id(task_id)
-        
-        # Cache result
-        self._cache.set(cache_key, task.to_dict(), ttl=3600)
-        
-        return task
-```
-
-### 2. Database Configuration and Management
-Database setup and connection management:
-
-#### Database Configuration
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/database/database_config.py
-class DatabaseConfig:
-    """Database configuration management"""
-    
-    @staticmethod
-    def get_database_url() -> str:
-        """Get database URL based on environment"""
-        
-        env = os.getenv('ENVIRONMENT', 'production')
-        
-        if env == 'test':
-            return "sqlite:///test_db.db"
-        elif os.getenv('DATABASE_TYPE') == 'supabase':
-            return DatabaseConfig._build_supabase_url()
-        else:
-            return "sqlite:///dhafnck_mcp.db"
-    
-    @staticmethod
-    def create_session_factory() -> sessionmaker:
-        """Create SQLAlchemy session factory"""
-        
-        engine = create_engine(
-            DatabaseConfig.get_database_url(),
-            pool_pre_ping=True,
-            pool_recycle=3600
-        )
-        
-        return sessionmaker(bind=engine)
-```
-
-#### Session Management
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/database/session_manager.py
-class SessionManager:
-    """Manages database sessions with proper cleanup"""
-    
-    def __init__(self, session_factory: sessionmaker):
-        self._session_factory = session_factory
-    
-    @contextmanager
-    def get_session(self):
-        """Context manager for database sessions"""
-        session = self._session_factory()
-        try:
-            yield session
-            session.commit()
-        except Exception:
-            session.rollback()
-            raise
-        finally:
-            session.close()
-```
-
-### 3. External Service Integrations
-Integration with external systems:
-
-#### Supabase Integration
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/database/supabase_config.py
-class SupabaseConfig:
-    """Supabase database configuration and client management"""
-    
-    def __init__(self):
-        self.url = os.getenv('SUPABASE_URL')
-        self.key = os.getenv('SUPABASE_ANON_KEY')
-        self.service_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
-    
-    def create_client(self):
-        """Create authenticated Supabase client"""
-        return create_client(self.url, self.service_key)
-    
-    def get_connection_string(self) -> str:
-        """Build PostgreSQL connection string for SQLAlchemy"""
-        return f"postgresql://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}"
-```
-
-#### Caching Infrastructure
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/cache/cache_manager.py
-class CacheManager:
-    """Redis cache management"""
-    
-    def __init__(self):
-        self._redis_client = redis.Redis(
-            host=os.getenv('REDIS_HOST', 'localhost'),
-            port=int(os.getenv('REDIS_PORT', 6379)),
-            decode_responses=True
-        )
-    
-    def get(self, key: str) -> Any:
-        """Get value from cache"""
-        value = self._redis_client.get(key)
-        return json.loads(value) if value else None
-    
-    def set(self, key: str, value: Any, ttl: int = 3600):
-        """Set value in cache with TTL"""
-        self._redis_client.setex(
-            key, 
-            ttl, 
-            json.dumps(value, default=str)
-        )
-```
-
-## 🚀 FastMCP Server Architecture
-
-### 1. Server Entry Points and Initialization
-
-#### Main Server Setup
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/server/main_server.py
-def create_main_server(name: Optional[str] = None):
-    """Create and configure the main FastMCP server"""
-    
-    from fastmcp import FastMCP
-    from fastmcp.task_management.interface.ddd_compliant_mcp_tools import DDDCompliantMCPTools
-    
-    # Initialize FastMCP server
-    server_name = name or "FastMCP Server with Task Management"
-    mcp = FastMCP(server_name)
-    
-    # Register DDD-compliant tools
-    dhafnck_mcp_tools = DDDCompliantMCPTools()
-    dhafnck_mcp_tools.register_tools(mcp)
-    
-    return mcp
-```
-
-#### MCP Entry Point
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/server/mcp_entry_point.py
-"""MCP Entry Point with Environment Configuration"""
-
-def create_mcp_server():
-    """Create MCP server with full configuration"""
-    
-    # Environment setup
-    load_environment_variables()
-    configure_logging()
-    
-    # Create FastMCP server
-    mcp = FastMCP("DhafnckMCP Task Management Server")
-    
-    # Configure authentication
-    setup_authentication_middleware(mcp)
-    
-    # Register tools
-    register_all_tools(mcp)
-    
-    # Setup connection management
-    setup_connection_monitoring(mcp)
-    
-    return mcp
-```
-
-### 2. MCP Protocol Integration
-
-#### Tool Registration Flow
-```mermaid
-graph TB
-    A[FastMCP Server Startup] --> B[Load Environment Config]
-    B --> C[Initialize Authentication]
-    C --> D[Create Repository Factories]
-    D --> E[Register MCP Tools]
-    E --> F{Tool Type}
-    F --> G[Task Management Tools]
-    F --> H[Project Management Tools]
-    F --> I[Context Management Tools]
-    F --> J[Agent Management Tools]
-    G --> K[Create Controllers]
-    H --> K
-    I --> K
-    J --> K
-    K --> L[Register with MCP Protocol]
-    L --> M[Server Ready]
-```
-
-#### Request/Response Pipeline
-```python
-# MCP Request Flow
-1. MCP Client Request → FastMCP Server
-2. Authentication Middleware → Validate Token
-3. Parameter Validation → Coerce Types
-4. Route to Controller → Task/Project/Context Controller
-5. Controller → Application Facade
-6. Application Facade → Use Case
-7. Use Case → Domain Services + Repository
-8. Repository → Database/Cache
-9. Response Pipeline (reverse order)
-10. MCP Protocol Response → Client
-```
-
-### 3. Authentication and Authorization
-
-#### JWT Authentication Backend
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/auth/mcp_integration/jwt_auth_backend.py
-class JWTAuthBackend(AuthBackend):
-    """JWT authentication backend for MCP"""
-    
-    async def authenticate(self, request: Request) -> Optional[str]:
-        """Authenticate MCP request with JWT token"""
-        
-        # Extract token from Authorization header
-        auth_header = request.headers.get('authorization', '')
-        if not auth_header.startswith('Bearer '):
-            return None
-        
-        token = auth_header[7:]  # Remove 'Bearer ' prefix
-        
-        try:
-            # Validate JWT token
-            payload = jwt.decode(token, self._secret_key, algorithms=['HS256'])
-            return payload.get('user_id')
-            
-        except jwt.InvalidTokenError:
-            raise AuthenticationError("Invalid JWT token")
-```
-
-#### Authentication Middleware
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/auth/middleware/jwt_auth_middleware.py
-class JWTAuthMiddleware:
-    """JWT authentication middleware"""
-    
-    async def dispatch(self, request: Request, call_next):
-        """Process request with JWT authentication"""
-        
-        # Skip auth for health checks
-        if request.url.path in ['/health', '/status']:
-            return await call_next(request)
-        
-        # Authenticate request
-        user_id = await self._auth_backend.authenticate(request)
-        if not user_id:
-            return JSONResponse(
-                status_code=401,
-                content={"error": "Authentication required"}
-            )
-        
-        # Add user context to request
-        request.state.user_id = user_id
-        
-        return await call_next(request)
-```
-
-### 4. Connection Management and Health Monitoring
-
-#### Connection Health Service
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/connection_management/domain/services/connection_diagnostics_service.py
-class ConnectionDiagnosticsService:
-    """Domain service for connection diagnostics"""
-    
-    def diagnose_connection_health(self, connection: Connection) -> ConnectionHealth:
-        """Perform comprehensive connection diagnostics"""
-        
-        # Check connection metrics
-        response_time = self._measure_response_time(connection)
-        error_rate = self._calculate_error_rate(connection)
-        throughput = self._measure_throughput(connection)
-        
-        # Apply business rules for health assessment
-        health_score = self._calculate_health_score(
-            response_time, error_rate, throughput
-        )
-        
-        return ConnectionHealth(
-            connection_id=connection.id,
-            health_score=health_score,
-            response_time_ms=response_time,
-            error_rate_percent=error_rate,
-            throughput_req_sec=throughput
-        )
-```
-
-#### Status Broadcasting Service
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/connection_management/infrastructure/services/mcp_status_broadcasting_service.py
-class MCPStatusBroadcastingService(StatusBroadcastingService):
-    """MCP-specific implementation of status broadcasting"""
-    
-    def broadcast_status_update(self, update: StatusUpdate):
-        """Broadcast status update to all registered clients"""
-        
-        # Format update for MCP protocol
-        mcp_message = {
-            "type": "status_update",
-            "data": {
-                "timestamp": update.timestamp.isoformat(),
-                "status": update.status.value,
-                "message": update.message,
-                "metadata": update.metadata
-            }
-        }
-        
-        # Send to all registered sessions
-        for session_id in self._registered_sessions:
-            self._send_to_session(session_id, mcp_message)
-```
-
-### 5. Cross-Cutting Concerns
-
-#### Transaction Management
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/application/facades/task_application_facade.py
-class TaskApplicationFacade:
-    """Application facade with transaction management"""
-    
-    @transactional
-    def create_task_with_subtasks(self, request: CreateTaskWithSubtasksRequest):
-        """Create task and subtasks in a single transaction"""
-        
-        # Create main task
-        task = self._create_task_use_case.execute(request.task_data)
-        
-        # Create subtasks
-        for subtask_data in request.subtasks:
-            subtask_data['parent_task_id'] = task.id
-            self._create_subtask_use_case.execute(subtask_data)
-        
-        # Publish events
-        self._event_bus.publish(TaskCreatedWithSubtasks(task.id))
-        
-        return task
-```
-
-#### Error Handling Strategy
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/interface/controllers/base_mcp_controller.py
-class BaseMCPController:
-    """Base controller with standardized error handling"""
-    
-    def _format_error_response(self, error: Exception) -> dict:
-        """Format exception as MCP error response"""
-        
-        if isinstance(error, ValidationError):
-            return {
-                "success": False,
-                "error_type": "validation_error",
-                "message": str(error),
-                "details": error.validation_details
-            }
-        
-        elif isinstance(error, BusinessRuleViolationError):
-            return {
-                "success": False,
-                "error_type": "business_rule_violation",
-                "message": str(error),
-                "rule": error.violated_rule
-            }
-        
-        elif isinstance(error, InfrastructureError):
-            # Log infrastructure errors but don't expose details
-            logger.error(f"Infrastructure error: {error}", exc_info=True)
-            return {
-                "success": False,
-                "error_type": "internal_error",
-                "message": "An internal error occurred"
-            }
-        
-        else:
-            # Generic error handling
-            return {
-                "success": False,
-                "error_type": "unknown_error",
-                "message": str(error)
-            }
-```
-
-#### Validation Layers
-```python
-# Interface Layer Validation (MCP Protocol)
-class MCPParameterValidator:
-    """Validates MCP protocol parameters"""
-    
-    def validate_required_parameters(self, action: str, params: dict):
-        """Validate required parameters for MCP actions"""
-        pass
-
-# Application Layer Validation (Business Context)
-class ApplicationValidator:
-    """Validates application-level business rules"""
-    
-    def validate_business_context(self, request: ApplicationRequest):
-        """Validate business context and permissions"""
-        pass
-
-# Domain Layer Validation (Core Business Rules)
-class DomainValidator:
-    """Validates core domain business rules"""
-    
-    def validate_domain_invariants(self, entity: DomainEntity):
-        """Validate domain invariants and business rules"""
-        pass
-```
-
-### 6. Performance Optimizations
-
-#### Caching Strategy
-```python
-# Multi-level caching strategy
-1. Repository Level: Redis cache for database queries
-2. Application Level: In-memory cache for frequently accessed data
-3. Domain Level: Cached calculations for expensive business logic
-
-# Located: dhafnck_mcp_main/src/fastmcp/server/cache/redis_cache_decorator.py
-@cache(ttl=3600, key_prefix="task")
-def get_task_with_context(task_id: str, include_subtasks: bool = False):
-    """Cached task retrieval with context"""
-    pass
-```
-
-#### Database Optimization
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/optimized_task_repository.py
-class OptimizedTaskRepository(TaskRepository):
-    """Performance-optimized task repository"""
-    
-    def get_tasks_with_dependencies(self, project_id: str) -> List[Task]:
-        """Single query to fetch tasks with all dependencies"""
-        
-        # Use SQLAlchemy eager loading to minimize queries
-        query = (
-            self._session.query(TaskModel)
-            .options(
-                joinedload(TaskModel.dependencies),
-                joinedload(TaskModel.subtasks),
-                joinedload(TaskModel.assignees)
-            )
-            .filter(TaskModel.project_id == project_id)
-        )
-        
-        return [self._model_to_entity(model) for model in query.all()]
-```
-
-#### Connection Pooling
-```python
-# Database connection pooling configuration
-engine = create_engine(
-    database_url,
-    pool_size=20,          # Number of persistent connections
-    max_overflow=30,       # Additional connections on demand
-    pool_pre_ping=True,    # Validate connections before use
-    pool_recycle=3600      # Recycle connections every hour
-)
-```
-
-## 📊 Module Boundaries and Dependencies
-
-### Dependency Flow Rules
-```
-Interface Layer    →    Application Layer    →    Domain Layer
-       ↓                      ↓                      ↑
-Infrastructure Layer  →  Infrastructure Layer  ←  Domain Layer
-
-✅ Allowed Dependencies:
-- Interface → Application
-- Application → Domain
-- Infrastructure → Domain (for implementations)
-- Infrastructure → Infrastructure (peer dependencies)
-
-❌ Forbidden Dependencies:  
-- Domain → Application
-- Domain → Infrastructure
-- Domain → Interface
-- Application → Interface
-```
-
-### Module Communication Patterns
-
-#### Anti-Corruption Layer
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/adapters/supabase_adapter.py
-class SupabaseTaskAdapter:
-    """Anti-corruption layer for Supabase integration"""
-    
-    def to_domain_entity(self, supabase_row: dict) -> Task:
-        """Convert Supabase row to domain entity"""
-        
-        # Handle Supabase-specific data format
-        task_id = TaskId(supabase_row['id'])
-        status = TaskStatus(TaskStatusEnum(supabase_row['status']))
-        
-        # Apply domain transformations
-        return Task(
-            id=task_id,
-            title=supabase_row['title'],
-            status=status,
-            created_at=self._parse_supabase_timestamp(supabase_row['created_at'])
-        )
-    
-    def from_domain_entity(self, task: Task) -> dict:
-        """Convert domain entity to Supabase format"""
-        return {
-            'id': task.id.value,
-            'title': task.title,
-            'status': task.status.status.value,
-            'created_at': task.created_at.isoformat()
-        }
-```
-
-#### Event-Driven Communication
-```python
-# Located: dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/event_bus.py
-class EventBus:
-    """Event bus for decoupled module communication"""
-    
-    def __init__(self):
-        self._handlers = defaultdict(list)
-    
-    def subscribe(self, event_type: Type, handler: Callable):
-        """Subscribe to domain events"""
-        self._handlers[event_type].append(handler)
-    
-    def publish(self, event: DomainEvent):
-        """Publish domain event to all subscribers"""
-        for handler in self._handlers[type(event)]:
-            try:
-                handler(event)
-            except Exception as e:
-                logger.error(f"Event handler error: {e}", exc_info=True)
-
-# Event handlers in different modules
-class TaskContextUpdateHandler:
-    """Handler for task events that updates context"""
-    
-    def handle_task_completed(self, event: TaskCompleted):
-        """Update context when task is completed"""
-        context_facade = UnifiedContextFacadeFactory.create_context_facade()
-        context_facade.update_task_completion_context(event.task_id)
-```
-

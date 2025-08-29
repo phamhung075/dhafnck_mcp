@@ -83,7 +83,7 @@ class SupabaseAuthService:
             logger.error("Supabase not available - cannot perform sign up")
             return SupabaseAuthResult(
                 success=False,
-                error="Supabase authentication not available",
+                error_message="Supabase authentication not available",
                 user=None,
                 session=None
             )
@@ -161,7 +161,7 @@ class SupabaseAuthService:
             logger.error("Supabase not available - cannot perform sign in")
             return SupabaseAuthResult(
                 success=False,
-                error="Supabase authentication not available",
+                error_message="Supabase authentication not available",
                 user=None,
                 session=None
             )

@@ -191,7 +191,7 @@ export async function listTasks(params: any = {}): Promise<Task[]> {
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -237,7 +237,7 @@ export async function getTask(task_id: string, includeContext: boolean = true): 
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -288,7 +288,7 @@ export async function createTask(task: Partial<Task>): Promise<Task | null> {
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -339,7 +339,7 @@ export async function updateTask(task_id: string, updates: Partial<Task>): Promi
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -407,7 +407,7 @@ export async function deleteTask(task_id: string): Promise<boolean> {
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -454,7 +454,7 @@ export async function completeTask(task_id: string, completion_summary: string, 
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -641,7 +641,7 @@ export async function listSubtasks(task_id: string): Promise<any[]> {
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -675,7 +675,7 @@ export async function createSubtask(task_id: string, subtask: any): Promise<any>
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -709,7 +709,7 @@ export async function updateSubtask(task_id: string, id: string, updates: any): 
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -774,7 +774,7 @@ export async function deleteSubtask(task_id: string, id: string): Promise<boolea
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -815,7 +815,7 @@ export async function completeSubtask(
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -849,7 +849,7 @@ export async function addDependency(task_id: string, dependency_id: string): Pro
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -876,7 +876,7 @@ export async function removeDependency(task_id: string, dependency_id: string): 
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -908,7 +908,7 @@ export async function searchTasks(query: string, git_branch_id?: string, limit: 
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -948,7 +948,7 @@ export async function getTaskContext(task_id: string): Promise<any> {
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -986,7 +986,7 @@ export async function getProjectContext(project_id: string): Promise<any> {
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -1019,7 +1019,7 @@ export async function getBranchContext(branch_id: string): Promise<any> {
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -1097,7 +1097,7 @@ export async function addTaskInsight(
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -1129,7 +1129,7 @@ export async function addTaskProgress(task_id: string, content: string): Promise
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -1163,7 +1163,7 @@ export async function listContexts(
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -1208,7 +1208,7 @@ export async function listProjects(): Promise<Project[]> {
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -1250,7 +1250,7 @@ export async function getProject(project_id: string): Promise<Project | null> {
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -1282,7 +1282,7 @@ export async function createProject(project: Partial<Project>): Promise<Project 
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -1314,7 +1314,7 @@ export async function updateProject(project_id: string, updates: Partial<Project
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -1346,7 +1346,7 @@ export async function deleteProject(project_id: string): Promise<{ success: bool
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -1381,7 +1381,7 @@ export async function listGitBranches(project_id: string): Promise<Branch[]> {
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -1410,7 +1410,7 @@ export async function listBranches(project_id: string): Promise<Branch[]> {
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -1446,7 +1446,7 @@ export async function createBranch(projectId: string, branchName: string, descri
     };
     const res = await fetch(`${API_BASE}`, {
         method: "POST",
-        headers: withMcpHeaders(),
+        headers: await withMcpHeaders(),
         body: JSON.stringify(body),
     });
     const data = await res.json();
@@ -1490,7 +1490,7 @@ export async function deleteBranch(project_id: string, branch_id: string): Promi
     console.log('Sending delete branch request:', body);
     const res = await fetch(`${API_BASE}`, {
       method: "POST",
-      headers: withMcpHeaders(),
+      headers: await withMcpHeaders(),
       body: JSON.stringify(body),
     });
     const data = await res.json();
@@ -1518,7 +1518,7 @@ export async function listRules(): Promise<Rule[]> {
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -1545,7 +1545,7 @@ export async function getRule(rule_id: string): Promise<Rule | null> {
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -1572,7 +1572,7 @@ export async function createRule(rule: Partial<Rule>): Promise<Rule | null> {
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -1599,7 +1599,7 @@ export async function updateRule(rule_id: string, updates: Partial<Rule>): Promi
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -1626,7 +1626,7 @@ export async function deleteRule(rule_id: string): Promise<boolean> {
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -1653,7 +1653,7 @@ export async function validateRule(rule_id: string): Promise<any> {
   };
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -1685,7 +1685,7 @@ export async function listAgents(project_id: string): Promise<any[]> {
 
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -1797,7 +1797,7 @@ export async function callAgent(name_agent: string): Promise<any> {
 
   const res = await fetch(`${API_BASE}`, {
     method: "POST",
-    headers: withMcpHeaders(),
+    headers: await withMcpHeaders(),
     body: JSON.stringify(body),
   });
   const data = await res.json();
