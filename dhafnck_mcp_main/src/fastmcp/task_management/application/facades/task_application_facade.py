@@ -181,12 +181,11 @@ class TaskApplicationFacade:
                 derived_user_id = getattr(request, 'user_id', None)
                 logger.info(f"🔄 TaskApplicationFacade: Fallback to request.user_id: {derived_user_id}")
             
-            if derived_user_id is None:
-                logger.error(f"❌ TaskApplicationFacade: No authentication found - user authentication is required")
-                raise UserAuthenticationRequiredError("Task creation")
-            else:
-                logger.info(f"✅ TaskApplicationFacade: Using authenticated user_id: {derived_user_id}")
-                derived_user_id = validate_user_id(derived_user_id, "Task creation")
+            # Always call validate_user_id to handle MVP mode properly
+            # This will return MVP default user if MVP mode is enabled and no user_id provided
+            logger.info(f"🔍 TaskApplicationFacade: Validating user_id: {derived_user_id}")
+            derived_user_id = validate_user_id(derived_user_id, "Task creation")
+            logger.info(f"✅ TaskApplicationFacade: Final validated user_id: {derived_user_id}")
             
             # Validate request at application boundary
             self._validate_create_task_request(request)

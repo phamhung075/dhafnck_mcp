@@ -71,12 +71,12 @@ class GitBranchAgentHandler:
             return self._response_formatter.create_success_response(
                 operation="assign_agent",
                 data=result,
-                message=f"Agent '{agent_id}' assigned to git branch successfully",
                 metadata={
                     "project_id": project_id,
                     "git_branch_id": git_branch_id,
                     "git_branch_name": git_branch_name,
-                    "agent_id": agent_id
+                    "agent_id": agent_id,
+                    "message": f"Agent '{agent_id}' assigned to git branch successfully"
                 }
             )
             
@@ -147,12 +147,12 @@ class GitBranchAgentHandler:
             return self._response_formatter.create_success_response(
                 operation="unassign_agent",
                 data=result,
-                message=f"Agent '{agent_id}' unassigned from git branch successfully",
                 metadata={
                     "project_id": project_id,
                     "git_branch_id": git_branch_id,
                     "git_branch_name": git_branch_name,
-                    "agent_id": agent_id
+                    "agent_id": agent_id,
+                    "message": f"Agent '{agent_id}' unassigned from git branch successfully"
                 }
             )
             

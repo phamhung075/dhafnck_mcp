@@ -247,8 +247,18 @@ class Project:
                 return False  # Prerequisite task not found
             
             prerequisite_task = prerequisite_tree.get_task(prerequisite_id)
-            if not prerequisite_task or not prerequisite_task.status.is_done():
-                return False  # Prerequisite not completed
+            if not prerequisite_task:
+                return False  # Prerequisite task not found
+            
+            # Handle both Task entity and dict representation
+            if hasattr(prerequisite_task, 'status'):
+                if not prerequisite_task.status.is_done():
+                    return False  # Prerequisite not completed
+            elif isinstance(prerequisite_task, dict):
+                if prerequisite_task.get('status') != 'done':
+                    return False  # Prerequisite not completed
+            else:
+                return False  # Unknown prerequisite task format
         
         return True
     
@@ -319,7 +329,20 @@ class Project:
                     continue
                 
                 prerequisite_task = prerequisite_tree.get_task(prerequisite_id)
-                if not prerequisite_task or not prerequisite_task.status.is_done():
+                if not prerequisite_task:
+                    all_prerequisites_met = False
+                    continue
+                
+                # Handle both Task entity and dict representation
+                task_not_done = False
+                if hasattr(prerequisite_task, 'status'):
+                    task_not_done = not prerequisite_task.status.is_done()
+                elif isinstance(prerequisite_task, dict):
+                    task_not_done = prerequisite_task.get('status') != 'done'
+                else:
+                    task_not_done = True  # Unknown format, assume not done
+                
+                if task_not_done:
                     all_prerequisites_met = False
             
             if all_prerequisites_met:

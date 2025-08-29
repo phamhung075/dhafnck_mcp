@@ -1,9 +1,9 @@
 import { Check, Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import React, { useEffect, useState, useCallback, useMemo, lazy, Suspense } from "react";
 import { deleteSubtask, listSubtasks, Subtask } from "../api";
+import { getSubtaskSummaries } from "../api-lazy";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import Cookies from 'js-cookie';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 
 // Lazy load dialogs
@@ -105,31 +105,9 @@ export default function LazySubtaskList({ projectId, taskTreeId, parentTaskId }:
     setError(null);
     
     try {
-      // Try v2 endpoint with proper authentication
-      const token = Cookies.get('access_token');
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json'
-      };
-      
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      
-      const response = await fetch(`/api/v2/tasks/${parentTaskId}/subtasks/summaries`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          include_counts: true
-        })
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setSubtaskSummaries(data.subtasks);
-      } else {
-        // Fallback to full subtask loading
-        await loadFullSubtasksFallback();
-      }
+      // Use the proper API function that handles authentication and proper URLs
+      const data = await getSubtaskSummaries(parentTaskId);
+      setSubtaskSummaries(data.subtasks);
       
     } catch (e) {
       console.warn('Lightweight subtask endpoint not available, falling back');

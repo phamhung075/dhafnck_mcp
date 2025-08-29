@@ -57,30 +57,34 @@ class SubtaskApplicationFacade:
             self._complete_subtask_use_case = None
     
     def _derive_context_from_task(self, task_id: str, subtask_id: str = None) -> Dict[str, str]:
-        """Derive context parameters from the parent task by using system-level repository access"""
+        """Derive context parameters from the parent task by looking it up in database"""
         try:
-            # Use system-level repository access (no context restrictions) to find the task
-            system_task_repository = self._task_repository_factory.create_system_repository() if self._task_repository_factory else None
+            # Directly query the database to find the task and its context
+            from ...infrastructure.database.database_source_manager import get_database_path
+            import sqlite3
             
-            if system_task_repository:
-                # Find the task without context restrictions
-                logger.debug(f"Looking for task {task_id} with system repository")
-                task = system_task_repository.find_by_id(TaskId.from_string(task_id))
-                logger.debug(f"System repository found task: {task is not None}")
-                if task and task.git_branch_id:
-                    logger.debug(f"Task found with git_branch_id: {task.git_branch_id}")
-                    # Derive context from task's git_branch_id by looking up the git branch and project
-                    return self._derive_context_from_git_branch_id(task.git_branch_id)
-                elif task:
-                    logger.debug(f"Task found but no git_branch_id: {task}")
+            db_path = get_database_path()
+            with sqlite3.connect(db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                
+                # Look up the task to get its git_branch_id
+                task_row = conn.execute(
+                    'SELECT git_branch_id FROM tasks WHERE id = ?',
+                    (task_id,)
+                ).fetchone()
+                
+                if task_row and task_row['git_branch_id']:
+                    logger.debug(f"Task found with git_branch_id: {task_row['git_branch_id']}")
+                    # Derive context from task's git_branch_id
+                    return self._derive_context_from_git_branch_id(task_row['git_branch_id'])
                 else:
-                    logger.debug("Task not found by system repository")
+                    logger.debug(f"Task {task_id} not found in database")
                     
         except Exception as e:
-            logger.debug(f"Failed to find task {task_id} with system repository: {e}")
+            logger.debug(f"Failed to find task {task_id} in database: {e}")
         
-        # If task not found, return defaults
-        logger.warning(f"Task {task_id} not found, using default context")
+        # If task not found, return defaults with MVP user
+        logger.warning(f"Task {task_id} not found, using default context with MVP user")
         # Validate user authentication
         from ...domain.constants import validate_user_id
         from ...domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError

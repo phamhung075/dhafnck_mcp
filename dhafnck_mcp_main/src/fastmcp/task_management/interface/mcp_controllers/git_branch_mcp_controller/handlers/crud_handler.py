@@ -32,10 +32,10 @@ class GitBranchCRUDHandler:
             return self._response_formatter.create_success_response(
                 operation="create",
                 data=result,
-                message=f"Git branch '{git_branch_name}' created successfully",
                 metadata={
                     "project_id": project_id,
-                    "git_branch_name": git_branch_name
+                    "git_branch_name": git_branch_name,
+                    "message": f"Git branch '{git_branch_name}' created successfully"
                 }
             )
             
@@ -64,10 +64,10 @@ class GitBranchCRUDHandler:
             return self._response_formatter.create_success_response(
                 operation="update",
                 data=result,
-                message=f"Git branch updated successfully",
                 metadata={
                     "git_branch_id": git_branch_id,
-                    "project_id": project_id
+                    "project_id": project_id,
+                    "message": "Git branch updated successfully"
                 }
             )
             
@@ -93,10 +93,10 @@ class GitBranchCRUDHandler:
             return self._response_formatter.create_success_response(
                 operation="get",
                 data=result,
-                message="Git branch retrieved successfully",
                 metadata={
                     "git_branch_id": git_branch_id,
-                    "project_id": project_id
+                    "project_id": project_id,
+                    "message": "Git branch retrieved successfully"
                 }
             )
             
@@ -122,10 +122,10 @@ class GitBranchCRUDHandler:
             return self._response_formatter.create_success_response(
                 operation="delete",
                 data={"deleted": True},
-                message="Git branch deleted successfully",
                 metadata={
                     "git_branch_id": git_branch_id,
-                    "project_id": project_id
+                    "project_id": project_id,
+                    "message": "Git branch deleted successfully"
                 }
             )
             
@@ -148,8 +148,10 @@ class GitBranchCRUDHandler:
             return self._response_formatter.create_success_response(
                 operation="list",
                 data=result,
-                message=f"Retrieved {len(result.get('git_branches', []))} git branches",
-                metadata={"project_id": project_id}
+                metadata={
+                    "project_id": project_id,
+                    "message": f"Retrieved {len(result.get('git_branches', []))} git branches"
+                }
             )
             
         except Exception as e:

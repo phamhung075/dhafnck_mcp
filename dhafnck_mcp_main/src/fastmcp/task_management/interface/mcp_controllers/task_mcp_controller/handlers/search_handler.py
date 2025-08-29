@@ -29,25 +29,14 @@ class SearchHandler:
                   sort_order: Optional[str] = None) -> Dict[str, Any]:
         """Handle task listing with filtering and pagination."""
         try:
-            # Create list request with filters
-            filters = {}
-            if status:
-                filters['status'] = status
-            if priority:
-                filters['priority'] = priority
-            if assignee:
-                filters['assignee'] = assignee
-            if tag:
-                filters['tag'] = tag
-            if git_branch_id:
-                filters['git_branch_id'] = git_branch_id
-            
+            # Create list request with individual parameters
             request = ListTasksRequest(
-                filters=filters,
-                limit=limit or 50,  # Default limit
-                offset=offset or 0,
-                sort_by=sort_by or "created_at",
-                sort_order=sort_order or "desc"
+                git_branch_id=git_branch_id,
+                status=status,
+                priority=priority,
+                assignees=[assignee] if assignee else None,
+                labels=[tag] if tag else None,
+                limit=limit or 50  # Default limit
             )
             
             result = facade.list_tasks(request)
@@ -58,7 +47,7 @@ class SearchHandler:
                 result["pagination"] = {
                     "total": len(tasks),
                     "limit": request.limit,
-                    "offset": request.offset,
+                    "offset": offset or 0,
                     "has_more": len(tasks) == request.limit
                 }
             
@@ -87,24 +76,11 @@ class SearchHandler:
             )
         
         try:
-            # Create search request
-            filters = {}
-            if status:
-                filters['status'] = status
-            if priority:
-                filters['priority'] = priority
-            if assignee:
-                filters['assignee'] = assignee
-            if tag:
-                filters['tag'] = tag
-            if git_branch_id:
-                filters['git_branch_id'] = git_branch_id
-            
+            # Create search request (SearchTasksRequest only supports query, git_branch_id, and limit)
             request = SearchTasksRequest(
                 query=query,
-                filters=filters,
-                limit=limit or 50,
-                offset=offset or 0
+                git_branch_id=git_branch_id,
+                limit=limit or 10  # Default limit for search
             )
             
             result = facade.search_tasks(request)
@@ -113,7 +89,7 @@ class SearchHandler:
             if result.get("success"):
                 result["search_metadata"] = {
                     "query": query,
-                    "filters_applied": len(filters),
+                    "git_branch_id": git_branch_id,
                     "total_results": len(result.get("tasks", []))
                 }
             

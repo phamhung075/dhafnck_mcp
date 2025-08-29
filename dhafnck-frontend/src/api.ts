@@ -5,7 +5,8 @@ import Cookies from 'js-cookie';
 import { taskApiV2, projectApiV2, isAuthenticated } from './services/apiV2';
 import { mcpTokenService } from './services/mcpTokenService';
 
-const API_BASE = "http://localhost:8000/mcp/";
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE = `${API_BASE_URL}/mcp/`;
 
 // Check if user isolation is enabled (user is authenticated)
 const shouldUseV2Api = () => {

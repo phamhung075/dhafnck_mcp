@@ -106,10 +106,7 @@ class TaskFacadeFactory:
         from ...domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
         from ....config.auth_config import AuthConfig
         
-        # Validate user authentication is provided - NO FALLBACKS ALLOWED
-        if user_id is None:
-            raise UserAuthenticationRequiredError("Task facade creation")
-        
+        # Validate user authentication (MVP mode will provide default if needed)
         user_id = validate_user_id(user_id, "Task facade creation")
         
         # Create task repository for facade construction
@@ -156,10 +153,7 @@ class TaskFacadeFactory:
         from ...domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
         from ....config.auth_config import AuthConfig
         
-        # Validate user authentication is provided - NO FALLBACKS ALLOWED
-        if user_id is None:
-            raise UserAuthenticationRequiredError("Task facade with git_branch_id creation")
-        
+        # Validate user authentication (MVP mode will provide default if needed)
         user_id = validate_user_id(user_id, "Task facade with git_branch_id creation")
         
         # Create task repository with git_branch_id directly

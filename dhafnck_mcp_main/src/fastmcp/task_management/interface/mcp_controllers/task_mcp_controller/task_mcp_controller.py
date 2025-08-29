@@ -6,7 +6,6 @@ architecture using factory pattern to maintain separation of concerns.
 """
 
 import logging
-import asyncio
 import uuid
 from typing import Dict, Any, Optional, List, Annotated, Union
 from datetime import datetime, timezone
@@ -208,12 +207,8 @@ class TaskMCPController(ContextPropagationMixin):
         
         mcp.tool(description=tool_description)(manage_task)
 
-    def manage_task(self, *args, **kwargs):
-        """Main entry point for task management operations."""
-        return asyncio.run(self._async_manage_task(*args, **kwargs))
-
-    async def _async_manage_task(self, action: str, user_id: Optional[str] = None, **kwargs) -> Dict[str, Any]:
-        """Async implementation of task management with modular architecture."""
+    async def manage_task(self, action: str, user_id: Optional[str] = None, **kwargs) -> Dict[str, Any]:
+        """Main entry point for task management operations with modular architecture."""
         
         try:
             # Step 1: Authentication
@@ -306,7 +301,6 @@ class TaskMCPController(ContextPropagationMixin):
         elif action in ["list", "search"]:
             return self._validation_factory.validate_search_request(
                 operation=action,
-                query=kwargs.get('query'),
                 **kwargs
             )
         elif action == "delete":

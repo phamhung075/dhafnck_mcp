@@ -146,7 +146,13 @@ export async function getBranchSummaries(project_id: string): Promise<BranchSumm
       return await response.json();
     }
     
-    // Fallback to empty response if endpoint not available
+    // Handle authentication errors specifically
+    if (response.status === 401 || response.status === 403 || response.status === 500) {
+      const errorData = await response.json().catch(() => ({ error: 'Authentication required' }));
+      console.log('Authentication issue with branch summaries:', errorData.error || 'No authentication token found');
+    }
+    
+    // Fallback to empty response if endpoint not available or auth fails
     return {
       branches: [],
       project_summary: {
@@ -386,9 +392,9 @@ export async function getTaskContextSummary(taskId: string): Promise<{
 export async function getAgentSummaries(projectId: string): Promise<AgentSummariesResponse> {
   
   try {
-    const response = await fetch(`${API_BASE}/agents/summary?project_id=${projectId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/agents/summary?project_id=${projectId}`, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' }
+      headers: getAuthHeaders()
     });
 
     if (response.ok) {
@@ -434,9 +440,9 @@ export async function getAgentSummaries(projectId: string): Promise<AgentSummari
  */
 export async function getPerformanceMetrics() {
   try {
-    const response = await fetch(`${API_BASE}/performance/metrics`, {
+    const response = await fetch(`${API_BASE_URL}/api/performance/metrics`, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' }
+      headers: getAuthHeaders()
     });
 
     if (response.ok) {

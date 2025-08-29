@@ -123,8 +123,16 @@ class GitBranch:
     
     def get_completed_task_count(self) -> int:
         """Get number of completed tasks"""
-        return sum(1 for task in self.all_tasks.values() 
-                  if task.status == TaskStatus.done())
+        def is_task_done(task):
+            # Handle both Task entity and dict representation
+            if hasattr(task, 'status'):
+                return task.status == TaskStatus.done()
+            elif isinstance(task, dict):
+                return task.get('status') == 'done'
+            else:
+                return False
+        
+        return sum(1 for task in self.all_tasks.values() if is_task_done(task))
     
     def get_progress_percentage(self) -> float:
         """Get completion percentage"""

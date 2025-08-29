@@ -49,10 +49,7 @@ class ContextOperationHandler:
                 result = facade.create_context(
                     level=level,
                     context_id=context_id,
-                    data=data,
-                    user_id=user_id,
-                    project_id=project_id,
-                    git_branch_id=git_branch_id
+                    data=data
                 )
             elif action == "get":
                 result = facade.get_context(
@@ -60,47 +57,33 @@ class ContextOperationHandler:
                     context_id=context_id,
                     include_inherited=include_inherited,
                     force_refresh=force_refresh,
-                    user_id=user_id,
-                    project_id=project_id,
-                    git_branch_id=git_branch_id
+                    user_id=user_id
                 )
             elif action == "update":
                 result = facade.update_context(
                     level=level,
                     context_id=context_id,
                     data=data,
-                    propagate_changes=propagate_changes,
-                    user_id=user_id,
-                    project_id=project_id,
-                    git_branch_id=git_branch_id
+                    propagate_changes=propagate_changes
                 )
             elif action == "delete":
                 result = facade.delete_context(
                     level=level,
-                    context_id=context_id,
-                    user_id=user_id,
-                    project_id=project_id,
-                    git_branch_id=git_branch_id
+                    context_id=context_id
                 )
             elif action == "resolve":
                 result = facade.resolve_context(
                     level=level,
                     context_id=context_id,
-                    force_refresh=force_refresh,
-                    user_id=user_id,
-                    project_id=project_id,
-                    git_branch_id=git_branch_id
+                    force_refresh=force_refresh
                 )
             elif action == "delegate":
                 result = facade.delegate_context(
                     level=level,
                     context_id=context_id,
                     delegate_to=delegate_to,
-                    delegate_data=delegate_data,
-                    delegation_reason=delegation_reason,
-                    user_id=user_id,
-                    project_id=project_id,
-                    git_branch_id=git_branch_id
+                    data=delegate_data,
+                    delegation_reason=delegation_reason
                 )
             elif action == "add_insight":
                 result = facade.add_insight(
@@ -109,28 +92,19 @@ class ContextOperationHandler:
                     content=content,
                     category=category,
                     importance=importance,
-                    agent=agent,
-                    user_id=user_id,
-                    project_id=project_id,
-                    git_branch_id=git_branch_id
+                    agent=agent
                 )
             elif action == "add_progress":
                 result = facade.add_progress(
                     level=level,
                     context_id=context_id,
                     content=content,
-                    agent=agent,
-                    user_id=user_id,
-                    project_id=project_id,
-                    git_branch_id=git_branch_id
+                    agent=agent
                 )
             elif action == "list":
                 result = facade.list_contexts(
                     level=level,
-                    filters=filters,
-                    user_id=user_id,
-                    project_id=project_id,
-                    git_branch_id=git_branch_id
+                    filters=filters
                 )
             else:
                 return self._response_formatter.create_error_response(

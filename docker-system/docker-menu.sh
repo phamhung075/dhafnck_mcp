@@ -747,6 +747,8 @@ start_dev_mode() {
     export APP_DEBUG=true
     export PYTHONDONTWRITEBYTECODE=1
     export PYTHONPATH="${PWD}/src:${PYTHONPATH:-}"
+    # Enable MVP mode for authentication bypass
+    export DHAFNCK_MVP_MODE=true
     # Ensure we're not in test mode
     unset PYTEST_CURRENT_TEST
     unset TEST_MODE

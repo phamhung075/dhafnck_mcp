@@ -465,7 +465,7 @@ export function TokenManagement() {
               <Typography variant="body2" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
 {`"dhafnck_mcp_http": {
     "type": "http",
-    "url": "http://localhost:8000/mcp/",
+    "url": "${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/mcp/",
     "headers": {
         "Accept": "application/json, text/event-stream",
         "Authorization": "Bearer ${generatedToken || 'YOUR_TOKEN_HERE'}"
@@ -480,7 +480,7 @@ export function TokenManagement() {
                 const config = {
                   dhafnck_mcp_http: {
                     type: "http",
-                    url: "http://localhost:8000/mcp/",
+                    url: `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/mcp/`,
                     headers: {
                       Accept: "application/json, text/event-stream",
                       Authorization: `Bearer ${generatedToken}`

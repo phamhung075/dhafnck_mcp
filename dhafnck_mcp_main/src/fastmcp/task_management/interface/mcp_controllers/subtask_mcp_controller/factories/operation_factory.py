@@ -83,18 +83,30 @@ class SubtaskOperationFactory:
         """Handle CRUD operations with automatic progress tracking."""
         handler = self._crud_handler
         
+        # Filter out authentication parameters that shouldn't be passed to CRUD handlers
+        # Following DDD: authentication is handled at interface layer, not passed to domain
+        # For create operation, only pass the parameters that create_subtask accepts
         if operation == 'create':
-            result = handler.create_subtask(facade, **kwargs)
+            # create_subtask only accepts: task_id, title, description, priority, assignees, progress_notes
+            allowed_params = {'task_id', 'title', 'description', 'priority', 'assignees', 'progress_notes'}
+            filtered_kwargs = {k: v for k, v in kwargs.items() if k in allowed_params}
+        else:
+            # For other operations, just exclude user_id
+            excluded_params = {'user_id'}
+            filtered_kwargs = {k: v for k, v in kwargs.items() if k not in excluded_params}
+        
+        if operation == 'create':
+            result = handler.create_subtask(facade, **filtered_kwargs)
         elif operation == 'update':
-            result = handler.update_subtask(facade, **kwargs)
+            result = handler.update_subtask(facade, **filtered_kwargs)
         elif operation == 'delete':
-            result = handler.delete_subtask(facade, **kwargs)
+            result = handler.delete_subtask(facade, **filtered_kwargs)
         elif operation == 'get':
-            result = handler.get_subtask(facade, **kwargs)
+            result = handler.get_subtask(facade, **filtered_kwargs)
         elif operation == 'list':
-            result = handler.list_subtasks(facade, **kwargs)
+            result = handler.list_subtasks(facade, **filtered_kwargs)
         elif operation == 'complete':
-            result = handler.complete_subtask(facade, **kwargs)
+            result = handler.complete_subtask(facade, **filtered_kwargs)
         else:
             raise ValueError(f"Unknown CRUD operation: {operation}")
         

@@ -143,7 +143,18 @@ class ORMProjectRepository(BaseORMRepository[Project], BaseUserScopedRepository,
                             }
                             
                             # Add user_id for data isolation
+                            logger.info(f"🔍 PROJECT_REPO: self.user_id = {self.user_id}, _is_system_mode = {self._is_system_mode}")
                             branch_data = self.set_user_id(branch_data)
+                            logger.info(f"🔍 PROJECT_REPO: branch_data after set_user_id: user_id = {branch_data.get('user_id')}")
+                            
+                            # In MVP mode, ensure we have a user_id even if repository is in system mode
+                            if branch_data.get('user_id') is None:
+                                from ....domain.constants import MVP_MODE_ENABLED, MVP_DEFAULT_USER_ID
+                                if MVP_MODE_ENABLED:
+                                    logger.info(f"🔧 PROJECT_REPO: MVP mode enabled, setting default user_id: {MVP_DEFAULT_USER_ID}")
+                                    branch_data['user_id'] = MVP_DEFAULT_USER_ID
+                                else:
+                                    logger.error("❌ PROJECT_REPO: No user_id and MVP mode disabled - this will fail!")
                             
                             new_branch = ProjectGitBranch(**branch_data)
                             session.add(new_branch)

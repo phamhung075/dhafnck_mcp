@@ -88,14 +88,14 @@ class AuthenticationService:
                 logger.info("🔧 Trying MCP authentication context...")
                 user_id = self.mcp_context_extractor.extract_user_id()
             
-            # If still no user ID, throw authentication error
+            # If still no user ID, let validate_user_id handle MVP mode fallback
             if user_id is None:
-                logger.error(f"❌ No authentication found for {operation_name}")
+                logger.warning(f"⚠️ No authentication found for {operation_name}, will try MVP mode fallback")
                 # Log all available context for debugging
                 if self.context_service.request_context_available:
                     auth_context = self.context_service.get_authentication_context()
-                    logger.error(f"❌ Full authentication context: {auth_context}")
-                raise UserAuthenticationRequiredError(operation_name)
+                    logger.info(f"🔍 Full authentication context: {auth_context}")
+                # Don't raise error here - let validate_user_id handle MVP mode
         else:
             logger.info(f"✅ Using provided user_id: {user_id}")
         

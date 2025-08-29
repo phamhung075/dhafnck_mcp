@@ -1,6 +1,7 @@
 import { Eye, FileText, Pencil, Plus, Trash2, Users, ChevronDown, ChevronRight } from "lucide-react";
 import React, { useEffect, useState, useCallback, useMemo, lazy, Suspense } from "react";
 import { listTasks, Task, listAgents, getAvailableAgents, deleteTask } from "../api";
+import { getFullTask } from "../api-lazy";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
@@ -139,19 +140,17 @@ const LazyTaskList: React.FC<LazyTaskListProps> = ({ projectId, taskTreeId, onTa
     });
     
     try {
-      // Request single task with full data
-      const response = await fetch(`/api/tasks/${taskId}`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      });
+      // Use the proper API function that handles authentication and proper URLs
+      const task = await getFullTask(taskId);
       
-      const task = await response.json();
+      if (task) {
+        setFullTasks(prev => {
+          const newMap = new Map(prev);
+          newMap.set(taskId, task);
+          return newMap;
+        });
+      }
       
-      setFullTasks(prev => {
-        const newMap = new Map(prev);
-        newMap.set(taskId, task);
-        return newMap;
-      });
       setLoadingTasks(prev => {
         const newSet = new Set(prev);
         newSet.delete(taskId);

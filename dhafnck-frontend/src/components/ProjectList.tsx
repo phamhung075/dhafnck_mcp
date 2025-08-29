@@ -10,6 +10,8 @@ import { RefreshButton } from "./ui/refresh-button";
 import BranchDetailsDialog from "./BranchDetailsDialog";
 import ProjectDetailsDialog from "./ProjectDetailsDialog";
 import GlobalContextDialog from "./GlobalContextDialog";
+import { useAuth } from "../hooks/useAuth";
+import Cookies from "js-cookie";
 
 interface ProjectListProps {
   onSelect?: (projectId: string, branchId: string) => void;
@@ -42,21 +44,35 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect, refreshKey }) => {
     
     // Load branch summaries with optimized endpoint when opening
     if (isOpening && !branchSummaries[projectId]) {
-      setLoadingBranches(prev => ({ ...prev, [projectId]: true }));
-      try {
-        const summaries = await getBranchSummaries(projectId);
-        setBranchSummaries(prev => ({ ...prev, [projectId]: summaries.branches }));
-        
-        // Update task counts from the optimized response
-        const counts: Record<string, number> = {};
-        for (const branch of summaries.branches) {
-          counts[branch.id] = branch.task_counts.total;
+      // Check if user is authenticated before trying to fetch branch summaries
+      const token = Cookies.get('access_token');
+      
+      if (token) {
+        // User is authenticated, fetch branch summaries
+        setLoadingBranches(prev => ({ ...prev, [projectId]: true }));
+        try {
+          const summaries = await getBranchSummaries(projectId);
+          setBranchSummaries(prev => ({ ...prev, [projectId]: summaries.branches }));
+          
+          // Update task counts from the optimized response
+          const counts: Record<string, number> = {};
+          for (const branch of summaries.branches) {
+            counts[branch.id] = branch.task_counts.total;
+          }
+          setTaskCounts(prev => ({ ...prev, ...counts }));
+        } catch (error) {
+          console.error('Error loading branch summaries:', error);
+          // If the error is authentication-related, we might want to clear the token
+          if (error instanceof Error && error.message?.includes('authentication')) {
+            console.log('Authentication error detected, user may need to log in again');
+          }
+        } finally {
+          setLoadingBranches(prev => ({ ...prev, [projectId]: false }));
         }
-        setTaskCounts(prev => ({ ...prev, ...counts }));
-      } catch (error) {
-        console.error('Error loading branch summaries:', error);
-      } finally {
-        setLoadingBranches(prev => ({ ...prev, [projectId]: false }));
+      } else {
+        // User is not authenticated, skip fetching branch summaries
+        console.log('User not authenticated, skipping branch summaries fetch');
+        // You can still show the project structure without the summaries
       }
     }
   };

@@ -83,7 +83,17 @@ class OperationFactory:
         handler = self._crud_handler
         
         if operation == 'create':
-            result = handler.create_task(facade, **kwargs)
+            # Filter to only include parameters accepted by create_task method
+            # Following DDD: only pass domain-relevant parameters for creation
+            allowed_params = {
+                'git_branch_id', 'title', 'description', 'status', 
+                'priority', 'details', 'estimated_effort', 'assignees', 
+                'labels', 'due_date', 'dependencies'
+            }
+            crud_kwargs = {k: v for k, v in kwargs.items() if k in allowed_params}
+            logger.debug(f"Create operation - Original kwargs: {list(kwargs.keys())}")
+            logger.debug(f"Create operation - Filtered kwargs: {list(crud_kwargs.keys())}")
+            result = handler.create_task(facade, **crud_kwargs)
             
             # Auto-create context if task creation was successful
             if result.get("success") and result.get("task"):
@@ -103,11 +113,17 @@ class OperationFactory:
             return result
             
         elif operation == 'update':
-            return handler.update_task(facade, **kwargs)
+            # Filter out user_id for DDD compliance
+            crud_kwargs = {k: v for k, v in kwargs.items() if k != 'user_id'}
+            return handler.update_task(facade, **crud_kwargs)
         elif operation == 'delete':
-            return handler.delete_task(facade, **kwargs)
+            # Filter out user_id for DDD compliance
+            crud_kwargs = {k: v for k, v in kwargs.items() if k != 'user_id'}
+            return handler.delete_task(facade, **crud_kwargs)
         elif operation == 'get':
-            result = handler.get_task(facade, **kwargs)
+            # Filter out user_id for DDD compliance
+            crud_kwargs = {k: v for k, v in kwargs.items() if k != 'user_id'}
+            result = handler.get_task(facade, **crud_kwargs)
             
             # Enrich response with workflow information
             if result.get("success") and result.get("task"):
@@ -118,7 +134,9 @@ class OperationFactory:
             return result
             
         elif operation == 'complete':
-            return handler.complete_task(facade, **kwargs)
+            # Filter out user_id for DDD compliance
+            crud_kwargs = {k: v for k, v in kwargs.items() if k != 'user_id'}
+            return handler.complete_task(facade, **crud_kwargs)
         else:
             raise ValueError(f"Unknown CRUD operation: {operation}")
     
@@ -126,12 +144,26 @@ class OperationFactory:
         """Handle search and list operations."""
         handler = self._search_handler
         
+        # Only include parameters expected by SearchHandler methods
         if operation == 'list':
-            return handler.list_tasks(facade, **kwargs)
+            # list_tasks parameters: status, priority, assignee, tag, git_branch_id, limit, offset, sort_by, sort_order
+            allowed_params = {'status', 'priority', 'assignee', 'tag', 'git_branch_id', 'limit', 'offset', 'sort_by', 'sort_order'}
+            search_kwargs = {k: v for k, v in kwargs.items() if k in allowed_params}
         elif operation == 'search':
-            return handler.search_tasks(facade, **kwargs)
+            # search_tasks parameters: query, status, priority, assignee, tag, git_branch_id, limit, offset
+            allowed_params = {'query', 'status', 'priority', 'assignee', 'tag', 'git_branch_id', 'limit', 'offset'}
+            search_kwargs = {k: v for k, v in kwargs.items() if k in allowed_params}
+        else:
+            # For other operations (next, count), filter out common problematic params
+            excluded_params = {'user_id', 'task_id', 'title', 'description'}
+            search_kwargs = {k: v for k, v in kwargs.items() if k not in excluded_params}
+        
+        if operation == 'list':
+            return handler.list_tasks(facade, **search_kwargs)
+        elif operation == 'search':
+            return handler.search_tasks(facade, **search_kwargs)
         elif operation == 'next':
-            result = handler.get_next_task(facade, **kwargs)
+            result = handler.get_next_task(facade, **search_kwargs)
             
             # Enrich response with workflow information
             if result.get("success") and result.get("task"):

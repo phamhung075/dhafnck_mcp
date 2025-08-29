@@ -26,8 +26,7 @@ class ProjectCRUDHandler:
         try:
             result = await facade.create_project(
                 name=name,
-                description=description,
-                user_id=user_id
+                description=description
             )
             
             return self._response_formatter.create_success_response(

@@ -31,10 +31,10 @@ class GitBranchAdvancedHandler:
             return self._response_formatter.create_success_response(
                 operation="get_statistics",
                 data=result,
-                message="Git branch statistics retrieved successfully",
                 metadata={
                     "project_id": project_id,
-                    "git_branch_id": git_branch_id
+                    "git_branch_id": git_branch_id,
+                    "message": "Git branch statistics retrieved successfully"
                 }
             )
             
@@ -63,11 +63,11 @@ class GitBranchAdvancedHandler:
             return self._response_formatter.create_success_response(
                 operation="archive",
                 data=result,
-                message="Git branch archived successfully",
                 metadata={
                     "project_id": project_id,
                     "git_branch_id": git_branch_id,
-                    "archived": True
+                    "archived": True,
+                    "message": "Git branch archived successfully"
                 }
             )
             
@@ -96,11 +96,11 @@ class GitBranchAdvancedHandler:
             return self._response_formatter.create_success_response(
                 operation="restore",
                 data=result,
-                message="Git branch restored successfully",
                 metadata={
                     "project_id": project_id,
                     "git_branch_id": git_branch_id,
-                    "restored": True
+                    "restored": True,
+                    "message": "Git branch restored successfully"
                 }
             )
             

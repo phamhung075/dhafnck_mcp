@@ -111,15 +111,24 @@ export const taskApiV2 = {
     return handleResponse(response);
   },
 
-  // Complete a task
+  // Complete a task - fix parameter format for backend
   completeTask: async (taskId: string, completionData: {
     completion_summary: string;
     testing_notes?: string;
   }) => {
+    const formData = new URLSearchParams();
+    formData.append('completion_summary', completionData.completion_summary);
+    if (completionData.testing_notes) {
+      formData.append('testing_notes', completionData.testing_notes);
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/v2/tasks/${taskId}/complete`, {
       method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(completionData),
+      headers: {
+        ...getAuthHeaders(),
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: formData,
     });
     return handleResponse(response);
   },
@@ -141,10 +150,19 @@ export const projectApiV2 = {
     name: string;
     description?: string;
   }) => {
+    const formData = new URLSearchParams();
+    formData.append('name', projectData.name);
+    if (projectData.description) {
+      formData.append('description', projectData.description);
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/v2/projects/`, {
       method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(projectData),
+      headers: {
+        ...getAuthHeaders(),
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: formData,
     });
     return handleResponse(response);
   },
@@ -153,12 +171,22 @@ export const projectApiV2 = {
   updateProject: async (projectId: string, updates: {
     name?: string;
     description?: string;
-    status?: string;
   }) => {
+    const formData = new URLSearchParams();
+    if (updates.name) {
+      formData.append('name', updates.name);
+    }
+    if (updates.description) {
+      formData.append('description', updates.description);
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/v2/projects/${projectId}`, {
       method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(updates),
+      headers: {
+        ...getAuthHeaders(),
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: formData,
     });
     return handleResponse(response);
   },
