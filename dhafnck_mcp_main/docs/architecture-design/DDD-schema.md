@@ -1,5 +1,10 @@
 # DDD Architecture Schema - Detailed Flow Documentation
 
+## 📋 Document Version
+- **Version**: 2.0.0
+- **Last Updated**: 2025-08-29
+- **Status**: Production Ready with Enhanced Authentication
+
 ## 🏗️ System Architecture Overview
 
 ### Complete System Flow Diagram
@@ -26,21 +31,47 @@
 └────────────────────┬─────────────────────────────────┘
                      ↓
 ┌──────────────────────────────────────────────────────┐
-│            Authentication & Authorization             │
-│  • JWT Token Extraction from Headers                │
-│  • Token Signature Verification                     │
-│  • User ID & Permissions Extraction                 │
-│  • Request Context Enrichment                       │
-│  • Rate Limiting Check                             │
-│  • API Key Validation (if configured)              │
+│        Enhanced Authentication & Authorization        │
+│                                                      │
+│  Authentication Pipeline:                           │
+│  ├─ JWT Token Extraction from Headers               │
+│  ├─ Token Signature Verification (RS256/HS256)      │
+│  ├─ Token Claims Validation & Expiry Check          │
+│  ├─ User Context Resolution                         │
+│  │   ├─ User ID Extraction                         │
+│  │   ├─ Organization/Tenant ID                     │
+│  │   └─ Session Metadata                           │
+│  │                                                  │
+│  ├─ MVP Mode Support                                │
+│  │   ├─ Bypass Authentication if MVP_MODE=true     │
+│  │   ├─ Default User Context Creation              │
+│  │   └─ Development-Only Access                    │
+│  │                                                  │
+│  Authorization & Security:                          │
+│  ├─ Permission Matrix Loading                       │
+│  ├─ Role-Based Access Control (RBAC)              │
+│  ├─ Resource-Level Authorization                    │
+│  ├─ Rate Limiting & Throttling                     │
+│  ├─ API Key Validation (Secondary Auth)            │
+│  └─ Audit Trail Initialization                     │
 └────────────────────┬─────────────────────────────────┘
                      ↓
 ┌──────────────────────────────────────────────────────┐
 │         INTERFACE LAYER (MCP Controllers)            │
 │                                                      │
+│  Controller Architecture:                           │
+│  ├─ Modular Controller Organization                 │
+│  │   ├─ TaskController                             │
+│  │   ├─ ProjectController                          │
+│  │   ├─ ContextController                          │
+│  │   ├─ AgentController                            │
+│  │   ├─ RuleController                             │
+│  │   └─ ComplianceController                       │
+│  │                                                  │
 │  Request Reception & Initial Processing:            │
 │  ├─ Parse MCP Tool Name & Action                    │
 │  ├─ Extract Raw Parameters from Request             │
+│  ├─ User Context Injection                         │
 │  ├─ Identify Target Controller                      │
 │  └─ Route to Appropriate Handler                    │
 │                                                      │
@@ -66,8 +97,17 @@
 ┌──────────────────────────────────────────────────────┐
 │      APPLICATION LAYER (Facades & Use Cases)         │
 │                                                      │
+│  Facade Architecture:                               │
+│  ├─ TaskApplicationFacade                          │
+│  ├─ ProjectApplicationFacade                       │
+│  ├─ ContextApplicationFacade                       │
+│  ├─ AgentApplicationFacade                         │
+│  ├─ RuleApplicationFacade                          │
+│  └─ ComplianceApplicationFacade                    │
+│                                                      │
 │  Facade Entry & Orchestration:                      │
 │  ├─ Receive Request DTO from Interface              │
+│  ├─ User-Scoped Repository Creation                │
 │  ├─ Begin Database Transaction                      │
 │  ├─ Initialize Audit Trail                          │
 │  └─ Setup Event Collection                          │
@@ -135,6 +175,12 @@
 │     INFRASTRUCTURE LAYER (Technical Services)        │
 │                                                      │
 │  Repository Pattern Implementation:                 │
+│  ├─ User-Scoped Repository Pattern                 │
+│  │   ├─ BaseUserScopedRepository                   │
+│  │   ├─ Automatic User Context Filtering           │
+│  │   ├─ Multi-Tenancy Support                      │
+│  │   └─ Row-Level Security                         │
+│  │                                                  │
 │  ├─ Environment Detection                          │
 │  │   ├─ Check DATABASE_TYPE Variable               │
 │  │   ├─ Verify Redis Availability                  │
@@ -607,9 +653,9 @@ RESPONSE PATH (Reverse)
     Response DTOs → MCP Response → JSON Output
 ```
 
-## 🔐 Security Flow
+## 🔐 Enhanced Security & Authentication Flow
 
-### Authentication & Authorization Pipeline
+### Multi-Mode Authentication Pipeline
 ```
 REQUEST SECURITY CHECK
 │
@@ -618,43 +664,123 @@ REQUEST SECURITY CHECK
 │    ├─ Certificate Validation
 │    └─ Encryption Check
 │
-├─ 2. Authentication
-│    ├─ Token Extraction
-│    │   ├─ Bearer Token (Header)
-│    │   ├─ API Key (Header/Query)
-│    │   └─ Session Cookie
+├─ 2. Authentication Mode Detection
+│    ├─ Check MVP_MODE Environment Variable
+│    │   ├─ If MVP_MODE=true → Skip to Default Context
+│    │   └─ If MVP_MODE=false → Full Authentication
 │    │
-│    ├─ Token Validation
-│    │   ├─ Signature Verification
-│    │   ├─ Expiry Check
-│    │   └─ Revocation Check
+│    ├─ Production Authentication
+│    │   ├─ Token Extraction
+│    │   │   ├─ Bearer Token (Authorization Header)
+│    │   │   ├─ API Key (X-API-Key Header)
+│    │   │   └─ Session Cookie (Optional)
+│    │   │
+│    │   ├─ JWT Token Validation
+│    │   │   ├─ Signature Verification (RS256/HS256)
+│    │   │   ├─ Issuer Validation
+│    │   │   ├─ Audience Check
+│    │   │   ├─ Expiry Verification
+│    │   │   └─ Claims Extraction
+│    │   │
+│    │   └─ Token Refresh Flow
+│    │       ├─ Refresh Token Validation
+│    │       ├─ New Access Token Generation
+│    │       └─ Token Rotation
 │    │
-│    └─ Identity Resolution
-│        ├─ User ID Extraction
-│        ├─ User Profile Load
-│        └─ Context Enrichment
+│    └─ MVP/Development Mode
+│        ├─ Create Default User Context
+│        ├─ Set Default Permissions
+│        └─ Skip Security Validations
 │
-├─ 3. Authorization
-│    ├─ Permission Check
-│    │   ├─ Resource Access
-│    │   ├─ Action Permission
-│    │   └─ Data Scope
+├─ 3. User Context Resolution
+│    ├─ Extract User Identity
+│    │   ├─ User ID (sub claim)
+│    │   ├─ Email (email claim)
+│    │   ├─ Organization ID (org_id claim)
+│    │   └─ Custom Claims
 │    │
-│    ├─ Role Validation
-│    │   ├─ Role Assignment
-│    │   ├─ Role Hierarchy
-│    │   └─ Role Constraints
+│    ├─ Load User Profile
+│    │   ├─ Database Lookup
+│    │   ├─ Cache Check
+│    │   └─ Default Profile Creation
 │    │
-│    └─ Policy Enforcement
-│        ├─ Business Rules
-│        ├─ Compliance Requirements
-│        └─ Audit Requirements
+│    └─ Context Enrichment
+│        ├─ User Preferences
+│        ├─ Active Projects
+│        ├─ Permission Sets
+│        └─ Session Metadata
 │
-└─ 4. Security Context
-     ├─ User Context Creation
-     ├─ Permission Matrix
-     ├─ Audit Trail Start
-     └─ Security Token Generation
+├─ 4. Authorization & Access Control
+│    ├─ Role-Based Access Control (RBAC)
+│    │   ├─ Role Resolution
+│    │   ├─ Permission Aggregation
+│    │   └─ Hierarchical Roles
+│    │
+│    ├─ Resource-Level Security
+│    │   ├─ User-Scoped Resources
+│    │   ├─ Project-Level Access
+│    │   ├─ Task-Level Permissions
+│    │   └─ Context Inheritance
+│    │
+│    ├─ Action Authorization
+│    │   ├─ CRUD Operations
+│    │   ├─ Special Actions
+│    │   └─ Admin Functions
+│    │
+│    └─ Data Filtering
+│        ├─ Row-Level Security
+│        ├─ Field-Level Masking
+│        └─ Query Scoping
+│
+└─ 5. Security Context Management
+     ├─ Context Creation
+     │   ├─ User Context Object
+     │   ├─ Request Context
+     │   └─ Security Metadata
+     │
+     ├─ Context Propagation
+     │   ├─ Thread-Local Storage
+     │   ├─ Async Context
+     │   └─ Repository Injection
+     │
+     └─ Audit & Compliance
+         ├─ Audit Trail Creation
+         ├─ Compliance Checks
+         ├─ Activity Logging
+         └─ Security Events
+```
+
+### User-Scoped Repository Pattern
+```
+USER-SCOPED DATA ACCESS
+│
+├─ 1. Repository Creation
+│    ├─ Receive User Context from Auth
+│    ├─ Create User-Scoped Repository Instance
+│    └─ Inject User ID into All Queries
+│
+├─ 2. Automatic Filtering
+│    ├─ SELECT Operations
+│    │   └─ WHERE user_id = :current_user_id
+│    │
+│    ├─ INSERT Operations
+│    │   └─ SET user_id = :current_user_id
+│    │
+│    ├─ UPDATE Operations
+│    │   └─ WHERE user_id = :current_user_id AND ...
+│    │
+│    └─ DELETE Operations
+│        └─ WHERE user_id = :current_user_id AND ...
+│
+├─ 3. Multi-Tenancy Support
+│    ├─ Organization-Level Scoping
+│    ├─ Project-Level Isolation
+│    └─ Cross-Tenant Protection
+│
+└─ 4. Security Enforcement
+     ├─ Prevent Cross-User Access
+     ├─ Audit All Operations
+     └─ Exception on Violation
 ```
 
 ## 🚀 Performance Optimization Flows
@@ -829,6 +955,131 @@ REQUEST MONITORING
      └─ Audit Trail
 ```
 
+## 🏛️ DDD Component Architecture
+
+### Core DDD Components
+```
+DDD SYSTEM STRUCTURE
+│
+├─ Interface Layer Components
+│   ├─ Controllers (MCP Tool Handlers)
+│   │   ├─ TaskController
+│   │   ├─ ProjectController
+│   │   ├─ ContextController
+│   │   ├─ AgentController
+│   │   ├─ RuleController
+│   │   ├─ GitBranchController
+│   │   └─ ComplianceController
+│   │
+│   └─ Unified MCP Tools Interface
+│       └─ DDDCompliantMCPTools
+│
+├─ Application Layer Components
+│   ├─ Application Facades
+│   │   ├─ TaskApplicationFacade
+│   │   ├─ ProjectApplicationFacade
+│   │   ├─ ContextApplicationFacade
+│   │   ├─ AgentApplicationFacade
+│   │   ├─ RuleApplicationFacade
+│   │   └─ ComplianceApplicationFacade
+│   │
+│   ├─ Use Cases
+│   │   ├─ Command Use Cases
+│   │   ├─ Query Use Cases
+│   │   └─ Process Use Cases
+│   │
+│   └─ Application Services
+│       ├─ ValidationService
+│       ├─ NotificationService
+│       └─ IntegrationService
+│
+├─ Domain Layer Components
+│   ├─ Entities
+│   │   ├─ Task
+│   │   ├─ Project
+│   │   ├─ Context
+│   │   ├─ Agent
+│   │   ├─ Rule
+│   │   └─ GitBranch
+│   │
+│   ├─ Value Objects
+│   │   ├─ TaskId
+│   │   ├─ UserId
+│   │   ├─ Priority
+│   │   ├─ Status
+│   │   └─ Timestamp
+│   │
+│   ├─ Domain Services
+│   │   ├─ TaskService
+│   │   ├─ ContextService
+│   │   └─ VisionService
+│   │
+│   └─ Domain Events
+│       ├─ TaskCreated
+│       ├─ TaskCompleted
+│       ├─ ContextUpdated
+│       └─ AgentAssigned
+│
+└─ Infrastructure Layer Components
+    ├─ Repositories
+    │   ├─ BaseUserScopedRepository
+    │   ├─ TaskRepository
+    │   ├─ ProjectRepository
+    │   ├─ ContextRepository
+    │   └─ AgentRepository
+    │
+    ├─ Repository Factories
+    │   ├─ RepositoryFactory
+    │   ├─ TaskRepositoryFactory
+    │   └─ ContextRepositoryFactory
+    │
+    ├─ Database Models
+    │   ├─ SQLAlchemy ORM Models
+    │   ├─ Migration Scripts
+    │   └─ Database Schemas
+    │
+    └─ External Services
+        ├─ CacheService (Redis)
+        ├─ SearchService (Elasticsearch)
+        └─ MessageQueue (RabbitMQ)
+```
+
+### Authentication Components
+```
+AUTHENTICATION ARCHITECTURE
+│
+├─ Authentication Middleware
+│   ├─ JWTAuthenticationMiddleware
+│   ├─ APIKeyAuthenticationMiddleware
+│   └─ MVPModeMiddleware
+│
+├─ Authentication Services
+│   ├─ TokenService
+│   │   ├─ Token Generation
+│   │   ├─ Token Validation
+│   │   └─ Token Refresh
+│   │
+│   ├─ UserContextService
+│   │   ├─ Context Creation
+│   │   ├─ Context Resolution
+│   │   └─ Context Propagation
+│   │
+│   └─ AuthorizationService
+│       ├─ Permission Checking
+│       ├─ Role Management
+│       └─ Resource Authorization
+│
+├─ Security Providers
+│   ├─ JWTProvider
+│   ├─ OAuth2Provider
+│   └─ SAMLProvider
+│
+└─ Security Infrastructure
+    ├─ Key Management
+    ├─ Certificate Store
+    └─ Security Policies
+```
+
 ## 🔧 Dependency Resolution Flow
 
 ### Module Dependency Rules
@@ -884,3 +1135,80 @@ DEPENDENCY INJECTION CONTAINER
      ├─ Connection Close
      └─ Memory Release
 ```
+
+## 📋 Architecture Summary
+
+### Key Architectural Patterns
+1. **Domain-Driven Design (DDD)**: Clear separation of concerns with distinct layers
+2. **User-Scoped Repositories**: Automatic user context filtering for multi-tenancy
+3. **MVP Mode Support**: Flexible authentication for development and production
+4. **Modular Controllers**: Organized by domain responsibility
+5. **Application Facades**: Orchestration layer for complex operations
+6. **Event-Driven Architecture**: Domain events for loose coupling
+7. **Repository Pattern**: Abstraction over data persistence
+8. **Dependency Injection**: IoC container for flexible dependencies
+
+### Security Features
+1. **JWT Authentication**: Industry-standard token-based auth
+2. **Multi-Mode Support**: Development (MVP) and Production modes
+3. **User Context Propagation**: Automatic user scoping throughout the stack
+4. **Row-Level Security**: Database-level access control
+5. **Role-Based Access Control**: Fine-grained permissions
+6. **Audit Trail**: Comprehensive activity logging
+7. **API Key Support**: Alternative authentication method
+
+### Performance Optimizations
+1. **Multi-Level Caching**: In-memory, Redis, and CDN layers
+2. **Connection Pooling**: Efficient database connections
+3. **Lazy Loading**: On-demand data fetching
+4. **Query Optimization**: Prepared statements and batching
+5. **Transaction Management**: Proper isolation and rollback
+6. **Event Streaming**: Asynchronous processing
+
+### Scalability Considerations
+1. **Horizontal Scaling**: Stateless architecture
+2. **Database Sharding**: User-based partitioning ready
+3. **Cache Distribution**: Redis cluster support
+4. **Message Queuing**: Async processing with RabbitMQ
+5. **Load Balancing**: Round-robin and sticky sessions
+6. **Service Mesh**: Microservice-ready architecture
+
+### Development Features
+1. **MVP Mode**: Quick development without auth setup
+2. **Mock Repositories**: Testing without database
+3. **Environment Detection**: Automatic configuration
+4. **Hot Reload**: Development productivity
+5. **Debug Logging**: Comprehensive troubleshooting
+6. **OpenAPI Documentation**: Auto-generated API docs
+
+## 🚀 Implementation Status
+
+### ✅ Completed Components
+- DDD Layer Architecture
+- User-Scoped Repositories
+- MVP Mode Authentication
+- Modular Controller System
+- Application Facades
+- Domain Entities and Services
+- Repository Pattern Implementation
+- JWT Authentication
+- Context Management System
+- Task Management System
+- Project Management System
+- Agent Management System
+- Rule Management System
+- Compliance System
+
+### 🚧 In Progress
+- Enhanced caching strategies
+- Performance monitoring
+- Advanced search capabilities
+- Real-time notifications
+- GraphQL API layer
+
+### 📅 Planned Features
+- WebSocket support for real-time updates
+- Advanced analytics dashboard
+- Machine learning integration
+- Blockchain audit trail
+- Federation support

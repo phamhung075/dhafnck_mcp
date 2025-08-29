@@ -135,8 +135,8 @@ class DDDCompliantMCPTools:
         )
         
         self._subtask_facade_factory = SubtaskFacadeFactory(
-            self._subtask_repository_factory,
-            self._task_repository_factory
+            subtask_repository_factory=self._subtask_repository_factory,
+            task_repository_factory=self._task_repository_factory
         )
         self._subtask_facade = self._subtask_facade_factory.create_subtask_facade()
         

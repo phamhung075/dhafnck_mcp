@@ -275,20 +275,23 @@ class ORMTaskRepository(CacheInvalidationMixin, BaseORMRepository[Task], BaseUse
                 task = self._load_task_with_relationships(session, task_id)
                 
                 if task:
-                    # Apply user filter for data isolation
-                    user_filter_query = session.query(Task)
-                    user_filter_query = self.apply_user_filter(user_filter_query)
-                    
-                    # Check if task passes user filter
-                    filters = [Task.id == task_id]
-                    if self.git_branch_id:
-                        filters.append(Task.git_branch_id == self.git_branch_id)
-                    
-                    filtered_task = user_filter_query.filter(and_(*filters)).first()
-                    
-                    if not filtered_task:
-                        logger.warning(f"Task {task_id} failed user isolation filter")
-                        return None
+                    # Skip user filter in MVP mode or system mode
+                    if not self.is_system_mode():
+                        # Apply user filter for data isolation
+                        user_filter_query = session.query(Task)
+                        user_filter_query = self.apply_user_filter(user_filter_query)
+                        
+                        # Check if task passes user filter
+                        filters = [Task.id == task_id]
+                        # Don't filter by git_branch_id in MVP/system mode
+                        if self.git_branch_id and not self.is_system_mode():
+                            filters.append(Task.git_branch_id == self.git_branch_id)
+                        
+                        filtered_task = user_filter_query.filter(and_(*filters)).first()
+                        
+                        if not filtered_task:
+                            logger.warning(f"Task {task_id} failed user isolation filter")
+                            return None
                     
                     # Log access for audit
                     self.log_access('read', 'task', task_id)

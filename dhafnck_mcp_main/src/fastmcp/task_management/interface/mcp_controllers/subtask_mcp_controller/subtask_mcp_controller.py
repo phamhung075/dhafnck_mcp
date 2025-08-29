@@ -221,8 +221,8 @@ class SubtaskMCPController(ContextPropagationMixin):
         if not self._subtask_facade_factory:
             raise ValueError("SubtaskFacadeFactory is required but not provided")
         
-        # Create facade with user context
-        return self._subtask_facade_factory.create_subtask_facade(task_id, user_id)
+        # Create facade with user context and task_id for context derivation
+        return self._subtask_facade_factory.create_subtask_facade(user_id=user_id, task_id=task_id)
 
     def _enhance_response_with_workflow_guidance(self, response: Dict[str, Any], 
                                                action: str, task_id: str) -> Dict[str, Any]:

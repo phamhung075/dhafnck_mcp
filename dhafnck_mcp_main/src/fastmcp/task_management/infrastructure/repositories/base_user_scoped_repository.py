@@ -30,12 +30,21 @@ class BaseUserScopedRepository:
             user_id: ID of the user whose data should be accessed.
                     If None, operates in system/admin mode (use with caution)
         """
+        import os
         self.session = session
         self.user_id = user_id
-        self._is_system_mode = user_id is None
+        
+        # Check if we're in MVP mode (bypass user filtering)
+        self._is_mvp_mode = os.getenv('DHAFNCK_MVP_MODE', '').lower() in ('true', '1', 'yes', 'on')
+        
+        # In MVP mode or when user_id is None, operate in system mode (no user filtering)
+        self._is_system_mode = user_id is None or self._is_mvp_mode
         
         if self._is_system_mode:
-            logger.info("Repository initialized in system mode during startup - no user filtering applied (expected behavior)")
+            if self._is_mvp_mode:
+                logger.info("Repository initialized in MVP mode - user filtering bypassed for testing")
+            else:
+                logger.info("Repository initialized in system mode during startup - no user filtering applied (expected behavior)")
     
     def with_user(self, user_id: str) -> 'BaseUserScopedRepository':
         """

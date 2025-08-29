@@ -7,6 +7,30 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 ## [Unreleased]
 
 ### Fixed
+- **Repository Scoping and UUID Type Issues** - Fixed critical repository and type conversion issues [2025-08-29 Evening]
+  - **BaseUserScopedRepository MVP Mode**: Added MVP mode detection to bypass user filtering
+    - Checks DHAFNCK_MVP_MODE environment variable
+    - Sets system mode when MVP mode active or user_id is None
+  - **ORMTaskRepository Filtering**: Modified to skip user filtering in MVP/system mode
+    - Added is_system_mode() checks before applying filters
+    - Prevents tasks from being filtered out during subtask creation
+  - **Repository Factory UUID Issues**: Fixed git_branch_name being passed as git_branch_id
+    - Changed to pass None for git_branch_id when only branch name available
+    - Prevents "invalid input syntax for type uuid: 'main'" PostgreSQL errors
+  - **Subtask Context Derivation**: Fixed UUID object type mismatches
+    - Convert project_id UUID to string in _derive_context_from_git_branch_id
+    - Added authentication fallback when project user_id is None
+    - Ensures proper string types for repository initialization
+  - **SubtaskFacadeFactory Parameter Order**: Fixed incorrect parameter initialization
+    - Added named parameters to ensure correct factory initialization
+  - Files Modified:
+    - `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/base_user_scoped_repository.py`
+    - `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/task_repository.py`
+    - `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/repository_factory.py`
+    - `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/task_repository_factory.py`
+    - `dhafnck_mcp_main/src/fastmcp/task_management/application/facades/subtask_application_facade.py`
+    - `dhafnck_mcp_main/src/fastmcp/task_management/interface/ddd_compliant_mcp_tools.py`
+
 - **MVP Mode Authentication Issues** - Fixed comprehensive authentication and parameter passing issues [2025-08-29]
   - **UUID Type Mismatch**: Changed MVP_DEFAULT_USER_ID from "mvp_user_12345" to valid UUID "00000000-0000-0000-0000-000000012345"
   - **Environment Variable Propagation**: Fixed DHAFNCK_MVP_MODE not being exported in docker-menu.sh startup script

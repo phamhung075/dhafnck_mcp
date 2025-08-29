@@ -59,24 +59,20 @@ class SubtaskApplicationFacade:
     def _derive_context_from_task(self, task_id: str, subtask_id: str = None) -> Dict[str, str]:
         """Derive context parameters from the parent task by looking it up in database"""
         try:
-            # Directly query the database to find the task and its context
-            from ...infrastructure.database.database_source_manager import get_database_path
-            import sqlite3
+            # Use proper database connection (PostgreSQL/Supabase)
+            from ...infrastructure.database.database_config import get_session
+            from ...infrastructure.database.models import Task
             
-            db_path = get_database_path()
-            with sqlite3.connect(db_path) as conn:
-                conn.row_factory = sqlite3.Row
-                
+            with get_session() as session:
                 # Look up the task to get its git_branch_id
-                task_row = conn.execute(
-                    'SELECT git_branch_id FROM tasks WHERE id = ?',
-                    (task_id,)
-                ).fetchone()
+                task = session.query(Task).filter(Task.id == task_id).first()
                 
-                if task_row and task_row['git_branch_id']:
-                    logger.debug(f"Task found with git_branch_id: {task_row['git_branch_id']}")
+                if task and task.git_branch_id:
+                    logger.info(f"✅ Task {task_id} found with git_branch_id: {task.git_branch_id}")
                     # Derive context from task's git_branch_id
-                    return self._derive_context_from_git_branch_id(task_row['git_branch_id'])
+                    context = self._derive_context_from_git_branch_id(task.git_branch_id)
+                    logger.info(f"✅ Derived context for subtask: {context}")
+                    return context
                 else:
                     logger.debug(f"Task {task_id} not found in database")
                     
@@ -100,46 +96,49 @@ class SubtaskApplicationFacade:
             logger.error(f"Authentication required for subtask context derivation: {e}")
             raise e
         
+        # When task not found, return defaults with "main" branch
+        # The repository will handle the lookup properly with git_branch_id=None
         return {
             "project_id": "default_project",
-            "git_branch_name": "main", 
+            "git_branch_name": "main",  # Use "main" as default branch name
             "user_id": user_id
         }
     
     def _derive_context_from_git_branch_id(self, git_branch_id: str) -> Dict[str, str]:
         """Derive context parameters from git_branch_id by looking up the project_git_branchs table"""
         try:
-            # Use system-level database access to look up git branch and project
-            from ...infrastructure.database.database_source_manager import get_database_path
-            import sqlite3
+            # Use proper database connection (PostgreSQL/Supabase)
+            from ...infrastructure.database.database_config import get_session
+            from ...infrastructure.database.models import ProjectGitBranch, Project
             
-            db_path = get_database_path()
-            with sqlite3.connect(db_path) as conn:
-                conn.row_factory = sqlite3.Row
+            with get_session() as session:
+                # Look up the git branch to get project_id and git_branch_name
+                branch = session.query(ProjectGitBranch).filter(ProjectGitBranch.id == git_branch_id).first()
                 
-                # Look up the git branch in project_git_branchs to get project_id and git_branch_name
-                branch_row = conn.execute(
-                    'SELECT project_id, name FROM project_git_branchs WHERE id = ?',
-                    (git_branch_id,)
-                ).fetchone()
-                
-                if branch_row:
-                    project_id = branch_row['project_id']
-                    git_branch_name = branch_row['name']
+                if branch:
+                    project_id = branch.project_id
+                    git_branch_name = branch.name
                     
                     # Look up the project to get user_id
-                    project_row = conn.execute(
-                        'SELECT user_id FROM projects WHERE id = ?',
-                        (project_id,)
-                    ).fetchone()
+                    project = session.query(Project).filter(Project.id == project_id).first()
                     
-                    if project_row:
-                        user_id = project_row['user_id']
-                        logger.debug(f"Derived context from git_branch_id {git_branch_id}: {project_id}/{git_branch_name}/{user_id}")
+                    if project:
+                        user_id = project.user_id
+                        # If user_id is still None (e.g., in MVP mode), get authenticated user
+                        if not user_id:
+                            try:
+                                from ...interface.mcp_controllers.auth_helper.auth_helper import get_authenticated_user_id
+                                user_id = get_authenticated_user_id(None, "Subtask context derivation from git_branch")
+                                logger.info(f"✅ Using authenticated user for context: {user_id}")
+                            except Exception as e:
+                                logger.error(f"Failed to get authenticated user: {e}")
+                                raise e
+                        
+                        logger.info(f"✅ Derived context from git_branch_id {git_branch_id}: project={project_id}, branch={git_branch_name}, user={user_id}")
                         return {
-                            "project_id": project_id,
+                            "project_id": str(project_id) if project_id else None,  # Convert UUID to string
                             "git_branch_name": git_branch_name,
-                            "user_id": user_id
+                            "user_id": str(user_id) if user_id else None  # Convert to string
                         }
                         
         except Exception as e:

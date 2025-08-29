@@ -174,7 +174,7 @@ class TaskRepositoryFactory:
             if db_config and db_config.engine:
                 return ORMTaskRepository(
                     session=None,
-                    git_branch_id=git_branch_name,  # Map git_branch_name to git_branch_id
+                    git_branch_id=None,  # Don't pass branch name as UUID - let repository handle lookup
                     project_id=project_id,
                     git_branch_name=git_branch_name,
                     user_id=user_id

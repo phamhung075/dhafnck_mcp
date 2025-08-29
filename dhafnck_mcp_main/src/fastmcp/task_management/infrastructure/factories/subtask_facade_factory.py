@@ -27,7 +27,7 @@ class SubtaskFacadeFactory:
         self._subtask_repository_factory = subtask_repository_factory
         self._task_repository_factory = task_repository_factory
     
-    def create_subtask_facade(self, project_id: str = "default_project", user_id: str = None) -> SubtaskApplicationFacade:
+    def create_subtask_facade(self, project_id: str = "default_project", user_id: str = None, task_id: str = None) -> SubtaskApplicationFacade:
         """
         Create a subtask application facade with proper dependency injection.
         
@@ -35,8 +35,9 @@ class SubtaskFacadeFactory:
         with all required dependencies using dependency injection.
         
         Args:
-            project_id: Project identifier for repository creation
+            project_id: Project identifier for repository creation (optional if task_id provided)
             user_id: User identifier for authentication and audit trails
+            task_id: Task identifier for context derivation (will auto-derive project context)
             
         Returns:
             Configured subtask application facade
