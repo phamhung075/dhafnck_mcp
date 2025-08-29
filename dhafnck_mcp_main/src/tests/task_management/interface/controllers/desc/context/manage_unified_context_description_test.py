@@ -9,7 +9,7 @@ import pytest
 import re
 import json
 
-from fastmcp.task_management.interface.controllers.desc.context.manage_unified_context_description import (
+from fastmcp.task_management.interface.mcp_controllers.desc.context.manage_unified_context_description import (
     MANAGE_UNIFIED_CONTEXT_DESCRIPTION,
     MANAGE_UNIFIED_CONTEXT_PARAMETERS,
     get_unified_context_description,

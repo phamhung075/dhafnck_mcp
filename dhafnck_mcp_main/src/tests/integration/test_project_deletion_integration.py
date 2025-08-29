@@ -9,7 +9,7 @@ import pytest
 import uuid
 from typing import Dict, Any
 
-from fastmcp.task_management.interface.controllers.project_mcp_controller import ProjectMCPController
+from fastmcp.task_management.interface.mcp_controllers.project_mcp_controller import ProjectMCPController
 from fastmcp.task_management.infrastructure.factories.project_facade_factory import ProjectFacadeFactory
 from fastmcp.task_management.infrastructure.repositories.project_repository_factory import GlobalRepositoryManager
 

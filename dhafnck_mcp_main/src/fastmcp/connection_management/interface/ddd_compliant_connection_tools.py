@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from fastmcp.server.server import FastMCP
 
 # Interface layer imports (same layer, acceptable)
-from .controllers.connection_mcp_controller import ConnectionMCPController
+from .mcp_controllers.connection_mcp_controller import ConnectionMCPController
 
 # Application layer imports (proper DDD dependency direction)
 from ..application.facades.connection_application_facade import ConnectionApplicationFacade

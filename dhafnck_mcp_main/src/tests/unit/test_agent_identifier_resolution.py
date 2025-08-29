@@ -9,7 +9,7 @@ import pytest
 import uuid
 from unittest.mock import Mock
 
-from fastmcp.task_management.interface.controllers.git_branch_mcp_controller import GitBranchMCPController
+from fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller import GitBranchMCPController
 from fastmcp.task_management.infrastructure.factories.git_branch_facade_factory import GitBranchFacadeFactory
 
 

@@ -13,7 +13,7 @@ import uuid
 from unittest.mock import Mock, patch
 from datetime import datetime, timezone
 
-from fastmcp.task_management.interface.controllers.unified_context_controller import UnifiedContextMCPController
+from fastmcp.task_management.interface.mcp_controllers.unified_context_controller import UnifiedContextMCPController
 from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
 from fastmcp.task_management.domain.value_objects.context_enums import ContextLevel
 from fastmcp.task_management.infrastructure.database.database_config import Base

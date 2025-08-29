@@ -10,7 +10,7 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime, timezone
 
-from fastmcp.task_management.interface.controllers.context_id_detector_orm import ContextIDDetector
+from fastmcp.task_management.interface.mcp_controllers.context_id_detector_orm import ContextIDDetector
 from fastmcp.task_management.infrastructure.database.models import Project, ProjectGitBranch, Task
 
 
@@ -60,7 +60,7 @@ class TestContextIDDetectorORM:
         mock_session.query.side_effect = query_side_effect
         
         # Test with mocked session
-        with patch('fastmcp.task_management.interface.controllers.context_id_detector_orm.get_session') as mock_get_session:
+        with patch('fastmcp.task_management.interface.mcp_controllers.context_id_detector_orm.get_session') as mock_get_session:
             mock_get_session.return_value.__enter__.return_value = mock_session
             
             id_type, associated_project_id = ContextIDDetector.detect_id_type(project_id)
@@ -91,7 +91,7 @@ class TestContextIDDetectorORM:
         mock_session.query.side_effect = query_side_effect
         
         # Test with mocked session
-        with patch('fastmcp.task_management.interface.controllers.context_id_detector_orm.get_session') as mock_get_session:
+        with patch('fastmcp.task_management.interface.mcp_controllers.context_id_detector_orm.get_session') as mock_get_session:
             mock_get_session.return_value.__enter__.return_value = mock_session
             
             id_type, associated_project_id = ContextIDDetector.detect_id_type(branch_id)
@@ -139,7 +139,7 @@ class TestContextIDDetectorORM:
         mock_session.query.side_effect = query_side_effect
         
         # Test with mocked session
-        with patch('fastmcp.task_management.interface.controllers.context_id_detector_orm.get_session') as mock_get_session:
+        with patch('fastmcp.task_management.interface.mcp_controllers.context_id_detector_orm.get_session') as mock_get_session:
             mock_get_session.return_value.__enter__.return_value = mock_session
             
             id_type, associated_project_id = ContextIDDetector.detect_id_type(task_id)
@@ -156,7 +156,7 @@ class TestContextIDDetectorORM:
         mock_session.query.return_value.filter_by.return_value.first.return_value = None
         
         # Test with mocked session
-        with patch('fastmcp.task_management.interface.controllers.context_id_detector_orm.get_session') as mock_get_session:
+        with patch('fastmcp.task_management.interface.mcp_controllers.context_id_detector_orm.get_session') as mock_get_session:
             mock_get_session.return_value.__enter__.return_value = mock_session
             
             id_type, associated_project_id = ContextIDDetector.detect_id_type(unknown_id)
@@ -215,7 +215,7 @@ class TestContextIDDetectorORM:
         mock_session.query.side_effect = Exception("Database error")
         
         # Test with mocked session
-        with patch('fastmcp.task_management.interface.controllers.context_id_detector_orm.get_session') as mock_get_session:
+        with patch('fastmcp.task_management.interface.mcp_controllers.context_id_detector_orm.get_session') as mock_get_session:
             mock_get_session.return_value.__enter__.return_value = mock_session
             
             id_type, associated_project_id = ContextIDDetector.detect_id_type(error_id)

@@ -8,7 +8,7 @@ import json
 from unittest.mock import Mock, patch
 from datetime import datetime, timezone
 
-from fastmcp.task_management.interface.controllers.unified_context_controller import (
+from fastmcp.task_management.interface.mcp_controllers.unified_context_controller import (
     UnifiedContextMCPController
 )
 from fastmcp.task_management.domain.value_objects.context_enums import ContextLevel
@@ -58,7 +58,7 @@ class TestFrontendContextAPIPatterns:
         }
         
         # Mock authentication helper to return test user
-        with patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
+        with patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
             mock_auth.return_value = user_id
             
             # Mock the facade factory to return our mock facade
@@ -122,7 +122,7 @@ class TestFrontendContextAPIPatterns:
         }
         
         # Mock authentication helper to return test user
-        with patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
+        with patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
             mock_auth.return_value = user_id
             
             # Mock the facade factory to return our mock facade
@@ -186,7 +186,7 @@ class TestFrontendContextAPIPatterns:
         }
         
         # Mock authentication helper to return test user
-        with patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
+        with patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
             mock_auth.return_value = user_id
             
             # Mock the facade factory to return our mock facade
@@ -241,7 +241,7 @@ class TestFrontendContextAPIPatterns:
         }
         
         # Mock authentication helper to return test user
-        with patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
+        with patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
             mock_auth.return_value = user_id
             
             # Mock the facade factory to return our mock facade
@@ -306,7 +306,7 @@ class TestFrontendContextAPIPatterns:
         }
         
         # Mock authentication helper to return test user
-        with patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
+        with patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
             mock_auth.return_value = user_id
             
             # Mock the facade factory to return our mock facade
@@ -360,7 +360,7 @@ class TestFrontendContextAPIPatterns:
         }
         
         # Mock authentication helper to return test user
-        with patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
+        with patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
             mock_auth.return_value = user_id
             
             # Mock the facade factory to return our mock facade
@@ -421,7 +421,7 @@ class TestFrontendContextAPIPatterns:
         }
         
         # Mock authentication helper to return test user
-        with patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
+        with patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
             mock_auth.return_value = user_id
             
             # Mock the facade factory to return our mock facade

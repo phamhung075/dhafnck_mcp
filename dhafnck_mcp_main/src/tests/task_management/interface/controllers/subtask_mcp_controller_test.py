@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import Mock, patch
 from typing import Dict, Any, Optional
 
-from fastmcp.task_management.interface.controllers.subtask_mcp_controller import SubtaskMCPController
+from fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller import SubtaskMCPController
 from fastmcp.task_management.domain.exceptions.authentication_exceptions import (
     UserAuthenticationRequiredError, DefaultUserProhibitedError
 )
@@ -41,7 +41,7 @@ class TestSubtaskMCPController:
         
         assert controller._subtask_facade_factory == mock_subtask_facade_factory
 
-    @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller.get_current_user_id')
     def test_manage_subtask_create_success(self, mock_get_user, controller, mock_subtask_facade_factory):
         """Test successful subtask creation"""
         mock_get_user.return_value = "test-user"
@@ -57,7 +57,7 @@ class TestSubtaskMCPController:
         assert result["subtask_id"] == "subtask-123"
         mock_facade.create_subtask.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller.get_current_user_id')
     def test_manage_subtask_update_success(self, mock_get_user, controller, mock_subtask_facade_factory):
         """Test successful subtask update"""
         mock_get_user.return_value = "test-user"
@@ -74,7 +74,7 @@ class TestSubtaskMCPController:
         assert result["updated"] is True
         mock_facade.update_subtask.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller.get_current_user_id')
     def test_manage_subtask_delete_success(self, mock_get_user, controller, mock_subtask_facade_factory):
         """Test successful subtask deletion"""
         mock_get_user.return_value = "test-user"
@@ -90,7 +90,7 @@ class TestSubtaskMCPController:
         assert result["deleted"] is True
         mock_facade.delete_subtask.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller.get_current_user_id')
     def test_manage_subtask_get_success(self, mock_get_user, controller, mock_subtask_facade_factory):
         """Test successful subtask retrieval"""
         mock_get_user.return_value = "test-user"
@@ -106,7 +106,7 @@ class TestSubtaskMCPController:
         assert "subtask" in result
         mock_facade.get_subtask.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller.get_current_user_id')
     def test_manage_subtask_list_success(self, mock_get_user, controller, mock_subtask_facade_factory):
         """Test successful subtask listing"""
         mock_get_user.return_value = "test-user"
@@ -121,7 +121,7 @@ class TestSubtaskMCPController:
         assert "subtasks" in result
         mock_facade.list_subtasks.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller.get_current_user_id')
     def test_manage_subtask_complete_success(self, mock_get_user, controller, mock_subtask_facade_factory):
         """Test successful subtask completion"""
         mock_get_user.return_value = "test-user"
@@ -138,7 +138,7 @@ class TestSubtaskMCPController:
         assert result["completed"] is True
         mock_facade.complete_subtask.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller.get_current_user_id')
     def test_manage_subtask_invalid_action(self, mock_get_user, controller):
         """Test handling of invalid action"""
         mock_get_user.return_value = "test-user"
@@ -156,7 +156,7 @@ class TestSubtaskMCPController:
         for action in expected_actions:
             assert action in result["available_actions"]
 
-    @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller.get_current_user_id')
     def test_manage_subtask_authentication_required_error(self, mock_get_user, controller):
         """Test handling of authentication required error"""
         mock_get_user.side_effect = UserAuthenticationRequiredError("Authentication required")
@@ -171,7 +171,7 @@ class TestSubtaskMCPController:
         assert "Authentication required" in result["error"]
         assert result["error_code"] == "AUTHENTICATION_REQUIRED"
 
-    @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller.get_current_user_id')
     def test_manage_subtask_default_user_prohibited_error(self, mock_get_user, controller):
         """Test handling of default user prohibited error"""
         mock_get_user.return_value = "test-user"
@@ -188,7 +188,7 @@ class TestSubtaskMCPController:
         assert "Default user not allowed" in result["error"]
         assert result["error_code"] == "DEFAULT_USER_PROHIBITED"
 
-    @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller.get_current_user_id')
     def test_manage_subtask_general_exception(self, mock_get_user, controller):
         """Test handling of general exceptions"""
         mock_get_user.return_value = "test-user"
@@ -210,7 +210,7 @@ class TestSubtaskMCPController:
         assert hasattr(controller, 'register_tools')
         assert callable(controller.register_tools)
 
-    @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.description_loader')
+    @patch('fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller.description_loader')
     def test_register_tools_calls_description_loader(self, mock_desc_loader, controller):
         """Test that register_tools calls the description loader"""
         mock_mcp = Mock()
@@ -222,7 +222,7 @@ class TestSubtaskMCPController:
         
         mock_desc_loader.get_subtask_management_descriptions.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller.get_current_user_id')
     def test_user_id_parameter_handling(self, mock_get_user, controller, mock_subtask_facade_factory):
         """Test that user_id parameter is handled correctly"""
         mock_get_user.return_value = "test-user"
@@ -238,7 +238,7 @@ class TestSubtaskMCPController:
             user_id="test-user"
         )
 
-    @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller.get_current_user_id')
     def test_workflow_guidance_integration(self, mock_get_user, controller):
         """Test that workflow guidance is integrated"""
         mock_get_user.return_value = "test-user"
@@ -253,7 +253,7 @@ class TestSubtaskMCPController:
         # Workflow guidance should be included in responses
         assert "workflow_guidance" in result or result["success"] is True
 
-    @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller.get_current_user_id')
     def test_parameter_validation_create_action(self, mock_get_user, controller):
         """Test parameter validation for create action"""
         mock_get_user.return_value = "test-user"
@@ -268,7 +268,7 @@ class TestSubtaskMCPController:
         
         assert result["success"] is True
 
-    @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller.get_current_user_id')
     def test_parameter_validation_update_action(self, mock_get_user, controller):
         """Test parameter validation for update action"""
         mock_get_user.return_value = "test-user"
@@ -283,7 +283,7 @@ class TestSubtaskMCPController:
         
         assert result["success"] is True
 
-    @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller.get_current_user_id')
     def test_parameter_validation_complete_action(self, mock_get_user, controller):
         """Test parameter validation for complete action"""
         mock_get_user.return_value = "test-user"
@@ -298,7 +298,7 @@ class TestSubtaskMCPController:
         
         assert result["success"] is True
 
-    @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller.get_current_user_id')
     def test_optional_parameters_handling(self, mock_get_user, controller, mock_subtask_facade_factory):
         """Test handling of optional parameters"""
         mock_get_user.return_value = "test-user"
@@ -321,7 +321,7 @@ class TestSubtaskMCPController:
         mock_facade = mock_subtask_facade_factory.create_subtask_facade.return_value
         mock_facade.create_subtask.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller.get_current_user_id')
     def test_list_parameters_conversion(self, mock_get_user, controller):
         """Test conversion of list parameters"""
         mock_get_user.return_value = "test-user"
@@ -336,17 +336,17 @@ class TestSubtaskMCPController:
         
         assert result["success"] is True
 
-    @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.logger')
+    @patch('fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller.logger')
     def test_logging_functionality(self, mock_logger, controller):
         """Test that logging is available and functional"""
         # Logger should be available for operations
         assert mock_logger is not None
         
         # Test that we can log (logger is imported at module level)
-        from fastmcp.task_management.interface.controllers.subtask_mcp_controller import logger
+        from fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller import logger
         assert logger is not None
 
-    @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller.get_current_user_id')
     def test_facade_creation_and_delegation(self, mock_get_user, controller, mock_subtask_facade_factory):
         """Test that facade is properly created and operations are delegated"""
         mock_get_user.return_value = "test-user"
@@ -366,7 +366,7 @@ class TestSubtaskMCPController:
         # Verify operation delegation
         mock_facade.list_subtasks.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller.get_current_user_id')
     def test_progress_tracking_parameters(self, mock_get_user, controller):
         """Test progress tracking related parameters"""
         mock_get_user.return_value = "test-user"
@@ -383,7 +383,7 @@ class TestSubtaskMCPController:
         
         assert result["success"] is True
 
-    @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller.get_current_user_id')
     def test_completion_parameters(self, mock_get_user, controller):
         """Test completion action with all parameters"""
         mock_get_user.return_value = "test-user"
@@ -410,7 +410,7 @@ class TestSubtaskMCPController:
         controller = SubtaskMCPController(factory)
         assert controller is not None
 
-    @patch('fastmcp.task_management.interface.controllers.subtask_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller.get_current_user_id')
     def test_empty_string_parameters(self, mock_get_user, controller):
         """Test handling of empty string parameters"""
         mock_get_user.return_value = "test-user"

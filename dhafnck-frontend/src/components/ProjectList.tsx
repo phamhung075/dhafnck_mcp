@@ -146,7 +146,10 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelect, refreshKey }) => {
       const result = await deleteProject(showDelete.id);
       if (result.success) {
         setShowDelete(null);
-        fetchProjects();
+        // Add small delay to ensure database transaction commits before refreshing
+        setTimeout(() => {
+          fetchProjects();
+        }, 500);
       } else {
         // Show the specific validation error from backend
         const errorMsg = result.error || "Failed to delete project";

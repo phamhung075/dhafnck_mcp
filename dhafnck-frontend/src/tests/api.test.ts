@@ -1,59 +1,62 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as api from '../api';
 import * as apiV2 from '../services/apiV2';
 import Cookies from 'js-cookie';
 import { mcpTokenService } from '../services/mcpTokenService';
 
 // Mock services/mcpTokenService
-jest.mock('../services/mcpTokenService', () => ({
+vi.mock('../services/mcpTokenService', () => ({
   mcpTokenService: {
-    getMCPToken: jest.fn()
+    getMCPToken: vi.fn()
   }
 }));
 
 // Mock services/apiV2
-jest.mock('../services/apiV2', () => ({
+vi.mock('../services/apiV2', () => ({
   taskApiV2: {
-    getTasks: jest.fn(),
-    createTask: jest.fn(),
-    updateTask: jest.fn(),
-    deleteTask: jest.fn(),
-    completeTask: jest.fn()
+    getTasks: vi.fn(),
+    createTask: vi.fn(),
+    updateTask: vi.fn(),
+    deleteTask: vi.fn(),
+    completeTask: vi.fn()
   },
   projectApiV2: {
-    getProjects: jest.fn(),
-    createProject: jest.fn(),
-    updateProject: jest.fn(),
-    deleteProject: jest.fn()
+    getProjects: vi.fn(),
+    createProject: vi.fn(),
+    updateProject: vi.fn(),
+    deleteProject: vi.fn()
   },
   agentApiV2: {
-    getAgents: jest.fn(),
-    createAgent: jest.fn(),
-    updateAgent: jest.fn(),
-    deleteAgent: jest.fn()
+    getAgents: vi.fn(),
+    createAgent: vi.fn(),
+    updateAgent: vi.fn(),
+    deleteAgent: vi.fn()
   },
-  isAuthenticated: jest.fn()
+  isAuthenticated: vi.fn()
 }));
 
 // Mock js-cookie
-jest.mock('js-cookie', () => ({
-  get: jest.fn(),
-  set: jest.fn(),
-  remove: jest.fn()
+vi.mock('js-cookie', () => ({
+  default: {
+    get: vi.fn(),
+    set: vi.fn(),
+    remove: vi.fn()
+  }
 }));
 
 // Mock fetch globally
-global.fetch = jest.fn();
+global.fetch = vi.fn();
 
 describe('api.ts', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     (global.fetch as any).mockReset();
     (apiV2.isAuthenticated as any).mockReturnValue(false);
     (mcpTokenService.getMCPToken as any).mockRejectedValue(new Error('No token'));
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Task Management', () => {
@@ -92,7 +95,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.listTasks();
@@ -121,7 +124,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.listTasks();
@@ -141,7 +144,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.listTasks();
@@ -171,7 +174,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.listTasks();
@@ -228,7 +231,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.createTask(newTask);
@@ -276,7 +279,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         await expect(api.updateTask(taskId, updates)).rejects.toThrow('Task not found');
@@ -293,7 +296,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.updateTask(taskId, updates);
@@ -326,7 +329,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.deleteTask(taskId);
@@ -345,7 +348,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.deleteTask(taskId);
@@ -391,7 +394,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.completeTask(taskId, completionSummary);
@@ -427,7 +430,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.searchTasks(query);
@@ -458,7 +461,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         await api.searchTasks(query, branchId, limit);
@@ -496,7 +499,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.listSubtasks(taskId);
@@ -523,7 +526,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.listSubtasks(taskId);
@@ -556,7 +559,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.listSubtasks(taskId);
@@ -593,7 +596,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.updateSubtask(taskId, subtaskId, updates);
@@ -620,7 +623,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.updateSubtask(taskId, subtaskId, updates);
@@ -647,7 +650,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.updateSubtask(taskId, subtaskId, updates);
@@ -672,7 +675,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         await expect(api.updateSubtask(taskId, subtaskId, updates))
@@ -704,7 +707,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.completeSubtask(
@@ -739,7 +742,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.completeSubtask(taskId, subtaskId, completionSummary);
@@ -763,7 +766,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.addDependency(taskId, dependencyId);
@@ -789,7 +792,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.removeDependency(taskId, dependencyId);
@@ -821,7 +824,7 @@ describe('api.ts', () => {
         }
       };
       (global.fetch as any).mockResolvedValue({
-        json: jest.fn().mockResolvedValue(mockResponse)
+        json: vi.fn().mockResolvedValue(mockResponse)
       });
 
       await api.listTasks();
@@ -844,7 +847,7 @@ describe('api.ts', () => {
         }
       };
       (global.fetch as any).mockResolvedValue({
-        json: jest.fn().mockResolvedValue(mockResponse)
+        json: vi.fn().mockResolvedValue(mockResponse)
       });
 
       await api.listTasks();
@@ -870,7 +873,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.getGlobalContext();
@@ -906,7 +909,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.getTaskContext(taskId);
@@ -935,7 +938,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.getTaskContext(taskId);
@@ -959,7 +962,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.addTaskInsight(taskId, content, category, importance);
@@ -986,7 +989,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         await api.addTaskInsight(taskId, content);
@@ -1011,7 +1014,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.addTaskProgress(taskId, content);
@@ -1044,7 +1047,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.updateGlobalContext(contextData);
@@ -1076,7 +1079,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         await expect(api.updateGlobalContext(contextData))
@@ -1122,7 +1125,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.listProjects();
@@ -1153,7 +1156,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.createProject(newProject);
@@ -1180,7 +1183,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.createProject(newProject);
@@ -1210,7 +1213,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.updateProject(projectId, updates);
@@ -1241,7 +1244,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.deleteProject(projectId);
@@ -1265,7 +1268,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.deleteProject(projectId);
@@ -1286,7 +1289,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.deleteProject(projectId);
@@ -1294,6 +1297,180 @@ describe('api.ts', () => {
         expect(result).toEqual({
           success: false,
           error: 'Failed to parse response'
+        });
+      });
+    });
+
+    describe('Project V2 API Operations', () => {
+      const newProject = {
+        name: 'New V2 Project',
+        description: 'A project created via V2 API'
+      };
+
+      describe('createProject with V2 API', () => {
+        it('should create project via V2 API when authenticated', async () => {
+          (apiV2.isAuthenticated as any).mockReturnValue(true);
+          const mockCreatedProject = { id: 'proj-v2-123', ...newProject, git_branchs: {} };
+          (apiV2.projectApiV2.createProject as any).mockResolvedValue(mockCreatedProject);
+
+          const result = await api.createProject(newProject);
+
+          expect(apiV2.projectApiV2.createProject).toHaveBeenCalledWith({
+            name: newProject.name,
+            description: newProject.description
+          });
+          expect(result).toEqual(mockCreatedProject);
+          expect(global.fetch).not.toHaveBeenCalled();
+        });
+
+        it('should fallback to V1 API when V2 create fails', async () => {
+          (apiV2.isAuthenticated as any).mockReturnValue(true);
+          (apiV2.projectApiV2.createProject as any).mockRejectedValue(new Error('V2 API error'));
+          
+          const mockResponse = {
+            result: {
+              content: [{
+                text: JSON.stringify({
+                  success: true,
+                  data: {
+                    project: { id: 'proj-v1-123', ...newProject, git_branchs: {} }
+                  }
+                })
+              }]
+            }
+          };
+          (global.fetch as any).mockResolvedValue({
+            json: vi.fn().mockResolvedValue(mockResponse)
+          });
+
+          const result = await api.createProject(newProject);
+
+          expect(apiV2.projectApiV2.createProject).toHaveBeenCalled();
+          expect(global.fetch).toHaveBeenCalled();
+          expect(result).toMatchObject(newProject);
+        });
+      });
+
+      describe('updateProject with V2 API', () => {
+        const projectId = 'proj-123';
+        const updates = {
+          name: 'Updated V2 Project Name',
+          description: 'Updated via V2 API'
+        };
+
+        it('should update project via V2 API when authenticated', async () => {
+          (apiV2.isAuthenticated as any).mockReturnValue(true);
+          const mockUpdatedProject = { id: projectId, ...updates };
+          (apiV2.projectApiV2.updateProject as any).mockResolvedValue(mockUpdatedProject);
+
+          const result = await api.updateProject(projectId, updates);
+
+          expect(apiV2.projectApiV2.updateProject).toHaveBeenCalledWith(projectId, {
+            name: updates.name,
+            description: updates.description,
+            status: undefined
+          });
+          expect(result).toEqual(mockUpdatedProject);
+          expect(global.fetch).not.toHaveBeenCalled();
+        });
+
+        it('should fallback to V1 API when V2 update fails', async () => {
+          (apiV2.isAuthenticated as any).mockReturnValue(true);
+          (apiV2.projectApiV2.updateProject as any).mockRejectedValue(new Error('V2 API error'));
+          
+          const mockResponse = {
+            result: {
+              content: [{
+                text: JSON.stringify({
+                  success: true,
+                  data: {
+                    project: { id: projectId, ...updates }
+                  }
+                })
+              }]
+            }
+          };
+          (global.fetch as any).mockResolvedValue({
+            json: vi.fn().mockResolvedValue(mockResponse)
+          });
+
+          const result = await api.updateProject(projectId, updates);
+
+          expect(apiV2.projectApiV2.updateProject).toHaveBeenCalled();
+          expect(global.fetch).toHaveBeenCalled();
+          expect(result).toMatchObject({ id: projectId, ...updates });
+        });
+      });
+
+      describe('deleteProject with V2 API', () => {
+        const projectId = 'proj-123';
+
+        it('should delete project via V2 API when authenticated', async () => {
+          (apiV2.isAuthenticated as any).mockReturnValue(true);
+          (apiV2.projectApiV2.deleteProject as any).mockResolvedValue(undefined);
+
+          const result = await api.deleteProject(projectId);
+
+          expect(apiV2.projectApiV2.deleteProject).toHaveBeenCalledWith(projectId);
+          expect(result).toEqual({ success: true, message: undefined, error: undefined });
+          expect(global.fetch).not.toHaveBeenCalled();
+        });
+
+        it('should fallback to V1 API when V2 delete fails', async () => {
+          (apiV2.isAuthenticated as any).mockReturnValue(true);
+          (apiV2.projectApiV2.deleteProject as any).mockRejectedValue(new Error('V2 API error'));
+          
+          const mockResponse = {
+            result: {
+              content: [{
+                text: JSON.stringify({
+                  success: true,
+                  message: 'Project deleted via V1'
+                })
+              }]
+            }
+          };
+          (global.fetch as any).mockResolvedValue({
+            json: vi.fn().mockResolvedValue(mockResponse)
+          });
+
+          const result = await api.deleteProject(projectId);
+
+          expect(apiV2.projectApiV2.deleteProject).toHaveBeenCalled();
+          expect(global.fetch).toHaveBeenCalled();
+          expect(result).toEqual({
+            success: true,
+            message: 'Project deleted via V1',
+            error: undefined
+          });
+        });
+
+        it('should handle V2 API error correctly', async () => {
+          (apiV2.isAuthenticated as any).mockReturnValue(true);
+          (apiV2.projectApiV2.deleteProject as any).mockRejectedValue(new Error('Project has dependencies'));
+
+          // Mock V1 API fallback to fail as well
+          const mockResponse = {
+            result: {
+              content: [{
+                text: JSON.stringify({
+                  success: false,
+                  error: 'V1 also failed'
+                })
+              }]
+            }
+          };
+          (global.fetch as any).mockResolvedValue({
+            json: vi.fn().mockResolvedValue(mockResponse)
+          });
+
+          const result = await api.deleteProject(projectId);
+
+          expect(result).toEqual({
+            success: false,
+            message: undefined,
+            error: 'V1 also failed'
+          });
         });
       });
     });
@@ -1323,7 +1500,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.listGitBranches(projectId);
@@ -1348,7 +1525,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.listGitBranches(projectId);
@@ -1376,7 +1553,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.createBranch(projectId, 'Feature Auth', description);
@@ -1403,7 +1580,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.deleteBranch(projectId, branchId);
@@ -1420,7 +1597,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.deleteBranch(projectId, branchId);
@@ -1434,6 +1611,118 @@ describe('api.ts', () => {
         const result = await api.deleteBranch(projectId, branchId);
 
         expect(result).toBe(false);
+      });
+    });
+
+    describe('updateBranch', () => {
+      const branchId = 'branch-123';
+      const updates = {
+        name: 'Updated Branch Name',
+        description: 'Updated branch description'
+      };
+
+      it('should update branch successfully', async () => {
+        const mockResponse = {
+          result: {
+            content: [{
+              text: JSON.stringify({
+                success: true,
+                data: {
+                  git_branch: {
+                    id: branchId,
+                    ...updates
+                  }
+                }
+              })
+            }]
+          }
+        };
+        (global.fetch as any).mockResolvedValue({
+          json: vi.fn().mockResolvedValue(mockResponse)
+        });
+
+        const result = await api.updateBranch(projectId, branchId, updates);
+
+        expect(result).toMatchObject({ id: branchId, ...updates });
+        const fetchCall = (global.fetch as any).mock.calls[0];
+        const body = JSON.parse(fetchCall[1].body);
+        expect(body.params.arguments).toMatchObject({
+          action: 'update',
+          project_id: projectId,
+          git_branch_id: branchId,
+          ...updates
+        });
+      });
+
+      it('should handle update failure', async () => {
+        const mockResponse = {
+          result: {
+            content: [{
+              text: JSON.stringify({
+                success: false,
+                error: 'Branch not found'
+              })
+            }]
+          }
+        };
+        (global.fetch as any).mockResolvedValue({
+          json: vi.fn().mockResolvedValue(mockResponse)
+        });
+
+        const result = await api.updateBranch(projectId, branchId, updates);
+
+        expect(result).toBeNull();
+      });
+
+      it('should handle response with git_branch in root', async () => {
+        const mockResponse = {
+          result: {
+            content: [{
+              text: JSON.stringify({
+                success: true,
+                git_branch: {
+                  id: branchId,
+                  name: updates.name,
+                  description: updates.description
+                }
+              })
+            }]
+          }
+        };
+        (global.fetch as any).mockResolvedValue({
+          json: vi.fn().mockResolvedValue(mockResponse)
+        });
+
+        const result = await api.updateBranch(projectId, branchId, updates);
+
+        expect(result).toMatchObject({
+          id: branchId,
+          name: updates.name,
+          description: updates.description
+        });
+      });
+
+      it('should handle network error', async () => {
+        (global.fetch as any).mockRejectedValue(new Error('Network error'));
+
+        const result = await api.updateBranch(projectId, branchId, updates);
+
+        expect(result).toBeNull();
+      });
+
+      it('should handle empty response', async () => {
+        const mockResponse = {
+          result: {
+            content: []
+          }
+        };
+        (global.fetch as any).mockResolvedValue({
+          json: vi.fn().mockResolvedValue(mockResponse)
+        });
+
+        const result = await api.updateBranch(projectId, branchId, updates);
+
+        expect(result).toBeNull();
       });
     });
   });
@@ -1457,7 +1746,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.listAgents(projectId);
@@ -1480,7 +1769,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.listAgents(projectId);
@@ -1504,7 +1793,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.callAgent(agentName);
@@ -1524,7 +1813,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.callAgent(agentName);
@@ -1542,7 +1831,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.callAgent(agentName);
@@ -1585,7 +1874,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.listRules();
@@ -1604,7 +1893,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.listRules();
@@ -1630,7 +1919,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.validateRule(ruleId);
@@ -1650,7 +1939,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.validateRule(ruleId);
@@ -1682,7 +1971,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const count = await api.getTaskCount(branchId);
@@ -1702,7 +1991,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const count = await api.getTaskCount(branchId);
@@ -1771,7 +2060,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         await expect(api.updateTask('123', { title: 'Test' }))
@@ -1790,7 +2079,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         await expect(api.updateTask('123', { title: 'Test' }))
@@ -1804,7 +2093,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         await expect(api.updateTask('123', { title: 'Test' }))
@@ -1825,7 +2114,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         await expect(api.updateSubtask('task-123', 'sub-123', { title: 'Test' }))
@@ -1843,7 +2132,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         await expect(api.updateSubtask('task-123', 'sub-123', { title: 'Test' }))
@@ -1874,7 +2163,7 @@ describe('api.ts', () => {
         }
       };
       (global.fetch as any).mockResolvedValue({
-        json: jest.fn().mockResolvedValue(mockResponse)
+        json: vi.fn().mockResolvedValue(mockResponse)
       });
 
       const result = await api.listTasks();
@@ -1901,7 +2190,7 @@ describe('api.ts', () => {
         }
       };
       (global.fetch as any).mockResolvedValue({
-        json: jest.fn().mockResolvedValue(mockResponse)
+        json: vi.fn().mockResolvedValue(mockResponse)
       });
 
       const result = await api.listTasks();
@@ -1928,7 +2217,7 @@ describe('api.ts', () => {
         }
       };
       (global.fetch as any).mockResolvedValue({
-        json: jest.fn().mockResolvedValue(mockResponse)
+        json: vi.fn().mockResolvedValue(mockResponse)
       });
 
       const result = await api.listTasks();
@@ -1955,7 +2244,7 @@ describe('api.ts', () => {
         }
       };
       (global.fetch as any).mockResolvedValue({
-        json: jest.fn().mockResolvedValue(mockResponse)
+        json: vi.fn().mockResolvedValue(mockResponse)
       });
 
       const result = await api.listTasks();
@@ -1982,7 +2271,7 @@ describe('api.ts', () => {
         }
       };
       (global.fetch as any).mockResolvedValue({
-        json: jest.fn().mockResolvedValue(mockResponse)
+        json: vi.fn().mockResolvedValue(mockResponse)
       });
 
       const result = await api.listTasks();
@@ -2014,7 +2303,7 @@ describe('api.ts', () => {
         }
       };
       (global.fetch as any).mockResolvedValue({
-        json: jest.fn().mockResolvedValue(mockResponse)
+        json: vi.fn().mockResolvedValue(mockResponse)
       });
 
       const result = await api.listTasks();
@@ -2041,7 +2330,7 @@ describe('api.ts', () => {
         }
       };
       (global.fetch as any).mockResolvedValue({
-        json: jest.fn().mockResolvedValue(mockResponse)
+        json: vi.fn().mockResolvedValue(mockResponse)
       });
 
       const result = await api.listTasks();
@@ -2075,7 +2364,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         await api.createBranch(projectId, branchName, 'Test');
@@ -2100,7 +2389,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.createBranch('proj-123', 'Feature Test');
@@ -2122,7 +2411,7 @@ describe('api.ts', () => {
           }
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.deleteBranch('proj-123', 'branch-123');
@@ -2135,7 +2424,7 @@ describe('api.ts', () => {
           result: {}
         };
         (global.fetch as any).mockResolvedValue({
-          json: jest.fn().mockResolvedValue(mockResponse)
+          json: vi.fn().mockResolvedValue(mockResponse)
         });
 
         const result = await api.deleteBranch('proj-123', 'branch-123');
@@ -2161,7 +2450,7 @@ describe('api.ts', () => {
         }
       };
       (global.fetch as any).mockResolvedValue({
-        json: jest.fn().mockResolvedValue(mockResponse)
+        json: vi.fn().mockResolvedValue(mockResponse)
       });
 
       await api.fetchTasks(projectId, branchName);
@@ -2188,7 +2477,7 @@ describe('api.ts', () => {
         }
       };
       (global.fetch as any).mockResolvedValue({
-        json: jest.fn().mockResolvedValue(mockResponse)
+        json: vi.fn().mockResolvedValue(mockResponse)
       });
 
       const result = await api.fetchSubtasks(projectId, branchName, taskId);
@@ -2214,7 +2503,7 @@ describe('api.ts', () => {
         }
       };
       (global.fetch as any).mockResolvedValue({
-        json: jest.fn().mockResolvedValue(mockResponse)
+        json: vi.fn().mockResolvedValue(mockResponse)
       });
 
       const result = await api.listContexts('task', filters);

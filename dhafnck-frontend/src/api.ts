@@ -1271,98 +1271,162 @@ export async function getProject(project_id: string): Promise<Project | null> {
 }
 
 export async function createProject(project: Partial<Project>): Promise<Project | null> {
-  const body = {
-    jsonrpc: "2.0",
-    method: "tools/call",
-    params: {
-      name: "manage_project",
-      arguments: { action: "create", ...project }
-    },
-    id: getRpcId(),
-  };
-  const res = await fetch(`${API_BASE}`, {
-    method: "POST",
-    headers: await withMcpHeaders(),
-    body: JSON.stringify(body),
-  });
-  const data = await res.json();
-  if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
-    try {
-      const toolResult = JSON.parse(data.result.content[0].text);
-      if (toolResult.success) {
-        const responseData = extractResponseData(toolResult);
-        if (responseData.project) {
-          return responseData.project;
-        } else if (toolResult.project) {
-          return toolResult.project;
-        }
+  try {
+    // Try V2 API first if authenticated
+    if (isAuthenticated()) {
+      try {
+        console.log('Using V2 API to create project:', project);
+        const result = await projectApiV2.createProject({
+          name: project.name!,
+          description: project.description
+        });
+        console.log('V2 API create project result:', result);
+        return result;
+      } catch (v2Error) {
+        console.error('V2 API error, falling back to V1:', v2Error);
+        // Continue to V1 fallback
       }
-    } catch {}
+    }
+
+    // Fallback to V1 MCP API
+    const body = {
+      jsonrpc: "2.0",
+      method: "tools/call",
+      params: {
+        name: "manage_project",
+        arguments: { action: "create", ...project }
+      },
+      id: getRpcId(),
+    };
+    const res = await fetch(`${API_BASE}`, {
+      method: "POST",
+      headers: await withMcpHeaders(),
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
+      try {
+        const toolResult = JSON.parse(data.result.content[0].text);
+        if (toolResult.success) {
+          const responseData = extractResponseData(toolResult);
+          if (responseData.project) {
+            return responseData.project;
+          } else if (toolResult.project) {
+            return toolResult.project;
+          }
+        }
+      } catch {}
+    }
+    return null;
+  } catch (error) {
+    console.error('Error creating project:', error);
+    return null;
   }
-  return null;
 }
 
 export async function updateProject(project_id: string, updates: Partial<Project>): Promise<Project | null> {
-  const body = {
-    jsonrpc: "2.0",
-    method: "tools/call",
-    params: {
-      name: "manage_project",
-      arguments: { action: "update", project_id, ...updates }
-    },
-    id: getRpcId(),
-  };
-  const res = await fetch(`${API_BASE}`, {
-    method: "POST",
-    headers: await withMcpHeaders(),
-    body: JSON.stringify(body),
-  });
-  const data = await res.json();
-  if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
-    try {
-      const toolResult = JSON.parse(data.result.content[0].text);
-      if (toolResult.success) {
-        const responseData = extractResponseData(toolResult);
-        if (responseData.project) {
-          return responseData.project;
-        } else if (toolResult.project) {
-          return toolResult.project;
-        }
+  try {
+    // Try V2 API first if authenticated
+    if (isAuthenticated()) {
+      try {
+        console.log('Using V2 API to update project:', project_id, updates);
+        const result = await projectApiV2.updateProject(project_id, {
+          name: updates.name,
+          description: updates.description,
+          status: updates.status
+        });
+        console.log('V2 API update project result:', result);
+        return result;
+      } catch (v2Error) {
+        console.error('V2 API error, falling back to V1:', v2Error);
+        // Continue to V1 fallback
       }
-    } catch {}
+    }
+
+    // Fallback to V1 MCP API
+    const body = {
+      jsonrpc: "2.0",
+      method: "tools/call",
+      params: {
+        name: "manage_project",
+        arguments: { action: "update", project_id, ...updates }
+      },
+      id: getRpcId(),
+    };
+    const res = await fetch(`${API_BASE}`, {
+      method: "POST",
+      headers: await withMcpHeaders(),
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
+      try {
+        const toolResult = JSON.parse(data.result.content[0].text);
+        if (toolResult.success) {
+          const responseData = extractResponseData(toolResult);
+          if (responseData.project) {
+            return responseData.project;
+          } else if (toolResult.project) {
+            return toolResult.project;
+          }
+        }
+      } catch {}
+    }
+    return null;
+  } catch (error) {
+    console.error('Error updating project:', error);
+    return null;
   }
-  return null;
 }
 
 export async function deleteProject(project_id: string): Promise<{ success: boolean; message?: string; error?: string }> {
-  const body = {
-    jsonrpc: "2.0",
-    method: "tools/call",
-    params: {
-      name: "manage_project",
-      arguments: { action: "delete", project_id }
-    },
-    id: getRpcId(),
-  };
-  const res = await fetch(`${API_BASE}`, {
-    method: "POST",
-    headers: await withMcpHeaders(),
-    body: JSON.stringify(body),
-  });
-  const data = await res.json();
-  if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
-    try {
-      const toolResult = JSON.parse(data.result.content[0].text);
-      return {
-        success: toolResult.success || false,
-        message: toolResult.message,
-        error: toolResult.error
-      };
-    } catch (e) {
-      return { success: false, error: "Failed to parse response" };
+  try {
+    // Try V2 API first if authenticated
+    if (isAuthenticated()) {
+      try {
+        console.log('Using V2 API to delete project:', project_id);
+        await projectApiV2.deleteProject(project_id);
+        console.log('V2 API delete project successful');
+        return { success: true, message: undefined, error: undefined };
+      } catch (v2Error) {
+        console.error('V2 API error, falling back to V1:', v2Error);
+        // Continue to V1 fallback
+      }
     }
+
+    // Fallback to V1 MCP API
+    const body = {
+      jsonrpc: "2.0",
+      method: "tools/call",
+      params: {
+        name: "manage_project",
+        arguments: { action: "delete", project_id }
+      },
+      id: getRpcId(),
+    };
+    const res = await fetch(`${API_BASE}`, {
+      method: "POST",
+      headers: await withMcpHeaders(),
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
+      try {
+        const toolResult = JSON.parse(data.result.content[0].text);
+        return {
+          success: toolResult.success || false,
+          message: toolResult.message,
+          error: toolResult.error
+        };
+      } catch (e) {
+        return { success: false, error: "Failed to parse response" };
+      }
+    }
+    return { success: false, error: "No response from server" };
+  } catch (error) {
+    console.error('Error deleting project:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
-  return { success: false, error: "No response from server" };
 }
 
 // --- Branch (Task Tree) Management ---
@@ -1466,10 +1530,51 @@ export async function createBranch(projectId: string, branchName: string, descri
     return null;
 }
 
-// NOTE: No update/delete branch API is documented. If MCP adds support, implement here.
-export async function updateBranch(/* project_id: string, branch_id: string, updates: Partial<Branch> */): Promise<null> {
-  // Not supported by MCP as of now
-  return null;
+export async function updateBranch(project_id: string, branch_id: string, updates: Partial<Branch>): Promise<Branch | null> {
+  try {
+    const body = {
+      jsonrpc: "2.0",
+      method: "tools/call",
+      params: {
+        name: "manage_git_branch",
+        arguments: {
+          action: "update",
+          project_id,
+          git_branch_id: branch_id,
+          ...updates
+        }
+      },
+      id: getRpcId(),
+    };
+    console.log('Sending update branch request:', body);
+    const res = await fetch(`${API_BASE}`, {
+      method: "POST",
+      headers: await withMcpHeaders(),
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    console.log('Update branch response:', data);
+    
+    if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content.length > 0) {
+      try {
+        const toolResult = JSON.parse(data.result.content[0].text);
+        if (toolResult.success) {
+          const responseData = extractResponseData(toolResult);
+          if (responseData.git_branch) {
+            return responseData.git_branch;
+          } else if (toolResult.git_branch) {
+            return toolResult.git_branch;
+          }
+        }
+      } catch (e) {
+        console.error('Error parsing update branch response:', e);
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error('Error updating branch:', error);
+    return null;
+  }
 }
 
 export async function deleteBranch(project_id: string, branch_id: string): Promise<boolean> {

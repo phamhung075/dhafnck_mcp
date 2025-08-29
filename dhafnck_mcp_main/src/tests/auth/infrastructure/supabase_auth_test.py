@@ -80,12 +80,29 @@ class TestSupabaseAuthService:
 
     @pytest.mark.asyncio
     async def test_init_with_missing_credentials(self, monkeypatch):
-        """Test initialization fails with missing credentials"""
+        """Test initialization with missing credentials creates service without client"""
         monkeypatch.delenv("SUPABASE_URL", raising=False)
         
-        with pytest.raises(ValueError, match="Missing Supabase credentials"):
-            SupabaseAuthService()
+        # Service should initialize but with warning and no client
+        service = SupabaseAuthService()
+        assert service.client is None
+        assert service.admin_client is None
 
+    @pytest.mark.asyncio
+    async def test_sign_up_no_supabase_available(self, auth_service):
+        """Test sign up when Supabase is not available"""
+        auth_service.client = None
+        
+        result = await auth_service.sign_up(
+            email="test@example.com",
+            password="password123"
+        )
+        
+        assert result.success is False
+        assert result.error_message == "Supabase authentication not available"
+        assert result.user is None
+        assert result.session is None
+    
     @pytest.mark.asyncio
     async def test_sign_up_success(self, auth_service):
         """Test successful user sign up"""
@@ -135,6 +152,22 @@ class TestSupabaseAuthService:
         assert result.success is True
         assert result.requires_email_verification is False
         assert result.error_message is None
+    
+    @pytest.mark.asyncio
+    async def test_sign_up_no_user_returned(self, auth_service):
+        """Test sign up when no user is returned"""
+        auth_service.client.auth.sign_up.return_value = MockAuthResponse(
+            user=None,
+            session=None
+        )
+        
+        result = await auth_service.sign_up(
+            email="test@example.com",
+            password="password123"
+        )
+        
+        assert result.success is False
+        assert result.error_message == "Failed to create user account"
 
     @pytest.mark.asyncio
     async def test_sign_up_user_already_exists(self, auth_service):
@@ -161,6 +194,21 @@ class TestSupabaseAuthService:
         
         assert result.success is False
         assert result.error_message == "Password must be at least 6 characters"
+
+    @pytest.mark.asyncio
+    async def test_sign_in_no_supabase_available(self, auth_service):
+        """Test sign in when Supabase is not available"""
+        auth_service.client = None
+        
+        result = await auth_service.sign_in(
+            email="test@example.com",
+            password="password123"
+        )
+        
+        assert result.success is False
+        assert result.error_message == "Supabase authentication not available"
+        assert result.user is None
+        assert result.session is None
 
     @pytest.mark.asyncio
     async def test_sign_in_success(self, auth_service):
@@ -200,6 +248,23 @@ class TestSupabaseAuthService:
         assert result.requires_email_verification is True
         assert result.error_message == "Please verify your email before signing in"
 
+    @pytest.mark.asyncio
+    async def test_sign_in_no_session(self, auth_service):
+        """Test sign in with user but no session"""
+        mock_user = MockUser()
+        auth_service.client.auth.sign_in_with_password.return_value = MockAuthResponse(
+            user=mock_user,
+            session=None
+        )
+        
+        result = await auth_service.sign_in(
+            email="test@example.com",
+            password="password123"
+        )
+        
+        assert result.success is False
+        assert result.error_message == "Invalid email or password"
+    
     @pytest.mark.asyncio
     async def test_sign_in_invalid_credentials(self, auth_service):
         """Test sign in with invalid credentials"""
@@ -298,7 +363,7 @@ class TestSupabaseAuthService:
     async def test_verify_token_success_without_admin_client(self, auth_service):
         """Test token verification without admin client"""
         # Remove admin client
-        auth_service.admin_client = None
+        delattr(auth_service, 'admin_client')
         
         mock_user = MockUser()
         auth_service.client.auth.get_user.return_value = MockAuthResponse(user=mock_user)
@@ -390,6 +455,20 @@ class TestSupabaseAuthService:
                 "redirect_to": "http://localhost:3800/auth/callback"
             }
         })
+
+    @pytest.mark.asyncio
+    async def test_sign_in_unconfirmed_email_exception(self, auth_service):
+        """Test sign in with email not confirmed exception"""
+        auth_service.client.auth.sign_in_with_password.side_effect = Exception("Email not confirmed")
+        
+        result = await auth_service.sign_in(
+            email="test@example.com",
+            password="password123"
+        )
+        
+        assert result.success is False
+        assert result.requires_email_verification is True
+        assert result.error_message == "Please verify your email before signing in"
 
     @pytest.mark.asyncio
     async def test_sign_in_with_provider_failure(self, auth_service):

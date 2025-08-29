@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock
 from typing import Dict, Any, Optional, Union
 
-from fastmcp.connection_management.interface.controllers.connection_mcp_controller import ConnectionMCPController
+from fastmcp.connection_management.interface.mcp_controllers.connection_mcp_controller import ConnectionMCPController
 from fastmcp.connection_management.application.dtos.connection_dtos import (
     HealthCheckResponse, ServerCapabilitiesResponse, ConnectionHealthResponse,
     ServerStatusResponse, RegisterUpdatesResponse
@@ -290,14 +290,14 @@ class TestConnectionMCPController:
         assert formatted["registered"] is True
         assert formatted["update_info"]["interval"] == "30s"
 
-    @patch('fastmcp.connection_management.interface.controllers.connection_mcp_controller.logger')
+    @patch('fastmcp.connection_management.interface.mcp_controllers.connection_mcp_controller.logger')
     def test_initialization_logging(self, mock_logger, mock_connection_facade):
         """Test that controller initialization is logged"""
         ConnectionMCPController(mock_connection_facade)
         
         mock_logger.info.assert_called_with("ConnectionMCPController initialized")
 
-    @patch('fastmcp.connection_management.interface.controllers.connection_mcp_controller.logger')
+    @patch('fastmcp.connection_management.interface.mcp_controllers.connection_mcp_controller.logger')
     def test_error_logging(self, mock_logger, controller, mock_connection_facade):
         """Test that errors are logged"""
         mock_connection_facade.check_server_health.side_effect = Exception("Test error")
@@ -311,7 +311,7 @@ class TestConnectionMCPController:
         assert hasattr(controller, 'register_tools')
         assert callable(controller.register_tools)
 
-    @patch('fastmcp.connection_management.interface.controllers.connection_mcp_controller.connection_description_loader')
+    @patch('fastmcp.connection_management.interface.mcp_controllers.connection_mcp_controller.connection_description_loader')
     def test_register_tools_calls_description_loader(self, mock_desc_loader, controller):
         """Test that register_tools calls the description loader"""
         mock_mcp = Mock()

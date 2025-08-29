@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import Mock, patch
 from typing import Dict, Any, Optional
 
-from fastmcp.task_management.interface.controllers.rule_orchestration_controller import RuleOrchestrationController
+from fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller import RuleOrchestrationController
 from fastmcp.task_management.domain.exceptions.authentication_exceptions import (
     UserAuthenticationRequiredError, DefaultUserProhibitedError
 )
@@ -40,7 +40,7 @@ class TestRuleOrchestrationController:
         
         assert controller._rule_facade_factory == mock_rule_facade_factory
 
-    @patch('fastmcp.task_management.interface.controllers.rule_orchestration_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller.get_current_user_id')
     def test_manage_rule_list_success(self, mock_get_user, controller, mock_rule_facade_factory):
         """Test successful rule listing"""
         mock_get_user.return_value = "test-user"
@@ -52,7 +52,7 @@ class TestRuleOrchestrationController:
         assert result["success"] is True
         mock_facade.execute_action.assert_called_once_with("list", "", "", "test-user")
 
-    @patch('fastmcp.task_management.interface.controllers.rule_orchestration_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller.get_current_user_id')
     def test_manage_rule_backup_success(self, mock_get_user, controller, mock_rule_facade_factory):
         """Test successful rule backup"""
         mock_get_user.return_value = "test-user"
@@ -64,7 +64,7 @@ class TestRuleOrchestrationController:
         assert result["success"] is True
         mock_facade.execute_action.assert_called_once_with("backup", "rules_backup", "", "test-user")
 
-    @patch('fastmcp.task_management.interface.controllers.rule_orchestration_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller.get_current_user_id')
     def test_manage_rule_restore_success(self, mock_get_user, controller, mock_rule_facade_factory):
         """Test successful rule restoration"""
         mock_get_user.return_value = "test-user"
@@ -76,7 +76,7 @@ class TestRuleOrchestrationController:
         assert result["success"] is True
         mock_facade.execute_action.assert_called_once_with("restore", "backup.json", "", "test-user")
 
-    @patch('fastmcp.task_management.interface.controllers.rule_orchestration_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller.get_current_user_id')
     def test_manage_rule_clean_success(self, mock_get_user, controller, mock_rule_facade_factory):
         """Test successful rule cleanup"""
         mock_get_user.return_value = "test-user"
@@ -88,7 +88,7 @@ class TestRuleOrchestrationController:
         assert result["success"] is True
         mock_facade.execute_action.assert_called_once_with("clean", "", "", "test-user")
 
-    @patch('fastmcp.task_management.interface.controllers.rule_orchestration_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller.get_current_user_id')
     def test_manage_rule_info_success(self, mock_get_user, controller, mock_rule_facade_factory):
         """Test successful rule info retrieval"""
         mock_get_user.return_value = "test-user"
@@ -100,7 +100,7 @@ class TestRuleOrchestrationController:
         assert result["success"] is True
         mock_facade.execute_action.assert_called_once_with("info", "", "", "test-user")
 
-    @patch('fastmcp.task_management.interface.controllers.rule_orchestration_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller.get_current_user_id')
     def test_manage_rule_enhanced_info_success(self, mock_get_user, controller, mock_rule_facade_factory):
         """Test successful enhanced rule info retrieval"""
         mock_get_user.return_value = "test-user"
@@ -112,7 +112,7 @@ class TestRuleOrchestrationController:
         assert result["success"] is True
         mock_facade.execute_action.assert_called_once_with("enhanced_info", "", "", "test-user")
 
-    @patch('fastmcp.task_management.interface.controllers.rule_orchestration_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller.get_current_user_id')
     def test_manage_rule_compose_nested_rules_success(self, mock_get_user, controller, mock_rule_facade_factory):
         """Test successful nested rule composition"""
         mock_get_user.return_value = "test-user"
@@ -124,7 +124,7 @@ class TestRuleOrchestrationController:
         assert result["success"] is True
         mock_facade.execute_action.assert_called_once_with("compose_nested_rules", "auth_rules", "", "test-user")
 
-    @patch('fastmcp.task_management.interface.controllers.rule_orchestration_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller.get_current_user_id')
     def test_manage_rule_register_client_success(self, mock_get_user, controller, mock_rule_facade_factory):
         """Test successful client registration"""
         mock_get_user.return_value = "test-user"
@@ -136,7 +136,7 @@ class TestRuleOrchestrationController:
         assert result["success"] is True
         mock_facade.execute_action.assert_called_once_with("register_client", "client-name", '{"type": "test"}', "test-user")
 
-    @patch('fastmcp.task_management.interface.controllers.rule_orchestration_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller.get_current_user_id')
     def test_manage_rule_sync_client_success(self, mock_get_user, controller, mock_rule_facade_factory):
         """Test successful client synchronization"""
         mock_get_user.return_value = "test-user"
@@ -148,7 +148,7 @@ class TestRuleOrchestrationController:
         assert result["success"] is True
         mock_facade.execute_action.assert_called_once_with("sync_client", "client-123", "push", "test-user")
 
-    @patch('fastmcp.task_management.interface.controllers.rule_orchestration_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller.get_current_user_id')
     def test_manage_rule_client_analytics_success(self, mock_get_user, controller, mock_rule_facade_factory):
         """Test successful client analytics retrieval"""
         mock_get_user.return_value = "test-user"
@@ -160,7 +160,7 @@ class TestRuleOrchestrationController:
         assert result["success"] is True
         mock_facade.execute_action.assert_called_once_with("client_analytics", "client-123", "", "test-user")
 
-    @patch('fastmcp.task_management.interface.controllers.rule_orchestration_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller.get_current_user_id')
     def test_manage_rule_cache_status_success(self, mock_get_user, controller, mock_rule_facade_factory):
         """Test successful cache status retrieval"""
         mock_get_user.return_value = "test-user"
@@ -172,7 +172,7 @@ class TestRuleOrchestrationController:
         assert result["success"] is True
         mock_facade.execute_action.assert_called_once_with("cache_status", "", "", "test-user")
 
-    @patch('fastmcp.task_management.interface.controllers.rule_orchestration_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller.get_current_user_id')
     def test_manage_rule_authentication_required_error(self, mock_get_user, controller):
         """Test handling of authentication required error"""
         mock_get_user.side_effect = UserAuthenticationRequiredError("Authentication required")
@@ -183,7 +183,7 @@ class TestRuleOrchestrationController:
         assert "Authentication required" in result["error"]
         assert result["error_code"] == "AUTHENTICATION_REQUIRED"
 
-    @patch('fastmcp.task_management.interface.controllers.rule_orchestration_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller.get_current_user_id')
     def test_manage_rule_default_user_prohibited_error(self, mock_get_user, controller):
         """Test handling of default user prohibited error"""
         mock_get_user.return_value = "test-user"
@@ -196,7 +196,7 @@ class TestRuleOrchestrationController:
         assert "Default user not allowed" in result["error"]
         assert result["error_code"] == "DEFAULT_USER_PROHIBITED"
 
-    @patch('fastmcp.task_management.interface.controllers.rule_orchestration_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller.get_current_user_id')
     def test_manage_rule_general_exception(self, mock_get_user, controller):
         """Test handling of general exceptions"""
         mock_get_user.return_value = "test-user"
@@ -214,7 +214,7 @@ class TestRuleOrchestrationController:
         assert hasattr(controller, 'register_tools')
         assert callable(controller.register_tools)
 
-    @patch('fastmcp.task_management.interface.controllers.rule_orchestration_controller.description_loader')
+    @patch('fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller.description_loader')
     def test_register_tools_calls_description_loader(self, mock_desc_loader, controller):
         """Test that register_tools calls the description loader"""
         mock_mcp = Mock()
@@ -226,7 +226,7 @@ class TestRuleOrchestrationController:
         
         mock_desc_loader.get_rule_orchestration_descriptions.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.rule_orchestration_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller.get_current_user_id')
     def test_user_id_parameter_handling(self, mock_get_user, controller, mock_rule_facade_factory):
         """Test that user_id parameter is handled correctly"""
         mock_get_user.return_value = "test-user"
@@ -238,7 +238,7 @@ class TestRuleOrchestrationController:
             user_id="test-user"
         )
 
-    @patch('fastmcp.task_management.interface.controllers.rule_orchestration_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller.get_current_user_id')
     def test_workflow_guidance_integration(self, mock_get_user, controller):
         """Test that workflow guidance is integrated"""
         mock_get_user.return_value = "test-user"
@@ -249,7 +249,7 @@ class TestRuleOrchestrationController:
         # Workflow guidance should be included in responses
         assert "workflow_guidance" in result or result["success"] is True
 
-    @patch('fastmcp.task_management.interface.controllers.rule_orchestration_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller.get_current_user_id')
     def test_parameter_handling_all_optional(self, mock_get_user, controller, mock_rule_facade_factory):
         """Test parameter handling when all are optional"""
         mock_get_user.return_value = "test-user"
@@ -263,7 +263,7 @@ class TestRuleOrchestrationController:
         mock_facade = mock_rule_facade_factory.create_rule_orchestration_facade.return_value
         mock_facade.execute_action.assert_called_once_with("list", "", "", "test-user")
 
-    @patch('fastmcp.task_management.interface.controllers.rule_orchestration_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller.get_current_user_id')
     def test_parameter_handling_with_target_and_content(self, mock_get_user, controller, mock_rule_facade_factory):
         """Test parameter handling with target and content"""
         mock_get_user.return_value = "test-user"
@@ -278,17 +278,17 @@ class TestRuleOrchestrationController:
         mock_facade = mock_rule_facade_factory.create_rule_orchestration_facade.return_value
         mock_facade.execute_action.assert_called_once_with("parse_rule", target, content, "test-user")
 
-    @patch('fastmcp.task_management.interface.controllers.rule_orchestration_controller.logger')
+    @patch('fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller.logger')
     def test_logging_functionality(self, mock_logger, controller):
         """Test that logging is available and functional"""
         # Logger should be available for operations
         assert mock_logger is not None
         
         # Test that we can log (logger is imported at module level)
-        from fastmcp.task_management.interface.controllers.rule_orchestration_controller import logger
+        from fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller import logger
         assert logger is not None
 
-    @patch('fastmcp.task_management.interface.controllers.rule_orchestration_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller.get_current_user_id')
     def test_facade_creation_and_delegation(self, mock_get_user, controller, mock_rule_facade_factory):
         """Test that facade is properly created and operations are delegated"""
         mock_get_user.return_value = "test-user"
@@ -305,7 +305,7 @@ class TestRuleOrchestrationController:
         # Verify operation delegation
         mock_facade.execute_action.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.rule_orchestration_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller.get_current_user_id')
     def test_all_rule_actions_supported(self, mock_get_user, controller):
         """Test that all rule orchestration actions are supported"""
         mock_get_user.return_value = "test-user"
@@ -325,7 +325,7 @@ class TestRuleOrchestrationController:
             # All should succeed (mocked facade returns success)
             assert result["success"] is True
 
-    @patch('fastmcp.task_management.interface.controllers.rule_orchestration_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller.get_current_user_id')
     def test_empty_parameters_handling(self, mock_get_user, controller):
         """Test handling of empty string parameters"""
         mock_get_user.return_value = "test-user"
@@ -338,7 +338,7 @@ class TestRuleOrchestrationController:
         
         assert result["success"] is True
 
-    @patch('fastmcp.task_management.interface.controllers.rule_orchestration_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller.get_current_user_id')
     def test_none_parameters_handling(self, mock_get_user, controller):
         """Test handling of None parameters"""
         mock_get_user.return_value = "test-user"

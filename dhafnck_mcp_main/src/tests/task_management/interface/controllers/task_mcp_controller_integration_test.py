@@ -12,7 +12,7 @@ import pytest
 import uuid
 from unittest.mock import Mock, patch, MagicMock
 
-from fastmcp.task_management.interface.controllers.task_mcp_controller import TaskMCPController
+from fastmcp.task_management.interface.mcp_controllers.task_mcp_controller import TaskMCPController
 from fastmcp.task_management.infrastructure.factories.task_facade_factory import TaskFacadeFactory
 from fastmcp.task_management.application.facades.task_application_facade import TaskApplicationFacade
 from fastmcp.task_management.domain.exceptions.authentication_exceptions import (
@@ -139,7 +139,7 @@ class TestTaskMCPControllerIntegration:
             result = controller._parse_string_list(input_val)
             assert result == expected, f"Failed for input {input_val}"
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_authenticated_user_id')
     def test_authentication_flow_integration(self, mock_get_auth_user_id, controller, mock_task_facade_factory):
         """Test complete authentication flow integration."""
         factory, mock_facade = mock_task_facade_factory
@@ -156,7 +156,7 @@ class TestTaskMCPControllerIntegration:
             mock_result.fetchone.return_value = ("test-project-id", "feature/test")
             mock_session.execute.return_value = mock_result
             
-            with patch('fastmcp.task_management.interface.controllers.task_mcp_controller.validate_user_id') as mock_validate:
+            with patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.validate_user_id') as mock_validate:
                 mock_validate.return_value = "test-user-123"
                 
                 facade = controller._get_facade_for_request(git_branch_id)
@@ -164,7 +164,7 @@ class TestTaskMCPControllerIntegration:
                 assert facade == mock_facade
                 mock_validate.assert_called_once_with("test-user-123", "Task facade creation")
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_authenticated_user_id')
     def test_authentication_error_scenarios(self, mock_get_auth_user_id, controller):
         """Test various authentication error scenarios."""
         git_branch_id = "550e8400-e29b-41d4-a716-446655440000"
@@ -179,7 +179,7 @@ class TestTaskMCPControllerIntegration:
         mock_get_auth_user_id.side_effect = None
         mock_get_auth_user_id.return_value = "default_user"
         
-        with patch('fastmcp.task_management.interface.controllers.task_mcp_controller.validate_user_id') as mock_validate:
+        with patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.validate_user_id') as mock_validate:
             mock_validate.side_effect = DefaultUserProhibitedError("Default user not allowed")
             with pytest.raises(DefaultUserProhibitedError):
                 controller._get_facade_for_request(git_branch_id)
@@ -266,7 +266,7 @@ class TestTaskMCPControllerIntegration:
             assert result["success"] is True
             assert result["action"] == "create"
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_manage_task_workflow_integration(self, mock_get_user_id, controller, mock_task_facade_factory):
         """Test complete manage_task workflow integration."""
         factory, mock_facade = mock_task_facade_factory
@@ -307,7 +307,7 @@ class TestTaskMCPControllerIntegration:
             # Test that enforcement is checked
             with patch.object(controller, '_get_facade_for_request') as mock_get_facade, \
                  patch.object(controller, 'handle_crud_operations') as mock_crud, \
-                 patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id') as mock_user:
+                 patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id') as mock_user:
                 
                 mock_facade = Mock()
                 mock_get_facade.return_value = mock_facade
@@ -359,7 +359,7 @@ class TestTaskMCPControllerIntegration:
     def test_workflow_hints_integration(self, controller):
         """Test workflow hints functionality."""
         with patch.object(controller, '_get_facade_for_request') as mock_get_facade, \
-             patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id') as mock_user:
+             patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id') as mock_user:
             
             mock_facade = Mock()
             mock_facade.get_workflow_hints.return_value = {
@@ -382,7 +382,7 @@ class TestTaskMCPControllerIntegration:
     def test_progress_reporting_integration(self, controller):
         """Test progress reporting functionality."""
         with patch.object(controller, '_get_facade_for_request') as mock_get_facade, \
-             patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id') as mock_user:
+             patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id') as mock_user:
             
             mock_facade = Mock()
             mock_facade.report_progress.return_value = {
@@ -407,7 +407,7 @@ class TestTaskMCPControllerIntegration:
     def test_vision_alignment_integration(self, controller):
         """Test vision alignment functionality.""" 
         with patch.object(controller, '_get_facade_for_request') as mock_get_facade, \
-             patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id') as mock_user:
+             patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id') as mock_user:
             
             mock_facade = Mock()
             mock_facade.get_vision_alignment.return_value = {
@@ -432,7 +432,7 @@ class TestTaskMCPControllerIntegration:
         """Test complete task with context functionality."""
         with patch.object(controller, '_get_facade_for_request') as mock_get_facade, \
              patch.object(controller._context_facade_factory, 'create') as mock_create_context, \
-             patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id') as mock_user:
+             patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id') as mock_user:
             
             mock_facade = Mock()
             mock_context_facade = Mock()

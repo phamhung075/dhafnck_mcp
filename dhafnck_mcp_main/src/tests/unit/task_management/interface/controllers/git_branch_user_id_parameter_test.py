@@ -8,7 +8,7 @@ import pytest
 from unittest.mock import Mock, patch
 from typing import Dict, Any
 
-from fastmcp.task_management.interface.controllers.git_branch_mcp_controller import GitBranchMCPController
+from fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller import GitBranchMCPController
 from fastmcp.task_management.infrastructure.factories.git_branch_facade_factory import GitBranchFacadeFactory
 from fastmcp.task_management.application.facades.git_branch_application_facade import GitBranchApplicationFacade
 
@@ -23,7 +23,7 @@ class TestGitBranchUserIdParameter:
         self.mock_facade_factory.create_git_branch_facade.return_value = self.mock_facade
         
         # Mock workflow guidance
-        with patch('fastmcp.task_management.interface.controllers.git_branch_mcp_controller.GitBranchWorkflowFactory'):
+        with patch('fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller.GitBranchWorkflowFactory'):
             self.controller = GitBranchMCPController(self.mock_facade_factory)
     
     def test_manage_git_branch_accepts_user_id_parameter(self):

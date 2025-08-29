@@ -10,9 +10,9 @@ import pytest
 import uuid
 from datetime import datetime, timezone
 
-from fastmcp.task_management.interface.controllers.task_mcp_controller import TaskMCPController
-from fastmcp.task_management.interface.controllers.project_mcp_controller import ProjectMCPController
-from fastmcp.task_management.interface.controllers.git_branch_mcp_controller import GitBranchMCPController
+from fastmcp.task_management.interface.mcp_controllers.task_mcp_controller import TaskMCPController
+from fastmcp.task_management.interface.mcp_controllers.project_mcp_controller import ProjectMCPController
+from fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller import GitBranchMCPController
 from fastmcp.task_management.infrastructure.factories.task_facade_factory import TaskFacadeFactory
 from fastmcp.task_management.infrastructure.factories.project_facade_factory import ProjectFacadeFactory
 from fastmcp.task_management.infrastructure.factories.git_branch_facade_factory import GitBranchFacadeFactory

@@ -16,8 +16,8 @@ from fastmcp.task_management.infrastructure.database.models import (
     Project, ProjectGitBranch, Task as TaskModel, Agent as AgentModel,
     GlobalContext as GlobalContextModel
 )
-from fastmcp.task_management.interface.controllers.task_mcp_controller import TaskMCPController
-from fastmcp.task_management.interface.controllers.git_branch_mcp_controller import GitBranchMCPController
+from fastmcp.task_management.interface.mcp_controllers.task_mcp_controller import TaskMCPController
+from fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller import GitBranchMCPController
 from fastmcp.task_management.infrastructure.factories.task_facade_factory import TaskFacadeFactory
 from fastmcp.task_management.infrastructure.factories.git_branch_facade_factory import GitBranchFacadeFactory
 

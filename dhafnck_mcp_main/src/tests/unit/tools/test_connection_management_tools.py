@@ -13,7 +13,7 @@ import unittest
 pytestmark = pytest.mark.unit  # Mark all tests in this file as unit tests
 
 # Mocking missing modules since they don't exist in the current codebase
-# from fastmcp.task_management.interface.controllers.connection_mcp_controller import ConnectionMCPController
+# from fastmcp.task_management.interface.mcp_controllers.connection_mcp_controller import ConnectionMCPController
 # from fastmcp.task_management.application.facades.connection_application_facade import ConnectionApplicationFacade
 
 # Create mock classes instead

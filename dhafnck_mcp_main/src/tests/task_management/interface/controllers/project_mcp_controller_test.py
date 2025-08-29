@@ -6,7 +6,7 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock, AsyncMock
 from typing import Dict, Any, Optional
 
-from fastmcp.task_management.interface.controllers.project_mcp_controller import ProjectMCPController
+from fastmcp.task_management.interface.mcp_controllers.project_mcp_controller import ProjectMCPController
 from fastmcp.task_management.domain.exceptions.authentication_exceptions import (
     UserAuthenticationRequiredError,
     DefaultUserProhibitedError
@@ -43,8 +43,8 @@ class TestProjectMCPController:
         
         assert controller._project_facade_factory == mock_project_facade_factory
 
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id')
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.validate_user_id')
     def test_manage_project_create_success(self, mock_validate_user, mock_get_user, controller, mock_project_facade_factory):
         """Test successful project creation."""
         mock_get_user.return_value = "test-user"
@@ -66,8 +66,8 @@ class TestProjectMCPController:
         assert "project" in result
         mock_facade.manage_project.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id')
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.validate_user_id')
     def test_manage_project_get_success(self, mock_validate_user, mock_get_user, controller, mock_project_facade_factory):
         """Test successful project retrieval."""
         mock_get_user.return_value = "test-user"
@@ -95,8 +95,8 @@ class TestProjectMCPController:
         assert "project_context" in result
         mock_facade.manage_project.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id')
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.validate_user_id')
     def test_manage_project_list_success(self, mock_validate_user, mock_get_user, controller, mock_project_facade_factory):
         """Test successful project listing."""
         mock_get_user.return_value = "test-user"
@@ -117,8 +117,8 @@ class TestProjectMCPController:
         assert "projects" in result
         mock_facade.manage_project.assert_called_once_with(action="list")
 
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id')
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.validate_user_id')
     def test_manage_project_update_success(self, mock_validate_user, mock_get_user, controller, mock_project_facade_factory):
         """Test successful project update."""
         mock_get_user.return_value = "test-user"
@@ -145,8 +145,8 @@ class TestProjectMCPController:
             description="Updated Description"
         )
 
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id')
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.validate_user_id')
     def test_manage_project_delete_success(self, mock_validate_user, mock_get_user, controller, mock_project_facade_factory):
         """Test successful project deletion."""
         mock_get_user.return_value = "test-user"
@@ -171,8 +171,8 @@ class TestProjectMCPController:
             force=True
         )
 
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id')
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.validate_user_id')
     def test_manage_project_maintenance_operations(self, mock_validate_user, mock_get_user, controller, mock_project_facade_factory):
         """Test maintenance operations."""
         mock_get_user.return_value = "test-user"
@@ -197,7 +197,7 @@ class TestProjectMCPController:
             user_id="test-user"
         )
 
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.get_current_user_id')
     def test_manage_project_no_authentication(self, mock_get_user, controller):
         """Test project management without authentication."""
         mock_get_user.return_value = None
@@ -210,7 +210,7 @@ class TestProjectMCPController:
         assert result["success"] is False
         assert "authentication" in result["error"].lower()
 
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.get_current_user_id')
     def test_manage_project_authentication_required_error(self, mock_get_user, controller):
         """Test handling of authentication required error."""
         mock_get_user.side_effect = UserAuthenticationRequiredError("Authentication required")
@@ -223,8 +223,8 @@ class TestProjectMCPController:
         assert result["success"] is False
         assert "authentication" in result["error"].lower()
 
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id')
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.validate_user_id')
     def test_manage_project_invalid_action(self, mock_validate_user, mock_get_user, controller):
         """Test handling of invalid action."""
         mock_get_user.return_value = "test-user"
@@ -242,8 +242,8 @@ class TestProjectMCPController:
 
     def test_manage_project_create_missing_name(self, controller):
         """Test create project without name."""
-        with patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id') as mock_get_user, \
-             patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id') as mock_validate:
+        with patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.get_current_user_id') as mock_get_user, \
+             patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.validate_user_id') as mock_validate:
             mock_get_user.return_value = "test-user"
             mock_validate.return_value = "test-user"
             
@@ -255,8 +255,8 @@ class TestProjectMCPController:
 
     def test_manage_project_get_missing_identifier(self, controller):
         """Test get project without project_id or name."""
-        with patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id') as mock_get_user, \
-             patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id') as mock_validate:
+        with patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.get_current_user_id') as mock_get_user, \
+             patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.validate_user_id') as mock_validate:
             mock_get_user.return_value = "test-user"
             mock_validate.return_value = "test-user"
             
@@ -268,8 +268,8 @@ class TestProjectMCPController:
 
     def test_manage_project_update_missing_project_id(self, controller):
         """Test update project without project_id."""
-        with patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id') as mock_get_user, \
-             patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id') as mock_validate:
+        with patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.get_current_user_id') as mock_get_user, \
+             patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.validate_user_id') as mock_validate:
             mock_get_user.return_value = "test-user"
             mock_validate.return_value = "test-user"
             
@@ -280,8 +280,8 @@ class TestProjectMCPController:
 
     def test_manage_project_delete_missing_project_id(self, controller):
         """Test delete project without project_id."""
-        with patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id') as mock_get_user, \
-             patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id') as mock_validate:
+        with patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.get_current_user_id') as mock_get_user, \
+             patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.validate_user_id') as mock_validate:
             mock_get_user.return_value = "test-user"
             mock_validate.return_value = "test-user"
             
@@ -292,8 +292,8 @@ class TestProjectMCPController:
 
     def test_manage_project_maintenance_missing_project_id(self, controller):
         """Test maintenance operation without project_id."""
-        with patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id') as mock_get_user, \
-             patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id') as mock_validate:
+        with patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.get_current_user_id') as mock_get_user, \
+             patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.validate_user_id') as mock_validate:
             mock_get_user.return_value = "test-user"
             mock_validate.return_value = "test-user"
             
@@ -310,8 +310,8 @@ class TestUserContextHandling:
     def controller(self, mock_project_facade_factory):
         return ProjectMCPController(mock_project_facade_factory)
 
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id')
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.validate_user_id')
     def test_user_id_string_context(self, mock_validate_user, mock_get_user, controller, mock_project_facade_factory):
         """Test user ID extraction when context returns string."""
         mock_get_user.return_value = "user123"
@@ -322,8 +322,8 @@ class TestUserContextHandling:
         assert result["success"] is True
         mock_project_facade_factory.create_project_facade.assert_called_once_with(user_id="user123")
 
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id')
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.validate_user_id')
     def test_user_id_object_context(self, mock_validate_user, mock_get_user, controller, mock_project_facade_factory):
         """Test user ID extraction when context returns object with user_id attribute."""
         mock_user_context = Mock()
@@ -336,8 +336,8 @@ class TestUserContextHandling:
         assert result["success"] is True
         mock_project_facade_factory.create_project_facade.assert_called_once_with(user_id="user456")
 
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id')
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.validate_user_id')
     def test_user_id_fallback_conversion(self, mock_validate_user, mock_get_user, controller, mock_project_facade_factory):
         """Test user ID fallback string conversion."""
         mock_get_user.return_value = 12345  # Non-string, no user_id attribute
@@ -348,7 +348,7 @@ class TestUserContextHandling:
         assert result["success"] is True
         mock_project_facade_factory.create_project_facade.assert_called_once_with(user_id="12345")
 
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.get_current_user_id')
     def test_user_id_extraction_failure(self, mock_get_user, controller):
         """Test failure in user ID extraction."""
         mock_get_user.return_value = ""  # Empty string
@@ -358,7 +358,7 @@ class TestUserContextHandling:
 
     def test_provided_user_id_parameter(self, controller, mock_project_facade_factory):
         """Test when user_id is provided as parameter."""
-        with patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id') as mock_validate:
+        with patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.validate_user_id') as mock_validate:
             mock_validate.return_value = "provided_user"
             
             result = controller.manage_project(
@@ -377,8 +377,8 @@ class TestFacadeIntegration:
     def controller(self, mock_project_facade_factory):
         return ProjectMCPController(mock_project_facade_factory)
 
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id')
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.validate_user_id')
     def test_facade_creation_and_delegation(self, mock_validate_user, mock_get_user, controller, mock_project_facade_factory):
         """Test that facade is properly created and operations are delegated."""
         mock_get_user.return_value = "test-user"
@@ -397,8 +397,8 @@ class TestFacadeIntegration:
         # Verify operation delegation
         mock_facade.manage_project.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id')
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.validate_user_id')
     def test_facade_exception_handling(self, mock_validate_user, mock_get_user, controller, mock_project_facade_factory):
         """Test handling of facade exceptions."""
         mock_get_user.return_value = "test-user"
@@ -418,8 +418,8 @@ class TestFacadeIntegration:
 
     def test_get_facade_for_request(self, controller, mock_project_facade_factory):
         """Test _get_facade_for_request method."""
-        with patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_authenticated_user_id') as mock_get_auth_user, \
-             patch('fastmcp.task_management.interface.controllers.project_mcp_controller.log_authentication_details') as mock_log_auth:
+        with patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.get_authenticated_user_id') as mock_get_auth_user, \
+             patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.log_authentication_details') as mock_log_auth:
             
             mock_get_auth_user.return_value = "authenticated_user"
             
@@ -445,7 +445,7 @@ class TestContextInclusion:
             "project": {"id": "project-123", "name": "Test Project"}
         }
         
-        with patch('fastmcp.task_management.interface.controllers.project_mcp_controller.UnifiedContextFacadeFactory') as mock_factory:
+        with patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.UnifiedContextFacadeFactory') as mock_factory:
             mock_context_facade = Mock()
             mock_context_facade.get_context.return_value = {
                 "success": True,
@@ -480,7 +480,7 @@ class TestContextInclusion:
             "project": {"id": "project-123", "name": "Test Project"}
         }
         
-        with patch('fastmcp.task_management.interface.controllers.project_mcp_controller.UnifiedContextFacadeFactory') as mock_factory:
+        with patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.UnifiedContextFacadeFactory') as mock_factory:
             mock_context_facade = Mock()
             mock_context_facade.get_context.return_value = {
                 "success": False,
@@ -502,7 +502,7 @@ class TestContextInclusion:
             "project": {"id": "project-123", "name": "Test Project"}
         }
         
-        with patch('fastmcp.task_management.interface.controllers.project_mcp_controller.UnifiedContextFacadeFactory') as mock_factory:
+        with patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.UnifiedContextFacadeFactory') as mock_factory:
             mock_factory.side_effect = Exception("Context service error")
             
             enhanced_result = controller._include_project_context(result)
@@ -523,7 +523,7 @@ class TestToolRegistration:
         assert hasattr(controller, 'register_tools')
         assert callable(controller.register_tools)
 
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.description_loader')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.description_loader')
     def test_register_tools_calls_description_loader(self, mock_desc_loader, controller):
         """Test that register_tools calls the description loader."""
         mock_mcp = Mock()
@@ -546,7 +546,7 @@ class TestToolRegistration:
 
     def test_get_project_management_descriptions(self, controller):
         """Test _get_project_management_descriptions method."""
-        with patch('fastmcp.task_management.interface.controllers.project_mcp_controller.description_loader') as mock_loader:
+        with patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.description_loader') as mock_loader:
             mock_loader.get_all_descriptions.return_value = {
                 "project_management": {
                     "manage_project": {
@@ -587,8 +587,8 @@ class TestAsyncOperationHandling:
         with pytest.raises(Exception, match="Async operation failed"):
             controller._run_async_with_context(mock_async_operation)
 
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id')
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.validate_user_id')
     def test_async_crud_operations(self, mock_validate_user, mock_get_user, controller, mock_project_facade_factory):
         """Test that CRUD operations properly handle async calls."""
         mock_get_user.return_value = "test-user"
@@ -648,8 +648,8 @@ class TestValidationAndErrorHandling:
 
     def test_user_validation_integration(self, controller):
         """Test integration with user validation."""
-        with patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id') as mock_get_user, \
-             patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id') as mock_validate:
+        with patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.get_current_user_id') as mock_get_user, \
+             patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.validate_user_id') as mock_validate:
             
             mock_get_user.return_value = "valid-user"
             mock_validate.return_value = "valid-user"
@@ -662,8 +662,8 @@ class TestValidationAndErrorHandling:
 
     def test_default_user_prohibited_error_handling(self, controller):
         """Test handling of DefaultUserProhibitedError."""
-        with patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id') as mock_get_user, \
-             patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id') as mock_validate:
+        with patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.get_current_user_id') as mock_get_user, \
+             patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.validate_user_id') as mock_validate:
             
             mock_get_user.return_value = "default"
             mock_validate.side_effect = DefaultUserProhibitedError("Default user not allowed")
@@ -675,8 +675,8 @@ class TestValidationAndErrorHandling:
 
     def test_general_exception_handling(self, controller, mock_project_facade_factory):
         """Test handling of general exceptions."""
-        with patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id') as mock_get_user, \
-             patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id') as mock_validate:
+        with patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.get_current_user_id') as mock_get_user, \
+             patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.validate_user_id') as mock_validate:
             
             mock_get_user.return_value = "test-user"
             mock_validate.return_value = "test-user"
@@ -707,7 +707,7 @@ class TestImportErrorHandling:
     def test_context_propagation_mixin_fallback(self):
         """Test fallback context propagation mixin."""
         # Test that the fallback ContextPropagationMixin works
-        from fastmcp.task_management.interface.controllers.project_mcp_controller import ContextPropagationMixin
+        from fastmcp.task_management.interface.mcp_controllers.project_mcp_controller import ContextPropagationMixin
         
         mixin = ContextPropagationMixin()
         
@@ -726,15 +726,15 @@ class TestLogingAndDebugging:
     def controller(self, mock_project_facade_factory):
         return ProjectMCPController(mock_project_facade_factory)
 
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.logger')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.logger')
     def test_logging_functionality(self, mock_logger, controller):
         """Test that logging is available and functional."""
         # Logger should be available for operations
         assert mock_logger is not None
 
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.logger')
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id')
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.logger')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.validate_user_id')
     def test_operation_logging(self, mock_validate_user, mock_get_user, mock_logger, controller, mock_project_facade_factory):
         """Test that operations are logged."""
         mock_get_user.return_value = "test-user"
@@ -745,13 +745,13 @@ class TestLogingAndDebugging:
         # Verify that info logging was called for the operation
         mock_logger.info.assert_called()
 
-    @patch('fastmcp.task_management.interface.controllers.project_mcp_controller.logger')
+    @patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.logger')
     def test_error_logging(self, mock_logger, controller, mock_project_facade_factory):
         """Test that errors are logged."""
         mock_project_facade_factory.create_project_facade.side_effect = Exception("Test error")
         
-        with patch('fastmcp.task_management.interface.controllers.project_mcp_controller.get_current_user_id') as mock_get_user, \
-             patch('fastmcp.task_management.interface.controllers.project_mcp_controller.validate_user_id') as mock_validate:
+        with patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.get_current_user_id') as mock_get_user, \
+             patch('fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.validate_user_id') as mock_validate:
             mock_get_user.return_value = "test-user"
             mock_validate.return_value = "test-user"
             

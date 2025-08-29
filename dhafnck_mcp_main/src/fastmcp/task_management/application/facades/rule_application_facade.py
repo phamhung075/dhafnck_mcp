@@ -95,7 +95,7 @@ class RuleApplicationFacade:
         if self._enhanced_orchestrator is not None:
             return self._enhanced_orchestrator
         # Lazy-load the controller (interface layer)
-        from ...interface.controllers.rule_orchestration_controller import RuleOrchestrationController
+        from ...interface.mcp_controllers.rule_orchestration_controller import RuleOrchestrationController
         controller = RuleOrchestrationController(self.orchestration_facade)
         # Some tests expect initialize() to be called
         if hasattr(controller, "initialize"):

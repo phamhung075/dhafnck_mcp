@@ -14,12 +14,9 @@ import logging
 import json
 from typing import Optional
 
-from fastmcp.task_management.application.facades.task_application_facade import TaskApplicationFacade
-from fastmcp.task_management.application.facades.unified_context_facade import UnifiedContextFacade
-from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
-from fastmcp.task_management.infrastructure.factories.task_facade_factory import TaskFacadeFactory
-from fastmcp.task_management.infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
-from fastmcp.task_management.infrastructure.repositories.subtask_repository_factory import SubtaskRepositoryFactory
+from fastmcp.task_management.interface.api_controllers.task_api_controller import TaskAPIController
+from fastmcp.task_management.interface.api_controllers.context_api_controller import ContextAPIController
+from fastmcp.task_management.interface.api_controllers.subtask_api_controller import SubtaskAPIController
 from fastmcp.auth.interface.fastapi_auth import get_db
 from fastmcp.auth.domain.entities.user import User
 
@@ -131,6 +128,11 @@ async def get_current_user_dual(
         return None
 
 router = APIRouter(prefix="/api", tags=["Task Summaries"])
+
+# Initialize API controllers
+task_controller = TaskAPIController()
+context_controller = ContextAPIController()
+subtask_controller = SubtaskAPIController()
 
 
 @router.post("/tasks/summaries")

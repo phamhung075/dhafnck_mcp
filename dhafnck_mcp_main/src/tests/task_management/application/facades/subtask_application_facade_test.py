@@ -410,7 +410,7 @@ class TestContextDerivation:
             assert context["git_branch_name"] == "main"
             assert context["user_id"] == "user_789"
     
-    @patch('fastmcp.task_management.interface.controllers.auth_helper.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.auth_helper.get_authenticated_user_id')
     def test_derive_context_fallback_with_auth(self, mock_get_auth_user, facade_with_factories):
         """Test context derivation fallback with authentication."""
         # Mock authentication
@@ -429,7 +429,7 @@ class TestContextDerivation:
         assert context["git_branch_name"] == "main"
         assert context["user_id"] == "auth_user_123"
     
-    @patch('fastmcp.task_management.interface.controllers.auth_helper.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.auth_helper.get_authenticated_user_id')
     def test_derive_context_auth_failure(self, mock_get_auth_user, facade_with_factories):
         """Test context derivation fails when authentication fails."""
         # Mock authentication failure
@@ -517,7 +517,7 @@ class TestErrorHandling:
             mock_connect.side_effect = sqlite3.Error("Database error")
             
             # Mock authentication for fallback
-            with patch('fastmcp.task_management.interface.controllers.auth_helper.get_authenticated_user_id') as mock_auth:
+            with patch('fastmcp.task_management.interface.mcp_controllers.auth_helper.get_authenticated_user_id') as mock_auth:
                 mock_auth.return_value = "fallback_user"
                 
                 # Should fall back to defaults

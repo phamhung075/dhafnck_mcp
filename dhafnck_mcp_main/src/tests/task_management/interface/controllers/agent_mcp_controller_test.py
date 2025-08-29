@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock, AsyncMock
 from typing import Dict, Any, Optional
 
-from fastmcp.task_management.interface.controllers.agent_mcp_controller import AgentMCPController
+from fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller import AgentMCPController
 from fastmcp.task_management.domain.exceptions.authentication_exceptions import (
     UserAuthenticationRequiredError, DefaultUserProhibitedError
 )
@@ -43,7 +43,7 @@ class TestAgentMCPController:
         
         assert controller._agent_facade_factory == mock_agent_facade_factory
 
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')
     def test_manage_agent_register_success(self, mock_get_user, controller, mock_agent_facade_factory):
         """Test successful agent registration"""
         mock_get_user.return_value = "test-user"
@@ -59,7 +59,7 @@ class TestAgentMCPController:
         assert result["agent_id"] == "agent-123"
         mock_facade.register_agent.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')
     def test_manage_agent_assign_success(self, mock_get_user, controller, mock_agent_facade_factory):
         """Test successful agent assignment"""
         mock_get_user.return_value = "test-user"
@@ -76,7 +76,7 @@ class TestAgentMCPController:
         assert result["assigned"] is True
         mock_facade.assign_agent.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')
     def test_manage_agent_get_success(self, mock_get_user, controller, mock_agent_facade_factory):
         """Test successful agent retrieval"""
         mock_get_user.return_value = "test-user"
@@ -92,7 +92,7 @@ class TestAgentMCPController:
         assert "agent" in result
         mock_facade.get_agent.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')
     def test_manage_agent_list_success(self, mock_get_user, controller, mock_agent_facade_factory):
         """Test successful agents listing"""
         mock_get_user.return_value = "test-user"
@@ -107,7 +107,7 @@ class TestAgentMCPController:
         assert "agents" in result
         mock_facade.list_agents.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')
     def test_manage_agent_update_success(self, mock_get_user, controller, mock_agent_facade_factory):
         """Test successful agent update"""
         mock_get_user.return_value = "test-user"
@@ -124,7 +124,7 @@ class TestAgentMCPController:
         assert result["updated"] is True
         mock_facade.update_agent.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')
     def test_manage_agent_unassign_success(self, mock_get_user, controller, mock_agent_facade_factory):
         """Test successful agent unassignment"""
         mock_get_user.return_value = "test-user"
@@ -141,7 +141,7 @@ class TestAgentMCPController:
         assert result["unassigned"] is True
         mock_facade.unassign_agent.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')
     def test_manage_agent_unregister_success(self, mock_get_user, controller, mock_agent_facade_factory):
         """Test successful agent unregistration"""
         mock_get_user.return_value = "test-user"
@@ -157,7 +157,7 @@ class TestAgentMCPController:
         assert result["unregistered"] is True
         mock_facade.unregister_agent.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')
     def test_manage_agent_rebalance_success(self, mock_get_user, controller, mock_agent_facade_factory):
         """Test successful agent rebalancing"""
         mock_get_user.return_value = "test-user"
@@ -172,7 +172,7 @@ class TestAgentMCPController:
         assert result["rebalanced"] is True
         mock_facade.rebalance_agents.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')
     def test_manage_agent_invalid_action(self, mock_get_user, controller):
         """Test handling of invalid action"""
         mock_get_user.return_value = "test-user"
@@ -186,7 +186,7 @@ class TestAgentMCPController:
         assert "Unknown action" in result["error"]
         assert "available_actions" in result
 
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')
     def test_manage_agent_authentication_required_error(self, mock_get_user, controller):
         """Test handling of authentication required error"""
         mock_get_user.side_effect = UserAuthenticationRequiredError("Authentication required")
@@ -201,7 +201,7 @@ class TestAgentMCPController:
         assert "Authentication required" in result["error"]
         assert result["error_code"] == "AUTHENTICATION_REQUIRED"
 
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')
     def test_manage_agent_default_user_prohibited_error(self, mock_get_user, controller):
         """Test handling of default user prohibited error"""
         mock_get_user.return_value = "test-user"
@@ -218,7 +218,7 @@ class TestAgentMCPController:
         assert "Default user not allowed" in result["error"]
         assert result["error_code"] == "DEFAULT_USER_PROHIBITED"
 
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')
     def test_manage_agent_general_exception(self, mock_get_user, controller):
         """Test handling of general exceptions"""
         mock_get_user.return_value = "test-user"
@@ -240,7 +240,7 @@ class TestAgentMCPController:
         assert hasattr(controller, 'register_tools')
         assert callable(controller.register_tools)
 
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.description_loader')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.description_loader')
     def test_register_tools_calls_description_loader(self, mock_desc_loader, controller):
         """Test that register_tools calls the description loader"""
         mock_mcp = Mock()
@@ -252,7 +252,7 @@ class TestAgentMCPController:
         
         mock_desc_loader.get_agent_management_descriptions.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')
     def test_user_id_parameter_handling(self, mock_get_user, controller, mock_agent_facade_factory):
         """Test that user_id parameter is handled correctly"""
         mock_get_user.return_value = "test-user"
@@ -269,7 +269,7 @@ class TestAgentMCPController:
             user_id="test-user"
         )
 
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')
     def test_workflow_guidance_integration(self, mock_get_user, controller):
         """Test that workflow guidance is integrated"""
         mock_get_user.return_value = "test-user"
@@ -284,17 +284,17 @@ class TestAgentMCPController:
         # Workflow guidance should be included in responses
         assert "workflow_guidance" in result or result["success"] is True
 
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.logger')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.logger')
     def test_logging_functionality(self, mock_logger, controller):
         """Test that logging is available and functional"""
         # Logger should be available for operations
         assert mock_logger is not None
         
         # Test that we can log (logger is imported at module level)
-        from fastmcp.task_management.interface.controllers.agent_mcp_controller import logger
+        from fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller import logger
         assert logger is not None
 
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')
     def test_parameter_validation(self, mock_get_user, controller, mock_agent_facade_factory):
         """Test parameter validation for different actions"""
         mock_get_user.return_value = "test-user"
@@ -316,7 +316,7 @@ class TestAgentMCPController:
         )
         assert result["success"] is True
 
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')
     def test_facade_creation_and_delegation(self, mock_get_user, controller, mock_agent_facade_factory):
         """Test that facade is properly created and operations are delegated"""
         mock_get_user.return_value = "test-user"
@@ -347,7 +347,7 @@ class TestAgentMCPController:
         controller = AgentMCPController(factory)
         assert controller is not None
 
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')
     def test_user_validation_integration(self, mock_get_user, controller):
         """Test integration with user validation"""
         mock_get_user.return_value = "valid-user"
@@ -361,13 +361,13 @@ class TestAgentMCPController:
         # Basic validation should pass (detailed validation tested in domain layer)
         assert "error_code" not in result or result["success"] is True
 
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')
     def test_workflow_guidance_factory_integration(self, mock_get_user, controller):
         """Test that workflow guidance factory integration works."""
         mock_get_user.return_value = "test-user"
         
         # Test that the controller has workflow guidance factory available
-        with patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.AgentWorkflowFactory') as mock_workflow_factory:
+        with patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.AgentWorkflowFactory') as mock_workflow_factory:
             result = controller.manage_agent(
                 action="register",
                 project_id="project-123",
@@ -377,7 +377,7 @@ class TestAgentMCPController:
             # Workflow guidance should be available even if not explicitly used
             assert result["success"] is True
 
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')
     def test_enhanced_error_handling(self, mock_get_user, controller, mock_agent_facade_factory):
         """Test enhanced error handling with more specific error types."""
         mock_get_user.return_value = "test-user"
@@ -395,8 +395,8 @@ class TestAgentMCPController:
         assert result["success"] is False
         assert "Database connection failed" in result["error"]
 
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.validate_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.validate_user_id')
     def test_user_id_validation_flow(self, mock_validate_user, mock_get_user, controller):
         """Test complete user ID validation flow."""
         mock_get_user.return_value = "test-user"
@@ -411,7 +411,7 @@ class TestAgentMCPController:
         assert result["success"] is True
         mock_validate_user.assert_called()
 
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')
     def test_all_supported_actions_comprehensive(self, mock_get_user, controller, mock_agent_facade_factory):
         """Test all supported agent management actions with proper responses."""
         mock_get_user.return_value = "test-user"
@@ -456,10 +456,10 @@ class TestAgentMCPController:
         assert hasattr(controller, '_workflow_factory')
         
         # Test logging is configured
-        from fastmcp.task_management.interface.controllers.agent_mcp_controller import logger
+        from fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller import logger
         assert logger is not None
 
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')
     def test_concurrent_operations_safety(self, mock_get_user, controller, mock_agent_facade_factory):
         """Test that concurrent operations are handled safely."""
         mock_get_user.return_value = "test-user"

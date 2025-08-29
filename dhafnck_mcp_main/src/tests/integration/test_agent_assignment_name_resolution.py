@@ -12,7 +12,7 @@ import uuid
 from typing import Dict, Any
 from unittest.mock import patch
 
-from fastmcp.task_management.interface.controllers.git_branch_mcp_controller import GitBranchMCPController
+from fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller import GitBranchMCPController
 from fastmcp.task_management.infrastructure.factories.git_branch_facade_factory import GitBranchFacadeFactory
 from fastmcp.task_management.infrastructure.factories.project_facade_factory import ProjectFacadeFactory
 from fastmcp.task_management.infrastructure.factories.agent_facade_factory import AgentFacadeFactory
@@ -100,7 +100,7 @@ class TestAgentAssignmentNameResolution:
         
         assert resolved_id == expected_resolved, f"Unprefixed name should get @ prefix, got: {resolved_id}"
     
-    @patch('fastmcp.task_management.interface.controllers.auth_helper.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.auth_helper.get_authenticated_user_id')
     def test_assign_agent_with_uuid(self, mock_auth, controller: GitBranchMCPController, project_id: str, git_branch_id: str):
         """Test agent assignment using UUID format (existing functionality)"""
         test_user_id = "550e8400-e29b-41d4-a716-446655440000"
@@ -125,7 +125,7 @@ class TestAgentAssignmentNameResolution:
         assert result["agent_id"] == agent_uuid, f"Expected agent_id to be {agent_uuid}, got: {result.get('agent_id')}"
         assert result["original_agent_id"] == agent_uuid, "original_agent_id should match input"
     
-    @patch('fastmcp.task_management.interface.controllers.auth_helper.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.auth_helper.get_authenticated_user_id')
     def test_assign_agent_with_prefixed_name(self, mock_auth, controller: GitBranchMCPController, project_id: str, git_branch_id: str):
         """Test agent assignment using @prefixed agent name (new functionality)"""
         agent_name = "@test_coding_agent"
@@ -148,7 +148,7 @@ class TestAgentAssignmentNameResolution:
         assert clean_expected in result["agent_id"], f"Expected '{clean_expected}' in UUID format: {result['agent_id']}"
         assert result["original_agent_id"] == agent_name, "original_agent_id should match input"
     
-    @patch('fastmcp.task_management.interface.controllers.auth_helper.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.auth_helper.get_authenticated_user_id')
     def test_assign_agent_with_unprefixed_name(self, mock_auth, controller: GitBranchMCPController, project_id: str, git_branch_id: str):
         """Test agent assignment using unprefixed agent name (new functionality)"""
         agent_name = "test_ui_agent"
@@ -170,7 +170,7 @@ class TestAgentAssignmentNameResolution:
         assert "test_ui_agent" in result["agent_id"], f"Expected 'test_ui_agent' in UUID format: {result['agent_id']}"
         assert result["original_agent_id"] == agent_name, "original_agent_id should match input"
     
-    @patch('fastmcp.task_management.interface.controllers.auth_helper.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.auth_helper.get_authenticated_user_id')
     def test_unassign_agent_with_prefixed_name(self, mock_auth, controller: GitBranchMCPController, project_id: str, git_branch_id: str):
         """Test agent unassignment using @prefixed agent name"""
         agent_name = "@test_debugger_agent"
@@ -202,7 +202,7 @@ class TestAgentAssignmentNameResolution:
         assert result["agent_id"] == assigned_agent_id, f"Expected agent_id to match assigned ID, got: {result.get('agent_id')}"
         assert result["original_agent_id"] == agent_name, "original_agent_id should match input"
     
-    @patch('fastmcp.task_management.interface.controllers.auth_helper.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.auth_helper.get_authenticated_user_id')
     def test_assign_agent_with_branch_name(self, mock_auth, controller: GitBranchMCPController, project_id: str):
         """Test agent assignment using branch name instead of branch ID"""
         test_user_id = "550e8400-e29b-41d4-a716-446655440000"
@@ -230,7 +230,7 @@ class TestAgentAssignmentNameResolution:
         assert result["git_branch_name"] == branch_name, f"Expected branch_name to be {branch_name}, got: {result.get('git_branch_name')}"
         assert result["original_agent_id"] == agent_name, "original_agent_id should match input"
     
-    @patch('fastmcp.task_management.interface.controllers.auth_helper.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.auth_helper.get_authenticated_user_id')
     def test_error_handling_invalid_branch(self, mock_auth, controller: GitBranchMCPController, project_id: str):
         """Test error handling when branch doesn't exist"""
         test_user_id = "550e8400-e29b-41d4-a716-446655440000"
@@ -248,7 +248,7 @@ class TestAgentAssignmentNameResolution:
         assert result["error_code"] == "BRANCH_NOT_FOUND", f"Expected BRANCH_NOT_FOUND error code, got: {result.get('error_code')}"
         assert "non-existent-branch" in result["error"], "Error message should mention the branch name"
     
-    @patch('fastmcp.task_management.interface.controllers.auth_helper.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.auth_helper.get_authenticated_user_id')
     def test_response_includes_tracking_fields(self, mock_auth, controller: GitBranchMCPController, project_id: str, git_branch_id: str):
         """Test that response includes both resolved and original agent identifiers"""
         original_agent_id = "tracking_test_agent"
@@ -277,7 +277,7 @@ class TestAgentAssignmentNameResolution:
         assert result["original_agent_id"] == original_agent_id, f"Expected original_agent_id to be {original_agent_id}"
         assert result["action"] == "assign_agent", "Action should be assign_agent"
     
-    @patch('fastmcp.task_management.interface.controllers.auth_helper.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.auth_helper.get_authenticated_user_id')
     def test_edge_cases_empty_and_special_characters(self, mock_auth, controller: GitBranchMCPController, project_id: str):
         """Test edge cases with empty strings and special characters"""
         test_user_id = "550e8400-e29b-41d4-a716-446655440000"

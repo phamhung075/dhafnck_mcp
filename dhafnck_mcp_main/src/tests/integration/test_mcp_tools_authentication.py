@@ -127,7 +127,7 @@ class TestMCPToolsAuthentication:
             mock_get_user.return_value = authenticated_user
             
             # Mock the project management tool
-            with patch('dhafnck_mcp_main.src.interface.controllers.project_mcp_controller.ProjectMCPController') as mock_controller:
+            with patch('dhafnck_mcp_main.src.interface.mcp_controllers.project_mcp_controller.ProjectMCPController') as mock_controller:
                 mock_instance = mock_controller.return_value
                 
                 # Test create project
@@ -216,7 +216,7 @@ class TestMCPToolsAuthentication:
         with patch('fastmcp.auth.middleware.request_context_middleware.get_current_user_context') as mock_get_user:
             mock_get_user.return_value = authenticated_user
             
-            with patch('dhafnck_mcp_main.src.interface.controllers.git_branch_mcp_controller.GitBranchMCPController') as mock_controller:
+            with patch('dhafnck_mcp_main.src.interface.mcp_controllers.git_branch_mcp_controller.GitBranchMCPController') as mock_controller:
                 mock_instance = mock_controller.return_value
                 
                 # Test create branch
@@ -294,7 +294,7 @@ class TestMCPToolsAuthentication:
         with patch('fastmcp.auth.middleware.request_context_middleware.get_current_user_context') as mock_get_user:
             mock_get_user.return_value = authenticated_user
             
-            with patch('dhafnck_mcp_main.src.interface.controllers.task_mcp_controller.TaskMCPController') as mock_controller:
+            with patch('dhafnck_mcp_main.src.interface.mcp_controllers.task_mcp_controller.TaskMCPController') as mock_controller:
                 mock_instance = mock_controller.return_value
                 
                 # Test create task
@@ -407,7 +407,7 @@ class TestMCPToolsAuthentication:
         with patch('fastmcp.auth.middleware.request_context_middleware.get_current_user_context') as mock_get_user:
             mock_get_user.return_value = authenticated_user
             
-            with patch('dhafnck_mcp_main.src.interface.controllers.subtask_mcp_controller.SubtaskMCPController') as mock_controller:
+            with patch('dhafnck_mcp_main.src.interface.mcp_controllers.subtask_mcp_controller.SubtaskMCPController') as mock_controller:
                 mock_instance = mock_controller.return_value
                 
                 # Test create subtask
@@ -495,7 +495,7 @@ class TestMCPToolsAuthentication:
         with patch('fastmcp.auth.middleware.request_context_middleware.get_current_user_context') as mock_get_user:
             mock_get_user.return_value = authenticated_user
             
-            with patch('dhafnck_mcp_main.src.interface.controllers.unified_context_controller.UnifiedContextController') as mock_controller:
+            with patch('dhafnck_mcp_main.src.interface.mcp_controllers.unified_context_controller.UnifiedContextController') as mock_controller:
                 mock_instance = mock_controller.return_value
                 
                 # Test create global context
@@ -601,7 +601,7 @@ class TestMCPToolsAuthentication:
         with patch('fastmcp.auth.middleware.request_context_middleware.get_current_user_context') as mock_get_user:
             mock_get_user.return_value = None
             
-            with patch('dhafnck_mcp_main.src.interface.controllers.task_mcp_controller.TaskMCPController') as mock_controller:
+            with patch('dhafnck_mcp_main.src.interface.mcp_controllers.task_mcp_controller.TaskMCPController') as mock_controller:
                 mock_instance = mock_controller.return_value
                 
                 # Mock authentication error response
@@ -620,7 +620,7 @@ class TestMCPToolsAuthentication:
         with patch('fastmcp.auth.middleware.request_context_middleware.get_current_user_context') as mock_get_user:
             mock_get_user.return_value = authenticated_user
             
-            with patch('dhafnck_mcp_main.src.interface.controllers.task_mcp_controller.TaskMCPController') as mock_controller:
+            with patch('dhafnck_mcp_main.src.interface.mcp_controllers.task_mcp_controller.TaskMCPController') as mock_controller:
                 mock_instance = mock_controller.return_value
                 
                 # Mock validation error responses
@@ -649,7 +649,7 @@ class TestMCPToolsAuthentication:
         with patch('fastmcp.auth.middleware.request_context_middleware.get_current_user_context') as mock_get_user:
             mock_get_user.return_value = authenticated_user
             
-            with patch('dhafnck_mcp_main.src.interface.controllers.task_mcp_controller.TaskMCPController') as mock_controller:
+            with patch('dhafnck_mcp_main.src.interface.mcp_controllers.task_mcp_controller.TaskMCPController') as mock_controller:
                 mock_instance = mock_controller.return_value
                 
                 # Mock not found error responses
@@ -683,7 +683,7 @@ class TestMCPToolsAuthentication:
             # Test as first user - should see their own data
             mock_get_user.return_value = authenticated_user
             
-            with patch('dhafnck_mcp_main.src.interface.controllers.project_mcp_controller.ProjectMCPController') as mock_controller:
+            with patch('dhafnck_mcp_main.src.interface.mcp_controllers.project_mcp_controller.ProjectMCPController') as mock_controller:
                 mock_instance = mock_controller.return_value
                 
                 # Mock user's own projects
@@ -706,7 +706,7 @@ class TestMCPToolsAuthentication:
             # Test as different user - should see different data
             mock_get_user.return_value = other_user
             
-            with patch('dhafnck_mcp_main.src.interface.controllers.project_mcp_controller.ProjectMCPController') as mock_controller:
+            with patch('dhafnck_mcp_main.src.interface.mcp_controllers.project_mcp_controller.ProjectMCPController') as mock_controller:
                 mock_instance = mock_controller.return_value
                 
                 # Mock other user's projects
@@ -741,7 +741,7 @@ class TestMCPToolsAuthentication:
             mock_get_user.return_value = authenticated_user
             
             # Step 1: Create project
-            with patch('dhafnck_mcp_main.src.interface.controllers.project_mcp_controller.ProjectMCPController') as mock_controller:
+            with patch('dhafnck_mcp_main.src.interface.mcp_controllers.project_mcp_controller.ProjectMCPController') as mock_controller:
                 mock_instance = mock_controller.return_value
                 mock_instance.create_project.return_value = MockMCPToolResponse(
                     success=True,
@@ -753,7 +753,7 @@ class TestMCPToolsAuthentication:
                 assert project_result.data['project']['user_id'] == authenticated_user.user_id
             
             # Step 2: Create git branch
-            with patch('dhafnck_mcp_main.src.interface.controllers.git_branch_mcp_controller.GitBranchMCPController') as mock_controller:
+            with patch('dhafnck_mcp_main.src.interface.mcp_controllers.git_branch_mcp_controller.GitBranchMCPController') as mock_controller:
                 mock_instance = mock_controller.return_value
                 mock_instance.create_git_branch.return_value = MockMCPToolResponse(
                     success=True,
@@ -765,7 +765,7 @@ class TestMCPToolsAuthentication:
                 assert branch_result.data['git_branch']['user_id'] == authenticated_user.user_id
             
             # Step 3: Create task
-            with patch('dhafnck_mcp_main.src.interface.controllers.task_mcp_controller.TaskMCPController') as mock_controller:
+            with patch('dhafnck_mcp_main.src.interface.mcp_controllers.task_mcp_controller.TaskMCPController') as mock_controller:
                 mock_instance = mock_controller.return_value
                 mock_instance.create_task.return_value = MockMCPToolResponse(
                     success=True,
@@ -777,7 +777,7 @@ class TestMCPToolsAuthentication:
                 assert task_result.data['task']['user_id'] == authenticated_user.user_id
             
             # Step 4: Create subtask
-            with patch('dhafnck_mcp_main.src.interface.controllers.subtask_mcp_controller.SubtaskMCPController') as mock_controller:
+            with patch('dhafnck_mcp_main.src.interface.mcp_controllers.subtask_mcp_controller.SubtaskMCPController') as mock_controller:
                 mock_instance = mock_controller.return_value
                 mock_instance.create_subtask.return_value = MockMCPToolResponse(
                     success=True,
@@ -789,7 +789,7 @@ class TestMCPToolsAuthentication:
                 assert subtask_result.data['subtask']['user_id'] == authenticated_user.user_id
             
             # Step 5: Create contexts at all levels
-            with patch('dhafnck_mcp_main.src.interface.controllers.unified_context_controller.UnifiedContextController') as mock_controller:
+            with patch('dhafnck_mcp_main.src.interface.mcp_controllers.unified_context_controller.UnifiedContextController') as mock_controller:
                 mock_instance = mock_controller.return_value
                 
                 # Mock successful context creation at all levels
@@ -803,7 +803,7 @@ class TestMCPToolsAuthentication:
                 assert context_result.data['context']['user_id'] == authenticated_user.user_id
             
             # Step 6: Complete subtask and task
-            with patch('dhafnck_mcp_main.src.interface.controllers.subtask_mcp_controller.SubtaskMCPController') as mock_controller:
+            with patch('dhafnck_mcp_main.src.interface.mcp_controllers.subtask_mcp_controller.SubtaskMCPController') as mock_controller:
                 mock_instance = mock_controller.return_value
                 mock_instance.complete_subtask.return_value = MockMCPToolResponse(
                     success=True,
@@ -814,7 +814,7 @@ class TestMCPToolsAuthentication:
                 assert subtask_complete_result.success
                 assert subtask_complete_result.data['subtask']['user_id'] == authenticated_user.user_id
             
-            with patch('dhafnck_mcp_main.src.interface.controllers.task_mcp_controller.TaskMCPController') as mock_controller:
+            with patch('dhafnck_mcp_main.src.interface.mcp_controllers.task_mcp_controller.TaskMCPController') as mock_controller:
                 mock_instance = mock_controller.return_value
                 mock_instance.complete_task.return_value = MockMCPToolResponse(
                     success=True,

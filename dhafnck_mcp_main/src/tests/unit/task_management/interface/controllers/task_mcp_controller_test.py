@@ -15,7 +15,7 @@ import logging
 from unittest.mock import Mock, patch, MagicMock, AsyncMock
 from typing import Dict, Any
 
-from fastmcp.task_management.interface.controllers.task_mcp_controller import TaskMCPController
+from fastmcp.task_management.interface.mcp_controllers.task_mcp_controller import TaskMCPController
 from fastmcp.task_management.infrastructure.factories.task_facade_factory import TaskFacadeFactory
 from fastmcp.task_management.application.facades.task_application_facade import TaskApplicationFacade
 from fastmcp.task_management.application.services.response_enrichment_service import ResponseEnrichmentService
@@ -68,7 +68,7 @@ class TestTaskMCPController:
             assert call_kwargs["name"] == "manage_task"
             assert call_kwargs["description"] == "Test description"
     
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_authenticated_user_id')
     def test_get_facade_for_request_with_user_context(self, mock_get_auth_user_id):
         """Test getting facade with user context from JWT."""
         mock_get_auth_user_id.return_value = "jwt-user-123"
@@ -95,7 +95,7 @@ class TestTaskMCPController:
             assert call_args[1] == "feature/test-branch"  # git_branch_name
             assert call_args[2] == "jwt-user-123"  # user_id
     
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_authenticated_user_id')
     def test_get_facade_for_request_no_auth_raises_error(self, mock_get_auth_user_id):
         """Test getting facade without authentication raises error."""
         mock_get_auth_user_id.side_effect = UserAuthenticationRequiredError("No auth")
@@ -106,7 +106,7 @@ class TestTaskMCPController:
         
         assert "No auth requires user authentication" in str(exc_info.value)
     
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_manage_task_create_action(self, mock_get_user_id):
         """Test manage_task with create action."""
         mock_get_user_id.return_value = "test-user-123"
@@ -126,7 +126,7 @@ class TestTaskMCPController:
             assert result == {"success": True}
             mock_crud.assert_called_once()
     
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_authenticated_user_id')
     def test_manage_task_search_action(self, mock_get_user_id):
         """Test manage_task with search action."""
         mock_get_user_id.return_value = "test-user-123"
@@ -153,7 +153,7 @@ class TestTaskMCPController:
                 git_branch_id="550e8400-e29b-41d4-a716-446655440000"
             )
     
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_authenticated_user_id')
     def test_manage_task_next_action(self, mock_get_user_id):
         """Test manage_task with next action."""
         mock_get_user_id.return_value = "test-user-123"
@@ -180,7 +180,7 @@ class TestTaskMCPController:
                 git_branch_id="550e8400-e29b-41d4-a716-446655440000"
             )
     
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_manage_task_unknown_action(self, mock_get_user_id):
         """Test manage_task with unknown action."""
         mock_get_user_id.return_value = "test-user-123"
@@ -530,7 +530,7 @@ class TestTaskMCPController:
     
     def test_get_task_management_descriptions(self):
         """Test getting task management descriptions."""
-        with patch('fastmcp.task_management.interface.controllers.task_mcp_controller.description_loader') as mock_loader:
+        with patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.description_loader') as mock_loader:
             mock_loader.get_all_descriptions.return_value = {
                 "tasks": {
                     "manage_task": {
@@ -587,7 +587,7 @@ class TestTaskMCPController:
     
     def test_get_task_management_descriptions_flattening(self):
         """Test getting flattened task management descriptions."""
-        with patch('fastmcp.task_management.interface.controllers.task_mcp_controller.description_loader') as mock_loader:
+        with patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.description_loader') as mock_loader:
             mock_loader.get_all_descriptions.return_value = {
                 "tasks": {
                     "manage_task": {

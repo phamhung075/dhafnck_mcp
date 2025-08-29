@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import Mock, patch
 from typing import Dict, Any, Optional
 
-from fastmcp.task_management.interface.controllers.task_mcp_controller import TaskMCPController
+from fastmcp.task_management.interface.mcp_controllers.task_mcp_controller import TaskMCPController
 from fastmcp.task_management.domain.exceptions.authentication_exceptions import (
     UserAuthenticationRequiredError, DefaultUserProhibitedError
 )
@@ -45,7 +45,7 @@ class TestTaskMCPController:
         
         assert controller._task_facade_factory == mock_task_facade_factory
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_manage_task_create_success(self, mock_get_user, controller, mock_task_facade_factory):
         """Test successful task creation"""
         mock_get_user.return_value = "test-user"
@@ -61,7 +61,7 @@ class TestTaskMCPController:
         assert result["task_id"] == "task-123"
         mock_facade.create_task.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_manage_task_update_success(self, mock_get_user, controller, mock_task_facade_factory):
         """Test successful task update"""
         mock_get_user.return_value = "test-user"
@@ -77,7 +77,7 @@ class TestTaskMCPController:
         assert result["updated"] is True
         mock_facade.update_task.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_manage_task_get_success(self, mock_get_user, controller, mock_task_facade_factory):
         """Test successful task retrieval"""
         mock_get_user.return_value = "test-user"
@@ -92,7 +92,7 @@ class TestTaskMCPController:
         assert "task" in result
         mock_facade.get_task.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_manage_task_delete_success(self, mock_get_user, controller, mock_task_facade_factory):
         """Test successful task deletion"""
         mock_get_user.return_value = "test-user"
@@ -107,7 +107,7 @@ class TestTaskMCPController:
         assert result["deleted"] is True
         mock_facade.delete_task.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_manage_task_complete_success(self, mock_get_user, controller, mock_task_facade_factory):
         """Test successful task completion"""
         mock_get_user.return_value = "test-user"
@@ -123,7 +123,7 @@ class TestTaskMCPController:
         assert result["completed"] is True
         mock_facade.complete_task.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_manage_task_list_success(self, mock_get_user, controller, mock_task_facade_factory):
         """Test successful task listing"""
         mock_get_user.return_value = "test-user"
@@ -138,7 +138,7 @@ class TestTaskMCPController:
         assert "tasks" in result
         mock_facade.list_tasks.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_manage_task_search_success(self, mock_get_user, controller, mock_task_facade_factory):
         """Test successful task search"""
         mock_get_user.return_value = "test-user"
@@ -153,7 +153,7 @@ class TestTaskMCPController:
         assert "tasks" in result
         mock_facade.search_tasks.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_manage_task_next_success(self, mock_get_user, controller, mock_task_facade_factory):
         """Test successful next task retrieval"""
         mock_get_user.return_value = "test-user"
@@ -168,7 +168,7 @@ class TestTaskMCPController:
         assert "next_task" in result
         mock_facade.next_task.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_manage_task_add_dependency_success(self, mock_get_user, controller, mock_task_facade_factory):
         """Test successful dependency addition"""
         mock_get_user.return_value = "test-user"
@@ -184,7 +184,7 @@ class TestTaskMCPController:
         assert result["dependency_added"] is True
         mock_facade.add_dependency.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_manage_task_remove_dependency_success(self, mock_get_user, controller, mock_task_facade_factory):
         """Test successful dependency removal"""
         mock_get_user.return_value = "test-user"
@@ -200,7 +200,7 @@ class TestTaskMCPController:
         assert result["dependency_removed"] is True
         mock_facade.remove_dependency.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_manage_task_invalid_action(self, mock_get_user, controller):
         """Test handling of invalid action"""
         mock_get_user.return_value = "test-user"
@@ -218,7 +218,7 @@ class TestTaskMCPController:
         for action in expected_actions:
             assert action in result["available_actions"]
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_manage_task_authentication_required_error(self, mock_get_user, controller):
         """Test handling of authentication required error"""
         mock_get_user.side_effect = UserAuthenticationRequiredError("Authentication required")
@@ -233,7 +233,7 @@ class TestTaskMCPController:
         assert "Authentication required" in result["error"]
         assert result["error_code"] == "AUTHENTICATION_REQUIRED"
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_manage_task_default_user_prohibited_error(self, mock_get_user, controller):
         """Test handling of default user prohibited error"""
         mock_get_user.return_value = "test-user"
@@ -250,7 +250,7 @@ class TestTaskMCPController:
         assert "Default user not allowed" in result["error"]
         assert result["error_code"] == "DEFAULT_USER_PROHIBITED"
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_manage_task_general_exception(self, mock_get_user, controller):
         """Test handling of general exceptions"""
         mock_get_user.return_value = "test-user"
@@ -272,7 +272,7 @@ class TestTaskMCPController:
         assert hasattr(controller, 'register_tools')
         assert callable(controller.register_tools)
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.description_loader')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.description_loader')
     def test_register_tools_calls_description_loader(self, mock_desc_loader, controller):
         """Test that register_tools calls the description loader"""
         mock_mcp = Mock()
@@ -284,7 +284,7 @@ class TestTaskMCPController:
         
         mock_desc_loader.get_task_management_descriptions.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_user_id_parameter_handling(self, mock_get_user, controller, mock_task_facade_factory):
         """Test that user_id parameter is handled correctly"""
         mock_get_user.return_value = "test-user"
@@ -300,7 +300,7 @@ class TestTaskMCPController:
             user_id="test-user"
         )
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_workflow_guidance_integration(self, mock_get_user, controller):
         """Test that workflow guidance is integrated"""
         mock_get_user.return_value = "test-user"
@@ -315,7 +315,7 @@ class TestTaskMCPController:
         # Workflow guidance should be included in responses
         assert "workflow_guidance" in result or result["success"] is True
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_parameter_validation_create_action(self, mock_get_user, controller):
         """Test parameter validation for create action"""
         mock_get_user.return_value = "test-user"
@@ -330,7 +330,7 @@ class TestTaskMCPController:
         
         assert result["success"] is True
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_parameter_validation_update_action(self, mock_get_user, controller):
         """Test parameter validation for update action"""
         mock_get_user.return_value = "test-user"
@@ -344,7 +344,7 @@ class TestTaskMCPController:
         
         assert result["success"] is True
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_parameter_validation_complete_action(self, mock_get_user, controller):
         """Test parameter validation for complete action"""
         mock_get_user.return_value = "test-user"
@@ -358,7 +358,7 @@ class TestTaskMCPController:
         
         assert result["success"] is True
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_optional_parameters_handling(self, mock_get_user, controller, mock_task_facade_factory):
         """Test handling of optional parameters"""
         mock_get_user.return_value = "test-user"
@@ -383,7 +383,7 @@ class TestTaskMCPController:
         mock_facade = mock_task_facade_factory.create_task_facade.return_value
         mock_facade.create_task.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_list_parameters_conversion(self, mock_get_user, controller):
         """Test conversion of list parameters"""
         mock_get_user.return_value = "test-user"
@@ -399,7 +399,7 @@ class TestTaskMCPController:
         
         assert result["success"] is True
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_dependency_management(self, mock_get_user, controller):
         """Test dependency management actions"""
         mock_get_user.return_value = "test-user"
@@ -420,17 +420,17 @@ class TestTaskMCPController:
         )
         assert result_remove["success"] is True
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.logger')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.logger')
     def test_logging_functionality(self, mock_logger, controller):
         """Test that logging is available and functional"""
         # Logger should be available for operations
         assert mock_logger is not None
         
         # Test that we can log (logger is imported at module level)
-        from fastmcp.task_management.interface.controllers.task_mcp_controller import logger
+        from fastmcp.task_management.interface.mcp_controllers.task_mcp_controller import logger
         assert logger is not None
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_facade_creation_and_delegation(self, mock_get_user, controller, mock_task_facade_factory):
         """Test that facade is properly created and operations are delegated"""
         mock_get_user.return_value = "test-user"
@@ -450,7 +450,7 @@ class TestTaskMCPController:
         # Verify operation delegation
         mock_facade.list_tasks.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_search_functionality(self, mock_get_user, controller):
         """Test search functionality with various parameters"""
         mock_get_user.return_value = "test-user"
@@ -465,7 +465,7 @@ class TestTaskMCPController:
         
         assert result["success"] is True
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_next_task_with_context(self, mock_get_user, controller):
         """Test next task retrieval with context inclusion"""
         mock_get_user.return_value = "test-user"
@@ -488,7 +488,7 @@ class TestTaskMCPController:
         controller = TaskMCPController(factory)
         assert controller is not None
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_create_with_dependencies(self, mock_get_user, controller):
         """Test task creation with dependencies"""
         mock_get_user.return_value = "test-user"
@@ -502,7 +502,7 @@ class TestTaskMCPController:
         
         assert result["success"] is True
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_empty_string_parameters(self, mock_get_user, controller):
         """Test handling of empty string parameters"""
         mock_get_user.return_value = "test-user"

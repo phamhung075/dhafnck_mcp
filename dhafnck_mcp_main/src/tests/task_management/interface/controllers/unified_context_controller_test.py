@@ -6,7 +6,7 @@ from typing import Dict, Any, Optional, Union
 import json
 import asyncio
 
-from fastmcp.task_management.interface.controllers.unified_context_controller import UnifiedContextMCPController
+from fastmcp.task_management.interface.mcp_controllers.unified_context_controller import UnifiedContextMCPController
 from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
 from fastmcp.task_management.application.facades.unified_context_facade import UnifiedContextFacade
 
@@ -161,7 +161,7 @@ class TestUnifiedContextMCPController:
         # Simulate calling the tool (this would be called by MCP server)
         # In real usage, the manage_context method would be registered as an MCP tool
         # For testing, we need to mock the authenticated user
-        with patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id') as mock_get_user:
+        with patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id') as mock_get_user:
             mock_get_user.return_value = "test-user"
             
             # Mock the actual manage_context method behavior
@@ -223,7 +223,7 @@ class TestUnifiedContextMCPController:
         }
         
         # Simulate error scenario
-        with patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id') as mock_get_user:
+        with patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id') as mock_get_user:
             mock_get_user.return_value = "test-user"
             
             facade = mock_facade_factory.create_facade(user_id="test-user")
@@ -237,7 +237,7 @@ class TestUnifiedContextMCPController:
         assert hasattr(controller, 'register_tools')
         assert callable(getattr(controller, 'register_tools', None))
     
-    @patch('fastmcp.task_management.interface.controllers.unified_context_controller.description_loader')
+    @patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.description_loader')
     def test_manage_context_parameter_coercion(self, mock_desc_loader, controller):
         """Test parameter type coercion in manage_context"""
         # Test that boolean and array parameters are properly coerced

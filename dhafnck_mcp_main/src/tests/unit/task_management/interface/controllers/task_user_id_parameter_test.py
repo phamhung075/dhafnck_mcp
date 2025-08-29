@@ -9,7 +9,7 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock
 from typing import Dict, Any
 
-from fastmcp.task_management.interface.controllers.task_mcp_controller import TaskMCPController
+from fastmcp.task_management.interface.mcp_controllers.task_mcp_controller import TaskMCPController
 from fastmcp.task_management.application.facades.task_application_facade import TaskApplicationFacade
 from fastmcp.task_management.domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
 
@@ -63,7 +63,7 @@ class TestTaskUserIdParameter:
 
     def test_derive_context_from_identifiers_with_user_id(self, controller):
         """Test that _derive_context_from_identifiers uses provided user_id."""
-        with patch('fastmcp.task_management.interface.controllers.auth_helper.get_authenticated_user_id') as mock_auth:
+        with patch('fastmcp.task_management.interface.mcp_controllers.auth_helper.get_authenticated_user_id') as mock_auth:
             # When user_id is provided, get_authenticated_user_id should NOT be called
             project_id, git_branch_name, user_id = controller._derive_context_from_identifiers(
                 task_id=None,

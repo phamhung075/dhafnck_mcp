@@ -20,11 +20,14 @@ except ImportError:
     # Fallback to local JWT if Supabase auth not available
     from ...auth.interface.fastapi_auth import get_current_user
 from ...auth.domain.entities.user import User
-from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+from ...task_management.interface.api_controllers.context_api_controller import ContextAPIController
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v2/contexts", tags=["User-Scoped Contexts"])
+
+# Initialize the context API controller
+context_controller = ContextAPIController()
 
 
 class ContextCreateRequest(BaseModel):
@@ -63,18 +66,7 @@ class ContextProgressRequest(BaseModel):
     agent: Optional[str] = None
 
 
-def get_context_facade(
-    user_id: str,
-    project_id: Optional[str] = None,
-    git_branch_id: Optional[str] = None
-):
-    """Get a user-scoped context facade"""
-    factory = UnifiedContextFacadeFactory.get_instance()
-    return factory.create_facade(
-        user_id=user_id,
-        project_id=project_id,
-        git_branch_id=git_branch_id
-    )
+# Context helper functions removed - now using ContextAPIController
 
 
 @router.post("/{level}", response_model=dict)
@@ -94,21 +86,16 @@ async def create_context(
         # Override level from URL parameter
         request.level = level
         
-        # Get user-scoped facade
-        facade = get_context_facade(
-            user_id=current_user.id,
-            project_id=request.project_id,
-            git_branch_id=request.git_branch_id
-        )
-        
         # Log the access for audit
         logger.info(f"User {current_user.email} creating {level} context: {request.context_id}")
         
-        # Create the context - will automatically be scoped to the user
-        result = facade.create_context(
+        # Delegate to API controller
+        result = context_controller.create_context(
             level=request.level,
             context_id=request.context_id,
-            data=request.data or {}
+            data=request.data or {},
+            user_id=current_user.id,
+            session=db
         )
         
         if result.get("success"):
@@ -149,14 +136,15 @@ async def get_context(
     """
     try:
         # Get user-scoped facade
-        facade = get_context_facade(user_id=current_user.id)
+        # Delegate to API controller
         
         # Get the context - will automatically check user ownership
-        result = facade.get_context(
+        result = context_controller.get_context(
             level=level,
             context_id=context_id,
             include_inherited=include_inherited,
-            force_refresh=force_refresh
+            user_id=current_user.id,
+            session=db
         )
         
         if result.get("success"):
@@ -197,10 +185,15 @@ async def update_context(
     """
     try:
         # Get user-scoped facade
-        facade = get_context_facade(user_id=current_user.id)
+        # Delegate to API controller
         
         # First check if context exists and belongs to user
-        existing_result = facade.get_context(level=level, context_id=context_id)
+        existing_result = context_controller.get_context(
+            level=level,
+            context_id=context_id,
+            user_id=current_user.id,
+            session=db
+        )
         if not existing_result.get("success"):
             logger.warning(f"User {current_user.email} attempted to update non-existent or unauthorized {level} context {context_id}")
             raise HTTPException(
@@ -209,11 +202,12 @@ async def update_context(
             )
         
         # Update the context
-        result = facade.update_context(
+        result = context_controller.update_context(
             level=level,
             context_id=context_id,
             data=request.data,
-            propagate_changes=request.propagate_changes
+            user_id=current_user.id,
+            session=db
         )
         
         if result.get("success"):
@@ -253,10 +247,15 @@ async def delete_context(
     """
     try:
         # Get user-scoped facade
-        facade = get_context_facade(user_id=current_user.id)
+        # Delegate to API controller
         
         # First check if context exists and belongs to user
-        existing_result = facade.get_context(level=level, context_id=context_id)
+        existing_result = context_controller.get_context(
+            level=level,
+            context_id=context_id,
+            user_id=current_user.id,
+            session=db
+        )
         if not existing_result.get("success"):
             logger.warning(f"User {current_user.email} attempted to delete non-existent or unauthorized {level} context {context_id}")
             raise HTTPException(
@@ -265,7 +264,12 @@ async def delete_context(
             )
         
         # Delete the context
-        result = facade.delete_context(level=level, context_id=context_id)
+        result = context_controller.delete_context(
+            level=level,
+            context_id=context_id,
+            user_id=current_user.id,
+            session=db
+        )
         
         if result.get("success"):
             logger.info(f"User {current_user.email} deleted {level} context {context_id}")
@@ -304,13 +308,15 @@ async def resolve_context(
     """
     try:
         # Get user-scoped facade
-        facade = get_context_facade(user_id=current_user.id)
+        # Delegate to API controller
         
         # Resolve the context - will automatically check user ownership
-        result = facade.resolve_context(
+        result = context_controller.resolve_context(
             level=level,
             context_id=context_id,
-            force_refresh=force_refresh
+            force_refresh=force_refresh,
+            user_id=current_user.id,
+            session=db
         )
         
         if result.get("success"):
@@ -352,10 +358,15 @@ async def delegate_context(
     """
     try:
         # Get user-scoped facade
-        facade = get_context_facade(user_id=current_user.id)
+        # Delegate to API controller
         
         # First check if context exists and belongs to user
-        existing_result = facade.get_context(level=level, context_id=context_id)
+        existing_result = context_controller.get_context(
+            level=level,
+            context_id=context_id,
+            user_id=current_user.id,
+            session=db
+        )
         if not existing_result.get("success"):
             logger.warning(f"User {current_user.email} attempted to delegate from non-existent or unauthorized {level} context {context_id}")
             raise HTTPException(
@@ -363,27 +374,12 @@ async def delegate_context(
                 detail="Context not found"
             )
         
-        # Delegate the context
-        result = facade.delegate_context(
-            level=level,
-            context_id=context_id,
-            delegate_to=request.delegate_to,
-            data=request.delegate_data,
-            delegation_reason=request.delegation_reason
+        # Delegation feature not implemented in basic API controller
+        # TODO: Implement delegation in ContextAPIController
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Context delegation feature not implemented in API controller"
         )
-        
-        if result.get("success"):
-            logger.info(f"User {current_user.email} delegated {level} context {context_id} to {request.delegate_to}")
-            return {
-                "success": True,
-                "delegation_result": result.get("delegation_result"),
-                "message": "Context delegated successfully"
-            }
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=result.get("error", "Failed to delegate context")
-            )
         
     except HTTPException:
         raise
@@ -410,10 +406,15 @@ async def add_insight(
     """
     try:
         # Get user-scoped facade
-        facade = get_context_facade(user_id=current_user.id)
+        # Delegate to API controller
         
         # First check if context exists and belongs to user
-        existing_result = facade.get_context(level=level, context_id=context_id)
+        existing_result = context_controller.get_context(
+            level=level,
+            context_id=context_id,
+            user_id=current_user.id,
+            session=db
+        )
         if not existing_result.get("success"):
             logger.warning(f"User {current_user.email} attempted to add insight to non-existent or unauthorized {level} context {context_id}")
             raise HTTPException(
@@ -421,28 +422,12 @@ async def add_insight(
                 detail="Context not found"
             )
         
-        # Add the insight
-        result = facade.add_insight(
-            level=level,
-            context_id=context_id,
-            content=request.content,
-            category=request.category,
-            importance=request.importance,
-            agent=request.agent
+        # Insights feature not implemented in basic API controller
+        # TODO: Implement insights in ContextAPIController
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Context insights feature not implemented in API controller"
         )
-        
-        if result.get("success"):
-            logger.info(f"User {current_user.email} added insight to {level} context {context_id}")
-            return {
-                "success": True,
-                "context": result.get("context"),
-                "message": "Insight added successfully"
-            }
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=result.get("error", "Failed to add insight")
-            )
         
     except HTTPException:
         raise
@@ -469,10 +454,15 @@ async def add_progress(
     """
     try:
         # Get user-scoped facade
-        facade = get_context_facade(user_id=current_user.id)
+        # Delegate to API controller
         
         # First check if context exists and belongs to user
-        existing_result = facade.get_context(level=level, context_id=context_id)
+        existing_result = context_controller.get_context(
+            level=level,
+            context_id=context_id,
+            user_id=current_user.id,
+            session=db
+        )
         if not existing_result.get("success"):
             logger.warning(f"User {current_user.email} attempted to add progress to non-existent or unauthorized {level} context {context_id}")
             raise HTTPException(
@@ -480,26 +470,12 @@ async def add_progress(
                 detail="Context not found"
             )
         
-        # Add the progress
-        result = facade.add_progress(
-            level=level,
-            context_id=context_id,
-            content=request.content,
-            agent=request.agent
+        # Progress feature not implemented in basic API controller
+        # TODO: Implement progress tracking in ContextAPIController
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Context progress feature not implemented in API controller"
         )
-        
-        if result.get("success"):
-            logger.info(f"User {current_user.email} added progress to {level} context {context_id}")
-            return {
-                "success": True,
-                "context": result.get("context"),
-                "message": "Progress added successfully"
-            }
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=result.get("error", "Failed to add progress")
-            )
         
     except HTTPException:
         raise
@@ -535,27 +511,12 @@ async def list_contexts(
                     detail=f"Invalid filters JSON: {e}"
                 )
         
-        # Get user-scoped facade
-        facade = get_context_facade(user_id=current_user.id)
-        
-        # List user's contexts only
-        result = facade.list_contexts(level=level, filters=parsed_filters)
-        
-        if result.get("success"):
-            contexts = result.get("contexts", [])
-            logger.info(f"User {current_user.email} listed {len(contexts)} {level} contexts")
-            return {
-                "success": True,
-                "contexts": contexts,
-                "count": len(contexts),
-                "level": level,
-                "user": current_user.email
-            }
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=result.get("error", "Failed to list contexts")
-            )
+        # List contexts feature not implemented in basic API controller
+        # TODO: Implement list_contexts in ContextAPIController
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="List contexts feature not implemented in API controller"
+        )
         
     except HTTPException:
         raise
@@ -580,32 +541,12 @@ async def get_context_summary(
     Used for performance optimization in lazy loading.
     """
     try:
-        # Get user-scoped facade
-        facade = get_context_facade(user_id=current_user.id)
-        
-        # Get context summary - will automatically check user ownership
-        result = facade.get_context_summary(context_id=context_id)
-        
-        if result.get("success"):
-            logger.info(f"User {current_user.email} accessed {level} context summary {context_id}")
-            return {
-                "success": True,
-                "summary": {
-                    "has_context": result.get("has_context", False),
-                    "context_size": result.get("context_size", 0),
-                    "last_updated": result.get("last_updated")
-                }
-            }
-        else:
-            # Context summary returns success: False for non-existent contexts
-            return {
-                "success": True,
-                "summary": {
-                    "has_context": False,
-                    "context_size": 0,
-                    "last_updated": None
-                }
-            }
+        # Context summary feature not implemented in basic API controller
+        # TODO: Implement get_context_summary in ContextAPIController
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Context summary feature not implemented in API controller"
+        )
         
     except Exception as e:
         logger.error(f"Error getting {level} context summary {context_id} for user {current_user.id}: {e}")

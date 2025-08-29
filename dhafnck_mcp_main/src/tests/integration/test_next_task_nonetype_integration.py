@@ -8,7 +8,7 @@ import pytest
 from unittest.mock import MagicMock, patch, AsyncMock
 import json
 
-from fastmcp.task_management.interface.controllers.task_mcp_controller import TaskMCPController
+from fastmcp.task_management.interface.mcp_controllers.task_mcp_controller import TaskMCPController
 from fastmcp.task_management.application.facades.task_application_facade import TaskApplicationFacade
 from fastmcp.task_management.infrastructure.factories.task_facade_factory import TaskFacadeFactory
 from fastmcp.task_management.domain.entities.task import Task

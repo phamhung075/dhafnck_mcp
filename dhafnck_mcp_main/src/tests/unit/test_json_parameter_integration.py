@@ -13,8 +13,8 @@ from unittest.mock import Mock, MagicMock, patch
 import os
 os.environ['SKIP_DB_INIT'] = 'true'
 
-from fastmcp.task_management.interface.controllers.unified_context_controller import UnifiedContextMCPController
-from fastmcp.connection_management.interface.controllers.connection_mcp_controller import ConnectionMCPController
+from fastmcp.task_management.interface.mcp_controllers.unified_context_controller import UnifiedContextMCPController
+from fastmcp.connection_management.interface.mcp_controllers.connection_mcp_controller import ConnectionMCPController
 from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
 from fastmcp.connection_management.application.facades.connection_application_facade import ConnectionApplicationFacade
 
@@ -88,7 +88,7 @@ class TestJSONParameterIntegration:
         data_json = json.dumps(data_dict)
         
         # Mock authentication helper to return test user
-        with patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
+        with patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
             mock_auth.return_value = "test-user-123"
             
             # Register tools to get the manage_context function
@@ -133,7 +133,7 @@ class TestJSONParameterIntegration:
         delegate_json = json.dumps(delegate_dict)
         
         # Mock authentication helper to return test user
-        with patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
+        with patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
             mock_auth.return_value = "test-user-123"
             
             # Register tools to get the manage_context function
@@ -178,7 +178,7 @@ class TestJSONParameterIntegration:
         filters_json = json.dumps(filters_dict)
         
         # Mock authentication helper to return test user
-        with patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
+        with patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
             mock_auth.return_value = "test-user-123"
             
             # Register tools to get the manage_context function
@@ -240,7 +240,7 @@ class TestJSONParameterIntegration:
     def test_invalid_json_string_returns_helpful_error(self, unified_context_controller):
         """Test that invalid JSON strings return helpful error messages."""
         # Mock authentication helper to return test user
-        with patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
+        with patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
             mock_auth.return_value = "test-user-123"
             
             # Register tools to get the manage_context function
@@ -291,7 +291,7 @@ class TestJSONParameterIntegration:
         delegate_json = '{"pattern": "test_pattern"}'
         
         # Mock authentication helper to return test user
-        with patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
+        with patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
             mock_auth.return_value = "test-user-123"
             
             # Register tools to get the manage_context function
@@ -336,7 +336,7 @@ class TestJSONParameterIntegration:
     def test_none_values_handled_correctly(self, unified_context_controller, mock_unified_context_facade):
         """Test that None values for dict parameters are handled correctly."""
         # Mock authentication helper to return test user
-        with patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
+        with patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
             mock_auth.return_value = "test-user-123"
             
             # Register tools to get the manage_context function
@@ -394,7 +394,7 @@ class TestJSONParameterIntegration:
         complex_json = json.dumps(complex_data)
         
         # Mock authentication helper to return test user
-        with patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
+        with patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id') as mock_auth:
             mock_auth.return_value = "test-user-123"
             
             # Register tools to get the manage_context function

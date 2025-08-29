@@ -29,7 +29,7 @@ from unittest.mock import Mock, patch, MagicMock, AsyncMock, call
 from typing import Dict, Any, Optional, List
 from contextlib import contextmanager
 
-from fastmcp.task_management.interface.controllers.task_mcp_controller import TaskMCPController
+from fastmcp.task_management.interface.mcp_controllers.task_mcp_controller import TaskMCPController
 from fastmcp.task_management.infrastructure.factories.task_facade_factory import TaskFacadeFactory
 from fastmcp.task_management.application.facades.task_application_facade import TaskApplicationFacade
 from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
@@ -97,7 +97,7 @@ class TestTaskMCPControllerAdvancedAuthentication:
             'coordination_service': mock_coordination_service
         }
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_authenticated_user_id')
     def test_authentication_context_propagation_across_threads(self, mock_get_auth_user_id, controller_with_mocks):
         """Test that authentication context properly propagates across thread boundaries."""
         controller, mocks = controller_with_mocks
@@ -116,7 +116,7 @@ class TestTaskMCPControllerAdvancedAuthentication:
                     mock_result.fetchone.return_value = ("test-project-id", "feature/test-branch")
                     mock_session.execute.return_value = mock_result
                     
-                    with patch('fastmcp.task_management.interface.controllers.task_mcp_controller.validate_user_id') as mock_validate:
+                    with patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.validate_user_id') as mock_validate:
                         mock_validate.return_value = "thread-test-user-123"
                         
                         facade = controller._get_facade_for_request("550e8400-e29b-41d4-a716-446655440000")
@@ -148,7 +148,7 @@ class TestTaskMCPControllerAdvancedAuthentication:
             assert result['user_id'] == "thread-test-user-123"
             assert result['facade_created'] is True
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_authenticated_user_id')
     def test_authentication_failure_recovery(self, mock_get_auth_user_id, controller_with_mocks):
         """Test controller handles authentication failures gracefully and provides recovery options."""
         controller, mocks = controller_with_mocks
@@ -175,14 +175,14 @@ class TestTaskMCPControllerAdvancedAuthentication:
             mock_result.fetchone.return_value = ("test-project-id", "feature/test-branch")
             mock_session.execute.return_value = mock_result
             
-            with patch('fastmcp.task_management.interface.controllers.task_mcp_controller.validate_user_id') as mock_validate:
+            with patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.validate_user_id') as mock_validate:
                 mock_validate.return_value = "recovered-user-456"
                 
                 facade = controller._get_facade_for_request(git_branch_id)
                 assert facade is not None
                 mock_validate.assert_called_with("recovered-user-456", "Task facade creation")
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_authenticated_user_id')
     def test_concurrent_user_authentication_isolation(self, mock_get_auth_user_id, controller_with_mocks):
         """Test that concurrent operations maintain proper user isolation."""
         controller, mocks = controller_with_mocks
@@ -201,7 +201,7 @@ class TestTaskMCPControllerAdvancedAuthentication:
                 mock_result.fetchone.return_value = (f"project-{user_id}", f"branch-{user_id}")
                 mock_session.execute.return_value = mock_result
                 
-                with patch('fastmcp.task_management.interface.controllers.task_mcp_controller.validate_user_id') as mock_validate:
+                with patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.validate_user_id') as mock_validate:
                     mock_validate.return_value = user_id
                     
                     try:
@@ -628,7 +628,7 @@ class TestTaskMCPControllerAsyncContextPropagation:
             assert result["operation_id"] == expected_op_id
             assert result["user_context"] == expected_context
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_complete_task_with_context_async_integration(self, mock_get_user_id, async_controller):
         """Test complete_task_with_context method with async context operations."""
         controller, mock_task_facade = async_controller
@@ -693,7 +693,7 @@ class TestTaskMCPControllerErrorRecoveryAndResilience:
         
         return controller, mock_task_facade_factory, mock_context_facade_factory
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_facade_creation_failure_recovery(self, mock_get_user_id, resilient_controller):
         """Test recovery from facade creation failures."""
         controller, mock_task_facade_factory, mock_context_facade_factory = resilient_controller
@@ -716,7 +716,7 @@ class TestTaskMCPControllerErrorRecoveryAndResilience:
             mock_result.fetchone.return_value = ("test-project-id", "feature/test-branch")
             mock_session.execute.return_value = mock_result
             
-            with patch('fastmcp.task_management.interface.controllers.task_mcp_controller.validate_user_id') as mock_validate:
+            with patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.validate_user_id') as mock_validate:
                 mock_validate.return_value = "resilient-user-123"
                 
                 # First call should fail
@@ -729,7 +729,7 @@ class TestTaskMCPControllerErrorRecoveryAndResilience:
                 assert facade == mock_task_facade
                 assert mock_task_facade_factory.create_task_facade.call_count == 2
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_enrichment_service_failure_graceful_degradation(self, mock_get_user_id, resilient_controller):
         """Test graceful degradation when enrichment services fail."""
         controller, _, _ = resilient_controller
@@ -762,7 +762,7 @@ class TestTaskMCPControllerErrorRecoveryAndResilience:
             # Should have logged the enrichment failure (tested via no exception)
             mock_enrich.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_context_service_failure_graceful_handling(self, mock_get_user_id, resilient_controller):
         """Test graceful handling when context services fail."""
         controller, mock_task_facade_factory, mock_context_facade_factory = resilient_controller
@@ -807,7 +807,7 @@ class TestTaskMCPControllerErrorRecoveryAndResilience:
             # Should not prevent operation and fall back to permissive mode
             with patch.object(controller, '_get_facade_for_request') as mock_get_facade, \
                  patch.object(controller, 'handle_crud_operations') as mock_crud, \
-                 patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id') as mock_user_id:
+                 patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id') as mock_user_id:
                 
                 mock_facade = Mock(spec=TaskApplicationFacade)
                 mock_get_facade.return_value = mock_facade
@@ -846,7 +846,7 @@ class TestTaskMCPControllerIntegrationScenarios:
         
         return controller, mock_task_facade, mock_context_facade
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_complete_task_lifecycle_with_enrichment(self, mock_get_user_id, integration_controller):
         """Test complete task lifecycle with full enrichment and context management."""
         controller, mock_task_facade, mock_context_facade = integration_controller
@@ -983,7 +983,7 @@ class TestTaskMCPControllerIntegrationScenarios:
                 if "workflow_guidance" in result:
                     assert "stage" in result["workflow_guidance"]
 
-    @patch('fastmcp.task_management.interface.controllers.task_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.get_current_user_id')
     def test_multi_user_collaboration_workflow(self, mock_get_user_id, integration_controller):
         """Test multi-user collaboration workflow with context sharing."""
         controller, mock_task_facade, mock_context_facade = integration_controller

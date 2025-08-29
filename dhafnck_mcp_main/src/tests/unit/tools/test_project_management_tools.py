@@ -12,7 +12,7 @@ from typing import Dict, List, Any
 pytestmark = pytest.mark.unit  # Mark all tests in this file as unit tests
 
 # Mocking missing modules since they don't exist in the current codebase
-# from fastmcp.task_management.interface.controllers.project_mcp_controller import ProjectMCPController
+# from fastmcp.task_management.interface.mcp_controllers.project_mcp_controller import ProjectMCPController
 # from fastmcp.task_management.application.facades.project_application_facade import ProjectApplicationFacade
 # from fastmcp.task_management.domain.entities.project import Project
 

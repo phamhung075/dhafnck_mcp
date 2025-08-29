@@ -16,13 +16,12 @@ import json
 from fastmcp.auth.interface.fastapi_auth import get_current_active_user
 from fastmcp.auth.domain.entities.user import User
 
-# Import task management facades
-from fastmcp.task_management.application.facades.task_application_facade import TaskApplicationFacade
-from fastmcp.task_management.application.facades.unified_context_facade import UnifiedContextFacade
-from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
-from fastmcp.task_management.infrastructure.factories.task_facade_factory import TaskFacadeFactory
-from fastmcp.task_management.infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
-from fastmcp.task_management.infrastructure.repositories.subtask_repository_factory import SubtaskRepositoryFactory
+# Import API controllers for proper DDD architecture
+from fastmcp.task_management.interface.api_controllers.task_api_controller import TaskAPIController
+from fastmcp.task_management.interface.api_controllers.context_api_controller import ContextAPIController
+from fastmcp.task_management.interface.api_controllers.subtask_api_controller import SubtaskAPIController
+from fastmcp.auth.interface.fastapi_auth import get_db
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
@@ -36,12 +35,18 @@ router = APIRouter(
     dependencies=[Depends(get_current_user_from_bridge)]  # Protect all routes
 )
 
+# Initialize API controllers
+task_controller = TaskAPIController()
+context_controller = ContextAPIController()
+subtask_controller = SubtaskAPIController()
+
 
 @router.get("/summaries")
 async def get_task_summaries(
     git_branch_id: str = Query(..., description="Git branch UUID"),
     include_subtasks: bool = Query(False, description="Include subtask summaries"),
-    current_user: Dict[str, Any] = Depends(get_current_user_from_bridge)
+    current_user: Dict[str, Any] = Depends(get_current_user_from_bridge),
+    db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """
     Get lightweight task summaries for list views with OAuth2 protection.
@@ -50,43 +55,59 @@ async def get_task_summaries(
     dramatically improving performance for large task lists.
     """
     try:
-        # Get task facade
-        task_facade = TaskFacadeFactory.create()
+        # Create list request for API controller
+        from fastmcp.task_management.application.dtos.task.list_tasks_request import ListTasksRequest
         
-        # List tasks for the branch (filtered by user context from auth)
-        tasks = task_facade.list_tasks(
+        list_request = ListTasksRequest(
             git_branch_id=git_branch_id,
-            # Could add user filtering here if needed
-            # user_id=current_user.get("user_id")
+            # Add user filtering from auth
+            status=None,  # No status filter for summaries
+            priority=None,  # No priority filter for summaries
+            limit=100,  # Default limit for summaries
+            offset=0
         )
+        
+        # Get user ID from current_user (OAuth2 format may be different than User entity)
+        user_id = current_user.get("user_id") or current_user.get("id") or str(current_user)
+        
+        # Use API controller to list tasks
+        result = task_controller.list_tasks(list_request, user_id, db)
+        
+        if not result.get("success"):
+            raise HTTPException(
+                status_code=500,
+                detail=result.get("error", "Failed to fetch tasks")
+            )
+        
+        tasks_data = result.get("tasks", [])
         
         # Transform to summary format
         summaries = []
-        for task in tasks:
+        for task_data in tasks_data:
             summary = {
-                "id": task.id,
-                "title": task.title,
-                "status": task.status,
-                "priority": task.priority,
-                "progress_percentage": task.progress_percentage,
-                "assignees": task.assignees,
-                "labels": task.labels,
-                "subtask_count": len(task.subtasks) if hasattr(task, 'subtasks') else 0,
-                "has_context": bool(task.context_id),
-                "created_at": task.created_at.isoformat() if task.created_at else None,
-                "updated_at": task.updated_at.isoformat() if task.updated_at else None
+                "id": task_data.get("id"),
+                "title": task_data.get("title"),
+                "status": task_data.get("status"),
+                "priority": task_data.get("priority"),
+                "progress_percentage": task_data.get("progress_percentage", 0),
+                "assignees": task_data.get("assignees", []),
+                "labels": task_data.get("labels", []),
+                "subtask_count": len(task_data.get("subtasks", [])),
+                "has_context": bool(task_data.get("context_id")),
+                "created_at": task_data.get("created_at"),
+                "updated_at": task_data.get("updated_at")
             }
             
             # Optionally include subtask summaries
-            if include_subtasks and hasattr(task, 'subtasks'):
+            if include_subtasks and task_data.get("subtasks"):
                 summary["subtasks"] = [
                     {
-                        "id": subtask.id,
-                        "title": subtask.title,
-                        "status": subtask.status,
-                        "progress": getattr(subtask, 'progress_percentage', 0)
+                        "id": subtask.get("id"),
+                        "title": subtask.get("title"),
+                        "status": subtask.get("status"),
+                        "progress": subtask.get("progress_percentage", 0)
                     }
-                    for subtask in task.subtasks
+                    for subtask in task_data.get("subtasks", [])
                 ]
             
             summaries.append(summary)
@@ -107,7 +128,8 @@ async def get_task_summaries(
 @router.get("/subtask-summaries/{task_id}")
 async def get_subtask_summaries(
     task_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_user_from_bridge)
+    current_user: Dict[str, Any] = Depends(get_current_user_from_bridge),
+    db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """
     Get lightweight subtask summaries for a specific task with OAuth2 protection.
@@ -115,25 +137,33 @@ async def get_subtask_summaries(
     Provides only essential subtask information for UI rendering.
     """
     try:
-        # Get subtask repository
-        subtask_repo = SubtaskRepositoryFactory.create()
+        # Get user ID from current_user
+        user_id = current_user.get("user_id") or current_user.get("id") or str(current_user)
         
-        # Get subtasks for the task
-        subtasks = subtask_repo.find_by_parent_task(task_id)
+        # Use SubtaskAPIController to list subtasks
+        result = subtask_controller.list_subtasks(task_id, user_id, db)
+        
+        if not result.get("success"):
+            raise HTTPException(
+                status_code=500,
+                detail=result.get("error", "Failed to fetch subtasks")
+            )
+        
+        subtasks_data = result.get("subtasks", [])
         
         # Transform to summary format
         summaries = [
             {
-                "id": subtask.id,
-                "title": subtask.title,
-                "status": subtask.status,
-                "priority": subtask.priority,
-                "assignees": subtask.assignees,
-                "progress": getattr(subtask, 'progress_percentage', 0),
-                "created_at": subtask.created_at.isoformat() if subtask.created_at else None,
-                "updated_at": subtask.updated_at.isoformat() if subtask.updated_at else None
+                "id": subtask_data.get("id"),
+                "title": subtask_data.get("title"),
+                "status": subtask_data.get("status"),
+                "priority": subtask_data.get("priority"),
+                "assignees": subtask_data.get("assignees", []),
+                "progress": subtask_data.get("progress_percentage", 0),
+                "created_at": subtask_data.get("created_at"),
+                "updated_at": subtask_data.get("updated_at")
             }
-            for subtask in subtasks
+            for subtask_data in subtasks_data
         ]
         
         # Calculate aggregate progress
@@ -161,7 +191,8 @@ async def get_subtask_summaries(
 @router.get("/branch-statistics/{git_branch_id}")
 async def get_branch_statistics(
     git_branch_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_user_from_bridge)
+    current_user: Dict[str, Any] = Depends(get_current_user_from_bridge),
+    db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """
     Get statistics for a git branch with OAuth2 protection.
@@ -169,29 +200,48 @@ async def get_branch_statistics(
     Provides task counts, progress metrics, and other statistics.
     """
     try:
-        # Get task facade
-        task_facade = TaskFacadeFactory.create()
+        # Create list request for API controller
+        from fastmcp.task_management.application.dtos.task.list_tasks_request import ListTasksRequest
         
-        # Get all tasks for the branch
-        tasks = task_facade.list_tasks(git_branch_id=git_branch_id)
+        list_request = ListTasksRequest(
+            git_branch_id=git_branch_id,
+            status=None,  # Get all statuses for statistics
+            priority=None,  # Get all priorities
+            limit=1000,  # High limit for statistics
+            offset=0
+        )
+        
+        # Get user ID from current_user
+        user_id = current_user.get("user_id") or current_user.get("id") or str(current_user)
+        
+        # Use API controller to list tasks
+        result = task_controller.list_tasks(list_request, user_id, db)
+        
+        if not result.get("success"):
+            raise HTTPException(
+                status_code=500,
+                detail=result.get("error", "Failed to fetch tasks")
+            )
+        
+        tasks_data = result.get("tasks", [])
         
         # Calculate statistics
-        total_tasks = len(tasks)
-        completed_tasks = sum(1 for t in tasks if t.status == "done")
-        in_progress_tasks = sum(1 for t in tasks if t.status == "in_progress")
-        todo_tasks = sum(1 for t in tasks if t.status == "todo")
-        blocked_tasks = sum(1 for t in tasks if t.status == "blocked")
+        total_tasks = len(tasks_data)
+        completed_tasks = sum(1 for t in tasks_data if t.get("status") == "done")
+        in_progress_tasks = sum(1 for t in tasks_data if t.get("status") == "in_progress")
+        todo_tasks = sum(1 for t in tasks_data if t.get("status") == "todo")
+        blocked_tasks = sum(1 for t in tasks_data if t.get("status") == "blocked")
         
         # Calculate average progress
-        total_progress = sum(t.progress_percentage for t in tasks if hasattr(t, 'progress_percentage'))
+        total_progress = sum(t.get("progress_percentage", 0) for t in tasks_data)
         avg_progress = total_progress / total_tasks if total_tasks > 0 else 0
         
         # Priority breakdown
         priority_breakdown = {
-            "critical": sum(1 for t in tasks if t.priority == "critical"),
-            "high": sum(1 for t in tasks if t.priority == "high"),
-            "medium": sum(1 for t in tasks if t.priority == "medium"),
-            "low": sum(1 for t in tasks if t.priority == "low")
+            "critical": sum(1 for t in tasks_data if t.get("priority") == "critical"),
+            "high": sum(1 for t in tasks_data if t.get("priority") == "high"),
+            "medium": sum(1 for t in tasks_data if t.get("priority") == "medium"),
+            "low": sum(1 for t in tasks_data if t.get("priority") == "low")
         }
         
         return {

@@ -4,7 +4,7 @@ This is the refactored version of cursor_rules_tools.py that follows DDD princip
 by properly separating concerns and delegating to application facades.
 """
 
-from .controllers.cursor_rules_controller import CursorRulesController
+from .mcp_controllers.cursor_rules_controller import CursorRulesController
 from ..application.facades.rule_application_facade import RuleApplicationFacade
 from ..infrastructure.utilities.path_resolver import PathResolver
 

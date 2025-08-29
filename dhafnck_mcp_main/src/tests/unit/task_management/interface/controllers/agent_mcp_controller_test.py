@@ -14,7 +14,7 @@ import logging
 from unittest.mock import Mock, patch, MagicMock
 from typing import Dict, Any
 
-from fastmcp.task_management.interface.controllers.agent_mcp_controller import AgentMCPController
+from fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller import AgentMCPController
 from fastmcp.task_management.infrastructure.factories.agent_facade_factory import AgentFacadeFactory
 from fastmcp.task_management.application.facades.agent_application_facade import AgentApplicationFacade
 from fastmcp.task_management.domain.exceptions.authentication_exceptions import (
@@ -33,12 +33,12 @@ class TestAgentMCPController:
         self.mock_facade_factory.create_agent_facade.return_value = self.mock_facade
         
         # Mock workflow guidance
-        with patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.AgentWorkflowFactory'):
+        with patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.AgentWorkflowFactory'):
             self.controller = AgentMCPController(self.mock_facade_factory)
     
     def test_init(self):
         """Test controller initialization."""
-        with patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.AgentWorkflowFactory') as mock_workflow_factory:
+        with patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.AgentWorkflowFactory') as mock_workflow_factory:
             mock_workflow = Mock()
             mock_workflow_factory.create.return_value = mock_workflow
             
@@ -72,13 +72,13 @@ class TestAgentMCPController:
             assert call_kwargs["name"] == "manage_agent"
             assert call_kwargs["description"] == "Test description"
     
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')
     def test_get_facade_for_request_with_user_context(self, mock_get_user_id):
         """Test getting facade with user context from JWT."""
         mock_get_user_id.return_value = "jwt-user-123"
         project_id = "test-project"
         
-        with patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.validate_user_id') as mock_validate:
+        with patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.validate_user_id') as mock_validate:
             mock_validate.return_value = "jwt-user-123"
             
             result = self.controller._get_facade_for_request(project_id)
@@ -90,7 +90,7 @@ class TestAgentMCPController:
                 user_id="jwt-user-123"
             )
     
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')
     def test_get_facade_for_request_no_auth_raises_error(self, mock_get_user_id):
         """Test getting facade without authentication raises error."""
         mock_get_user_id.return_value = None
@@ -371,7 +371,7 @@ class TestAgentMCPController:
     
     def test_get_agent_management_descriptions(self):
         """Test getting agent management descriptions."""
-        with patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.description_loader') as mock_loader:
+        with patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.description_loader') as mock_loader:
             mock_loader.get_all_descriptions.return_value = {
                 "agents": {
                     "manage_agent": {
@@ -477,10 +477,10 @@ class TestAgentMCPControllerIntegration:
         self.mock_facade = Mock(spec=AgentApplicationFacade)
         self.mock_facade_factory.create_agent_facade.return_value = self.mock_facade
         
-        with patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.AgentWorkflowFactory'):
+        with patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.AgentWorkflowFactory'):
             self.controller = AgentMCPController(self.mock_facade_factory)
     
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')
     def test_complete_register_workflow(self, mock_get_user_id):
         """Test complete agent registration workflow."""
         mock_get_user_id.return_value = "test-user"
@@ -495,7 +495,7 @@ class TestAgentMCPControllerIntegration:
         mock_guidance = {"next_steps": ["Assign agent to branch"]}
         self.controller._workflow_guidance.generate_guidance.return_value = mock_guidance
         
-        with patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.validate_user_id') as mock_validate:
+        with patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.validate_user_id') as mock_validate:
             mock_validate.return_value = "test-user"
             
             result = self.controller.manage_agent(
@@ -524,7 +524,7 @@ class TestAgentMCPControllerIntegration:
             assert call_args[2] == "test-agent"   # name
             assert call_args[3] == "test-config"  # call_agent
     
-    @patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')
     def test_complete_assign_workflow(self, mock_get_user_id):
         """Test complete agent assignment workflow."""
         mock_get_user_id.return_value = "test-user"
@@ -536,7 +536,7 @@ class TestAgentMCPControllerIntegration:
         mock_guidance = {"next_steps": ["Start working on tasks"]}
         self.controller._workflow_guidance.generate_guidance.return_value = mock_guidance
         
-        with patch('fastmcp.task_management.interface.controllers.agent_mcp_controller.validate_user_id') as mock_validate:
+        with patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.validate_user_id') as mock_validate:
             mock_validate.return_value = "test-user"
             
             result = self.controller.manage_agent(

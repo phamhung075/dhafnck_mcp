@@ -19,16 +19,11 @@ except ImportError:
     # Fallback to local JWT if Supabase auth not available
     from ...auth.interface.fastapi_auth import get_current_user
 from ...auth.domain.entities.user import User
-from ...task_management.application.facades.task_application_facade import TaskApplicationFacade
-from ...task_management.infrastructure.repositories.orm.task_repository import ORMTaskRepository as TaskRepository
-from ...task_management.infrastructure.repositories.orm.project_repository import ORMProjectRepository as ProjectRepository
-from ...task_management.infrastructure.repositories.orm.agent_repository import ORMAgentRepository as AgentRepository
+from ...task_management.interface.api_controllers.task_api_controller import TaskAPIController
+from ...task_management.interface.api_controllers.subtask_api_controller import SubtaskAPIController
 from ...task_management.application.dtos.task.create_task_request import CreateTaskRequest
 from ...task_management.application.dtos.task.update_task_request import UpdateTaskRequest
 from ...task_management.application.dtos.task.list_tasks_request import ListTasksRequest
-from ...task_management.infrastructure.repositories.subtask_repository_factory import SubtaskRepositoryFactory
-from fastmcp.task_management.infrastructure.factories.task_facade_factory import TaskFacadeFactory
-from ...task_management.infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
 
 # Import debug service
 from ...utilities.debug_service import debug_service, log_api_v2_request, log_api_v2_response, log_auth_event, log_frontend_issue
@@ -38,24 +33,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v2/tasks", tags=["User-Scoped Tasks"])
 
 
-class UserScopedRepositoryFactory:
-    """Factory for creating user-scoped repository instances"""
-    
-    @staticmethod
-    def create_task_repository(session: Session, user_id: str, git_branch_id: str = None) -> TaskRepository:
-        """Create a user-scoped task repository with optional git_branch_id filtering"""
-        # Create repository with git_branch_id for filtering
-        return TaskRepository(session, git_branch_id=git_branch_id).with_user(user_id)
-    
-    @staticmethod
-    def create_project_repository(session: Session, user_id: str) -> ProjectRepository:
-        """Create a user-scoped project repository"""
-        return ProjectRepository(session, user_id=user_id)
-    
-    @staticmethod
-    def create_agent_repository(session: Session, user_id: str) -> AgentRepository:
-        """Create a user-scoped agent repository"""
-        return AgentRepository(session, user_id=user_id)
+# Initialize the API controllers
+task_controller = TaskAPIController()
+subtask_controller = SubtaskAPIController()
 
 
 @router.post("/", response_model=dict)
@@ -71,29 +51,26 @@ async def create_task(
     ensuring data isolation.
     """
     try:
-        # Create user-scoped repositories
-        task_repo = UserScopedRepositoryFactory.create_task_repository(db, current_user.id)
-        project_repo = UserScopedRepositoryFactory.create_project_repository(db, current_user.id)
-        
-        # Create facade with user context
-        facade = TaskApplicationFacade(
-            task_repository=task_repo,
-            git_branch_repository=None,  # Will be initialized as needed
-            context_service=None  # Will be initialized as needed
-        )
-        
         # Log the access for audit
         logger.info(f"User {current_user.email} creating task: {request.title}")
         
-        # Create the task - will automatically be scoped to the user
-        result = facade.create_task(request)
+        # Delegate to API controller
+        result = task_controller.create_task(request, current_user.id, db)
+        
+        if not result.get("success"):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=result.get("message", "Failed to create task")
+            )
         
         return {
             "success": True,
-            "task": result,
+            "task": result.get("task"),
             "message": f"Task created successfully for user {current_user.email}"
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error creating task for user {current_user.id}: {e}")
         raise HTTPException(
@@ -132,39 +109,27 @@ async def list_tasks(
         logger.debug(f"🎯 Filters: status={task_status}, priority={priority}, git_branch_id={git_branch_id}, limit={limit}")
         logger.debug(f"💾 Database session: {type(db)}")
         
-        # Create user-scoped repository with git_branch_id filtering
-        logger.debug("🏭 Creating user-scoped task repository...")
-        logger.debug(f"🌿 Git branch ID for filtering: {git_branch_id}")
-        task_repo = UserScopedRepositoryFactory.create_task_repository(db, current_user.id, git_branch_id)
-        logger.debug(f"✅ Task repository created: {type(task_repo)}")
-        
-        # Create facade with user context
-        logger.debug("🏗️ Creating task application facade...")
-        facade = TaskApplicationFacade(task_repository=task_repo)
-        logger.debug(f"✅ Facade created: {type(facade)}")
-        
         # Build request
         logger.debug("📋 Building list request...")
         list_request = ListTasksRequest(
-            git_branch_id=git_branch_id,  # Add git_branch_id to the request
+            git_branch_id=git_branch_id,
             status=task_status,
             priority=priority,
             limit=limit
         )
         logger.debug(f"✅ List request built: {list_request}")
         
-        # Get user's tasks only
-        logger.debug("🔍 Fetching tasks from facade...")
-        facade_result = facade.list_tasks(list_request)
-        logger.debug(f"✅ Facade result type: {type(facade_result)}")
-        logger.debug(f"✅ Facade result keys: {facade_result.keys() if isinstance(facade_result, dict) else 'Not a dict'}")
+        # Delegate to API controller
+        logger.debug("🔍 Fetching tasks from controller...")
+        controller_result = task_controller.list_tasks(list_request, current_user.id, db)
+        logger.debug(f"✅ Controller result type: {type(controller_result)}")
         
-        # Extract the actual tasks array from the facade response
-        if isinstance(facade_result, dict) and facade_result.get("success") and "tasks" in facade_result:
-            tasks = facade_result["tasks"]
+        # Extract the actual tasks array from the controller response
+        if controller_result.get("success") and "tasks" in controller_result:
+            tasks = controller_result["tasks"]
             logger.debug(f"✅ Tasks extracted: {len(tasks)} tasks found")
         else:
-            logger.error(f"❌ Unexpected facade result structure: {facade_result}")
+            logger.error(f"❌ Controller result error: {controller_result.get('error', 'Unknown error')}")
             tasks = []
         
         # Log each task for debugging
@@ -230,16 +195,10 @@ async def get_task(
     Returns 404 if the task doesn't exist or doesn't belong to the user.
     """
     try:
-        # Create user-scoped repository
-        task_repo = UserScopedRepositoryFactory.create_task_repository(db, current_user.id)
+        # Delegate to API controller
+        result = task_controller.get_task(task_id, current_user.id, db)
         
-        # Create facade with user context
-        facade = TaskApplicationFacade(task_repository=task_repo)
-        
-        # Get the task - will automatically check user ownership
-        task = facade.get_task(task_id)
-        
-        if not task:
+        if not result.get("success"):
             logger.warning(f"User {current_user.email} attempted to access non-existent or unauthorized task {task_id}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -250,7 +209,7 @@ async def get_task(
         
         return {
             "success": True,
-            "task": task
+            "task": result.get("task")
         }
         
     except HTTPException:
@@ -276,29 +235,27 @@ async def update_task(
     Only allows updating tasks that belong to the current user.
     """
     try:
-        # Create user-scoped repository
-        task_repo = UserScopedRepositoryFactory.create_task_repository(db, current_user.id)
+        # Delegate to API controller
+        result = task_controller.update_task(task_id, request, current_user.id, db)
         
-        # Create facade with user context
-        facade = TaskApplicationFacade(task_repository=task_repo)
-        
-        # First check if task exists and belongs to user
-        existing_task = facade.get_task(task_id)
-        if not existing_task:
-            logger.warning(f"User {current_user.email} attempted to update non-existent or unauthorized task {task_id}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Task not found"
-            )
-        
-        # Update the task
-        updated_task = facade.update_task(task_id, request)
+        if not result.get("success"):
+            if "not found" in result.get("error", "").lower():
+                logger.warning(f"User {current_user.email} attempted to update non-existent or unauthorized task {task_id}")
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Task not found"
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=result.get("message", "Failed to update task")
+                )
         
         logger.info(f"User {current_user.email} updated task {task_id}")
         
         return {
             "success": True,
-            "task": updated_task,
+            "task": result.get("task"),
             "message": "Task updated successfully"
         }
         
@@ -324,23 +281,21 @@ async def delete_task(
     Only allows deleting tasks that belong to the current user.
     """
     try:
-        # Create user-scoped repository
-        task_repo = UserScopedRepositoryFactory.create_task_repository(db, current_user.id)
+        # Delegate to API controller
+        result = task_controller.delete_task(task_id, current_user.id, db)
         
-        # Create facade with user context
-        facade = TaskApplicationFacade(task_repository=task_repo)
-        
-        # First check if task exists and belongs to user
-        existing_task = facade.get_task(task_id)
-        if not existing_task:
-            logger.warning(f"User {current_user.email} attempted to delete non-existent or unauthorized task {task_id}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Task not found"
-            )
-        
-        # Delete the task
-        facade.delete_task(task_id)
+        if not result.get("success"):
+            if "not found" in result.get("error", "").lower():
+                logger.warning(f"User {current_user.email} attempted to delete non-existent or unauthorized task {task_id}")
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Task not found"
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=result.get("message", "Failed to delete task")
+                )
         
         logger.info(f"User {current_user.email} deleted task {task_id}")
         
@@ -373,33 +328,27 @@ async def complete_task(
     Only allows completing tasks that belong to the current user.
     """
     try:
-        # Create user-scoped repository
-        task_repo = UserScopedRepositoryFactory.create_task_repository(db, current_user.id)
+        # Delegate to API controller
+        result = task_controller.complete_task(task_id, completion_summary, testing_notes, current_user.id, db)
         
-        # Create facade with user context
-        facade = TaskApplicationFacade(task_repository=task_repo)
-        
-        # First check if task exists and belongs to user
-        existing_task = facade.get_task(task_id)
-        if not existing_task:
-            logger.warning(f"User {current_user.email} attempted to complete non-existent or unauthorized task {task_id}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Task not found"
-            )
-        
-        # Complete the task
-        completed_task = facade.complete_task(
-            task_id=task_id,
-            completion_summary=completion_summary,
-            testing_notes=testing_notes
-        )
+        if not result.get("success"):
+            if "not found" in result.get("error", "").lower():
+                logger.warning(f"User {current_user.email} attempted to complete non-existent or unauthorized task {task_id}")
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Task not found"
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=result.get("message", "Failed to complete task")
+                )
         
         logger.info(f"User {current_user.email} completed task {task_id}")
         
         return {
             "success": True,
-            "task": completed_task,
+            "task": result.get("task"),
             "message": "Task completed successfully"
         }
         
@@ -424,21 +373,18 @@ async def get_user_task_stats(
     Returns summary statistics only for the user's own tasks.
     """
     try:
-        # Create user-scoped repository
-        task_repo = UserScopedRepositoryFactory.create_task_repository(db, current_user.id)
+        # Delegate to API controller
+        result = task_controller.get_task_statistics(current_user.id, db)
         
-        # Get all user's tasks
-        all_tasks = task_repo.find_all()
+        if not result.get("success"):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=result.get("message", "Failed to get task statistics")
+            )
         
-        # Calculate statistics
-        stats = {
-            "total_tasks": len(all_tasks),
-            "completed_tasks": len([t for t in all_tasks if t.status == "done"]),
-            "in_progress_tasks": len([t for t in all_tasks if t.status == "in_progress"]),
-            "pending_tasks": len([t for t in all_tasks if t.status == "todo"]),
-            "high_priority_tasks": len([t for t in all_tasks if t.priority == "high"]),
-            "user": current_user.email
-        }
+        # Add user email to stats
+        stats = result.get("stats", {})
+        stats["user"] = current_user.email
         
         logger.info(f"User {current_user.email} retrieved task statistics")
         
@@ -479,21 +425,8 @@ async def get_subtask_summaries(
         
         logger.info(f"Loading subtask summaries for task {task_id} by user {current_user.email}")
         
-        # Initialize repository factories and facade
-        task_repository_factory = TaskRepositoryFactory()
-        subtask_repository_factory = SubtaskRepositoryFactory()
-        
-        # Use authenticated user
-        user_id = current_user.id
-        
-        task_facade_factory = TaskFacadeFactory(task_repository_factory, subtask_repository_factory)
-        task_facade = task_facade_factory.create_task_facade("default_project", None, user_id)
-        
-        # Get subtasks for the parent task
-        result = task_facade.list_subtasks_summary(
-            parent_task_id=task_id,
-            include_counts=include_counts
-        )
+        # Delegate to API controller
+        result = subtask_controller.list_subtasks(task_id, current_user.id, db)
         
         if not result.get("success"):
             raise HTTPException(

@@ -19,12 +19,16 @@ try:
 except ImportError:
     # Fallback to local JWT if Supabase auth not available
     from ...auth.interface.fastapi_auth import get_current_user
-from ...task_management.infrastructure.repositories.orm.project_repository import ORMProjectRepository
-from ...task_management.application.orchestrators.services.project_application_service import ProjectApplicationService
+from ...task_management.interface.api_controllers.project_api_controller import ProjectAPIController
+from ...task_management.application.dtos.project.create_project_request import CreateProjectRequest
+from ...task_management.application.dtos.project.update_project_request import UpdateProjectRequest
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v2/projects", tags=["User-Scoped Projects"])
+
+# Initialize the project API controller
+project_controller = ProjectAPIController()
 
 
 @router.post("/", response_model=dict)
@@ -41,28 +45,29 @@ async def create_project(
     ensuring data isolation.
     """
     try:
-        # Create user-scoped repository
-        project_repo = ORMProjectRepository(session=db, user_id=current_user.id)
-        
-        # Create service with user context
-        service = ProjectApplicationService(project_repo, user_id=current_user.id)
-        
-        # Generate project ID
-        from uuid import uuid4
-        project_id = str(uuid4())
-        
         # Log the access for audit
         logger.info(f"User {current_user.email} creating project: {name}")
         
-        # Create the project - will automatically be scoped to the user
-        result = await service.create_project(project_id, name, description)
+        # Create request DTO
+        request = CreateProjectRequest(name=name, description=description)
+        
+        # Delegate to API controller
+        result = project_controller.create_project(request, current_user.id, db)
+        
+        if not result.get("success"):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=result.get("message", "Failed to create project")
+            )
         
         return {
             "success": True,
-            "project": result,
+            "project": result.get("project"),
             "message": f"Project created successfully for user {current_user.email}"
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error creating project for user {current_user.id}: {e}")
         raise HTTPException(
@@ -82,17 +87,17 @@ async def list_projects(
     Only returns projects that belong to the current user.
     """
     try:
-        # Create user-scoped repository
-        project_repo = ORMProjectRepository(session=db, user_id=current_user.id)
-        
-        # Create service with user context
-        service = ProjectApplicationService(project_repo, user_id=current_user.id)
-        
         # Log the access for audit
         logger.info(f"User {current_user.email} listing projects")
         
-        # List projects - automatically filtered by user
-        result = await service.list_projects()
+        # Delegate to API controller
+        result = project_controller.list_projects(current_user.id, db)
+        
+        if not result.get("success"):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=result.get("message", "Failed to list projects")
+            )
         
         return {
             "success": True,
@@ -121,19 +126,13 @@ async def get_project(
     Only returns the project if it belongs to the current user.
     """
     try:
-        # Create user-scoped repository
-        project_repo = ORMProjectRepository(session=db, user_id=current_user.id)
-        
-        # Create service with user context
-        service = ProjectApplicationService(project_repo, user_id=current_user.id)
-        
         # Log the access for audit
         logger.info(f"User {current_user.email} accessing project: {project_id}")
         
-        # Get the project - will return None if not owned by user
-        result = await service.get_project(project_id)
+        # Delegate to API controller
+        result = project_controller.get_project(project_id, current_user.id, db)
         
-        if not result or not result.get("success"):
+        if not result.get("success"):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Project not found or access denied"
@@ -169,23 +168,26 @@ async def update_project(
     Only allows updating projects that belong to the current user.
     """
     try:
-        # Create user-scoped repository
-        project_repo = ORMProjectRepository(session=db, user_id=current_user.id)
-        
-        # Create service with user context
-        service = ProjectApplicationService(project_repo, user_id=current_user.id)
-        
         # Log the access for audit
         logger.info(f"User {current_user.email} updating project: {project_id}")
         
-        # Update the project - will fail if not owned by user
-        result = await service.update_project(project_id, name, description)
+        # Create request DTO
+        update_request = UpdateProjectRequest(name=name, description=description)
         
-        if not result or not result.get("success"):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Project not found or access denied"
-            )
+        # Delegate to API controller
+        result = project_controller.update_project(project_id, update_request, current_user.id, db)
+        
+        if not result.get("success"):
+            if "not found" in result.get("error", "").lower():
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Project not found or access denied"
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=result.get("message", "Failed to update project")
+                )
         
         return {
             "success": True,
@@ -216,22 +218,23 @@ async def delete_project(
     This will also delete all associated git branches, tasks, and contexts.
     """
     try:
-        # Create user-scoped repository
-        project_repo = ORMProjectRepository(session=db, user_id=current_user.id)
-        
-        # First verify the project exists and belongs to the user
-        project = await project_repo.find_by_id(project_id)
-        if not project:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Project not found or access denied"
-            )
-        
         # Log the access for audit
         logger.info(f"User {current_user.email} deleting project: {project_id}")
         
-        # Delete the project
-        result = await project_repo.delete(project)
+        # Delegate to API controller
+        result = project_controller.delete_project(project_id, current_user.id, db)
+        
+        if not result.get("success"):
+            if "not found" in result.get("error", "").lower():
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Project not found or access denied"
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=result.get("message", "Failed to delete project")
+                )
         
         return {
             "success": True,
@@ -260,27 +263,27 @@ async def project_health_check(
     Only works for projects that belong to the current user.
     """
     try:
-        # Create user-scoped repository
-        project_repo = ORMProjectRepository(session=db, user_id=current_user.id)
-        
-        # Create service with user context
-        service = ProjectApplicationService(project_repo, user_id=current_user.id)
-        
         # Log the access for audit
         logger.info(f"User {current_user.email} checking health of project: {project_id}")
         
-        # Perform health check
-        result = await service.project_health_check(project_id)
+        # Delegate to API controller
+        result = project_controller.get_project_health(project_id, current_user.id, db)
         
-        if not result or not result.get("success"):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Project not found or access denied"
-            )
+        if not result.get("success"):
+            if "not found" in result.get("error", "").lower():
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Project not found or access denied"
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=result.get("message", "Failed to check project health")
+                )
         
         return {
             "success": True,
-            "health": result,
+            "health": result.get("health"),
             "message": f"Health check completed for user {current_user.email}"
         }
         

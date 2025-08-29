@@ -13,7 +13,7 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock
 from typing import Dict, Any
 
-from fastmcp.task_management.interface.controllers.unified_context_controller import UnifiedContextMCPController
+from fastmcp.task_management.interface.mcp_controllers.unified_context_controller import UnifiedContextMCPController
 from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
 
 
@@ -114,7 +114,7 @@ class TestUnifiedContextDescriptionLoading:
             "type": "string"
         })
     
-    @patch('fastmcp.task_management.interface.controllers.unified_context_controller.description_loader')
+    @patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.description_loader')
     def test_get_context_management_descriptions_success(self, mock_loader, controller):
         """Test successful description loading from loader."""
         # Mock successful loading
@@ -135,7 +135,7 @@ class TestUnifiedContextDescriptionLoading:
         assert result["parameters"]["action"] == "Loaded action param"
         mock_loader.get_all_descriptions.assert_called_once()
     
-    @patch('fastmcp.task_management.interface.controllers.unified_context_controller.description_loader')
+    @patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.description_loader')
     def test_get_context_management_descriptions_fallback(self, mock_loader, controller):
         """Test fallback to default descriptions when loading fails."""
         # Mock loading failure
@@ -148,7 +148,7 @@ class TestUnifiedContextDescriptionLoading:
         assert "action" in result["parameters"]
         assert isinstance(result["parameters"]["action"], str)
     
-    @patch('fastmcp.task_management.interface.controllers.unified_context_controller.description_loader')
+    @patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.description_loader')
     def test_get_context_management_descriptions_missing_key(self, mock_loader, controller):
         """Test fallback when expected keys are missing."""
         # Mock incomplete structure
@@ -184,7 +184,7 @@ class TestUnifiedContextDescriptionLoading:
         # The actual loaded description should contain "UNIFIED CONTEXT MANAGEMENT SYSTEM"
         assert "UNIFIED CONTEXT MANAGEMENT SYSTEM" in call_args[1]["description"]
     
-    @patch('fastmcp.task_management.interface.controllers.unified_context_controller.description_loader')
+    @patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.description_loader')
     def test_tool_function_parameter_descriptions(self, mock_loader, controller, mock_facade_factory):
         """Test that tool function parameters use loaded descriptions."""
         # Mock successful loading with parameter descriptions

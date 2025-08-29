@@ -10,7 +10,7 @@ from unittest.mock import Mock, MagicMock, patch, call
 import json
 from typing import Dict, Any
 
-from fastmcp.task_management.interface.controllers.unified_context_controller import UnifiedContextMCPController
+from fastmcp.task_management.interface.mcp_controllers.unified_context_controller import UnifiedContextMCPController
 from fastmcp.task_management.application.facades.unified_context_facade import UnifiedContextFacade
 from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
 from fastmcp.task_management.domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
@@ -74,7 +74,7 @@ class TestUnifiedContextMCPController:
         assert call_args[1]["name"] == "manage_context"
         assert "Unified context management" in call_args[1]["description"]
     
-    @patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id')
     def test_manage_context_create_action(self, mock_get_user_id, controller, mock_mcp_server, mock_facade_factory, mock_facade):
         """Test manage_context tool with create action."""
         mock_get_user_id.return_value = "authenticated-user"
@@ -118,7 +118,7 @@ class TestUnifiedContextMCPController:
         assert "data" in result
         assert "context_data" in result["data"]
     
-    @patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id')
     def test_manage_context_get_action(self, mock_get_user_id, controller, mock_mcp_server, mock_facade):
         """Test manage_context tool with get action."""
         mock_get_user_id.return_value = "test-user"
@@ -147,7 +147,7 @@ class TestUnifiedContextMCPController:
         
         assert result["success"] is True
     
-    @patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id')
     def test_manage_context_update_action(self, mock_get_user_id, controller, mock_mcp_server, mock_facade):
         """Test manage_context tool with update action."""
         mock_get_user_id.return_value = "test-user"
@@ -176,7 +176,7 @@ class TestUnifiedContextMCPController:
         
         assert result["success"] is True
     
-    @patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id')
     def test_manage_context_delete_action(self, mock_get_user_id, controller, mock_mcp_server, mock_facade):
         """Test manage_context tool with delete action."""
         mock_get_user_id.return_value = "test-user"
@@ -198,7 +198,7 @@ class TestUnifiedContextMCPController:
         
         assert result["success"] is True
     
-    @patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id')
     def test_manage_context_resolve_action(self, mock_get_user_id, controller, mock_mcp_server, mock_facade):
         """Test manage_context tool with resolve action."""
         mock_get_user_id.return_value = "test-user"
@@ -225,7 +225,7 @@ class TestUnifiedContextMCPController:
         
         assert result["success"] is True
     
-    @patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id')
     def test_manage_context_delegate_action(self, mock_get_user_id, controller, mock_mcp_server, mock_facade):
         """Test manage_context tool with delegate action."""
         mock_get_user_id.return_value = "test-user"
@@ -256,7 +256,7 @@ class TestUnifiedContextMCPController:
         
         assert result["success"] is True
     
-    @patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id')
     def test_manage_context_add_insight_action(self, mock_get_user_id, controller, mock_mcp_server, mock_facade):
         """Test manage_context tool with add_insight action."""
         mock_get_user_id.return_value = "test-user"
@@ -289,7 +289,7 @@ class TestUnifiedContextMCPController:
         
         assert result["success"] is True
     
-    @patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id')
     def test_manage_context_add_progress_action(self, mock_get_user_id, controller, mock_mcp_server, mock_facade):
         """Test manage_context tool with add_progress action."""
         mock_get_user_id.return_value = "test-user"
@@ -318,7 +318,7 @@ class TestUnifiedContextMCPController:
         
         assert result["success"] is True
     
-    @patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id')
     def test_manage_context_list_action(self, mock_get_user_id, controller, mock_mcp_server, mock_facade):
         """Test manage_context tool with list action."""
         mock_get_user_id.return_value = "test-user"
@@ -350,7 +350,7 @@ class TestUnifiedContextMCPController:
         assert "contexts" in result["data"]
         assert len(result["data"]["contexts"]) == 2
     
-    @patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id')
     def test_manage_context_invalid_action(self, mock_get_user_id, controller, mock_mcp_server):
         """Test manage_context tool with invalid action."""
         mock_get_user_id.return_value = "test-user"
@@ -370,7 +370,7 @@ class TestUnifiedContextMCPController:
         assert "Unknown action: invalid_action" in result["error"]["message"]
         assert "Valid actions:" in result["error"]["message"]
     
-    @patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id')
     def test_manage_context_json_string_data(self, mock_get_user_id, controller, mock_mcp_server, mock_facade):
         """Test manage_context with JSON string data parameter."""
         mock_get_user_id.return_value = "test-user"
@@ -397,7 +397,7 @@ class TestUnifiedContextMCPController:
         
         assert result["success"] is True
     
-    @patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id')
     def test_manage_context_invalid_json_data(self, mock_get_user_id, controller, mock_mcp_server):
         """Test manage_context with invalid JSON string data."""
         mock_get_user_id.return_value = "test-user"
@@ -420,7 +420,7 @@ class TestUnifiedContextMCPController:
         assert "metadata" in result
         assert "suggestions" in result["metadata"]
     
-    @patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id')
     def test_manage_context_boolean_parameter_coercion(self, mock_get_user_id, controller, mock_mcp_server, mock_facade):
         """Test boolean parameter coercion from string values."""
         mock_get_user_id.return_value = "test-user"
@@ -448,7 +448,7 @@ class TestUnifiedContextMCPController:
         
         assert result["success"] is True
     
-    @patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id')
     def test_manage_context_authentication_error(self, mock_get_user_id, controller, mock_mcp_server):
         """Test authentication error handling."""
         mock_get_user_id.side_effect = UserAuthenticationRequiredError("Authentication required")
@@ -471,7 +471,7 @@ class TestUnifiedContextMCPController:
                 "Authentication required" in error_content or
                 "USER_AUTHENTICATION_REQUIRED" in str(result.get("error_code", "")))
     
-    @patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id')
     def test_manage_context_facade_error(self, mock_get_user_id, controller, mock_mcp_server, mock_facade):
         """Test facade error handling."""
         mock_get_user_id.return_value = "test-user"
@@ -580,7 +580,7 @@ class TestUnifiedContextMCPController:
         assert isinstance(result["data"], dict)
         assert "metadata" in result
     
-    @patch('fastmcp.task_management.interface.controllers.unified_context_controller.description_loader')
+    @patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.description_loader')
     def test_get_context_management_descriptions_fallback(self, mock_loader, controller):
         """Test fallback when description loading fails."""
         mock_loader.get_all_descriptions.side_effect = Exception("Loading error")
@@ -602,8 +602,8 @@ class TestParameterParsing:
         factory = Mock(spec=UnifiedContextFacadeFactory)
         return UnifiedContextMCPController(factory)
     
-    @patch('fastmcp.task_management.interface.controllers.unified_context_controller.get_authenticated_user_id')
-    @patch('fastmcp.task_management.interface.controllers.unified_context_controller.JSONParameterParser')
+    @patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.get_authenticated_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.JSONParameterParser')
     def test_json_parameter_parsing(self, mock_parser, mock_get_user_id, controller):
         """Test JSON parameter parsing for delegate_data and filters."""
         mock_get_user_id.return_value = "test-user"
@@ -646,7 +646,7 @@ class TestParameterParsing:
             assert result["success"] is True
             assert result["status"] == "success"
     
-    @patch('fastmcp.task_management.interface.controllers.unified_context_controller.coerce_parameter_types')
+    @patch('fastmcp.task_management.interface.mcp_controllers.unified_context_controller.coerce_parameter_types')
     def test_boolean_parameter_coercion_error_handling(self, mock_coerce, controller):
         """Test error handling in boolean parameter coercion."""
         mock_coerce.side_effect = Exception("Coercion error")

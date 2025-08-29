@@ -10,7 +10,7 @@ import pytest
 from unittest.mock import Mock, patch
 import asyncio
 
-from fastmcp.task_management.interface.controllers.unified_context_controller import UnifiedContextMCPController
+from fastmcp.task_management.interface.mcp_controllers.unified_context_controller import UnifiedContextMCPController
 from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
 from fastmcp.task_management.interface.utils.parameter_validation_fix import ParameterTypeCoercer
 

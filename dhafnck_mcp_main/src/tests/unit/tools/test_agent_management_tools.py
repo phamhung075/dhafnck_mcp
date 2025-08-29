@@ -13,8 +13,8 @@ import unittest
 pytestmark = pytest.mark.unit  # Mark all tests in this file as unit tests
 
 # Mocking missing modules since they don't exist in the current codebase
-# from fastmcp.task_management.interface.controllers.agent_mcp_controller import AgentMCPController
-# from fastmcp.task_management.interface.controllers.call_agent_mcp_controller import CallAgentMCPController
+# from fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller import AgentMCPController
+# from fastmcp.task_management.interface.mcp_controllers.call_agent_mcp_controller import CallAgentMCPController
 # from fastmcp.task_management.application.facades.agent_application_facade import AgentApplicationFacade
 # from fastmcp.task_management.application.facades.call_agent_application_facade import CallAgentApplicationFacade
 

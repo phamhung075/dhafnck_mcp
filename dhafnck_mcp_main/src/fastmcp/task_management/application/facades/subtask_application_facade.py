@@ -88,7 +88,7 @@ class SubtaskApplicationFacade:
         
         # Use auth_helper to get authenticated user ID (same as controllers)
         try:
-            from ...interface.controllers.auth_helper import get_authenticated_user_id
+            from ...interface.mcp_controllers.auth_helper import get_authenticated_user_id
             user_id = get_authenticated_user_id(None, "Subtask context derivation")
         except Exception as e:
             logger.error(f"Authentication failed for subtask context derivation: {e}")
@@ -150,7 +150,7 @@ class SubtaskApplicationFacade:
         
         # Use auth_helper to get authenticated user ID (same as controllers)
         try:
-            from ...interface.controllers.auth_helper import get_authenticated_user_id
+            from ...interface.mcp_controllers.auth_helper import get_authenticated_user_id
             user_id = get_authenticated_user_id(None, "Subtask context derivation")
         except Exception as e:
             logger.error(f"Authentication failed for subtask context derivation: {e}")

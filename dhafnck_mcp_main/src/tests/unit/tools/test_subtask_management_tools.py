@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Dict, List, Any
 
 # Mocking missing modules since they don't exist in the current codebase
-# from fastmcp.task_management.interface.controllers.subtask_mcp_controller import SubtaskMCPController
+# from fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller import SubtaskMCPController
 # from fastmcp.task_management.application.facades.subtask_application_facade import SubtaskApplicationFacade
 # from fastmcp.task_management.domain.entities.subtask import Subtask
 # from fastmcp.task_management.domain.value_objects.task_status import TaskStatus

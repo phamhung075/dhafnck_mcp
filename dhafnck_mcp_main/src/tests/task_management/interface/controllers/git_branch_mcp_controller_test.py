@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import Mock, patch
 from typing import Dict, Any, Optional
 
-from fastmcp.task_management.interface.controllers.git_branch_mcp_controller import GitBranchMCPController
+from fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller import GitBranchMCPController
 from fastmcp.task_management.domain.exceptions.authentication_exceptions import (
     UserAuthenticationRequiredError, DefaultUserProhibitedError
 )
@@ -45,7 +45,7 @@ class TestGitBranchMCPController:
         
         assert controller._git_branch_facade_factory == mock_git_branch_facade_factory
 
-    @patch('fastmcp.task_management.interface.controllers.git_branch_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller.get_current_user_id')
     def test_manage_git_branch_create_success(self, mock_get_user, controller, mock_git_branch_facade_factory):
         """Test successful git branch creation"""
         mock_get_user.return_value = "test-user"
@@ -61,7 +61,7 @@ class TestGitBranchMCPController:
         assert result["git_branch_id"] == "branch-123"
         mock_facade.create_git_branch.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.git_branch_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller.get_current_user_id')
     def test_manage_git_branch_get_success(self, mock_get_user, controller, mock_git_branch_facade_factory):
         """Test successful git branch retrieval"""
         mock_get_user.return_value = "test-user"
@@ -77,7 +77,7 @@ class TestGitBranchMCPController:
         assert "git_branch" in result
         mock_facade.get_git_branch.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.git_branch_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller.get_current_user_id')
     def test_manage_git_branch_list_success(self, mock_get_user, controller, mock_git_branch_facade_factory):
         """Test successful git branch listing"""
         mock_get_user.return_value = "test-user"
@@ -92,7 +92,7 @@ class TestGitBranchMCPController:
         assert "git_branches" in result
         mock_facade.list_git_branches.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.git_branch_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller.get_current_user_id')
     def test_manage_git_branch_update_success(self, mock_get_user, controller, mock_git_branch_facade_factory):
         """Test successful git branch update"""
         mock_get_user.return_value = "test-user"
@@ -109,7 +109,7 @@ class TestGitBranchMCPController:
         assert result["updated"] is True
         mock_facade.update_git_branch.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.git_branch_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller.get_current_user_id')
     def test_manage_git_branch_delete_success(self, mock_get_user, controller, mock_git_branch_facade_factory):
         """Test successful git branch deletion"""
         mock_get_user.return_value = "test-user"
@@ -125,7 +125,7 @@ class TestGitBranchMCPController:
         assert result["deleted"] is True
         mock_facade.delete_git_branch.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.git_branch_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller.get_current_user_id')
     def test_manage_git_branch_assign_agent_success(self, mock_get_user, controller, mock_git_branch_facade_factory):
         """Test successful agent assignment to git branch"""
         mock_get_user.return_value = "test-user"
@@ -142,7 +142,7 @@ class TestGitBranchMCPController:
         assert result["assigned"] is True
         mock_facade.assign_agent.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.git_branch_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller.get_current_user_id')
     def test_manage_git_branch_unassign_agent_success(self, mock_get_user, controller, mock_git_branch_facade_factory):
         """Test successful agent unassignment from git branch"""
         mock_get_user.return_value = "test-user"
@@ -159,7 +159,7 @@ class TestGitBranchMCPController:
         assert result["unassigned"] is True
         mock_facade.unassign_agent.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.git_branch_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller.get_current_user_id')
     def test_manage_git_branch_get_statistics_success(self, mock_get_user, controller, mock_git_branch_facade_factory):
         """Test successful git branch statistics retrieval"""
         mock_get_user.return_value = "test-user"
@@ -175,7 +175,7 @@ class TestGitBranchMCPController:
         assert "statistics" in result
         mock_facade.get_statistics.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.git_branch_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller.get_current_user_id')
     def test_manage_git_branch_archive_success(self, mock_get_user, controller, mock_git_branch_facade_factory):
         """Test successful git branch archival"""
         mock_get_user.return_value = "test-user"
@@ -191,7 +191,7 @@ class TestGitBranchMCPController:
         assert result["archived"] is True
         mock_facade.archive_git_branch.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.git_branch_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller.get_current_user_id')
     def test_manage_git_branch_restore_success(self, mock_get_user, controller, mock_git_branch_facade_factory):
         """Test successful git branch restoration"""
         mock_get_user.return_value = "test-user"
@@ -207,7 +207,7 @@ class TestGitBranchMCPController:
         assert result["restored"] is True
         mock_facade.restore_git_branch.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.git_branch_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller.get_current_user_id')
     def test_manage_git_branch_invalid_action(self, mock_get_user, controller):
         """Test handling of invalid action"""
         mock_get_user.return_value = "test-user"
@@ -221,7 +221,7 @@ class TestGitBranchMCPController:
         assert "Unknown action" in result["error"]
         assert "available_actions" in result
 
-    @patch('fastmcp.task_management.interface.controllers.git_branch_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller.get_current_user_id')
     def test_manage_git_branch_authentication_required_error(self, mock_get_user, controller):
         """Test handling of authentication required error"""
         mock_get_user.side_effect = UserAuthenticationRequiredError("Authentication required")
@@ -236,7 +236,7 @@ class TestGitBranchMCPController:
         assert "Authentication required" in result["error"]
         assert result["error_code"] == "AUTHENTICATION_REQUIRED"
 
-    @patch('fastmcp.task_management.interface.controllers.git_branch_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller.get_current_user_id')
     def test_manage_git_branch_default_user_prohibited_error(self, mock_get_user, controller):
         """Test handling of default user prohibited error"""
         mock_get_user.return_value = "test-user"
@@ -253,7 +253,7 @@ class TestGitBranchMCPController:
         assert "Default user not allowed" in result["error"]
         assert result["error_code"] == "DEFAULT_USER_PROHIBITED"
 
-    @patch('fastmcp.task_management.interface.controllers.git_branch_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller.get_current_user_id')
     def test_manage_git_branch_general_exception(self, mock_get_user, controller):
         """Test handling of general exceptions"""
         mock_get_user.return_value = "test-user"
@@ -275,7 +275,7 @@ class TestGitBranchMCPController:
         assert hasattr(controller, 'register_tools')
         assert callable(controller.register_tools)
 
-    @patch('fastmcp.task_management.interface.controllers.git_branch_mcp_controller.description_loader')
+    @patch('fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller.description_loader')
     def test_register_tools_calls_description_loader(self, mock_desc_loader, controller):
         """Test that register_tools calls the description loader"""
         mock_mcp = Mock()
@@ -287,7 +287,7 @@ class TestGitBranchMCPController:
         
         mock_desc_loader.get_git_branch_management_descriptions.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.git_branch_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller.get_current_user_id')
     def test_user_id_parameter_handling(self, mock_get_user, controller, mock_git_branch_facade_factory):
         """Test that user_id parameter is handled correctly"""
         mock_get_user.return_value = "test-user"
@@ -304,7 +304,7 @@ class TestGitBranchMCPController:
             user_id="test-user"
         )
 
-    @patch('fastmcp.task_management.interface.controllers.git_branch_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller.get_current_user_id')
     def test_workflow_guidance_integration(self, mock_get_user, controller):
         """Test that workflow guidance is integrated"""
         mock_get_user.return_value = "test-user"
@@ -319,7 +319,7 @@ class TestGitBranchMCPController:
         # Workflow guidance should be included in responses
         assert "workflow_guidance" in result or result["success"] is True
 
-    @patch('fastmcp.task_management.interface.controllers.git_branch_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller.get_current_user_id')
     def test_git_branch_identification_by_name_or_id(self, mock_get_user, controller):
         """Test git branch identification by name or ID"""
         mock_get_user.return_value = "test-user"
@@ -341,7 +341,7 @@ class TestGitBranchMCPController:
         )
         assert result_name["success"] is True
 
-    @patch('fastmcp.task_management.interface.controllers.git_branch_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller.get_current_user_id')
     def test_parameter_validation_for_actions(self, mock_get_user, controller):
         """Test parameter validation for different actions"""
         mock_get_user.return_value = "test-user"
@@ -363,17 +363,17 @@ class TestGitBranchMCPController:
         )
         assert result["success"] is True
 
-    @patch('fastmcp.task_management.interface.controllers.git_branch_mcp_controller.logger')
+    @patch('fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller.logger')
     def test_logging_functionality(self, mock_logger, controller):
         """Test that logging is available and functional"""
         # Logger should be available for operations
         assert mock_logger is not None
         
         # Test that we can log (logger is imported at module level)
-        from fastmcp.task_management.interface.controllers.git_branch_mcp_controller import logger
+        from fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller import logger
         assert logger is not None
 
-    @patch('fastmcp.task_management.interface.controllers.git_branch_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller.get_current_user_id')
     def test_facade_creation_and_delegation(self, mock_get_user, controller, mock_git_branch_facade_factory):
         """Test that facade is properly created and operations are delegated"""
         mock_get_user.return_value = "test-user"
@@ -394,7 +394,7 @@ class TestGitBranchMCPController:
         # Verify operation delegation
         mock_facade.list_git_branches.assert_called_once()
 
-    @patch('fastmcp.task_management.interface.controllers.git_branch_mcp_controller.get_current_user_id')
+    @patch('fastmcp.task_management.interface.mcp_controllers.git_branch_mcp_controller.get_current_user_id')
     def test_action_availability_list(self, mock_get_user, controller):
         """Test that available actions are correctly listed for invalid actions"""
         mock_get_user.return_value = "test-user"
