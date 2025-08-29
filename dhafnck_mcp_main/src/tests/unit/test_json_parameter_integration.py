@@ -13,7 +13,7 @@ from unittest.mock import Mock, MagicMock, patch
 import os
 os.environ['SKIP_DB_INIT'] = 'true'
 
-from fastmcp.task_management.interface.mcp_controllers.unified_context_controller import UnifiedContextMCPController
+from fastmcp.task_management.interface.mcp_controllers.unified_context_controller.unified_context_controller import UnifiedContextMCPController
 from fastmcp.connection_management.interface.mcp_controllers.connection_mcp_controller import ConnectionMCPController
 from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
 from fastmcp.connection_management.application.facades.connection_application_facade import ConnectionApplicationFacade

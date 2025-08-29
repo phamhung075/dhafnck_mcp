@@ -7,8 +7,9 @@ This folder contains the core architectural design documents for the DhafnckMCP 
 - **[System Architecture](architecture.md)** - Overall system architecture and component relationships
 - **[Technical Architecture](Architecture_Technique.md)** - Detailed technical architecture with DDD principles
 - **[Domain-Driven Design](domain-driven-design.md)** - DDD implementation patterns and domain modeling
+- **[Modular Controller Architecture](modular-controller-architecture.md)** - ✅ **COMPLETE** - Factory pattern implementation for 12 controllers with 93% size reduction (August 2025)
 - **[DDD Compliance Analysis Report](DDD_COMPLIANCE_ANALYSIS_REPORT.md)** - Original DDD compliance analysis (August 2025)
-- **[DDD Compliance Update Report](DDD_COMPLIANCE_UPDATE_REPORT.md)** - ✅ **NEW** - Updated DDD compliance status after major fixes (August 2025)
+- **[DDD Compliance Update Report](DDD_COMPLIANCE_UPDATE_REPORT.md)** - ✅ **UPDATED** - DDD compliance status with modular architecture improvements (August 2025)
 - **[AI Context Realistic Approach](AI-CONTEXT-REALISTIC-APPROACH.md)** - Practical AI context implementation strategies
 
 ## 🎯 Purpose

@@ -9,7 +9,7 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock
 import logging
 
-from fastmcp.task_management.interface.mcp_controllers.auth_helper import (
+from fastmcp.task_management.interface.mcp_controllers.auth_helper.auth_helper import (
     get_user_id_from_request_state,
     _extract_user_id_from_context_object,
     get_authenticated_user_id,

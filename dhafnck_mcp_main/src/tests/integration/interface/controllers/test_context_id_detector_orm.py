@@ -10,7 +10,7 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime, timezone
 
-from fastmcp.task_management.interface.mcp_controllers.context_id_detector_orm import ContextIDDetector
+from fastmcp.task_management.interface.mcp_controllers.context_id_detector.context_id_detector import ContextIDDetector
 from fastmcp.task_management.infrastructure.database.models import Project, ProjectGitBranch, Task
 
 

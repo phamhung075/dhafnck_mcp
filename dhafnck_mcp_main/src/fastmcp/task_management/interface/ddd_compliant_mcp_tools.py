@@ -42,21 +42,21 @@ from ..infrastructure.configuration.tool_config import ToolConfig
 from ..infrastructure.utilities.path_resolver import PathResolver
 
 # Interface layer imports (same layer, acceptable)
-from .mcp_controllers.task_mcp_controller import TaskMCPController
-from .mcp_controllers.subtask_mcp_controller import SubtaskMCPController
-from .mcp_controllers.unified_context_controller import UnifiedContextMCPController
-from .mcp_controllers.project_mcp_controller import ProjectMCPController
-from .mcp_controllers.git_branch_mcp_controller import GitBranchMCPController
-from .mcp_controllers.agent_mcp_controller import AgentMCPController
+from .mcp_controllers.task_mcp_controller.task_mcp_controller import TaskMCPController
+from .mcp_controllers.subtask_mcp_controller.subtask_mcp_controller import SubtaskMCPController
+from .mcp_controllers.unified_context_controller.unified_context_controller import UnifiedContextMCPController
+from .mcp_controllers.project_mcp_controller.project_mcp_controller import ProjectMCPController
+from .mcp_controllers.git_branch_mcp_controller.git_branch_mcp_controller import GitBranchMCPController
+from .mcp_controllers.agent_mcp_controller.agent_mcp_controller import AgentMCPController
 # Claude agent controller removed
-from .mcp_controllers.call_agent_mcp_controller import CallAgentMCPController
-from .mcp_controllers.compliance_mcp_controller import ComplianceMCPController
-from .mcp_controllers.file_resource_mcp_controller import FileResourceMCPController
-from .mcp_controllers.rule_orchestration_controller import RuleOrchestrationController
+from .mcp_controllers.call_agent_mcp_controller.call_agent_mcp_controller import CallAgentMCPController
+from .mcp_controllers.compliance_mcp_controller.compliance_mcp_controller import ComplianceMCPController
+from .mcp_controllers.file_resource_mcp_controller.file_resource_mcp_controller import FileResourceMCPController
+from .mcp_controllers.rule_orchestration_controller.rule_orchestration_controller import RuleOrchestrationController
 
 # Vision System Enhanced Controllers
 # Enhanced task controller removed - functionality merged into TaskMCPController
-from .mcp_controllers.workflow_hint_enhancer import WorkflowHintEnhancer
+from .mcp_controllers.workflow_hint_enhancer.workflow_hint_enhancer import WorkflowHintEnhancer
 
 
 # Application layer imports (proper DDD dependency direction) 

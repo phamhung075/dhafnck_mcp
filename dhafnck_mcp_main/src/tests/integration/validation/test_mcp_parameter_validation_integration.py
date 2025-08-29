@@ -22,7 +22,7 @@ from fastmcp.task_management.interface.utils.parameter_validation_fix import (
     validate_parameters,
     ParameterTypeCoercionError
 )
-from fastmcp.task_management.interface.mcp_controllers.task_mcp_controller import TaskMCPController
+from fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.task_mcp_controller import TaskMCPController
 
 logger = logging.getLogger(__name__)
 

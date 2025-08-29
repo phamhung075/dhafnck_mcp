@@ -6,7 +6,7 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock, AsyncMock
 from typing import Dict, Any, Optional
 
-from fastmcp.task_management.interface.mcp_controllers.project_mcp_controller import ProjectMCPController
+from fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.project_mcp_controller import ProjectMCPController
 from fastmcp.task_management.domain.exceptions.authentication_exceptions import (
     UserAuthenticationRequiredError,
     DefaultUserProhibitedError
@@ -707,7 +707,7 @@ class TestImportErrorHandling:
     def test_context_propagation_mixin_fallback(self):
         """Test fallback context propagation mixin."""
         # Test that the fallback ContextPropagationMixin works
-        from fastmcp.task_management.interface.mcp_controllers.project_mcp_controller import ContextPropagationMixin
+        from fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.project_mcp_controller import ContextPropagationMixin
         
         mixin = ContextPropagationMixin()
         

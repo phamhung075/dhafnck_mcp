@@ -10,7 +10,7 @@ import time
 from unittest.mock import Mock, AsyncMock, patch
 from uuid import uuid4
 
-from fastmcp.task_management.interface.mcp_controllers.project_mcp_controller import ProjectMCPController
+from fastmcp.task_management.interface.mcp_controllers.project_mcp_controller.project_mcp_controller import ProjectMCPController
 from fastmcp.task_management.application.facades.project_application_facade import ProjectApplicationFacade
 from fastmcp.task_management.application.services.project_management_service import ProjectManagementService
 

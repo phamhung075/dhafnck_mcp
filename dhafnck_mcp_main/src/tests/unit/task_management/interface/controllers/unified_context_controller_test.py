@@ -10,7 +10,7 @@ from unittest.mock import Mock, MagicMock, patch, call
 import json
 from typing import Dict, Any
 
-from fastmcp.task_management.interface.mcp_controllers.unified_context_controller import UnifiedContextMCPController
+from fastmcp.task_management.interface.mcp_controllers.unified_context_controller.unified_context_controller import UnifiedContextMCPController
 from fastmcp.task_management.application.facades.unified_context_facade import UnifiedContextFacade
 from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
 from fastmcp.task_management.domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError

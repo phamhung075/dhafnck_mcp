@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'dhafnck_mcp_main', '
 def test_manage_agent_user_id():
     """Test that manage_agent accepts user_id parameter"""
     try:
-        from fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller import AgentMCPController
+        from fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.agent_mcp_controller import AgentMCPController
         from fastmcp.task_management.infrastructure.factories.agent_facade_factory import AgentFacadeFactory
         
         # Create controller instance
@@ -49,7 +49,7 @@ def test_manage_agent_user_id():
 def test_manage_subtask_user_id():
     """Test that manage_subtask accepts user_id parameter"""
     try:
-        from fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller import SubtaskMCPController
+        from fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller.subtask_mcp_controller import SubtaskMCPController
         from fastmcp.task_management.infrastructure.factories.subtask_facade_factory import SubtaskFacadeFactory
         from fastmcp.task_management.infrastructure.repositories.subtask_repository_factory import SubtaskRepositoryFactory
         from fastmcp.task_management.infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
@@ -86,7 +86,7 @@ def test_manage_subtask_user_id():
 def test_manage_rule_user_id():
     """Test that manage_rule accepts user_id parameter"""
     try:
-        from fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller import RuleOrchestrationController
+        from fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller.rule_orchestration_controller import RuleOrchestrationController
         
         # Mock facade to avoid complex dependencies
         class MockRuleFacade:
@@ -165,7 +165,7 @@ def test_manage_connection_user_id():
 def test_manage_compliance_user_id():
     """Test that manage_compliance already accepts user_id parameter (should already work)"""
     try:
-        from fastmcp.task_management.interface.mcp_controllers.compliance_mcp_controller import ComplianceMCPController
+        from fastmcp.task_management.interface.mcp_controllers.compliance_mcp_controller.compliance_mcp_controller import ComplianceMCPController
         
         # Create controller instance 
         controller = ComplianceMCPController()

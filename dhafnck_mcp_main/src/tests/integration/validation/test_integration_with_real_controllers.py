@@ -14,7 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "src"))
 
 try:
-    from fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller import SubtaskMCPController
+    from fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller.subtask_mcp_controller import SubtaskMCPController
     from fastmcp.task_management.infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
     from fastmcp.task_management.infrastructure.repositories.subtask_repository_factory import SubtaskRepositoryFactory
     from fastmcp.task_management.infrastructure.factories.subtask_facade_factory import SubtaskFacadeFactory

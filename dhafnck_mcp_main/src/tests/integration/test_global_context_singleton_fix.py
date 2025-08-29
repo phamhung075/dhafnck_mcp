@@ -12,7 +12,7 @@ import uuid
 from typing import Optional
 
 from fastmcp.task_management.infrastructure.database.models import GLOBAL_SINGLETON_UUID
-from fastmcp.task_management.interface.mcp_controllers.unified_context_controller import UnifiedContextMCPController
+from fastmcp.task_management.interface.mcp_controllers.unified_context_controller.unified_context_controller import UnifiedContextMCPController
 from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
 
 logger = logging.getLogger(__name__)

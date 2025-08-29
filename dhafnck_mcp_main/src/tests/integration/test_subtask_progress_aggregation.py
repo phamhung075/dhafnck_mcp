@@ -15,8 +15,8 @@ from fastmcp.task_management.infrastructure.database.models import (
     Project, ProjectGitBranch, Task as TaskModel, TaskSubtask as SubtaskModel,
     GlobalContext as GlobalContextModel
 )
-from fastmcp.task_management.interface.mcp_controllers.task_mcp_controller import TaskMCPController
-from fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller import SubtaskMCPController
+from fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.task_mcp_controller import TaskMCPController
+from fastmcp.task_management.interface.mcp_controllers.subtask_mcp_controller.subtask_mcp_controller import SubtaskMCPController
 from fastmcp.task_management.infrastructure.factories.task_facade_factory import TaskFacadeFactory
 
 

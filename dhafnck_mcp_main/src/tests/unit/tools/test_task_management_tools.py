@@ -16,7 +16,7 @@ from fastmcp.task_management.domain.value_objects.priority import Priority, Prio
 pytestmark = pytest.mark.unit  # Mark all tests in this file as unit tests
 
 # Mocking missing modules since they don't exist in the current codebase
-# from fastmcp.task_management.interface.mcp_controllers.task_mcp_controller import TaskMCPController
+# from fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.task_mcp_controller import TaskMCPController
 # from fastmcp.task_management.application.facades.task_application_facade import TaskApplicationFacade
 # from fastmcp.task_management.domain.entities.task import Task
 # from fastmcp.task_management.domain.value_objects.task_priority import TaskPriority

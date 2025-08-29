@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock, AsyncMock
 from typing import Dict, Any, Optional
 
-from fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller import AgentMCPController
+from fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.agent_mcp_controller import AgentMCPController
 from fastmcp.task_management.domain.exceptions.authentication_exceptions import (
     UserAuthenticationRequiredError, DefaultUserProhibitedError
 )
@@ -291,7 +291,7 @@ class TestAgentMCPController:
         assert mock_logger is not None
         
         # Test that we can log (logger is imported at module level)
-        from fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller import logger
+        from fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.agent_mcp_controller import logger
         assert logger is not None
 
     @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')
@@ -456,7 +456,7 @@ class TestAgentMCPController:
         assert hasattr(controller, '_workflow_factory')
         
         # Test logging is configured
-        from fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller import logger
+        from fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.agent_mcp_controller import logger
         assert logger is not None
 
     @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')

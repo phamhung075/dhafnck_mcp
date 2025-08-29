@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import Mock, patch
 from typing import Dict, Any, Optional
 
-from fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller import RuleOrchestrationController
+from fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller.rule_orchestration_controller import RuleOrchestrationController
 from fastmcp.task_management.domain.exceptions.authentication_exceptions import (
     UserAuthenticationRequiredError, DefaultUserProhibitedError
 )
@@ -285,7 +285,7 @@ class TestRuleOrchestrationController:
         assert mock_logger is not None
         
         # Test that we can log (logger is imported at module level)
-        from fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller import logger
+        from fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller.rule_orchestration_controller import logger
         assert logger is not None
 
     @patch('fastmcp.task_management.interface.mcp_controllers.rule_orchestration_controller.get_current_user_id')
