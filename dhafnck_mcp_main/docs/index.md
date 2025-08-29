@@ -43,18 +43,6 @@ Comprehensive API documentation, integration guides, and configuration reference
 - [Parameter Type Conversion](api-behavior/parameter-type-conversion-verification.md) - Automatic parameter type conversion
 - [JSON Parameter Parsing](api-behavior/json-parameter-parsing.md) - JSON string parameter handling
 
-### 📄 Claude Document Management System
-A comprehensive documentation management system with analysis tools, quality metrics, and automated maintenance capabilities.
-
-- [**System Overview**](claude-document-management-system/index.md) - Complete documentation management guide
-- [**CLI Tools Documentation**](claude-document-management-system/cli-commands/manage-documentation-tools.md) - Command-line tools for doc management
-- [Architecture](claude-document-management-system/architecture/claude-document-management-architecture.md) - Database schema and system design
-- [Implementation Guide](claude-document-management-system/implementation/claude-document-management-implementation.md) - Setup and deployment
-- [Multi-Phase Roadmap](claude-document-management-system/phases/claude-document-management-phases.md) - 5-phase evolution plan
-- [Phase 2: pgvector](claude-document-management-system/phases/phase2-pgvector-implementation.md) - Semantic search integration
-- [Phase 3: Advanced Search](claude-document-management-system/phases/phase3-advanced-search-implementation.md) - Analytics and recommendations
-- [File Specifications](claude-document-management-system/file-specifications/complete-file-structure-and-tests.md) - Complete file listings and tests
-- [CLI Commands](claude-document-management-system/cli-commands/) - Executable scripts and tools
 
 ### 🔗 Context System
 Comprehensive documentation for the DhafnckMCP hierarchical context management system.
@@ -132,7 +120,6 @@ System status reports, documentation health checks, and implementation status up
 - **🚨 Error Handling**: See [Error Handling and Logging](development-guides/error-handling-and-logging.md) for comprehensive error management
 - **💾 Database Setup**: See [Database Setup Guide](../DATABASE_SETUP.md) for PostgreSQL configuration
 - **📡 API Documentation**: See [API Reference](api-integration/api-reference.md) for MCP tools documentation
-- **📄 Document Management**: See [Claude Document Management System](claude-document-management-system/README.md) for document management solution
 - **🐛 Troubleshooting**: See [Comprehensive Troubleshooting Guide](troubleshooting-guides/COMPREHENSIVE_TROUBLESHOOTING_GUIDE.md)
 
 ## 📅 Recent Updates
@@ -174,7 +161,6 @@ System status reports, documentation health checks, and implementation status up
   - Created 9 new categorized subfolders: architecture-design, context-system, troubleshooting-guides, migration-guides, testing-qa, reports-status, development-guides, api-integration, product-requirements
   - Moved 28 loose markdown files into appropriate categories with dedicated README files
   - Updated all cross-references and maintained proper documentation hierarchy
-- **Claude Document Management System**: Organized all system files into dedicated subfolder with structured organization
 - **Enhanced Navigation**: Added comprehensive README files for each category with clear descriptions
 - **Better Discoverability**: Organized docs into logical categories with consistent formatting and icons
 

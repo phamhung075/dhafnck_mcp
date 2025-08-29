@@ -3,6 +3,93 @@
 ## Test Updates - 2025-08-29 (Obsolete Test Cleanup - DDD Architecture Compliance)
 
 ### Removed Obsolete Test Files Not Following DDD Architecture
+
+#### Final Round Cleanup - Additional 35+ Files Removed
+Continued DDD architecture compliance cleanup by removing remaining test files and directories that don't follow proper domain organization:
+
+**Unit Test Directory Structure Cleanup:**
+- Removed 17 files directly in `/unit/` directory (should be in domain subdirectories):
+  - `hot_reload_test.py` - Hot reload testing
+  - `test_agent_identifier_resolution.py` - Agent identifier resolution
+  - `test_branch_context_auto_detect_project_id.py` - Branch context detection
+  - `test_context_hierarchy_validator.py` - Context hierarchy validation
+  - `test_context_level_differentiation.py` - Context level differentiation
+  - `test_frontend_context_api_patterns.py` - Frontend API patterns
+  - `test_isolation_utils.py` - Isolation utilities
+  - `test_json_parameter_integration.py` - JSON parameter integration
+  - `test_json_parameter_parser.py` - JSON parameter parsing
+  - `test_mock_repository_completeness.py` - Mock repository testing
+  - `test_parameter_coercer_standalone.py` - Parameter coercion
+  - `test_progress_field_mapping_unit.py` - Progress field mapping
+  - `test_task_completion_auto_context.py` - Task completion auto-context
+  - `test_task_completion_unified_context.py` - Unified context completion
+  - `test_task_create_auto_context.py` - Task creation auto-context
+  - `test_unified_context_description_loading.py` - Context description loading
+  - `test_unified_context_system.py` - Unified context system
+
+**Non-Domain Directory Cleanup:**
+- Removed `/unit/server/` directory (15+ files) - Not a DDD domain:
+  - `session_store_test.py` - Session store testing
+  - `test_factory_pattern.py` - Factory pattern testing  
+  - `test_http_server_factory.py` - HTTP server factory
+  - `test_server_functionality.py` - Server functionality
+  - `auth/auth_test.py` - Auth testing
+  - `routes/auth_integration_test.py` - Auth integration routes
+  - `routes/mcp_redirect_routes_test.py` - MCP redirect routes
+  - `routes/mcp_registration_routes_test.py` - MCP registration routes
+  - `routes/test_token_datetime_serialization.py` - Token serialization
+  
+- Removed `/unit/infrastructure/` directory (5+ files) - Not domain-organized:
+  - `database/test_database_config.py` - Database configuration
+  - `database/test_helpers.py` - Database helpers
+  - `migrations/test_constraints.py` - Migration constraints
+  
+- Removed `/unit/tools/` directory (6 files) - Not a DDD domain:
+  - `run_tool_tests.py` - Tool test runner
+  - `test_agent_management_tools.py` - Agent management tools
+  - `test_connection_management_tools.py` - Connection management tools  
+  - `test_project_management_tools.py` - Project management tools
+  - `test_subtask_management_tools.py` - Subtask management tools
+  - `test_task_management_tools.py` - Task management tools
+  
+- Removed `/unit/use_cases/` directory (3 files) - Not domain-organized:
+  - `test_delete_project.py` - Project deletion use case
+  - `test_next_task_nonetype_error_simulation.py` - Next task error simulation
+  - `test_next_task_parameter_mismatch.py` - Next task parameter mismatch
+  
+- Removed `/unit/validation/` directory (1 file) - Not a domain:
+  - `test_schema_monkey_patch.py` - Schema monkey patching
+  
+- Removed `/unit/test_isolation/` directory - Not a domain
+
+**Application-Level Directory Cleanup:**
+- Removed `/tests/application/` directory (10+ files) - Not domain-organized:
+  - `facades/test_dependency_application_facade.py` - Dependency facade
+  - `factories/test_git_branch_facade_factory.py` - Git branch factory
+  - `factories/test_unified_context_facade_factory.py` - Context facade factory
+  - `services/test_context_hierarchy_validator.py` - Context hierarchy validator
+  - `services/test_dependency_resolver_service.py` - Dependency resolver
+  - `services/test_parameter_enforcement_service.py` - Parameter enforcement
+  - `services/test_progressive_enforcement_service.py` - Progressive enforcement
+  - `services/test_subtask_application_service.py` - Subtask application service
+  - `services/test_unified_context_service.py` - Unified context service
+
+- Removed `/tests/architecture/` directory (6 files) - Not domain-organized:
+  - `test_cache_invalidation.py` - Cache invalidation
+  - `test_controller_compliance.py` - Controller compliance
+  - `test_factory_environment.py` - Factory environment
+  - `test_factory_layer_compliance.py` - Factory layer compliance
+  - `test_full_architecture_compliance.py` - Full architecture compliance
+
+**Integration Test Cleanup:**
+- Removed `/integration/` non-domain files:
+  - `test_mvp_mode_integration.py` - MVP mode integration
+  - Removed `/integration/interface/` directory - Interface tests not domain-organized
+  - Removed `/integration/validation/` directory (10+ files) - Validation tests not domain-organized
+
+#### Total Files Removed in Final Round: 35+ files and 8+ directories
+
+### Removed Obsolete Test Files Not Following DDD Architecture
 Executed comprehensive cleanup of test files that do not respect the current DDD architecture patterns as defined in dhafnck_mcp_main/docs/architecture-design/DDD-schema.md.
 
 #### DDD Architecture Structure
@@ -96,9 +183,43 @@ The cleanup preserved all tests following the proper DDD architecture:
 - `utilities/` - Test utilities and fixtures
 - `fixtures/` - Test fixtures and mocks
 
+#### Second Round Cleanup (Additional Files Removed)
+
+**Additional Integration Tests Removed:**
+- `test_git_branch_persistence.py` - Service test in wrong location (should be in task_management/application/services/)
+- `test_mcp_server_completion_summary.py` - Obsolete MCP server completion test
+- `test_frontend_integration.py` - Frontend integration test using requests library
+- And empty directories: `frontend/`, `mcp_tools/`, `services/`
+
+**Additional Root Level Tests/Directories Removed:**
+- `run_comprehensive_tests.py` - Obsolete comprehensive test runner
+- `e2e/` - Obsolete E2E tests directory (2 files)
+- `performance/` - Obsolete performance tests directory (6 files)
+- `test_full_architecture_compliance.py` - Root-level architecture test (moved to architecture/)
+- `scenarios/` - Obsolete scenarios tests directory (1 file)
+- `run_supabase_connection_tests.py` - Obsolete Supabase test runner
+- `config/` - Obsolete config tests directory (1 file)
+
+**Validation Directory Cleanup:**
+- `README_MCP_PARAMETER_VALIDATION_FIX.md` - Documentation file
+- `README_PARAMETER_VALIDATION_FIX.md` - Documentation file
+- `mcp_controller_integration_patch.py` - Patch file (not a test)
+
+**Empty/Utility Directories Removed:**
+- `deprecated/` - Deprecated tests directory
+- `contrib/` - Contrib tests directory  
+- `cli/` - Empty CLI tests directory
+- `client/` - Empty client tests directory
+- `load/` - Empty load tests directory
+- `prompts/` - Empty prompts tests directory
+- `resources/` - Empty resources tests directory
+- `logs/` - Log files directory (not tests)
+- `validation/` - Empty validation directory
+- And 6 other empty subdirectories
+
 #### Impact Summary
-- **Total files removed:** 54+ obsolete test files
-- **Directories cleaned:** 8 obsolete test directories
+- **Total files removed:** 75+ obsolete test files
+- **Directories cleaned:** 18+ obsolete test directories
 - **Architecture compliance:** All remaining tests now follow DDD patterns
 - **Maintained coverage:** All DDD-compliant tests preserved
 - **Structure clarity:** Clear separation between domain modules

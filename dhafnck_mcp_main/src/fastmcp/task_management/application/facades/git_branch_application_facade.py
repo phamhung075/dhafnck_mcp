@@ -88,6 +88,33 @@ class GitBranchApplicationFacade:
                 "error_code": "UPDATE_FAILED"
             }
 
+    def get_git_branch(self, project_id: str, git_branch_id: str) -> Dict[str, Any]:
+        """Get a git branch by ID with project context - DDD-compliant method for controller interface."""
+        try:
+            import asyncio
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"Getting git branch: project_id={project_id}, git_branch_id={git_branch_id}")
+            
+            # Use the existing get_git_branch_by_id method which handles the lookup
+            result = self.get_git_branch_by_id(git_branch_id)
+            
+            # Ensure project_id matches (for validation)
+            if result.get("success") and result.get("git_branch", {}).get("project_id") != project_id:
+                logger.warning(f"Project ID mismatch: expected {project_id}, found {result.get('git_branch', {}).get('project_id')}")
+            
+            return result
+            
+        except Exception as e:
+            import traceback
+            logger.error(f"Error getting git branch: {e}")
+            traceback.print_exc()
+            return {
+                "success": False,
+                "error": f"Failed to get git branch: {str(e)}",
+                "error_code": "GET_FAILED"
+            }
+
     def get_git_branch_by_id(self, git_branch_id: str) -> Dict[str, Any]:
         """Get a git branch by ID - synchronous version for MCP controller."""
         try:
