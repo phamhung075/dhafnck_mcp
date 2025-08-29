@@ -56,7 +56,7 @@ Successfully deployed comprehensive user data isolation system to production env
 - **ORMAgentRepository**: User-based agent management
 
 ### 3. API Integration
-- Location: `src/fastmcp/server/routes/user_scoped_task_routes.py`
+- Location: `src/fastmcp/server/routes/task_user_routes.py` (renamed from user_scoped_task_routes.py)
 - JWT authentication with OAuth2PasswordBearer
 - All endpoints require authenticated user context
 - Automatic user_id injection from JWT token

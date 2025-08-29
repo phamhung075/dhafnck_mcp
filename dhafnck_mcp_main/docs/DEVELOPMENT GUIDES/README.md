@@ -4,9 +4,18 @@ This folder contains technical development guides, implementation patterns, and 
 
 ## 📋 Contents
 
+### 🏗️ Architecture & Design
+- **[Domain-Driven Design Documentation](../architecture-design/DDD_COMPLIANCE_UPDATE_REPORT.md)** - ✅ **NEW** - Current DDD architecture implementation and compliance status
+- **[MCP Integration Guide](mcp-integration-guide.md)** - Complete MCP client integration patterns and examples
+
+### 🔧 Implementation Patterns
 - **[Error Handling and Logging](error-handling-and-logging.md)** - Comprehensive error handling patterns and logging strategies
 - **[ORM Agent Repository Implementation](orm-agent-repository-implementation.md)** - ORM-based repository patterns and agent data management
-- **[Docker Deployment](docker-deployment.md)** - Production-ready Docker deployment configurations
+- **[Server Initialization Patterns](server-initialization-patterns.md)** - Server startup and configuration patterns
+
+### 🐳 Deployment & Operations
+- **[Docker System Guide](docker-system-guide.md)** - ✅ **NEW** - Complete Docker development system documentation
+- **[Authentication Configuration](jwt-authentication-configuration.md)** - JWT authentication setup and configuration
 
 ## 🛠️ Development Topics
 
@@ -30,7 +39,8 @@ This folder contains technical development guides, implementation patterns, and 
 
 ## 🎯 Best Practices
 
-### Code Quality
+### Code Quality & Architecture
+- **Domain-Driven Design (DDD)** - ✅ **IMPLEMENTED** - Complete DDD architecture with proper layer separation
 - Clean code principles
 - SOLID design patterns
 - Test-driven development (TDD)

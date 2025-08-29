@@ -7,6 +7,49 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 ## [Unreleased]
 
 ### Added
+- **Route File Reorganization** - Standardized route file naming convention for better maintainability [2025-08-29]
+  - **File Renames**: Renamed all route files to follow "name + routes" convention
+    - `agent_metadata_routes.py` → `agent_routes.py`
+    - `branch_summary_routes.py` → `branch_routes.py`  
+    - `lazy_task_routes.py` → `task_lazy_routes.py`
+    - `protected_task_routes.py` → `task_protected_routes.py`
+    - `task_summary_routes.py` → `task_routes.py`
+    - `user_scoped_context_routes.py` → `context_routes.py`
+    - `user_scoped_project_routes.py` → `project_routes.py`
+    - `user_scoped_task_routes.py` → `task_user_routes.py`
+    - `token_management_routes.py` → `token_mgmt_routes.py`
+  - **New Dedicated Route**: Created `subtask_routes.py` - Comprehensive subtask management endpoints using SubtaskAPIController
+  - **Import Updates**: Updated all import statements in main server file (`http_server.py`) and test files
+  - **Verification**: All renamed routes import successfully and maintain DDD architecture compliance
+  - **Impact**: Cleaner, more consistent route file organization following standardized naming patterns
+
+- **API Controller Enhancement** - Extended existing API controllers with missing functionality [2025-08-29]
+  - **BranchAPIController**: Created comprehensive controller for branch summary operations
+    - `get_branches_with_task_counts()` - Optimized branch loading with task counts
+    - `get_single_branch_summary()` - Individual branch summary retrieval
+    - `get_project_branch_stats()` - Aggregated project branch statistics
+    - `get_branch_performance_metrics()` - Performance monitoring data
+  - **AgentAPIController**: Created comprehensive controller for agent metadata operations
+    - `get_agent_metadata()` - All available agents with static fallback
+    - `get_agent_by_id()` - Specific agent metadata retrieval
+    - `get_agents_by_category()` - Category-filtered agent listing
+    - `list_agent_categories()` - Available agent categories
+  - **Route Integration**: Updated `branch_routes.py` and `agent_routes.py` to use new controllers
+  - **DDD Compliance**: Eliminated remaining direct repository/registry access violations
+  - **Impact**: Complete API controller coverage for all route operations
+
+### Removed
+- **Claude Agent Controller Cleanup** - Removed obsolete claude agent controller and related files [2025-08-29]
+  - **Files Deleted**:
+    - `claude_agent_controller.py` - Obsolete MCP controller for Claude agent generation
+    - `claude_agent_facade.py` - Related application facade
+    - All associated compiled bytecode files (.pyc)
+  - **References Cleaned**: Removed all imports and references from:
+    - `ddd_compliant_mcp_tools.py` - Removed import and controller initialization
+    - `ddd_compliant_mcp_tools_test.py` - Removed test patches and mocks
+  - **Verification**: DDDCompliantMCPTools continues to work correctly after cleanup
+  - **Impact**: Cleaner codebase with removal of unused/obsolete functionality
+
 - **DDD Architecture Refactoring** - Implemented proper Domain-Driven Design controller separation [2025-08-29]
   - **Controller Reorganization**: Renamed `task_management/interface/controllers` → `mcp_controllers` for MCP tools
   - **New API Controllers**: Created `task_management/interface/api_controllers` for frontend API routes

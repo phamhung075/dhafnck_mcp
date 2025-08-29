@@ -137,6 +137,17 @@ System status reports, documentation health checks, and implementation status up
 
 ## 📅 Recent Updates
 
+### 2025-08-29
+- **DDD Architecture Compliance Achieved**: Complete refactoring to implement proper Domain-Driven Design
+  - **Controller Layer Separation**: Separated MCP controllers from frontend API controllers
+  - **Route Reorganization**: Standardized naming convention for all route files
+  - **API Controllers**: Created 6 new API controllers for proper DDD delegation
+  - **Code Cleanup**: Removed obsolete components and unused functionality
+  - **Documentation**: Updated DDD compliance documentation with current status
+- **Route File Standardization**: All route files now follow consistent "name + routes" naming pattern
+- **Subtask Routes**: Added dedicated subtask management endpoints with full CRUD operations
+- **Architecture Documentation**: Created comprehensive DDD compliance update report
+
 ### 2025-08-20
 - **MCP Registration System**: Implemented proper `/register` endpoint for Claude MCP client compatibility
   - Created dedicated registration routes with session management

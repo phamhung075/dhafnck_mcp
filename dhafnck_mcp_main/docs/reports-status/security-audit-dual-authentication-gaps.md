@@ -48,7 +48,7 @@ graph LR
 - **Risk Level:** LOW ✅
 
 ```python
-# Example from user_scoped_task_routes.py
+# Example from task_user_routes.py (renamed from user_scoped_task_routes.py)
 @router.get("/", response_model=List[TaskResponse])
 async def list_user_tasks(
     current_user: User = Depends(get_current_user),  # Supabase auth
@@ -71,7 +71,7 @@ async def list_user_tasks(
 ### ❌ SERVICES MISSING DUAL AUTHENTICATION
 
 #### 1.4 Agent Metadata Routes
-- **Location:** `/dhafnck_mcp_main/src/fastmcp/server/routes/agent_metadata_routes.py`
+- **Location:** `/dhafnck_mcp_main/src/fastmcp/server/routes/agent_routes.py`
 - **Current Authentication:** None detected
 - **Risk Level:** HIGH ❌
 - **Exposure:** Agent configurations, capabilities, metadata can be accessed without authentication
@@ -245,7 +245,7 @@ def execute_with_auth(self, operation_name: str, **kwargs):
 ### Phase 2: Service Layer Authentication (1 week)
 
 #### 2.1 Agent Metadata Route Protection
-- **File:** `/server/routes/agent_metadata_routes.py`
+- **File:** `/server/routes/agent_routes.py`
 - **Action:** Add dual authentication middleware
 ```python
 @router.get("/agents/metadata")
