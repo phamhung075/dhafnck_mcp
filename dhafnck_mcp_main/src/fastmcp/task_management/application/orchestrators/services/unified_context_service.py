@@ -200,7 +200,7 @@ class UnifiedContextService:
                 # Try to get project_id from the git branch entity
                 try:
                     from fastmcp.task_management.infrastructure.repositories.git_branch_repository_factory import GitBranchRepositoryFactory
-                    git_branch_factory = GitBranchRepositoryFactory()
+                    git_branch_factory = GitBranchDomainServiceFactory.get_repository_factory()
                     git_branch_repo = git_branch_factory.create()
                     
                     # Use sync method if available, otherwise handle async
@@ -225,7 +225,7 @@ class UnifiedContextService:
                 # Try to get git_branch_id from the task entity
                 try:
                     from fastmcp.task_management.infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
-                    task_factory = TaskRepositoryFactory()
+                    task_factory = TaskDomainServiceFactory.get_repository_factory()
                     task_repo = task_factory.create()
                     
                     # Use the correct sync method
@@ -1713,7 +1713,7 @@ class UnifiedContextService:
         """
         try:
             from fastmcp.task_management.infrastructure.repositories.git_branch_repository_factory import GitBranchRepositoryFactory
-            git_branch_factory = GitBranchRepositoryFactory()
+            git_branch_factory = GitBranchDomainServiceFactory.get_repository_factory()
             git_branch_repo = git_branch_factory.create()
             
             # Use sync method if available
@@ -1995,6 +1995,7 @@ class UnifiedContextService:
         
         This method is designed to set up a complete context hierarchy when starting
         from an empty state. It creates contexts in the proper order and provides
+from ..services.domain_service_factory import DomainServiceFactory
         detailed feedback on what was created.
         
         Args:

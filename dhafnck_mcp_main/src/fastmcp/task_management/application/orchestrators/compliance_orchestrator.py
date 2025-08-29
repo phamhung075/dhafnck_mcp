@@ -12,7 +12,7 @@ from datetime import datetime
 from ...domain.enums.compliance_enums import ComplianceLevel
 from ..orchestrators.services.compliance_service import ComplianceService
 from ..orchestrators.services.audit_service import AuditService
-from ...infrastructure.monitoring.process_monitor import ProcessMonitor
+from ...domain.interfaces.monitoring_service import IProcessMonitor
 
 logger = logging.getLogger(__name__)
 

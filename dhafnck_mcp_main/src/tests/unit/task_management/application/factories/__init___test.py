@@ -1,6 +1,6 @@
 """Unit tests for application factories __init__.py module."""
 import pytest
-from fastmcp.task_management.application.factories import (
+from fastmcp.task_management.infrastructure.factories import (
     TaskFacadeFactory,
     UnifiedContextFacadeFactory,
     ContextServiceFactory,
@@ -64,13 +64,13 @@ class TestFactoriesInit:
     def test_import_from_package(self):
         """Test importing from the package namespace"""
         # This tests that the imports work correctly from the package level
-        from fastmcp.task_management.application.factories import TaskFacadeFactory as TFF
-        from fastmcp.task_management.application.factories import UnifiedContextFacadeFactory as UCFF
-        from fastmcp.task_management.application.factories import ContextServiceFactory as CSF
-        from fastmcp.task_management.application.factories import SubtaskFacadeFactory as SFF
-        from fastmcp.task_management.application.factories import AgentFacadeFactory as AFF
-        from fastmcp.task_management.application.factories import RuleServiceFactory as RSF
-        from fastmcp.task_management.application.factories import ContextResponseFactory as CRF
+        from fastmcp.task_management.infrastructure.factories import TaskFacadeFactory as TFF
+        from fastmcp.task_management.infrastructure.factories import UnifiedContextFacadeFactory as UCFF
+        from fastmcp.task_management.infrastructure.factories import ContextServiceFactory as CSF
+        from fastmcp.task_management.infrastructure.factories import SubtaskFacadeFactory as SFF
+        from fastmcp.task_management.infrastructure.factories import AgentFacadeFactory as AFF
+        from fastmcp.task_management.infrastructure.factories import RuleServiceFactory as RSF
+        from fastmcp.task_management.infrastructure.factories import ContextResponseFactory as CRF
         
         assert TFF == TaskFacadeFactory
         assert UCFF == UnifiedContextFacadeFactory

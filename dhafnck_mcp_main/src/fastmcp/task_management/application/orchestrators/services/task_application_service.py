@@ -2,7 +2,7 @@
 
 from typing import Optional, Any
 
-from ....application.dtos.task import (
+from fastmcp.task_management.application.dtos.task import (
     CreateTaskRequest,
     CreateTaskResponse,
     TaskResponse,
@@ -11,8 +11,8 @@ from ....application.dtos.task import (
     TaskListResponse,
     SearchTasksRequest
 )
-from ....domain.exceptions.task_exceptions import TaskNotFoundError
-from ....domain.repositories.task_repository import TaskRepository
+from fastmcp.task_management.domain.exceptions.task_exceptions import TaskNotFoundError
+from fastmcp.task_management.domain.repositories.task_repository import TaskRepository
 from ...use_cases.create_task import CreateTaskUseCase
 from ...use_cases.get_task import GetTaskUseCase
 from ...use_cases.update_task import UpdateTaskUseCase
@@ -25,7 +25,7 @@ from ...use_cases.complete_task import CompleteTaskUseCase
 class TaskApplicationService:
     """Application service for task CRUD, search, and completion"""
     def __init__(self, task_repository: TaskRepository, context_service: Optional[Any] = None, user_id: Optional[str] = None):
-        from ...factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+        from ....infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
         from .unified_context_service import UnifiedContextService
         self._task_repository = task_repository
         self._user_id = user_id  # Store user context

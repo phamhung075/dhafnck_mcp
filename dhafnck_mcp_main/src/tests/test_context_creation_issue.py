@@ -8,7 +8,7 @@ import uuid
 # Add src to path
 sys.path.insert(0, '/home/daihungpham/agentic-project/dhafnck_mcp_main/src')
 
-from fastmcp.task_management.application.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
 
 def test_context_creation():
     """Test that context can be created directly"""

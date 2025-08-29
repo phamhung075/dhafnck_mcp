@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from fastmcp.task_management.infrastructure.database.models import Base
-from fastmcp.task_management.application.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
 from fastmcp.task_management.domain.entities.context import GlobalContext, ProjectContext, BranchContext, TaskContext
 
 

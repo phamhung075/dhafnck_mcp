@@ -16,8 +16,8 @@ from ...domain.events.progress_events import (
 )
 from ...domain.repositories.task_repository import TaskRepository
 from ...domain.repositories.context_repository import ContextRepository
-from ...infrastructure.notification_service import NotificationService, get_notification_service
-from ...infrastructure.event_store import EventStore, get_event_store
+from ...domain.interfaces.notification_service import NotificationService, get_notification_service
+from ...domain.interfaces.event_store import EventStore, get_event_store
 
 logger = logging.getLogger(__name__)
 

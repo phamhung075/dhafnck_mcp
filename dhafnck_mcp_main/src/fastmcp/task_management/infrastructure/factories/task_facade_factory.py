@@ -84,7 +84,7 @@ class TaskFacadeFactory:
     
     from typing import TYPE_CHECKING, Any
     if TYPE_CHECKING:
-        from ..facades.task_application_facade import TaskApplicationFacade as _TaskApplicationFacade
+        from ...application.facades.task_application_facade import TaskApplicationFacade as _TaskApplicationFacade
 
     def create_task_facade(self, project_id: str, git_branch_id: str = None, user_id: str = None) -> object:
         """
@@ -132,7 +132,7 @@ class TaskFacadeFactory:
         
         # Create and return facade with all repositories and services
         # The facade will create its own use cases internally
-        from ..facades.task_application_facade import TaskApplicationFacade
+        from ...application.facades.task_application_facade import TaskApplicationFacade
         return TaskApplicationFacade(task_repository, subtask_repository, context_service)
 
     def create_task_facade_with_git_branch_id(self, project_id: str, git_branch_name: str, user_id: str, git_branch_id: str) -> object:
@@ -180,5 +180,5 @@ class TaskFacadeFactory:
             )
         
         # Create and return facade with all repositories and services
-        from ..facades.task_application_facade import TaskApplicationFacade
+        from ...application.facades.task_application_facade import TaskApplicationFacade
         return TaskApplicationFacade(task_repository, subtask_repository, context_service)

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import List, Optional
 from ...domain.repositories.agent_repository import AgentRepository
 from ...domain.exceptions import AgentNotFoundError, ProjectNotFoundError
-from ...infrastructure.repositories.repository_factory import RepositoryFactory
+from ...domain.interfaces.repository_factory import IRepositoryFactory
 
 logger = logging.getLogger(__name__)
 

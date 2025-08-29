@@ -9,7 +9,7 @@ from unittest.mock import Mock, patch
 from typing import Dict, Any
 
 from fastmcp.task_management.interface.controllers.git_branch_mcp_controller import GitBranchMCPController
-from fastmcp.task_management.application.factories.git_branch_facade_factory import GitBranchFacadeFactory
+from fastmcp.task_management.infrastructure.factories.git_branch_facade_factory import GitBranchFacadeFactory
 from fastmcp.task_management.application.facades.git_branch_application_facade import GitBranchApplicationFacade
 
 

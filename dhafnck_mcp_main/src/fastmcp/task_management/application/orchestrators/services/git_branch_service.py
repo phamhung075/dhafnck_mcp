@@ -33,7 +33,7 @@ class GitBranchService:
         if hierarchical_context_service:
             self._hierarchical_context_service = hierarchical_context_service
         else:
-            from ...factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+            from ....infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
             factory = UnifiedContextFacadeFactory()
             self._hierarchical_context_service = factory.create_unified_service()
 

@@ -98,7 +98,7 @@ class GitBranchApplicationFacade:
             
             # We need to find the project that contains this git branch
             # For now, we'll query the project repository directly
-            from ...infrastructure.repositories.project_repository_factory import GlobalRepositoryManager
+            from ...domain.interfaces.repository_factory import IProjectRepositoryFactory
             
             # Check if we're already in an event loop
             try:
@@ -146,7 +146,7 @@ class GitBranchApplicationFacade:
     
     async def _find_git_branch_by_id(self, git_branch_id: str) -> Dict[str, Any]:
         """Helper method to find a git branch by ID across all projects."""
-        from ...infrastructure.repositories.project_repository_factory import GlobalRepositoryManager
+        from ...domain.interfaces.repository_factory import IProjectRepositoryFactory
         
         project_repo = GlobalRepositoryManager.get_default()
         projects = await project_repo.find_all()

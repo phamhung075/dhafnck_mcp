@@ -61,10 +61,23 @@ class AddSubtaskUseCase:
         
         logging.debug(f"[AddSubtask] Creating subtask for task_id={task_id} (following clean relationship chain)")
         
+        # Handle potential async/sync method issue
+        try:
+            progress = task.get_subtask_progress()
+            # Check if it's a coroutine (async method result)
+            if hasattr(progress, '__await__'):
+                # If it's a coroutine, we can't await it in sync context
+                # Fall back to a basic progress calculation
+                logging.warning("[AddSubtask] get_subtask_progress returned coroutine, using fallback")
+                progress = {"total": len(task.subtasks) if task.subtasks else 0, "completed": 0, "percentage": 0}
+        except Exception as e:
+            logging.error(f"[AddSubtask] Error getting subtask progress: {e}, using fallback")
+            progress = {"total": len(task.subtasks) if task.subtasks else 0, "completed": 0, "percentage": 0}
+        
         return SubtaskResponse(
             task_id=str(request.task_id),
             subtask=added_subtask,
-            progress=task.get_subtask_progress()
+            progress=progress
         )
 
     def _convert_to_task_id(self, task_id: Union[str, int]) -> TaskId:

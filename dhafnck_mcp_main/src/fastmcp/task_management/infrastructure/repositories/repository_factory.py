@@ -79,7 +79,10 @@ class RepositoryFactory:
             logger.info("[RepositoryFactory] Using ORMTaskRepository (fallback)")
         
         # Wrap with cache if enabled and not in test environment
-        if config['redis_enabled'] and config['use_cache'] and config['environment'] != 'test':
+        # TEMPORARILY DISABLED: CachedTaskRepository has async methods but NextTaskUseCase expects sync
+        # This causes "coroutine object is not iterable" errors
+        # TODO: Fix by either making CachedTaskRepository sync or updating use cases to handle async
+        if False and config['redis_enabled'] and config['use_cache'] and config['environment'] != 'test':
             try:
                 from .cached.cached_task_repository import CachedTaskRepository
                 logger.info("[RepositoryFactory] Wrapping with CachedTaskRepository")

@@ -4,7 +4,7 @@ Factory for creating rule management services with proper dependency injection f
 """
 
 from typing import Optional
-from ..orchestrators.services.rule_application_service import RuleApplicationService
+from ...application.orchestrators.services.rule_application_service import RuleApplicationService
 from ...domain.repositories.rule_repository import RuleRepository
 
 

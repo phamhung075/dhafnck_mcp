@@ -11,7 +11,7 @@ from typing import Dict, Any
 
 from fastmcp.task_management.application.services.unified_context_service import UnifiedContextService
 from fastmcp.task_management.application.facades.unified_context_facade import UnifiedContextFacade
-from fastmcp.task_management.application.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
 
 
 class TestContextHierarchyBootstrap:

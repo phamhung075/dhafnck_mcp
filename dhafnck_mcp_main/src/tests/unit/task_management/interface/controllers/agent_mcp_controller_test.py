@@ -15,7 +15,7 @@ from unittest.mock import Mock, patch, MagicMock
 from typing import Dict, Any
 
 from fastmcp.task_management.interface.controllers.agent_mcp_controller import AgentMCPController
-from fastmcp.task_management.application.factories.agent_facade_factory import AgentFacadeFactory
+from fastmcp.task_management.infrastructure.factories.agent_facade_factory import AgentFacadeFactory
 from fastmcp.task_management.application.facades.agent_application_facade import AgentApplicationFacade
 from fastmcp.task_management.domain.exceptions.authentication_exceptions import (
     UserAuthenticationRequiredError,

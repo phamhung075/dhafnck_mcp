@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from fastmcp.server.server import FastMCP
 
 from .desc import description_loader
-from ...application.factories.agent_facade_factory import AgentFacadeFactory
+from fastmcp.task_management.infrastructure.factories.agent_facade_factory import AgentFacadeFactory
 from ...application.facades.agent_application_facade import AgentApplicationFacade
 from .workflow_guidance.agent.agent_workflow_factory import AgentWorkflowFactory
 from ...domain.constants import validate_user_id

@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
+from dotenv import load_dotenv
 
 from ..application.services.auth_service import AuthService
 from ..domain.services.jwt_service import JWTService
@@ -23,14 +24,27 @@ from .fastapi_auth import (
     get_optional_user
 )
 
+# Load environment variables
+load_dotenv()
+
 logger = logging.getLogger(__name__)
 
 # Initialize router
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
-# Initialize services
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
-jwt_service = JWTService(JWT_SECRET_KEY)
+# Lazy initialize JWT service
+_jwt_service = None
+
+def get_jwt_service():
+    """Get JWT service instance (lazy loaded)"""
+    global _jwt_service
+    if _jwt_service is None:
+        JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
+        if not JWT_SECRET_KEY or JWT_SECRET_KEY == "your-secret-key-change-in-production":
+            logger.error("JWT_SECRET_KEY not properly configured in environment")
+            raise ValueError("Secret key is required for JWT service")
+        _jwt_service = JWTService(JWT_SECRET_KEY)
+    return _jwt_service
 
 # Database configuration - lazy loaded
 _db_config = None
@@ -57,7 +71,7 @@ def get_db() -> Session:
 def get_auth_service(db: Session = Depends(get_db)) -> AuthService:
     """Get authentication service with dependencies"""
     user_repository = UserRepository(db)
-    return AuthService(user_repository, jwt_service)
+    return AuthService(user_repository, get_jwt_service())
 
 
 # Request/Response models

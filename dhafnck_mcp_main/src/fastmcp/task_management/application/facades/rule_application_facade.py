@@ -7,7 +7,7 @@ for rule management operations following DDD principles.
 from typing import Dict, Any, TYPE_CHECKING
 from pathlib import Path
 
-from ...infrastructure.utilities.path_resolver import PathResolver
+from ...domain.interfaces.utility_service import IPathResolver
 
 if TYPE_CHECKING:
     from ...interface.mcp_tools.path_resolver import PathResolver
@@ -34,7 +34,7 @@ class RuleApplicationFacade:
         
         # Import PathResolver here to avoid circular imports
         if path_resolver is None:
-            from ...infrastructure.utilities.path_resolver import PathResolver
+            from ...domain.interfaces.utility_service import IPathResolver
             path_resolver = PathResolver()
         
         self._path_resolver = path_resolver

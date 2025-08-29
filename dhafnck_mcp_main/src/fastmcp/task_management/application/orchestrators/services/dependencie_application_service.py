@@ -2,16 +2,16 @@
 
 from typing import Any, Dict, Optional, TYPE_CHECKING
 
-from ....application.dtos.dependency import (
+from fastmcp.task_management.application.dtos.dependency import (
     AddDependencyRequest,
     DependencyResponse
 )
 
-from ....domain import TaskRepository
+from fastmcp.task_management.domain.repositories.task_repository import TaskRepository
 
 # Use TYPE_CHECKING to avoid circular imports
 if TYPE_CHECKING:
-    from ...use_cases import (
+    from ..use_cases import (
         AddDependencyUseCase,
         RemoveDependencyUseCase,
         GetDependenciesUseCase,

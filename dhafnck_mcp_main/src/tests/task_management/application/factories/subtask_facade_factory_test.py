@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import Mock, MagicMock
 
-from fastmcp.task_management.application.factories.subtask_facade_factory import SubtaskFacadeFactory
+from fastmcp.task_management.infrastructure.factories.subtask_facade_factory import SubtaskFacadeFactory
 from fastmcp.task_management.application.facades.subtask_application_facade import SubtaskApplicationFacade
 
 

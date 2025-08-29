@@ -8,7 +8,7 @@ The default_id fallback has been removed to enforce security requirements.
 
 import logging
 from typing import Optional, Dict
-from ..facades.agent_application_facade import AgentApplicationFacade
+from ...application.facades.agent_application_facade import AgentApplicationFacade
 from ...infrastructure.repositories.agent_repository_factory import (
     get_default_agent_repository,
     AgentRepositoryFactory

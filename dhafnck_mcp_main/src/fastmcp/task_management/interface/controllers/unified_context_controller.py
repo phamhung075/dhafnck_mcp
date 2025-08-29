@@ -23,7 +23,7 @@ from ..utils.response_formatter import StandardResponseFormatter, ResponseStatus
 from ..utils.parameter_validation_fix import coerce_parameter_types
 from ..utils.json_parameter_parser import JSONParameterParser
 
-from ...application.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
 from ...application.facades.unified_context_facade import UnifiedContextFacade
 
 logger = logging.getLogger(__name__)

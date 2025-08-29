@@ -14,7 +14,7 @@ from datetime import datetime
 
 from ...domain.models.unified_context import ContextLevel
 from ..orchestrators.services.unified_context_service import UnifiedContextService
-from ...infrastructure.cache.context_cache import get_context_cache
+from ...domain.interfaces.cache_service import ICacheService
 
 logger = logging.getLogger(__name__)
 

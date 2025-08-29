@@ -9,7 +9,7 @@ import pytest
 import logging
 from unittest.mock import Mock, patch, MagicMock
 
-from fastmcp.task_management.application.factories.task_facade_factory import TaskFacadeFactory
+from fastmcp.task_management.infrastructure.factories.task_facade_factory import TaskFacadeFactory
 from fastmcp.task_management.infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
 from fastmcp.task_management.infrastructure.repositories.subtask_repository_factory import SubtaskRepositoryFactory
 

@@ -11,7 +11,7 @@ Tests the project facade factory including:
 import pytest
 import logging
 from unittest.mock import Mock, patch, MagicMock
-from fastmcp.task_management.application.factories.project_facade_factory import ProjectFacadeFactory
+from fastmcp.task_management.infrastructure.factories.project_facade_factory import ProjectFacadeFactory
 from fastmcp.task_management.application.facades.project_application_facade import ProjectApplicationFacade
 from fastmcp.task_management.application.services.project_management_service import ProjectManagementService
 from fastmcp.task_management.infrastructure.repositories.project_repository_factory import (
@@ -24,7 +24,7 @@ from fastmcp.task_management.domain.exceptions.authentication_exceptions import 
     InvalidUserIdError
 )
 # Import logger for patching in tests
-from fastmcp.task_management.application.factories import project_facade_factory
+from fastmcp.task_management.infrastructure.factories import project_facade_factory
 
 
 class TestProjectFacadeFactory:

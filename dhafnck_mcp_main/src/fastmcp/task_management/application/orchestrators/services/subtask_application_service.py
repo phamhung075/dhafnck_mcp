@@ -2,14 +2,14 @@
 
 from typing import Any, Dict, Optional
 
-from ....application.dtos.subtask import (
+from fastmcp.task_management.application.dtos.subtask import (
     AddSubtaskRequest,
     UpdateSubtaskRequest,
     SubtaskResponse
 )
 
-from ....domain import TaskRepository
-from ....domain.repositories.subtask_repository import SubtaskRepository
+from fastmcp.task_management.domain.repositories.task_repository import TaskRepository
+from fastmcp.task_management.domain.repositories.subtask_repository import SubtaskRepository
 from ...use_cases.add_subtask import AddSubtaskUseCase
 from ...use_cases.update_subtask import UpdateSubtaskUseCase
 from ...use_cases.remove_subtask import RemoveSubtaskUseCase

@@ -20,7 +20,7 @@ except ImportError:
     # Fallback to local JWT if Supabase auth not available
     from ...auth.interface.fastapi_auth import get_current_user
 from ...task_management.infrastructure.repositories.orm.project_repository import ORMProjectRepository
-from ...task_management.application.services.project_application_service import ProjectApplicationService
+from ...task_management.application.orchestrators.services.project_application_service import ProjectApplicationService
 
 logger = logging.getLogger(__name__)
 

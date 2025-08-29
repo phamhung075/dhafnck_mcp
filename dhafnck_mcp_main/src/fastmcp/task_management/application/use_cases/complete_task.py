@@ -13,7 +13,7 @@ from ...domain.exceptions.vision_exceptions import MissingCompletionSummaryError
 from ...domain.services.task_completion_service import TaskCompletionService
 from ...domain.events import TaskUpdated
 from ...interface.utils.error_handler import UserFriendlyErrorHandler
-from ...infrastructure.repositories.task_context_repository import TaskContextRepository
+from ...domain.interfaces.repository_factory import IContextRepository
 # from ..orchestrators.services.context_validation_service import ContextValidationService  # TODO: Fix circular import
 
 # Module-level logger - not used due to scoping issues, using logging.getLogger(__name__) directly instead
@@ -132,8 +132,8 @@ class CompleteTaskUseCase:
                     if not project_id and git_branch_id:
                         try:
                             # Get project_id from git branch
-                            from ...infrastructure.database.database_config import get_session
-                            from ...infrastructure.database.models import ProjectGitBranch
+                            from ...domain.interfaces.database_session import IDatabaseSessionFactory
+                            # TODO: Replace direct model import with domain entity: ProjectGitBranch
                             with get_session() as session:
                                 branch = session.get(ProjectGitBranch, git_branch_id)
                                 if branch:

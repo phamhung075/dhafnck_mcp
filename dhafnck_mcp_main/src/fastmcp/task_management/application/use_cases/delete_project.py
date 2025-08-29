@@ -40,9 +40,9 @@ class DeleteProjectUseCase:
         """Initialize the delete project use case with required repositories."""
         # Use provided repositories or get defaults
         if project_repo is None or git_branch_repo is None or task_repo is None:
-            from ...infrastructure.repositories.project_repository_factory import GlobalRepositoryManager
-            from ...infrastructure.repositories.git_branch_repository_factory import GitBranchRepositoryFactory
-            from ...infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
+            from ...domain.interfaces.repository_factory import IProjectRepositoryFactory
+            from ...domain.interfaces.repository_factory import IGitBranchRepositoryFactory
+            from ...domain.interfaces.repository_factory import ITaskRepositoryFactory
             
             self.project_repo = project_repo or GlobalRepositoryManager.get_default()
             self.git_branch_repo = git_branch_repo or GitBranchRepositoryFactory.create()

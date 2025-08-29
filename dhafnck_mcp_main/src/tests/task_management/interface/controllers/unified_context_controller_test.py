@@ -7,7 +7,7 @@ import json
 import asyncio
 
 from fastmcp.task_management.interface.controllers.unified_context_controller import UnifiedContextMCPController
-from fastmcp.task_management.application.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
 from fastmcp.task_management.application.facades.unified_context_facade import UnifiedContextFacade
 
 

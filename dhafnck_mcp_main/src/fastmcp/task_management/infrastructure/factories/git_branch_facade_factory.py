@@ -5,7 +5,7 @@ Factory for creating git branch application facades with proper dependency injec
 
 import logging
 from typing import Optional, Dict
-from ..facades.git_branch_application_facade import GitBranchApplicationFacade
+from ...application.facades.git_branch_application_facade import GitBranchApplicationFacade
 from ...domain.repositories.git_branch_repository import GitBranchRepository
 from ...infrastructure.repositories.git_branch_repository_factory import GitBranchRepositoryFactory
 
@@ -54,7 +54,7 @@ class GitBranchFacadeFactory:
             return self._facades_cache[cache_key]
         
         # Create GitBranchService with user context
-        from ..orchestrators.services.git_branch_service import GitBranchService
+        from ...application.orchestrators.services.git_branch_service import GitBranchService
         git_branch_service = GitBranchService(user_id=user_id)
         
         # Create facade with service, project_id and user_id

@@ -20,7 +20,7 @@ except ImportError:
     # Fallback to local JWT if Supabase auth not available
     from ...auth.interface.fastapi_auth import get_current_user
 from ...auth.domain.entities.user import User
-from ...task_management.application.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
 
 logger = logging.getLogger(__name__)
 

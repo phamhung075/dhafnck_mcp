@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime
 import re
 
-from ...infrastructure.services.agent_doc_generator import generate_docs_for_assignees
+from ...domain.interfaces.utility_service import IAgentDocGenerator
 
 
 def _find_project_root() -> Path:

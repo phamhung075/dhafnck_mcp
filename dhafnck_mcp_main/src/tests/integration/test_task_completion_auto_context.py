@@ -168,7 +168,7 @@ class TestTaskCompletionAutoContext:
         context_repo = TaskContextRepository(get_session)
         
         # Pre-create context
-        from fastmcp.task_management.application.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+        from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
         facade = UnifiedContextFacadeFactory().create_facade(git_branch_id=branch_id)
         
         # Create project context first (required by hierarchy)

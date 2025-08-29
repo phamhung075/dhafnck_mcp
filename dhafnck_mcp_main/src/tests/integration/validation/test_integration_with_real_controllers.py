@@ -17,7 +17,7 @@ try:
     from fastmcp.task_management.interface.controllers.subtask_mcp_controller import SubtaskMCPController
     from fastmcp.task_management.infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
     from fastmcp.task_management.infrastructure.repositories.subtask_repository_factory import SubtaskRepositoryFactory
-    from fastmcp.task_management.application.factories.subtask_facade_factory import SubtaskFacadeFactory
+    from fastmcp.task_management.infrastructure.factories.subtask_facade_factory import SubtaskFacadeFactory
     
     # Import our fix
     from fastmcp.task_management.interface.utils.parameter_validation_fix import coerce_parameter_types, ParameterTypeCoercionError

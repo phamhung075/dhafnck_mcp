@@ -11,7 +11,7 @@ from ...application.dtos.context import GetContextRequest
 from ...domain import TaskRepository, TaskId
 from ...domain.exceptions.task_exceptions import TaskNotFoundError
 from ...domain.events import TaskRetrieved
-from ...infrastructure.services.agent_doc_generator import generate_agent_docs, generate_docs_for_assignees
+from ...domain.interfaces.utility_service import IAgentDocGenerator
 
 logger = logging.getLogger(__name__)
 

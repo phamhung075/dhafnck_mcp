@@ -1,14 +1,14 @@
 from typing import Optional, Any
 import logging
 
-from ...factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+from ....infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
 from .unified_context_service import UnifiedContextService
 from ....domain.repositories.task_repository import TaskRepository
 from ....domain.value_objects.task_id import TaskId
-from ...use_cases.get_task import GetTaskUseCase
+from ..use_cases.get_task import GetTaskUseCase
 from ....domain.constants import validate_user_id
 from ....domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
-from .....config.auth_config import AuthConfig
+from fastmcp.config.auth_config import AuthConfig
 
 logger = logging.getLogger(__name__)
 

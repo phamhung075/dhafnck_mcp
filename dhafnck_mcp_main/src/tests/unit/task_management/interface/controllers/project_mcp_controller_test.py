@@ -15,7 +15,7 @@ from unittest.mock import Mock, patch, MagicMock, AsyncMock
 from typing import Dict, Any
 
 from fastmcp.task_management.interface.controllers.project_mcp_controller import ProjectMCPController
-from fastmcp.task_management.application.factories.project_facade_factory import ProjectFacadeFactory
+from fastmcp.task_management.infrastructure.factories.project_facade_factory import ProjectFacadeFactory
 from fastmcp.task_management.application.facades.project_application_facade import ProjectApplicationFacade
 from fastmcp.task_management.domain.exceptions.authentication_exceptions import (
     UserAuthenticationRequiredError,

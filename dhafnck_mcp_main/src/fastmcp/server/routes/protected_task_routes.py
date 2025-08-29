@@ -19,12 +19,15 @@ from fastmcp.auth.domain.entities.user import User
 # Import task management facades
 from fastmcp.task_management.application.facades.task_application_facade import TaskApplicationFacade
 from fastmcp.task_management.application.facades.unified_context_facade import UnifiedContextFacade
-from fastmcp.task_management.application.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
-from fastmcp.task_management.application.factories.task_facade_factory import TaskFacadeFactory
+from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+from fastmcp.task_management.infrastructure.factories.task_facade_factory import TaskFacadeFactory
 from fastmcp.task_management.infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
 from fastmcp.task_management.infrastructure.repositories.subtask_repository_factory import SubtaskRepositoryFactory
 
 logger = logging.getLogger(__name__)
+
+# Define the missing function using the imported one
+get_current_user_from_bridge = get_current_active_user
 
 # Create router with OAuth2 protection
 router = APIRouter(

@@ -10,8 +10,8 @@ import logging
 from typing import Optional, Dict
 from ...domain.constants import validate_user_id
 from ...domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
-from ..facades.project_application_facade import ProjectApplicationFacade
-from ..orchestrators.services.project_management_service import ProjectManagementService
+from ...application.facades.project_application_facade import ProjectApplicationFacade
+from ...application.orchestrators.services.project_management_service import ProjectManagementService
 from ...infrastructure.repositories.project_repository_factory import (
     ProjectRepositoryFactory, 
     GlobalRepositoryManager

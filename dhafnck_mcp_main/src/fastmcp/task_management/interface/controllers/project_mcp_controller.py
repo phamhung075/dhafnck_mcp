@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from fastmcp.server.server import FastMCP
 
 from .desc import description_loader
-from ...application.factories.project_facade_factory import ProjectFacadeFactory
+from fastmcp.task_management.infrastructure.factories.project_facade_factory import ProjectFacadeFactory
 from ...application.facades.project_application_facade import ProjectApplicationFacade
 from ...domain.constants import validate_user_id
 from ...domain.exceptions.authentication_exceptions import (
@@ -417,7 +417,7 @@ class ProjectMCPController(ContextPropagationMixin):
                 return result
             
             # Get hierarchical context facade
-            from ...application.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+            from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
             context_factory = UnifiedContextFacadeFactory()
             context_facade = context_factory.create_facade()
             

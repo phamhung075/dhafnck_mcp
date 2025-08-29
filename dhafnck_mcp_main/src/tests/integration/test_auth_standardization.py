@@ -14,7 +14,7 @@ def test_manage_agent_user_id():
     """Test that manage_agent accepts user_id parameter"""
     try:
         from fastmcp.task_management.interface.controllers.agent_mcp_controller import AgentMCPController
-        from fastmcp.task_management.application.factories.agent_facade_factory import AgentFacadeFactory
+        from fastmcp.task_management.infrastructure.factories.agent_facade_factory import AgentFacadeFactory
         
         # Create controller instance
         facade_factory = AgentFacadeFactory()
@@ -50,7 +50,7 @@ def test_manage_subtask_user_id():
     """Test that manage_subtask accepts user_id parameter"""
     try:
         from fastmcp.task_management.interface.controllers.subtask_mcp_controller import SubtaskMCPController
-        from fastmcp.task_management.application.factories.subtask_facade_factory import SubtaskFacadeFactory
+        from fastmcp.task_management.infrastructure.factories.subtask_facade_factory import SubtaskFacadeFactory
         from fastmcp.task_management.infrastructure.repositories.subtask_repository_factory import SubtaskRepositoryFactory
         from fastmcp.task_management.infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
         

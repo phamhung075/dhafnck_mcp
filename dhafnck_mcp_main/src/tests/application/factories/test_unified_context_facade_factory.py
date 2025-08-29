@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock
 import logging
 
-from fastmcp.task_management.application.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
 from fastmcp.task_management.application.facades.unified_context_facade import UnifiedContextFacade
 from fastmcp.task_management.application.services.unified_context_service import UnifiedContextService
 

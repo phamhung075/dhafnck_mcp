@@ -9,7 +9,7 @@ from ..dtos.task.list_tasks_request import ListTasksRequest
 from ..dtos.task.search_tasks_request import SearchTasksRequest
 from ..dtos.task.update_task_request import UpdateTaskRequest
 from ..dtos.task.task_list_item_response import TaskListItemResponse
-from ..factories.context_response_factory import ContextResponseFactory
+from ...infrastructure.factories.context_response_factory import ContextResponseFactory
 
 from ..orchestrators.services.task_application_service import TaskApplicationService
 
@@ -71,8 +71,8 @@ class TaskApplicationFacade:
         # Initialize task context repository for unified context system
         task_context_repository = None
         try:
-            from ...infrastructure.repositories.task_context_repository import TaskContextRepository
-            from ...infrastructure.database.database_config import get_db_config
+            from ...domain.interfaces.repository_factory import IContextRepository
+            from ...domain.interfaces.database_session import IDatabaseSessionFactory
             db_config = get_db_config()
             task_context_repository = TaskContextRepository(db_config.SessionLocal)
         except Exception as e:
@@ -311,8 +311,16 @@ class TaskApplicationFacade:
 
             # Get task from repository to extract its own data
             from ...domain.value_objects.task_id import TaskId
+            import inspect
             domain_task_id = TaskId(task_id)
-            task_entity = self._get_task_use_case._task_repository.find_by_id(domain_task_id)
+            
+            # Check if find_by_id is async and handle accordingly
+            find_by_id_result = self._get_task_use_case._task_repository.find_by_id(domain_task_id)
+            if inspect.iscoroutine(find_by_id_result):
+                # If it's a coroutine, we need to run it in an event loop
+                task_entity = self._await_if_coroutine(find_by_id_result)
+            else:
+                task_entity = find_by_id_result
             
             if not task_entity:
                 return {
@@ -438,8 +446,16 @@ class TaskApplicationFacade:
             try:
                 # Get task from repository to extract its own data
                 from ...domain.value_objects.task_id import TaskId
+                import inspect
                 domain_task_id = TaskId(task_id)
-                task_entity = self._get_task_use_case._task_repository.find_by_id(domain_task_id)
+                
+                # Check if find_by_id is async and handle accordingly
+                find_by_id_result = self._get_task_use_case._task_repository.find_by_id(domain_task_id)
+                if inspect.iscoroutine(find_by_id_result):
+                    # If it's a coroutine, we need to run it in an event loop
+                    task_entity = self._await_if_coroutine(find_by_id_result)
+                else:
+                    task_entity = find_by_id_result
                 
                 if task_entity:
                     task_response = self._await_if_coroutine(
@@ -591,7 +607,7 @@ class TaskApplicationFacade:
             
             if PerformanceConfig.is_performance_mode() and minimal:
                 # Use repository factory for environment-based selection
-                from ...infrastructure.repositories.repository_factory import RepositoryFactory
+                from ...domain.interfaces.repository_factory import IRepositoryFactory
                 
                 # Get the appropriate task repository based on environment
                 optimized_repo = RepositoryFactory.get_task_repository(

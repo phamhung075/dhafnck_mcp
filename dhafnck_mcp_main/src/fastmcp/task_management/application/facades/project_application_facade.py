@@ -4,7 +4,7 @@ Project Application Facade
 from typing import Dict, Any, Optional
 
 from ..orchestrators.services.project_management_service import ProjectManagementService
-from ...infrastructure.repositories.project_repository_factory import GlobalRepositoryManager
+from ...domain.interfaces.repository_factory import IProjectRepositoryFactory
 
 class ProjectApplicationFacade:
     def __init__(self, project_service: Optional[ProjectManagementService] = None, user_id: Optional[str] = None):

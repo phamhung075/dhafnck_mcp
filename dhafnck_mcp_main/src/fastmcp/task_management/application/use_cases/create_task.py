@@ -97,8 +97,8 @@ class CreateTaskUseCase:
             
             # Update branch task count
             try:
-                from ...infrastructure.database.database_config import get_session
-                from ...infrastructure.database.models import ProjectGitBranch
+                from ...domain.interfaces.database_session import IDatabaseSessionFactory
+                # TODO: Replace direct model import with domain entity: ProjectGitBranch
                 
                 with get_session() as session:
                     branch = session.query(ProjectGitBranch).filter(

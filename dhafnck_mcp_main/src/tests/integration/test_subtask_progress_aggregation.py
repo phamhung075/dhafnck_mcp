@@ -17,7 +17,7 @@ from fastmcp.task_management.infrastructure.database.models import (
 )
 from fastmcp.task_management.interface.controllers.task_mcp_controller import TaskMCPController
 from fastmcp.task_management.interface.controllers.subtask_mcp_controller import SubtaskMCPController
-from fastmcp.task_management.application.factories.task_facade_factory import TaskFacadeFactory
+from fastmcp.task_management.infrastructure.factories.task_facade_factory import TaskFacadeFactory
 
 
 class TestSubtaskProgressAggregation:
@@ -112,7 +112,7 @@ class TestSubtaskProgressAggregation:
         from fastmcp.task_management.infrastructure.repositories.orm.subtask_repository import ORMSubtaskRepository
         from fastmcp.task_management.infrastructure.repositories.orm.task_repository import ORMTaskRepository
         from fastmcp.task_management.application.facades.subtask_application_facade import SubtaskApplicationFacade
-        from fastmcp.task_management.application.factories.subtask_facade_factory import SubtaskFacadeFactory
+        from fastmcp.task_management.infrastructure.factories.subtask_facade_factory import SubtaskFacadeFactory
         
         # Create repositories with the same context as the task controller
         task_repository = ORMTaskRepository(git_branch_id=branch_id, user_id="default_id")

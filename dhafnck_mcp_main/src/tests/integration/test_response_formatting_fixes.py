@@ -24,8 +24,8 @@ from fastmcp.task_management.infrastructure.database.models import (
 )
 from fastmcp.task_management.interface.controllers.git_branch_mcp_controller import GitBranchMCPController
 from fastmcp.task_management.interface.controllers.task_mcp_controller import TaskMCPController
-from fastmcp.task_management.application.factories.git_branch_facade_factory import GitBranchFacadeFactory
-from fastmcp.task_management.application.factories.task_facade_factory import TaskFacadeFactory
+from fastmcp.task_management.infrastructure.factories.git_branch_facade_factory import GitBranchFacadeFactory
+from fastmcp.task_management.infrastructure.factories.task_facade_factory import TaskFacadeFactory
 from fastmcp.task_management.infrastructure.repositories.git_branch_repository_factory import GitBranchRepositoryFactory
 from fastmcp.task_management.infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
 

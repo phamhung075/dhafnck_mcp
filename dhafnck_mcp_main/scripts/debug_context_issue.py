@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from fastmcp.auth.mcp_integration.user_context_middleware import current_user_context, MCPUserContext, get_current_user_id
 from fastmcp.auth.mcp_integration.thread_context_manager import ThreadContextManager
-from fastmcp.task_management.application.factories.project_facade_factory import ProjectFacadeFactory
+from fastmcp.task_management.infrastructure.factories.project_facade_factory import ProjectFacadeFactory
 from fastmcp.task_management.interface.controllers.project_mcp_controller import ProjectMCPController
 
 # Configure detailed logging

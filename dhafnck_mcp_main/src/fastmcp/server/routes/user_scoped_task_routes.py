@@ -27,7 +27,7 @@ from ...task_management.application.dtos.task.create_task_request import CreateT
 from ...task_management.application.dtos.task.update_task_request import UpdateTaskRequest
 from ...task_management.application.dtos.task.list_tasks_request import ListTasksRequest
 from ...task_management.infrastructure.repositories.subtask_repository_factory import SubtaskRepositoryFactory
-from ...task_management.application.factories.task_facade_factory import TaskFacadeFactory
+from fastmcp.task_management.infrastructure.factories.task_facade_factory import TaskFacadeFactory
 from ...task_management.infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
 
 # Import debug service

@@ -20,12 +20,12 @@ if TYPE_CHECKING:
     from ...server.server import FastMCP
 
 # Application layer imports (proper DDD dependency injection)
-from ..application.factories.task_facade_factory import TaskFacadeFactory
-from ..application.factories.subtask_facade_factory import SubtaskFacadeFactory
+from fastmcp.task_management.infrastructure.factories.task_facade_factory import TaskFacadeFactory
+from fastmcp.task_management.infrastructure.factories.subtask_facade_factory import SubtaskFacadeFactory
 # Legacy context factories removed - now using unified context system
-from ..application.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
-from ..application.factories.project_facade_factory import ProjectFacadeFactory
-from ..application.factories.git_branch_facade_factory import GitBranchFacadeFactory
+from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+from fastmcp.task_management.infrastructure.factories.project_facade_factory import ProjectFacadeFactory
+from fastmcp.task_management.infrastructure.factories.git_branch_facade_factory import GitBranchFacadeFactory
 
 # Import facades for type hints only
 if TYPE_CHECKING:
@@ -197,7 +197,7 @@ class DDDCompliantMCPTools:
             self._git_branch_controller = None
         
         # Agent controller with proper agent facade factory
-        from ..application.factories.agent_facade_factory import AgentFacadeFactory
+        from fastmcp.task_management.infrastructure.factories.agent_facade_factory import AgentFacadeFactory
         self._agent_facade_factory = AgentFacadeFactory()
         self._agent_controller = AgentMCPController(self._agent_facade_factory)
         

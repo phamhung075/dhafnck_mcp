@@ -13,7 +13,7 @@ This module tests the ProjectServiceFactory functionality including:
 import pytest
 from unittest.mock import Mock, patch
 
-from fastmcp.task_management.application.factories.project_service_factory import (
+from fastmcp.task_management.infrastructure.factories.project_service_factory import (
     ProjectServiceFactory,
     create_project_service_factory,
     create_default_project_service,
@@ -415,7 +415,7 @@ class TestProjectServiceFactoryModuleExports:
     
     def test_module_exports(self):
         """Test that all expected functions and classes are exported"""
-        from fastmcp.task_management.application.factories.project_service_factory import __all__
+        from fastmcp.task_management.infrastructure.factories.project_service_factory import __all__
         
         expected_exports = [
             "ProjectServiceFactory",
@@ -429,7 +429,7 @@ class TestProjectServiceFactoryModuleExports:
     
     def test_all_exports_are_importable(self):
         """Test that all exported functions and classes can be imported"""
-        from fastmcp.task_management.application.factories.project_service_factory import (
+        from fastmcp.task_management.infrastructure.factories.project_service_factory import (
             ProjectServiceFactory,
             create_project_service_factory,
             create_default_project_service,

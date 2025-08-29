@@ -154,6 +154,12 @@ class DualAuthMiddleware(BaseHTTPMiddleware):
         Returns:
             True if authentication should be skipped
         """
+        # Check if MVP mode is enabled - bypass auth for development
+        import os
+        if os.environ.get("DHAFNCK_MVP_MODE", "false").lower() == "true":
+            logger.info("🚀 MVP Mode enabled - bypassing authentication")
+            return True
+            
         skip_paths = [
             '/health',
             '/docs',

@@ -3,7 +3,7 @@
 Application layer factory for creating subtask facades with proper dependency injection.
 """
 
-from ..facades.subtask_application_facade import SubtaskApplicationFacade
+from ...application.facades.subtask_application_facade import SubtaskApplicationFacade
 from ...infrastructure.repositories.subtask_repository_factory import SubtaskRepositoryFactory
 from ...infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
 

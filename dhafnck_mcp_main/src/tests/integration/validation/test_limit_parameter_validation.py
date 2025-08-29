@@ -230,7 +230,7 @@ class TestLimitParameterValidation:
         sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "src"))
         
         from fastmcp.task_management.interface.controllers.task_mcp_controller import TaskMCPController
-        from fastmcp.task_management.application.factories.task_facade_factory import TaskFacadeFactory
+        from fastmcp.task_management.infrastructure.factories.task_facade_factory import TaskFacadeFactory
         from fastmcp.task_management.infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
         from fastmcp.task_management.infrastructure.repositories.subtask_repository_factory import SubtaskRepositoryFactory
         
@@ -261,7 +261,7 @@ class TestLimitParameterValidation:
         sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "src"))
         
         from fastmcp.task_management.interface.controllers.task_mcp_controller import TaskMCPController
-        from fastmcp.task_management.application.factories.task_facade_factory import TaskFacadeFactory
+        from fastmcp.task_management.infrastructure.factories.task_facade_factory import TaskFacadeFactory
         from fastmcp.task_management.infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
         from fastmcp.task_management.infrastructure.repositories.subtask_repository_factory import SubtaskRepositoryFactory
         

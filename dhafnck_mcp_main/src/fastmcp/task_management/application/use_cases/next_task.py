@@ -6,7 +6,7 @@ import logging
 import asyncio
 
 from ...domain import TaskRepository
-from ...infrastructure.services.agent_doc_generator import generate_agent_docs, generate_docs_for_assignees
+from ...domain.interfaces.utility_service import IAgentDocGenerator
 from ...application.orchestrators.services.unified_context_service import UnifiedContextService
 from ...domain.value_objects.task_status import TaskStatus
 from ...domain.value_objects.priority import Priority
@@ -62,7 +62,7 @@ class NextTaskUseCase:
             return self._context_factory
         
         # Import here to avoid circular import
-        from ...application.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+        from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
         return UnifiedContextFacadeFactory()
     
     async def execute(self, assignee: Optional[str] = None, project_id: Optional[str] = None, 
@@ -86,7 +86,13 @@ class NextTaskUseCase:
         if project_id is None:
             project_id = getattr(self._task_repository, 'project_id', '')
             
-        all_tasks = self._task_repository.find_all()
+        # Check if find_all is async and await it if necessary
+        import inspect
+        find_all_result = self._task_repository.find_all()
+        if inspect.iscoroutine(find_all_result):
+            all_tasks = await find_all_result
+        else:
+            all_tasks = find_all_result
         
         if not all_tasks:
             return NextTaskResponse(

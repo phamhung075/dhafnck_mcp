@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock
 import logging
 
-from fastmcp.task_management.application.factories.git_branch_facade_factory import GitBranchFacadeFactory
+from fastmcp.task_management.infrastructure.factories.git_branch_facade_factory import GitBranchFacadeFactory
 from fastmcp.task_management.application.facades.git_branch_application_facade import GitBranchApplicationFacade
 from fastmcp.task_management.infrastructure.repositories.git_branch_repository_factory import GitBranchRepositoryFactory
 

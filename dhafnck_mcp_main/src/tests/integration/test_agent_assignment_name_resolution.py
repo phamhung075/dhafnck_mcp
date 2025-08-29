@@ -13,9 +13,9 @@ from typing import Dict, Any
 from unittest.mock import patch
 
 from fastmcp.task_management.interface.controllers.git_branch_mcp_controller import GitBranchMCPController
-from fastmcp.task_management.application.factories.git_branch_facade_factory import GitBranchFacadeFactory
-from fastmcp.task_management.application.factories.project_facade_factory import ProjectFacadeFactory
-from fastmcp.task_management.application.factories.agent_facade_factory import AgentFacadeFactory
+from fastmcp.task_management.infrastructure.factories.git_branch_facade_factory import GitBranchFacadeFactory
+from fastmcp.task_management.infrastructure.factories.project_facade_factory import ProjectFacadeFactory
+from fastmcp.task_management.infrastructure.factories.agent_facade_factory import AgentFacadeFactory
 
 
 class TestAgentAssignmentNameResolution:

@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime, timezone
 
 from ...application.facades.task_application_facade import TaskApplicationFacade
-from ...application.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
 from ..utils.response_formatter import StandardResponseFormatter
 
 logger = logging.getLogger(__name__)

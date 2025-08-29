@@ -49,7 +49,7 @@ class TestMCPParameterValidationIntegration:
     @pytest.fixture
     def controller(self):
         """Create a task controller for testing"""
-        from fastmcp.task_management.application.factories.task_facade_factory import TaskFacadeFactory
+        from fastmcp.task_management.infrastructure.factories.task_facade_factory import TaskFacadeFactory
         from fastmcp.task_management.infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
         repository_factory = TaskRepositoryFactory()
         task_facade_factory = TaskFacadeFactory(repository_factory=repository_factory)

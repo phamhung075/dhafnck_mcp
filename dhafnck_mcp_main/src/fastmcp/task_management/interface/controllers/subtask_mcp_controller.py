@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 from .desc import description_loader
 from ...application.facades.subtask_application_facade import SubtaskApplicationFacade
-from ...application.factories.subtask_facade_factory import SubtaskFacadeFactory
+from fastmcp.task_management.infrastructure.factories.subtask_facade_factory import SubtaskFacadeFactory
 from .workflow_guidance.subtask import SubtaskWorkflowFactory
 from ..utils.response_formatter import StandardResponseFormatter, ResponseStatus, ErrorCodes
 from ..utils.parameter_validation_fix import coerce_parameter_types
@@ -1034,7 +1034,7 @@ class SubtaskMCPController(ContextPropagationMixin):
                         logger.debug(f"Found git_branch_id {git_branch_id} for task_id {task_id}")
                         
                         # Look up project_id from git_branch_id using facade factory properly
-                        from ...application.factories.git_branch_facade_factory import GitBranchFacadeFactory
+                        from fastmcp.task_management.infrastructure.factories.git_branch_facade_factory import GitBranchFacadeFactory
                         
                         factory = GitBranchFacadeFactory()
                         git_branch_facade = factory.create_git_branch_facade(user_id=validated_user_id)

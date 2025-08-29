@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from fastmcp.server.server import FastMCP
 
 from .desc import description_loader
-from ...application.factories.git_branch_facade_factory import GitBranchFacadeFactory
+from fastmcp.task_management.infrastructure.factories.git_branch_facade_factory import GitBranchFacadeFactory
 from ...application.facades.git_branch_application_facade import GitBranchApplicationFacade
 from .workflow_guidance.git_branch.git_branch_workflow_factory import GitBranchWorkflowFactory
 from .auth_helper import get_authenticated_user_id, log_authentication_details
@@ -358,7 +358,7 @@ class GitBranchMCPController(ContextPropagationMixin):
         """Handle assign agent to git branch request."""
         try:
             # Get the agent facade to handle agent operations
-            from ...application.factories.agent_facade_factory import AgentFacadeFactory
+            from fastmcp.task_management.infrastructure.factories.agent_facade_factory import AgentFacadeFactory
             factory = AgentFacadeFactory()
             agent_facade = factory.create_agent_facade(project_id=project_id, user_id=user_id)
             
@@ -425,7 +425,7 @@ class GitBranchMCPController(ContextPropagationMixin):
         """Handle unassign agent from git branch request."""
         try:
             # Get the agent facade to handle agent operations
-            from ...application.factories.agent_facade_factory import AgentFacadeFactory
+            from fastmcp.task_management.infrastructure.factories.agent_facade_factory import AgentFacadeFactory
             factory = AgentFacadeFactory()
             agent_facade = factory.create_agent_facade(project_id=project_id, user_id=user_id)
             
@@ -776,7 +776,7 @@ class GitBranchMCPController(ContextPropagationMixin):
         """Include project + branch context in the response."""
         try:
             # Get hierarchical context facade
-            from ...application.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+            from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
             context_factory = UnifiedContextFacadeFactory()
             context_facade = context_factory.create_facade()
             

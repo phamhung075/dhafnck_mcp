@@ -19,7 +19,7 @@ from ..use_cases.remove_subtask import RemoveSubtaskUseCase
 from ..use_cases.get_subtask import GetSubtaskUseCase
 from ..use_cases.get_subtasks import GetSubtasksUseCase
 from ..use_cases.complete_subtask import CompleteSubtaskUseCase
-from ...infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
+from ...domain.interfaces.repository_factory import ITaskRepositoryFactory
 from ...infrastructure.repositories.subtask_repository_factory import SubtaskRepositoryFactory
 
 logger = logging.getLogger(__name__)

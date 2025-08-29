@@ -83,7 +83,7 @@ def get_task_facade() -> TaskApplicationFacade:
 def get_context_facade() -> UnifiedContextFacade:
     """Dependency injection for UnifiedContextFacade"""
     # Use the proper factory to create UnifiedContextFacade
-    from fastmcp.task_management.application.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+    from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
     
     # Get factory instance (handles database availability automatically)
     factory = UnifiedContextFacadeFactory.get_instance()

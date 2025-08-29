@@ -9,7 +9,7 @@ import pytest
 import logging
 from unittest.mock import Mock, patch, MagicMock
 
-from fastmcp.task_management.application.factories.agent_facade_factory import (
+from fastmcp.task_management.infrastructure.factories.agent_facade_factory import (
     AgentFacadeFactory,
     MockAgentApplicationFacade
 )

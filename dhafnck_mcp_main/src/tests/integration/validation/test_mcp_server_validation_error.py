@@ -41,7 +41,7 @@ class TestMCPServerValidation:
     def test_mcp_tool_registration_with_limit_parameter(self):
         """Test how the manage_task tool is registered with limit parameter."""
         from fastmcp.task_management.interface.controllers.task_mcp_controller import TaskMCPController
-        from fastmcp.task_management.application.factories.task_facade_factory import TaskFacadeFactory
+        from fastmcp.task_management.infrastructure.factories.task_facade_factory import TaskFacadeFactory
         
         # Create mock dependencies
         mock_facade_factory = Mock(spec=TaskFacadeFactory)
