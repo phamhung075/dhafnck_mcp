@@ -7,9 +7,9 @@ from fastmcp.settings import Settings
 settings = Settings()
 
 
-# from fastmcp.server.server import FastMCP
-# from fastmcp.server.context import Context
-# import fastmcp.server
+from fastmcp.server.server import FastMCP
+from fastmcp.server.context import Context
+import fastmcp.server
 
 # from fastmcp.client import Client
 # from . import client
@@ -53,4 +53,4 @@ except Exception:
 #     "settings",
 # ]
 
-__all__ = ["settings"]
+__all__ = ["settings", "FastMCP", "Context"]

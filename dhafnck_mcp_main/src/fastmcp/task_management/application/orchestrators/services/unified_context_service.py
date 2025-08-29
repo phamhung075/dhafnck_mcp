@@ -1995,7 +1995,6 @@ class UnifiedContextService:
         
         This method is designed to set up a complete context hierarchy when starting
         from an empty state. It creates contexts in the proper order and provides
-from ..services.domain_service_factory import DomainServiceFactory
         detailed feedback on what was created.
         
         Args:

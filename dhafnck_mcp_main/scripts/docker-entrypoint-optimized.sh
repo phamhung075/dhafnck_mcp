@@ -25,7 +25,8 @@ for i in range(max_retries):
     try:
         engine = create_engine(db_url)
         with engine.connect() as conn:
-            conn.execute('SELECT 1')
+            from sqlalchemy import text
+            conn.execute(text('SELECT 1'))
         print('✅ Database connection successful')
         sys.exit(0)
     except Exception as e:

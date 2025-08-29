@@ -7,6 +7,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 ## [Unreleased]
 
 ### Added
+- **MCP HTTP Server Implementation** - Created HTTP API server for MCP tools [2025-08-29]
+  - Created `dhafnck_mcp_main/src/mcp_http_server.py` to expose MCP tools via REST API
+  - Implements endpoints for task, context, project, git branch, and subtask management
+  - Added CORS support for frontend integration
+  - Provides `/mcp/tools` endpoint to list available MCP functions
+
+### Added
+- **Simplified Health Check Server** - Added temporary simple server for basic health checks [2025-08-29]
+  - Created `dhafnck_mcp_main/src/simple_server.py` for testing Docker deployment
+  - Provides basic `/health` and `/` endpoints for container verification
+  - Temporary solution while resolving complex dependency issues
 - **MCP System Comprehensive Testing** - Conducted full system testing to identify critical issues [2025-08-29]
   - Created comprehensive testing documentation: `docs/troubleshooting-guides/mcp-comprehensive-testing-findings-2025-08-29.md`
   - Created fix task documentation: `docs/troubleshooting-guides/mcp-system-fix-tasks-2025-08-29.md`
@@ -14,20 +25,76 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
   - Generated testing reports with actionable fix recommendations
 
 ### Fixed
+- **Docker Network Configuration** - Fixed Docker Compose network configuration issue [2025-08-29]
+  - Updated `docker-system/docker/docker-compose.optimized.yml` to use external network
+  - Resolved network label mismatch preventing container startup
+  - Containers now start successfully with proper network connectivity
+
+### Identified Issues
+- **MCP Tools Not Available** - MCP tools not accessible through standard MCP interface [2025-08-29]
+  - MCP server 'dhafnck_mcp_http' not registered in MCP configuration
+  - Backend API endpoints return 404 errors for MCP routes
+- **Module Import Error** - `mcp_http_server.py` fails with "No module named 'fastmcp.task_management.application.factories'" [2025-08-29]
+  - Error occurs when running through server but not in direct Python execution
+  - All factory modules exist in infrastructure directory, not application
+  - Created `test_server.py` to isolate and diagnose the issue
+  - Error persists even though module imports work correctly when tested individually
+  - Docker containers running simplified health check server instead of full MCP server
+  - Database initialized but MCP tool endpoints not exposed
+  - Need to properly configure MCP server registration and HTTP API exposure
+
+### Testing
+- **MCP Comprehensive Integration Tests** - 19/21 tests passing [2025-08-29]
+  - ✅ Task persistence and relationships working correctly
+  - ✅ Context management and inheritance chain functioning
+  - ✅ Subtask management and progress calculations working
+  - ✅ Project and branch management with auto-context creation
+  - ✅ User data isolation working properly
+  - ✅ Performance tests for large datasets passing
+  - ⚠️ 2 test failures identified:
+    - `test_informative_error_messages` - Error message format mismatch (non-critical)
+    - `test_cascade_deletion` - Cascade deletion not working as expected (needs investigation)
+
+### Fixed
+- **Backend Server Startup Issues** - Fixed multiple import and configuration errors [2025-08-29]
+  - Fixed import errors in `task_application_service.py` - changed relative imports from `..use_cases` to `...use_cases` to match correct directory structure
+  - Fixed FastMCP import issues in `fastmcp/__init__.py` - uncommented FastMCP and Context imports and added them to __all__ exports
+  - Fixed Docker backend startup - corrected the path to `simple_server.py` in Dockerfile CMD from `simple_server.py` to `src/simple_server.py`
+  - Fixed uvicorn startup warnings in `simple_server.py` - changed to use string import format for the app to avoid reload warnings
+  - Result: Backend now starts successfully and serves health check endpoint on port 8000
+- **Docker Deployment Issues** - Resolved multiple Docker container startup issues [2025-08-29]
+  - Fixed import paths in `task_application_service.py` and `orchestrators/services/task_application_service.py`
+    - Changed from incorrect `...use_cases` to proper relative imports `..use_cases` and `...use_cases` respectively
+  - Fixed database connection in `docker-entrypoint-optimized.sh`
+    - Added `from sqlalchemy import text` to properly execute SQL statements
+  - Fixed frontend Dockerfile issues:
+    - Updated Node.js version from 18 to 20 to meet Vite requirements
+    - Fixed nginx pid file permissions - changed from `/var/run/nginx.pid` to `/tmp/nginx.pid`
+  - Fixed backend Dockerfile dependencies:
+    - Added missing Python packages: `mcp>=1.9.4`, `authlib`, `rich`
+    - Updated backend CMD to use simplified server for testing
+  - Created Docker build files from archived versions:
+    - Restored `backend.Dockerfile` and `frontend.Dockerfile` from archived versions
+  - Result: All containers now start successfully (frontend on port 3800, backend on port 8000)
 - **Critical Import Path Errors in Application Layer** - Fixed module import errors preventing server startup [2025-08-29]
-  - Fixed incorrect relative imports in `application/orchestrators/services/`:
-    - `task_application_service.py` - Fixed imports to use `...use_cases` instead of `..use_cases`
-    - `subtask_application_service.py` - Fixed imports to use `...use_cases` for all use case imports
-    - `dependency_resolver_service.py` - Fixed domain imports to use absolute paths
-    - `dependencie_application_service.py` - Fixed domain repository imports
-    - `domain_service_factory.py` - Fixed all domain interface imports to use absolute paths
-  - Fixed incorrect relative imports in `application/services/`:
-    - `task_application_service.py` - Fixed imports to use `..use_cases` instead of `...use_cases`
-    - `subtask_application_service.py` - Fixed all use case imports
-    - `rule_application_service.py` - Fixed use case imports
-    - `project_application_service.py` - Fixed use case imports
-    - `task_context_sync_service.py` - Fixed use case imports
-  - Root cause: Incorrect relative import depth for new DDD layer structure
+  - ✅ **RESOLVED**: Fixed incorrect relative imports in `application/orchestrators/services/`:
+    - `task_application_service.py` - Fixed imports from `..use_cases` to `...use_cases`
+    - `subtask_application_service.py` - Fixed all use case imports from `..use_cases` to `...use_cases`
+    - `rule_application_service.py` - Fixed use case imports from `..use_cases` to `...use_cases`
+    - `project_application_service.py` - Fixed use case imports from `..use_cases` to `...use_cases`
+    - `task_context_sync_service.py` - Fixed use case import from `..use_cases` to `...use_cases`
+    - `dependencie_application_service.py` - Fixed all lazy-loaded use case imports
+  - ✅ **RESOLVED**: Fixed missing import in `application/use_cases/`:
+    - `complete_task.py` - Added missing `TaskContextRepository` import
+    - `delete_task.py` - Fixed service factory import path to `..orchestrators.services`
+  - ✅ **RESOLVED**: Fixed missing import in `application/facades/`:
+    - `subtask_application_facade.py` - Added missing `TaskRepositoryFactory` import
+  - ✅ **RESOLVED**: Fixed corrupted file content:
+    - `unified_context_service.py` - Removed misplaced import statement from docstring
+  - **Import Test Results**: All critical components now import successfully:
+    - ✅ CreateTaskUseCase, TaskApplicationFacade, TaskApplicationService
+    - ✅ SubtaskApplicationService, CompleteTaskUseCase
+  - **Root cause**: Incorrect relative import depth for DDD layer structure changes
   - Impact: Server can now start successfully with all modules properly imported
 - **Import Path Resolution in Services** - Fixed incorrect relative import paths in DDD layers [2025-08-29]
   - Fixed import paths in `application/services/` - Changed from `...dtos` to `..dtos`

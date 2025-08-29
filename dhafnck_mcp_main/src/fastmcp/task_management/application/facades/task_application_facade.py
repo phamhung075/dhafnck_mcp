@@ -10,6 +10,9 @@ from ..dtos.task.search_tasks_request import SearchTasksRequest
 from ..dtos.task.update_task_request import UpdateTaskRequest
 from ..dtos.task.task_list_item_response import TaskListItemResponse
 from ...infrastructure.factories.context_response_factory import ContextResponseFactory
+from ...infrastructure.database.database_config import get_db_config
+from ...infrastructure.repositories.task_context_repository import TaskContextRepository
+from ...infrastructure.repositories.repository_factory import RepositoryFactory
 
 from ..orchestrators.services.task_application_service import TaskApplicationService
 
@@ -54,7 +57,7 @@ class TaskApplicationFacade:
         self._git_branch_repository = git_branch_repository
         
         # Initialize hierarchical context service with lazy import to avoid circular dependency
-        from ..factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+        from ...infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
         factory = UnifiedContextFacadeFactory()
         self._hierarchical_context_service = factory.create_unified_service()
         

@@ -496,35 +496,431 @@ class TaskFacadeFactory:
 ### 4. DTOs (Data Transfer Objects)
 Objects for transferring data between layers:
 
-#### Task DTOs
+## 📋 Detailed Request DTOs
+
+### Task Management Request DTOs
+
+#### CreateTaskRequest
 ```python
 # Located: dhafnck_mcp_main/src/fastmcp/task_management/application/dtos/task_dtos.py
 @dataclass
 class CreateTaskRequest:
     """Request DTO for task creation"""
-    title: str
-    description: str
-    git_branch_id: str
-    priority: str | None = None
-    assignees: List[str] = field(default_factory=list)
+    title: str                              # Required: Task title
+    description: str                        # Required: Task description
+    git_branch_id: str                      # Required: Branch UUID identifier
+    priority: str | None = None            # Optional: "low", "medium", "high", "critical"
+    assignees: List[str] = field(default_factory=list)  # Optional: List of agent IDs
+    tags: List[str] = field(default_factory=list)       # Optional: Task tags
+    due_date: datetime | None = None       # Optional: Task deadline
+    parent_task_id: str | None = None      # Optional: Parent task for subtasks
+    dependencies: List[str] = field(default_factory=list)  # Optional: Task dependency IDs
+    metadata: dict = field(default_factory=dict)           # Optional: Additional metadata
+```
 
+#### UpdateTaskRequest
+```python
+@dataclass
+class UpdateTaskRequest:
+    """Request DTO for task updates"""
+    task_id: str                           # Required: Task UUID
+    title: str | None = None               # Optional: New title
+    description: str | None = None         # Optional: New description
+    status: str | None = None              # Optional: "todo", "in_progress", "review", "done"
+    priority: str | None = None            # Optional: New priority level
+    assignees: List[str] | None = None     # Optional: Replace assignees
+    add_assignees: List[str] | None = None # Optional: Add to assignees
+    remove_assignees: List[str] | None = None  # Optional: Remove from assignees
+    tags: List[str] | None = None          # Optional: Replace tags
+    add_tags: List[str] | None = None      # Optional: Add tags
+    remove_tags: List[str] | None = None   # Optional: Remove tags
+    progress_percentage: int | None = None # Optional: Progress 0-100
+    details: str | None = None             # Optional: Progress details
+    metadata: dict | None = None           # Optional: Update metadata
+```
+
+#### CompleteTaskRequest
+```python
+@dataclass
+class CompleteTaskRequest:
+    """Request DTO for task completion"""
+    task_id: str                           # Required: Task UUID
+    completion_summary: str                # Required: Completion summary
+    testing_notes: str | None = None       # Optional: Testing results
+    lessons_learned: str | None = None     # Optional: Lessons learned
+    artifacts: List[str] = field(default_factory=list)  # Optional: Output artifacts
+    final_progress: int = 100              # Default: 100% complete
+    completed_by: str | None = None        # Optional: Agent/user ID
+    completion_metadata: dict = field(default_factory=dict)  # Optional: Metadata
+```
+
+#### SearchTaskRequest
+```python
+@dataclass
+class SearchTaskRequest:
+    """Request DTO for task search"""
+    query: str | None = None               # Optional: Search text
+    git_branch_id: str | None = None       # Optional: Filter by branch
+    project_id: str | None = None          # Optional: Filter by project
+    status: List[str] | None = None        # Optional: Filter by statuses
+    priority: List[str] | None = None      # Optional: Filter by priorities
+    assignees: List[str] | None = None     # Optional: Filter by assignees
+    tags: List[str] | None = None          # Optional: Filter by tags
+    created_after: datetime | None = None  # Optional: Created after date
+    created_before: datetime | None = None # Optional: Created before date
+    include_subtasks: bool = False         # Optional: Include subtasks
+    include_dependencies: bool = False     # Optional: Include dependencies
+    limit: int = 50                        # Optional: Result limit
+    offset: int = 0                        # Optional: Pagination offset
+```
+
+### Project Management Request DTOs
+
+#### CreateProjectRequest
+```python
+@dataclass
+class CreateProjectRequest:
+    """Request DTO for project creation"""
+    name: str                              # Required: Project name
+    description: str                       # Required: Project description
+    team_preferences: dict | None = None   # Optional: Team settings
+    technology_stack: dict | None = None   # Optional: Tech stack definition
+    project_workflow: dict | None = None   # Optional: Workflow configuration
+    local_standards: dict | None = None    # Optional: Coding standards
+    repository_url: str | None = None      # Optional: Git repository URL
+    project_type: str | None = None        # Optional: "web", "mobile", "backend", etc.
+    visibility: str = "private"            # Default: "private" or "public"
+    owner_id: str | None = None            # Optional: Project owner
+```
+
+#### AssignAgentRequest
+```python
+@dataclass
+class AssignAgentRequest:
+    """Request DTO for agent assignment"""
+    project_id: str                        # Required: Project UUID
+    git_branch_id: str                     # Required: Branch UUID
+    agent_id: str                          # Required: Agent identifier
+    permissions: List[str] = field(default_factory=list)  # Optional: Permissions
+    assignment_reason: str | None = None   # Optional: Assignment reason
+    assigned_by: str | None = None         # Optional: Assigner ID
+```
+
+### Context Management Request DTOs
+
+#### CreateContextRequest
+```python
+@dataclass
+class CreateContextRequest:
+    """Request DTO for context creation"""
+    level: str                             # Required: "global", "project", "branch", "task"
+    context_id: str                        # Required: Context UUID
+    project_id: str | None = None          # Required for project/branch/task levels
+    git_branch_id: str | None = None       # Required for branch/task levels
+    data: dict                             # Required: Context data
+    metadata: dict = field(default_factory=dict)  # Optional: Metadata
+    inherit_from_parent: bool = True       # Default: Inherit parent context
+```
+
+#### UpdateContextRequest
+```python
+@dataclass
+class UpdateContextRequest:
+    """Request DTO for context updates"""
+    level: str                             # Required: Context level
+    context_id: str                        # Required: Context UUID
+    data: dict                             # Required: New/updated data
+    merge_strategy: str = "deep"           # Default: "deep", "shallow", "replace"
+    propagate_changes: bool = False        # Optional: Propagate to children
+    update_metadata: dict | None = None    # Optional: Update metadata
+```
+
+#### DelegateContextRequest
+```python
+@dataclass
+class DelegateContextRequest:
+    """Request DTO for context delegation"""
+    level: str                             # Required: Source level
+    context_id: str                        # Required: Source context UUID
+    delegate_to: str                       # Required: Target level
+    delegate_data: dict                    # Required: Data to delegate
+    delegation_reason: str                 # Required: Reason for delegation
+    preserve_source: bool = True           # Default: Keep in source context
+```
+
+### Agent Management Request DTOs
+
+#### CallAgentRequest
+```python
+@dataclass
+class CallAgentRequest:
+    """Request DTO for agent invocation"""
+    name_agent: str                        # Required: Agent identifier
+    task_id: str | None = None             # Optional: Associated task
+    parameters: dict = field(default_factory=dict)  # Optional: Agent parameters
+    context_override: dict | None = None   # Optional: Override context
+    timeout_seconds: int = 300             # Default: 5 minute timeout
+```
+
+#### ManageAgentRequest
+```python
+@dataclass
+class ManageAgentRequest:
+    """Request DTO for agent management"""
+    action: str                            # Required: "create", "update", "delete", "list"
+    agent_id: str | None = None            # Required for update/delete
+    name: str | None = None                # Required for create
+    capabilities: List[str] | None = None  # Optional: Agent capabilities
+    configuration: dict | None = None      # Optional: Agent config
+    metadata: dict | None = None           # Optional: Agent metadata
+```
+
+## 📤 Detailed Response DTOs
+
+### Task Management Response DTOs
+
+#### TaskResponse
+```python
 @dataclass
 class TaskResponse:
     """Response DTO for task data"""
-    id: str
-    title: str
-    description: str
-    status: str
+    id: str                                # Task UUID
+    title: str                             # Task title
+    description: str                       # Task description
+    status: str                            # Current status
+    priority: str                          # Priority level
+    git_branch_id: str                     # Branch UUID
+    progress_percentage: int               # Progress 0-100
+    assignees: List[str]                   # Assigned agents
+    tags: List[str]                        # Task tags
+    created_at: datetime                   # Creation timestamp
+    updated_at: datetime                   # Last update timestamp
+    completed_at: datetime | None          # Completion timestamp
+    dependencies: List[str]                # Dependency task IDs
+    subtasks: List['TaskResponse'] | None  # Nested subtasks
+    metadata: dict                         # Additional metadata
     
     @classmethod
     def from_entity(cls, task: Task) -> 'TaskResponse':
-        """Convert domain entity to DTO"""
+        """Convert domain entity to response DTO"""
         return cls(
             id=task.id.value,
             title=task.title,
             description=task.description,
-            status=task.status.status.value
+            status=task.status.status.value,
+            priority=task.priority.level.value,
+            git_branch_id=task.git_branch_id,
+            progress_percentage=task.progress_percentage,
+            assignees=[a.id for a in task.assignees],
+            tags=task.tags,
+            created_at=task.created_at,
+            updated_at=task.updated_at,
+            completed_at=task.completed_at,
+            dependencies=[d.value for d in task.dependencies],
+            subtasks=None,  # Loaded separately if requested
+            metadata=task.metadata
         )
+```
+
+#### CreateTaskResponse
+```python
+@dataclass
+class CreateTaskResponse:
+    """Response DTO for task creation"""
+    success: bool                          # Operation success
+    task: TaskResponse                     # Created task data
+    message: str                           # Success/error message
+    created_context: bool                  # Context auto-created
+    validation_warnings: List[str] = field(default_factory=list)  # Warnings
+```
+
+#### UpdateTaskResponse
+```python
+@dataclass
+class UpdateTaskResponse:
+    """Response DTO for task updates"""
+    success: bool                          # Operation success
+    task: TaskResponse                     # Updated task data
+    message: str                           # Success/error message
+    changed_fields: List[str]              # Fields that were updated
+    triggered_events: List[str] = field(default_factory=list)  # Events triggered
+```
+
+#### CompleteTaskResponse
+```python
+@dataclass
+class CompleteTaskResponse:
+    """Response DTO for task completion"""
+    success: bool                          # Operation success
+    task: TaskResponse                     # Completed task data
+    message: str                           # Success/error message
+    completion_summary: str                # Completion details
+    vision_enrichment: dict | None         # AI-generated insights
+    context_updated: bool                  # Context auto-updated
+    dependent_tasks_affected: List[str]    # Affected dependencies
+```
+
+#### SearchTaskResponse
+```python
+@dataclass
+class SearchTaskResponse:
+    """Response DTO for task search"""
+    success: bool                          # Operation success
+    tasks: List[TaskResponse]              # Found tasks
+    total_count: int                       # Total matching tasks
+    returned_count: int                    # Tasks in this response
+    has_more: bool                         # More results available
+    next_offset: int | None                # Offset for next page
+    search_metadata: dict                  # Search execution details
+```
+
+### Project Management Response DTOs
+
+#### ProjectResponse
+```python
+@dataclass
+class ProjectResponse:
+    """Response DTO for project data"""
+    id: str                                # Project UUID
+    name: str                              # Project name
+    description: str                       # Project description
+    created_at: datetime                   # Creation timestamp
+    updated_at: datetime                   # Last update timestamp
+    branches: List[GitBranchResponse]      # Project branches
+    team_preferences: dict                 # Team settings
+    technology_stack: dict                 # Tech stack
+    project_workflow: dict                 # Workflow config
+    local_standards: dict                  # Coding standards
+    health_status: ProjectHealthResponse | None  # Health check result
+    statistics: ProjectStatisticsResponse | None  # Project stats
+```
+
+#### GitBranchResponse
+```python
+@dataclass
+class GitBranchResponse:
+    """Response DTO for git branch data"""
+    id: str                                # Branch UUID
+    project_id: str                        # Parent project UUID
+    git_branch_name: str                   # Git branch name
+    assigned_agent: str | None             # Assigned agent ID
+    created_at: datetime                   # Creation timestamp
+    task_count: int                        # Number of tasks
+    completion_rate: float                 # Completion percentage
+    metadata: dict                         # Additional metadata
+```
+
+#### ProjectHealthResponse
+```python
+@dataclass
+class ProjectHealthResponse:
+    """Response DTO for project health check"""
+    project_id: str                        # Project UUID
+    health_score: float                    # Health score 0-100
+    status: str                            # "healthy", "warning", "critical"
+    active_tasks: int                      # Active task count
+    completed_tasks: int                   # Completed task count
+    blocked_tasks: int                     # Blocked task count
+    overdue_tasks: int                     # Overdue task count
+    agent_utilization: dict                # Agent workload
+    issues: List[str]                      # Health issues
+    recommendations: List[str]             # Improvement suggestions
+    checked_at: datetime                   # Check timestamp
+```
+
+### Context Management Response DTOs
+
+#### ContextResponse
+```python
+@dataclass
+class ContextResponse:
+    """Response DTO for context data"""
+    level: str                             # Context level
+    context_id: str                        # Context UUID
+    data: dict                             # Context data
+    inherited_data: dict | None            # Data from parent contexts
+    resolved_data: dict | None             # Merged context data
+    metadata: dict                         # Context metadata
+    created_at: datetime                   # Creation timestamp
+    updated_at: datetime                   # Last update timestamp
+    delegation_history: List[DelegationRecord]  # Delegation records
+```
+
+#### DelegationRecord
+```python
+@dataclass
+class DelegationRecord:
+    """Record of context delegation"""
+    from_level: str                        # Source level
+    from_id: str                           # Source context ID
+    to_level: str                          # Target level
+    to_id: str                             # Target context ID
+    delegated_data: dict                   # Delegated data
+    delegation_reason: str                 # Reason
+    delegated_at: datetime                 # Delegation timestamp
+    delegated_by: str | None               # Delegator ID
+```
+
+### Agent Management Response DTOs
+
+#### AgentResponse
+```python
+@dataclass
+class AgentResponse:
+    """Response DTO for agent data"""
+    agent_info: AgentInfoResponse          # Basic agent info
+    yaml_content: AgentYamlResponse        # Full YAML specification
+    capabilities: AgentCapabilitiesResponse # Agent capabilities
+    success: bool                          # Operation success
+    message: str | None                    # Status message
+```
+
+#### AgentInfoResponse
+```python
+@dataclass
+class AgentInfoResponse:
+    """Basic agent information"""
+    name: str                              # Agent identifier
+    description: str                       # Agent description
+    model: str                             # Preferred AI model
+    status: str                            # "active", "inactive", "error"
+    capabilities_summary: dict             # Capability summary
+```
+
+#### AgentYamlResponse
+```python
+@dataclass
+class AgentYamlResponse:
+    """Agent YAML specification"""
+    config: dict                           # Agent configuration
+    contexts: List[dict]                   # Operational contexts
+    rules: List[dict]                      # Behavioral rules
+    output_formats: List[dict]             # Expected outputs
+    metadata: AgentMetadataResponse        # Agent metadata
+```
+
+#### AgentMetadataResponse
+```python
+@dataclass
+class AgentMetadataResponse:
+    """Agent metadata details"""
+    name: str                              # Canonical name
+    description: str                       # Full description
+    model: str                             # AI model preference
+    color: str                             # UI color theme
+    migration: dict                        # Migration history
+    validation: dict                       # Validation status
+```
+
+#### AgentCapabilitiesResponse
+```python
+@dataclass
+class AgentCapabilitiesResponse:
+    """Agent capabilities details"""
+    available_actions: List[str]           # Available actions
+    mcp_tools: dict                        # MCP tool access
+    permissions: dict                      # Permission matrix
+    constraints: dict                      # Operational constraints
 ```
 
 ## 🔌 Interface Layer Components

@@ -7,7 +7,7 @@ from ...domain.value_objects.task_id import TaskId
 from ...domain.events import TaskDeleted
 from ...domain.interfaces.database_session import IDatabaseSessionFactory
 from ...domain.interfaces.logging_service import ILoggingService
-from ..services.domain_service_factory import DomainServiceFactory
+from ..orchestrators.services.domain_service_factory import DomainServiceFactory
 
 
 class DeleteTaskUseCase:

@@ -21,8 +21,8 @@ except ImportError:
 from ...auth.domain.entities.user import User
 from ...task_management.application.facades.task_application_facade import TaskApplicationFacade
 from ...task_management.infrastructure.repositories.orm.task_repository import ORMTaskRepository as TaskRepository
-from ...task_management.infrastructure.repositories.orm.project_repository import ProjectRepository
-from ...task_management.infrastructure.repositories.orm.agent_repository import AgentRepository
+from ...task_management.infrastructure.repositories.orm.project_repository import ORMProjectRepository as ProjectRepository
+from ...task_management.infrastructure.repositories.orm.agent_repository import ORMAgentRepository as AgentRepository
 from ...task_management.application.dtos.task.create_task_request import CreateTaskRequest
 from ...task_management.application.dtos.task.update_task_request import UpdateTaskRequest
 from ...task_management.application.dtos.task.list_tasks_request import ListTasksRequest
@@ -50,12 +50,12 @@ class UserScopedRepositoryFactory:
     @staticmethod
     def create_project_repository(session: Session, user_id: str) -> ProjectRepository:
         """Create a user-scoped project repository"""
-        return ProjectRepository(session).with_user(user_id)
+        return ProjectRepository(session, user_id=user_id)
     
     @staticmethod
     def create_agent_repository(session: Session, user_id: str) -> AgentRepository:
         """Create a user-scoped agent repository"""
-        return AgentRepository(session).with_user(user_id)
+        return AgentRepository(session, user_id=user_id)
 
 
 @router.post("/", response_model=dict)
