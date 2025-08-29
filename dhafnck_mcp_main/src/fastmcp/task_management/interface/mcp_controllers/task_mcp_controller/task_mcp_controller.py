@@ -37,11 +37,7 @@ from fastmcp.task_management.infrastructure.factories.unified_context_facade_fac
 from ....application.facades.task_application_facade import TaskApplicationFacade
 from ....application.facades.unified_context_facade import UnifiedContextFacade
 from fastmcp.task_management.infrastructure.factories.task_facade_factory import TaskFacadeFactory
-from ....application.orchestrators.services.context_validation_service import ContextValidationService
-from ....application.orchestrators.services.progress_tracking_service import ProgressTrackingService
-from ....application.orchestrators.services.hint_generation_service import HintGenerationService
-from ....application.orchestrators.services.workflow_analysis_service import WorkflowAnalysisService
-from ....application.orchestrators.services.agent_coordination_service import AgentCoordinationService
+# Services are created by factories with their required dependencies
 from ....application.orchestrators.services.parameter_enforcement_service import (
     ParameterEnforcementService, 
     EnforcementLevel,
@@ -143,14 +139,10 @@ class TaskMCPController(ContextPropagationMixin):
         
         # Initialize workflow components
         workflow_factory = TaskWorkflowFactory()
-        self._workflow_guidance = workflow_factory.create_guidance()
+        self._workflow_guidance = workflow_factory.create()
         
-        # Initialize orchestrator services
-        context_service = ContextValidationService()
-        progress_service = ProgressTrackingService()
-        hint_service = HintGenerationService()
-        analysis_service = WorkflowAnalysisService()
-        coordination_service = AgentCoordinationService()
+        # Note: Orchestrator services are created by factories as needed
+        # They require repositories and other dependencies that are not available here
         
         # Initialize enforcement services
         self._enforcement_service = ParameterEnforcementService(EnforcementLevel.WARNING)

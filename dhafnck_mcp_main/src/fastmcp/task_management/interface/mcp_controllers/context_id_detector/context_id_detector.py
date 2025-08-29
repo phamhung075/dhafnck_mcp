@@ -6,7 +6,7 @@ git branch ID, or task ID by using the proper application layer services.
 
 import logging
 from typing import Tuple, Optional
-from .....application.services.context_detection_service import ContextDetectionService
+from ....application.services.context_detection_service import ContextDetectionService
 
 logger = logging.getLogger(__name__)
 

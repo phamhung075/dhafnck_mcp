@@ -7,7 +7,7 @@ if TYPE_CHECKING:
     from fastmcp.server.server import FastMCP
 
 from .....application.facades.rule_orchestration_facade import IRuleOrchestrationFacade
-from ..workflow_guidance.rule.rule_workflow_factory import RuleWorkflowFactory
+from ...workflow_guidance.rule.rule_workflow_factory import RuleWorkflowFactory
 
 logger = logging.getLogger(__name__)
 

@@ -144,8 +144,7 @@ class DDDCompliantMCPTools:
         self._task_controller = TaskMCPController(
             self._task_facade_factory, 
             self._context_facade_factory,  # Pass context facade factory for auto-context creation
-            None,  # project_manager
-            self._task_repository_factory
+            None  # workflow_hint_enhancer
         )
         
         self._subtask_controller = SubtaskMCPController(

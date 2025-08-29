@@ -3,7 +3,7 @@
 from typing import Dict, Any, Optional
 import logging
 
-from .....application.use_cases.template_use_cases import TemplateUseCases
+from ....application.use_cases.template_use_cases import TemplateUseCases
 from .factories.template_controller_factory import TemplateControllerFactory
 
 logger = logging.getLogger(__name__)

@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from fastmcp.server.server import FastMCP
 
 from ..desc import description_loader
-from .....application.facades.rule_orchestration_facade import IRuleOrchestrationFacade
+from ....application.facades.rule_orchestration_facade import IRuleOrchestrationFacade
 from .factories.rule_orchestration_controller_factory import RuleOrchestrationControllerFactory
 
 logger = logging.getLogger(__name__)

@@ -14,7 +14,7 @@ The controller now uses:
 
 import logging
 from typing import Dict, Any, Optional, List
-from .....application.facades.task_application_facade import TaskApplicationFacade
+from ....application.facades.task_application_facade import TaskApplicationFacade
 from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
 from ...utils.response_formatter import StandardResponseFormatter
 from .factories.operation_factory import ProgressOperationFactory

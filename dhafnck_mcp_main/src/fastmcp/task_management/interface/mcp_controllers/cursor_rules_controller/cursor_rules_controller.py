@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from fastmcp.server.server import FastMCP
-    from .....application.facades.rule_application_facade import RuleApplicationFacade
+    from ....application.facades.rule_application_facade import RuleApplicationFacade
 
 from ..desc import description_loader
 from .handlers import RuleManagementHandler
