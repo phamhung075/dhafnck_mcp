@@ -73,8 +73,28 @@ class DualAuthMiddleware(BaseHTTPMiddleware):
         logger.debug(f"🔍 UNIFIED AUTH: Request type: {request_type} (for error formatting)")
         
         # Skip authentication for certain paths
-        if self._should_skip_auth(request):
-            logger.debug("🔍 UNIFIED AUTH: Skipping authentication for this path")
+        skip_auth_result = self._should_skip_auth(request)
+        if skip_auth_result:
+            logger.info("🔍 UNIFIED AUTH: Skipping authentication for this path")
+            
+            # For MVP mode, we need to set up the MVP user context
+            import os
+            logger.info(f"🔍 UNIFIED AUTH: Checking MVP mode. DHAFNCK_MVP_MODE={os.environ.get('DHAFNCK_MVP_MODE', 'not_set')}")
+            
+            if os.environ.get("DHAFNCK_MVP_MODE", "false").lower() == "true":
+                # Use the MVP default user ID directly to avoid import issues
+                mvp_user_id = "00000000-0000-0000-0000-000000012345"
+                request.state.user_id = mvp_user_id
+                request.state.auth_type = 'mvp_mode'
+                request.state.auth_info = {
+                    'user_id': mvp_user_id,
+                    'auth_method': 'mvp_mode',
+                    'mvp_mode': True
+                }
+                logger.info(f"🚀 MVP Mode: Set up user context with MVP user ID: {mvp_user_id}")
+            else:
+                logger.info("🔍 UNIFIED AUTH: MVP mode not enabled, skipping user setup")
+            
             return await call_next(request)
         
         try:

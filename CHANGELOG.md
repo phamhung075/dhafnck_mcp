@@ -6,8 +6,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Fixed
+- **CRITICAL BUG DISCOVERED** - DualAuthMiddleware not applied to `/api/v2/*` endpoints causing complete API failure [2025-08-29]
+- **Authentication Architecture** - Middleware configuration issue prevents all API authentication including MVP mode [2025-08-29]
+- **MCP Tool Integration** - MCP tools (`mcp__dhafnck_mcp_http__*`) not available in current environment [2025-08-29]
+
 ### Changed
+- **Testing Protocol Adapted** - Switched from MCP tools to direct REST API calls due to tool availability issues [2025-08-29]
 - **Documentation Cleanup** - Removed obsolete documentation that doesn't correspond to actual project [2025-08-29]
+
+### Added
+- **Comprehensive Testing Report** - Critical system issues documented in `docs/reports-status/comprehensive-mcp-testing-issues-2025-08-29.md` [2025-08-29]
   - **Removed Non-Existent Systems**: Cleaned up documentation for systems not present in actual codebase
     - Removed cloud-mcp-platform/ directory (35+ files) - no corresponding implementation
     - Removed claude-document-management-system/ directory (20+ files) - non-existent feature

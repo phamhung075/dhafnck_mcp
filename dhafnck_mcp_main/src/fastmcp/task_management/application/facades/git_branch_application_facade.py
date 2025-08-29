@@ -174,6 +174,7 @@ class GitBranchApplicationFacade:
     async def _find_git_branch_by_id(self, git_branch_id: str) -> Dict[str, Any]:
         """Helper method to find a git branch by ID across all projects."""
         from ...domain.interfaces.repository_factory import IProjectRepositoryFactory
+        from ...infrastructure.repositories.project_repository_factory import GlobalRepositoryManager
         
         project_repo = GlobalRepositoryManager.get_default()
         projects = await project_repo.find_all()
