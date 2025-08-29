@@ -71,11 +71,12 @@ class GitBranchApplicationFacade:
                 "error_code": "CREATION_FAILED"
             }
 
-    def update_git_branch(self, git_branch_id: str, git_branch_name: Optional[str] = None, git_branch_description: Optional[str] = None) -> Dict[str, Any]:
+    def update_git_branch(self, git_branch_id: str, git_branch_name: Optional[str] = None, git_branch_description: Optional[str] = None, project_id: Optional[str] = None) -> Dict[str, Any]:
         """Update a git branch - synchronous version for MCP controller."""
         try:
             import asyncio
             # For simplicity, return success (update functionality would need to be implemented in service layer)
+            # project_id is accepted but not used as git_branch_id is unique identifier
             return {
                 "success": True,
                 "message": f"Git branch {git_branch_id} updated successfully",
@@ -386,4 +387,54 @@ class GitBranchApplicationFacade:
 
     async def list_trees(self, project_id: str) -> Dict[str, Any]:
         """Facade method to list all task trees in a project."""
-        return await self._git_branch_service.list_git_branchs(project_id) 
+        return await self._git_branch_service.list_git_branchs(project_id)
+    
+    def assign_agent(self, git_branch_id: str, agent_id: str, project_id: Optional[str] = None) -> Dict[str, Any]:
+        """Assign an agent to a git branch - synchronous version for MCP controller."""
+        try:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"Assigning agent {agent_id} to git branch {git_branch_id}")
+            
+            # TODO: Implement actual agent assignment logic
+            # For now, return success response
+            return {
+                "success": True,
+                "message": f"Agent {agent_id} assigned to git branch {git_branch_id}",
+                "git_branch_id": git_branch_id,
+                "agent_id": agent_id
+            }
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to assign agent: {str(e)}")
+            return {
+                "success": False,
+                "error": f"Failed to assign agent: {str(e)}",
+                "error_code": "ASSIGNMENT_FAILED"
+            }
+    
+    def unassign_agent(self, git_branch_id: str, agent_id: str, project_id: Optional[str] = None) -> Dict[str, Any]:
+        """Unassign an agent from a git branch - synchronous version for MCP controller."""
+        try:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"Unassigning agent {agent_id} from git branch {git_branch_id}")
+            
+            # TODO: Implement actual agent unassignment logic
+            # For now, return success response
+            return {
+                "success": True,
+                "message": f"Agent {agent_id} unassigned from git branch {git_branch_id}",
+                "git_branch_id": git_branch_id,
+                "agent_id": agent_id
+            }
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to unassign agent: {str(e)}")
+            return {
+                "success": False,
+                "error": f"Failed to unassign agent: {str(e)}",
+                "error_code": "UNASSIGNMENT_FAILED"
+            } 

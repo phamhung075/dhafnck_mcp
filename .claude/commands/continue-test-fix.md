@@ -1,53 +1,200 @@
-**MCP Tool Testing Protocol**
+# MCP Tool Testing Protocol - Decision Tree
 
-Call agent to execute comprehensive MCP tool testing following the specified protocol to find issues for fixes: test → stop on error → fix with DDD compliance → restart backend → verify in Supabase → retest
+I no need make report, i want coder agent correct code issue by finding on test
 
-**Test Checklist:**
+## 🚀 Entry Point
+```
+START → Call @test_orchestrator_agent
+```
 
-- ☐ Test project management actions (create 2 projects, get, list, update, health checks, set project context)
-- ☐ Test git branch management actions (create 2 branches, get, list, update, agent assignment, set branch context)
-- ☐ Test task management actions (create 5 tasks on first branch, 2 tasks on second branch, update, get, list, search, next, random dependencies to other tasks, assign agent)
-- ☐ Test task management actions on first branch (update, get, list, search, next, random dependencies to other tasks, assign agent)
-- ☐ Test subtask management actions (create 4 subtasks for each task on first branch, TDD step, update, list, get, complete)
-- ☐ Try to complete a task
-- ☐ Verify context management is working on different layers
-- ☐ Resume all issues that appear when testing, write in .md file format in docs folder
-- ☐ For each issue, write prompt per issue with details for fix in new chat, write in same .md file
-- ☐ Update global context
+## 📋 Testing Decision Tree
 
-**Global Context Update**
+```mermaid
+graph TD
+    A[Start Testing Protocol] --> B[Initialize Test Agent]
+    B --> C[Test Project Management]
+    
+    C --> D{Project Tests Pass?}
+    D -->|Yes| E[Test Git Branch Management]
+    D -->|No| F[Stop - Create Todo List]
+    
+    E --> G{Branch Tests Pass?}
+    G -->|Yes| H[Test Task Management - Branch 1]
+    G -->|No| F
+    
+    H --> I{Task Tests Pass?}
+    I -->|Yes| J[Test Task Management - Branch 2]
+    I -->|No| F
+    
+    J --> K{Branch 2 Tests Pass?}
+    K -->|Yes| L[Test Subtask Management]
+    K -->|No| F
+    
+    L --> M{Subtask Tests Pass?}
+    M -->|Yes| N[Test Task Completion]
+    M -->|No| F
+    
+    N --> O{Completion Tests Pass?}
+    O -->|Yes| P[Test Context Management]
+    O -->|No| F
+    
+    P --> Q{Context Tests Pass?}
+    Q -->|Yes| R[Document All Issues]
+    Q -->|No| F
+    
+    R --> S[Create Fix Prompts]
+    S --> T[Update All Context Layers]
+    T --> U[Complete Testing Protocol]
+    
+    F --> V[Document Issues in MD]
+    V --> W[Create DDD-Compliant Fixes]
+    W --> X[Restart Backend]
+    X --> Y[Verify in Supabase]
+    Y --> Z[Return to Failed Test]
+    Z --> D
+```
 
-Update global context with this content:
+## 🎯 Test Execution Flow
 
-**Global Context:**
+### Phase 1: Project Management Tests
+```
+IF testing project management:
+    CREATE 2 projects
+    TEST get, list, update, health_check
+    SET project context
+    
+    IF any_error:
+        STOP → CREATE todo_list → FIX → RESTART → RETEST
+    ELSE:
+        PROCEED to Phase 2
+```
 
-**1️⃣ Organization Settings**
-- Company name and structure
-- Team configuration (24/7 AI-powered operations)
-- Communication protocols and collaboration tools
-- Automation rules for tasks, code review, testing, deployment
-- AI agent orchestration settings
+### Phase 2: Git Branch Management Tests
+```
+IF testing git branches:
+    CREATE 2 branches
+    TEST get, list, update, agent_assignment
+    SET branch context
+    
+    IF any_error:
+        STOP → CREATE todo_list → FIX → RESTART → RETEST
+    ELSE:
+        PROCEED to Phase 3
+```
 
-**2️⃣ Security Policies**
-- Data classification levels (public, internal, confidential, secret)
-- Multi-factor authentication and RBAC
-- AES-256 encryption at rest, TLS 1.3 in transit
-- Compliance standards (GDPR, HIPAA, SOC2, ISO 27001)
-- Vulnerability scanning and incident response SLAs
+### Phase 3: Task Management Tests
+```
+IF testing task management:
+    BRANCH 1:
+        CREATE 5 tasks
+        TEST update, get, list, search, next
+        ADD random dependencies
+        ASSIGN agents
+    
+    BRANCH 2:
+        CREATE 2 tasks
+        TEST same operations as Branch 1
+    
+    IF any_error:
+        STOP → CREATE todo_list → FIX → RESTART → RETEST
+    ELSE:
+        PROCEED to Phase 4
+```
 
-**3️⃣ Coding Standards**
-- TypeScript: v5.x with strict mode, ESLint, Prettier
-- Python: 3.11+ with PEP 8, Black formatter, type hints
-- React: v18.x with hooks, Tailwind CSS
-- 80% minimum test coverage, TDD preferred
-- GitFlow workflow with 2-approval code reviews
+### Phase 4: Subtask Management Tests
+```
+IF testing subtasks:
+    FOR each task in Branch 1:
+        CREATE 4 subtasks
+        FOLLOW TDD steps
+        TEST update, list, get, complete
+    
+    IF any_error:
+        STOP → CREATE todo_list → FIX → RESTART → RETEST
+    ELSE:
+        PROCEED to Phase 5
+```
 
-**4️⃣ Workflow Templates**
-- Feature Development: 2-week sprints with 7 phases
-- Bug Fixing: Priority-based response times (1hr for critical)
-- Release Management: Bi-weekly releases with blue-green deployment
+### Phase 5: Task Completion Tests
+```
+IF testing task completion:
+    SELECT 1 task from Branch 1
+    COMPLETE with full summary
+    VERIFY completion status
+    
+    IF any_error:
+        STOP → CREATE todo_list → FIX → RESTART → RETEST
+    ELSE:
+        PROCEED to Phase 6
+```
 
-**5️⃣ Delegation Rules**
-- Task routing by expertise area
-- 3-level escalation matrix
-- Clear approval authority for different change types
+### Phase 6: Context Management Tests
+```
+IF testing context management:
+    VERIFY global context
+    VERIFY project context
+    VERIFY branch context  
+    VERIFY task context
+    TEST inheritance flow
+    
+    IF any_error:
+        STOP → CREATE todo_list → FIX → RESTART → RETEST
+    ELSE:
+        PROCEED to Phase 7
+```
+
+### Phase 7: Documentation & Fix Generation
+```
+IF all tests complete OR errors encountered:
+    DOCUMENT all issues in MD format
+    SAVE to dhafnck_mcp_main/docs/issues/
+    CREATE detailed fix prompts
+    UPDATE all context layers
+```
+
+## 🔄 Error Handling Loop
+
+```
+ON ERROR:
+1. STOP current test immediately
+2. CREATE todo list with specific error details
+3. WRITE issue to dhafnck_mcp_main/docs/issues/mcp-testing-issues-{date}.md
+4. GENERATE fix prompt with DDD compliance requirements
+5. APPLY fixes following Domain-Driven Design patterns
+6. RESTART backend: docker-compose down && docker-compose up
+7. VERIFY changes in Supabase dashboard
+8. RETURN to failed test and continue from that point
+```
+
+## 📝 Todo List Remake Protocol
+
+```
+WHEN creating todo list after error:
+1. IDENTIFY specific failing operation
+2. ANALYZE error with DDD compliance lens
+3. CREATE fix prompt with implementation details
+4. RESTART backend after applying fixes
+5. VERIFY database changes in Supabase
+6. RETEST from point of failure
+7. CONTINUE with remaining test phases
+```
+
+## 🎯 Success Criteria
+
+```
+ALL PHASES MUST PASS:
+✅ Project Management (2 projects + operations)
+✅ Git Branch Management (2 branches + operations) 
+✅ Task Management (5+2 tasks + operations)
+✅ Subtask Management (4 per task + operations)
+✅ Task Completion (1 complete task)
+✅ Context Management (all 4 layers)
+✅ Issue Documentation (complete MD file)
+✅ Context Updates (all layers updated)
+```
+
+## 📁 Output Locations
+
+- **Issues**: `dhafnck_mcp_main/docs/issues/mcp-testing-issues-{date}.md`
+- **Fix Prompts**: Same MD file, section "Fix Prompts"
+- **Context Updates**: All 4 context layers (global, project, branch, task)

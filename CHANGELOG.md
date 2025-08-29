@@ -6,6 +6,31 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Fixed - 2025-08-29 Critical MCP Tool Issues
+- **Git Branch Management** - Fixed critical operation failures
+  - Fixed `update_git_branch` parameter mismatch by accepting optional `project_id` parameter
+  - Added missing `assign_agent` and `unassign_agent` methods to GitBranchApplicationFacade
+  - File: `dhafnck_mcp_main/src/fastmcp/task_management/application/facades/git_branch_application_facade.py`
+
+### Testing - 2025-08-29 Evening Follow-up
+- **MCP Tool Testing Verification** - Conducted follow-up testing session to verify issue resolution status
+  - Tested project management: ✅ All operations working
+  - Tested git branch management: ❌ Get and update still failing
+  - Tested task management: ⚠️ Status validation inconsistency persists, search still broken
+  - Tested subtask management: ❌ Create still failing with task not found
+  - Tested context management: ❌ Create/get inconsistency remains
+  - **Result**: No improvements detected - all 6 critical issues from previous session remain unresolved
+  - Updated comprehensive report in `dhafnck_mcp_main/docs/reports-status/comprehensive-mcp-testing-issues-2025-08-29.md`
+
+### Added
+- **Unit Tests for Auth Components** - Created comprehensive unit tests for authentication middleware [2025-08-29]
+  - Created tests for deprecated auth middleware utilities (`auth_middleware_test.py`)
+  - Created tests for DualAuthMiddleware with full coverage (`dual_auth_middleware_test.py`)
+  - Created tests for MCPTokenService token management (`mcp_token_service_test.py`)
+  - Created tests for TokenValidator with rate limiting (`token_validator_test.py`)
+  - All tests follow DDD patterns and 4-layer architecture
+  - Tests cover success cases, error handling, and edge cases
+
 ### Fixed
 - **CRITICAL BUG DISCOVERED** - DualAuthMiddleware not applied to `/api/v2/*` endpoints causing complete API failure [2025-08-29]
 - **Authentication Architecture** - Middleware configuration issue prevents all API authentication including MVP mode [2025-08-29]

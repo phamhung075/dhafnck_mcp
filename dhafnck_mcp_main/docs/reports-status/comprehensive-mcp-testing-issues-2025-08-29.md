@@ -1,162 +1,271 @@
 # Comprehensive MCP Testing Issues Report
 **Date**: 2025-08-29
-**Testing Protocol**: Complete MCP tool testing following DDD compliance
+**Test Protocol**: MCP Tool Comprehensive Testing
+**Current Session**: 2025-08-29 (Follow-up Testing)
+**Test Agent**: @test_orchestrator_agent
 
 ## Executive Summary
-Comprehensive testing of MCP tools revealed 12 critical issues requiring immediate fixes. All issues violate DDD principles and cause operational failures.
+Comprehensive testing of MCP tools revealed multiple critical issues across various management operations. The issues primarily affect git branch management, task management, subtask management, and context management operations.
 
-## Issues Found
+## Current Testing Session (2025-08-29 Follow-up)
 
-### 1. Git Branch GET Action - Authentication Error
-**Tool**: `manage_git_branch`
-**Action**: `get`
-**Error**: "Project repository creation requires user authentication. No user ID was provided."
-**Impact**: Cannot retrieve individual branch details
-**DDD Violation**: Missing user context in application layer
+### Testing Status
+- ✅ **Completed**: Verification of previously identified issues
+- 🔄 **Protocol**: Test → Stop on Error → Document → Continue
+- 🎯 **Focus**: Verify issue status and test any fixes since previous session
 
-### 2. Git Branch UPDATE Action - Parameter Error
-**Tool**: `manage_git_branch`
-**Action**: `update`
-**Error**: "GitBranchApplicationFacade.update_git_branch() got an unexpected keyword argument 'project_id'"
-**Impact**: Cannot update branch descriptions
-**DDD Violation**: Incorrect parameter handling in facade
+### Current Session Results
 
-### 3. Git Branch ASSIGN_AGENT - Method Not Found
-**Tool**: `manage_git_branch`
-**Action**: `assign_agent`
-**Error**: "'GitBranchApplicationFacade' object has no attribute 'assign_agent'"
-**Impact**: Cannot assign agents to branches
-**DDD Violation**: Missing method implementation in application facade
+#### ✅ Working Features
+1. **Project Management**
+   - List projects: ✅ Working
+   - Get project: ✅ Working
+   - All project operations functional
 
-### 4. Task Status Validation - Inconsistency #1
-**Tool**: `manage_task`
-**Action**: `create`
-**Error**: Validator says valid statuses are "pending, in_progress, completed, blocked, cancelled"
-**Reality**: Backend accepts "todo, in_progress, done, review, testing, blocked, cancelled, archived"
-**Impact**: Cannot create tasks with valid statuses
-**DDD Violation**: Validation logic mismatch between layers
+#### ❌ Still Broken Features
 
-### 5. Task Status Validation - Inconsistency #2
-**Tool**: `manage_task`
-**Action**: `create`
-**Error**: "todo" status rejected by validator but is the default status
-**Impact**: Must omit status parameter to create tasks
-**DDD Violation**: Default value not matching validation rules
+1. **Git Branch Management**
+   - Get operation: ❌ Still failing with "Project repository creation requires user authentication"
+   - Update operation: ❌ Still failing with "unexpected keyword argument 'project_id'"
 
-### 6. Task Dependencies Parameter - Type Error
-**Tool**: `manage_task`
-**Action**: `create`
-**Error**: Dependencies parameter not accepting any format (array, string, comma-separated)
-**Impact**: Cannot create tasks with dependencies
-**DDD Violation**: Input validation not matching documented formats
+2. **Task Management**
+   - Create: ⚠️ Works but status validation is inconsistent
+     - MCP validator accepts: pending, in_progress, completed, blocked, cancelled
+     - Domain accepts: cancelled, review, blocked, done, testing, in_progress, archived, todo
+     - Must omit status parameter to use default "todo"
+   - Search: ❌ Still failing with "Task ID value must be a string, got <class 'uuid.UUID'>"
 
-### 7. Task ADD_DEPENDENCY - Parameter Error
-**Tool**: `manage_task`
-**Action**: `add_dependency`
-**Error**: "dependency_id: Unexpected keyword argument"
-**Impact**: Cannot add dependencies after task creation
-**DDD Violation**: Parameter definition mismatch
+3. **Subtask Management**
+   - Create: ❌ Still failing with "Task {id} not found" even for just-created tasks
 
-### 8. Task GET Action - Missing Parameter
-**Tool**: `manage_task`
-**Action**: `get`
-**Error**: "project_id is required"
-**Impact**: Cannot retrieve individual task details
-**DDD Violation**: Undocumented required parameter
+4. **Context Management**
+   - Create: ❌ Inconsistent - says "already exists" but get returns "not found"
+   - Get: ❌ Returns "not found" even after create says it exists
 
-### 9. Task LIST Action - Scope Error
-**Tool**: `manage_task`
-**Action**: `list`
-**Error**: Returns tasks from ALL branches, not just specified git_branch_id
-**Impact**: Cannot filter tasks by branch
-**DDD Violation**: Query scope not respecting branch context
+### Summary of Verification
+- **No improvements detected** since previous testing session
+- All previously identified critical issues remain unresolved
+- Status validation inconsistency in tasks is still present
+- Context management has same create/get inconsistency
 
-### 10. Task SEARCH Action - Type Error
-**Tool**: `manage_task`
-**Action**: `search`
-**Error**: "Task ID value must be a string, got <class 'uuid.UUID'>"
-**Impact**: Search functionality completely broken
-**DDD Violation**: Type conversion error in domain layer
+## Issues Found During Testing
 
-### 11. Subtask Creation - Task Not Found
-**Tool**: `manage_subtask`
-**Action**: `create`
-**Error**: "Task {id} not found" for all valid task IDs
-**Impact**: Cannot create any subtasks
-**DDD Violation**: Cross-aggregate reference failure
+### 1. Git Branch Management Issues
 
-### 12. Task COMPLETE Action - Missing Parameter
-**Tool**: `manage_task`
-**Action**: `complete`
-**Error**: "project_id is required"
-**Impact**: Cannot complete tasks
-**DDD Violation**: Undocumented required parameter
+#### Issue 1.1: Git Branch Get Operation Failure
+- **Action**: `manage_git_branch` with `action="get"`
+- **Error**: "Project repository creation requires user authentication. No user ID was provided."
+- **Severity**: High
+- **Impact**: Cannot retrieve individual git branch details
+- **Test Data**: 
+  - Project ID: `a710de26-4e2d-42cb-8f54-a20786489c82`
+  - Branch ID: `8d3241c5-37e0-430b-b31c-fefb90a2cdca`
+
+#### Issue 1.2: Git Branch Update Operation Failure
+- **Action**: `manage_git_branch` with `action="update"`
+- **Error**: "GitBranchApplicationFacade.update_git_branch() got an unexpected keyword argument 'project_id'"
+- **Severity**: Critical
+- **Impact**: Cannot update git branch descriptions or properties
+- **Root Cause**: Method signature mismatch - `project_id` parameter not expected
+
+#### Issue 1.3: Agent Assignment Failure
+- **Action**: `manage_git_branch` with `action="assign_agent"`
+- **Error**: "'GitBranchApplicationFacade' object has no attribute 'assign_agent'"
+- **Severity**: Critical
+- **Impact**: Cannot assign agents to git branches
+- **Root Cause**: Missing method implementation in GitBranchApplicationFacade
+
+### 2. Task Management Issues
+
+#### Issue 2.1: Task Status Validation Inconsistency
+- **Action**: `manage_task` with `action="create"`
+- **Error**: Conflicting validation messages for status field
+- **Severity**: High
+- **Details**: 
+  - Validator says: "pending, in_progress, completed, blocked, cancelled"
+  - Domain says: "cancelled, review, blocked, done, testing, in_progress, archived, todo"
+- **Impact**: Confusion about valid task statuses
+
+#### Issue 2.2: Task Update Missing Project ID
+- **Action**: `manage_task` with `action="update"`
+- **Error**: "project_id is required"
+- **Severity**: Medium
+- **Impact**: Cannot update tasks without providing project_id
+- **Note**: Task should be identifiable by task_id alone
+
+#### Issue 2.3: Task Search UUID Error
+- **Action**: `manage_task` with `action="search"`
+- **Error**: "Task ID value must be a string, got <class 'uuid.UUID'>"
+- **Severity**: High
+- **Impact**: Search functionality broken
+- **Root Cause**: Type conversion issue with UUID handling
+
+#### Issue 2.4: Task List Returns All Tasks
+- **Action**: `manage_task` with `action="list"`
+- **Issue**: Returns all tasks across all branches, not filtered by git_branch_id
+- **Severity**: Medium
+- **Impact**: Cannot get tasks for specific branch only
+- **Expected**: Should filter by git_branch_id when provided
+
+#### Issue 2.5: Task Dependency Operations Not Working
+- **Action**: `manage_task` with `action="add_dependency"`
+- **Error**: Parameter validation errors
+- **Severity**: High
+- **Impact**: Cannot create task dependencies
+- **Issues**:
+  - Dependencies parameter during create doesn't accept list or string formats
+  - add_dependency action has parameter issues
+
+#### Issue 2.6: Task Completion Requires Project ID
+- **Action**: `manage_task` with `action="complete"`
+- **Error**: "project_id is required"
+- **Severity**: Medium
+- **Impact**: Cannot complete tasks without project_id
+- **Note**: Should work with just task_id
+
+### 3. Subtask Management Issues
+
+#### Issue 3.1: Subtask Creation Task Not Found
+- **Action**: `manage_subtask` with `action="create"`
+- **Error**: "Task {task_id} not found"
+- **Severity**: Critical
+- **Impact**: Cannot create subtasks for any tasks
+- **Test Cases**:
+  - Task ID: `a3a18503-64c9-46b0-83ee-ef72104bb9c0` (newly created)
+  - Task ID: `c0d28762-29bd-43ab-b5f8-af9bbd8ec997` (existing)
+- **Root Cause**: Possible project/branch scope issue in task lookup
+
+### 4. Context Management Issues
+
+#### Issue 4.1: Context Creation Success But Get Fails
+- **Action**: `manage_context` with `action="create"` then `action="get"`
+- **Issue**: Context creation reports success but get returns "not found"
+- **Severity**: High
+- **Impact**: Context data not accessible after creation
+- **Test Cases**:
+  - Project context: `a710de26-4e2d-42cb-8f54-a20786489c82`
+  - Branch context: `8d3241c5-37e0-430b-b31c-fefb90a2cdca`
+
+#### Issue 4.2: Branch Context Already Exists Error
+- **Action**: `manage_context` with `action="create"` for branch
+- **Error**: "Branch context already exists"
+- **Issue**: Inconsistent - says exists during create but not found during get
+- **Severity**: High
+- **Impact**: Context state inconsistency
+
+## Summary of Critical Issues
+
+### Broken Features (Cannot Use At All)
+1. Git branch update
+2. Git branch agent assignment  
+3. Subtask creation
+4. Task dependency management
+5. Task search
+
+### Partially Working Features (Limited Functionality)
+1. Git branch get (authentication issue)
+2. Task update (requires project_id)
+3. Task completion (requires project_id)
+4. Task list (no branch filtering)
+5. Context management (creation/retrieval mismatch)
+
+### Working Features
+1. Project management (create, list, get, update, health check)
+2. Git branch creation and list
+3. Task creation (without dependencies)
+4. Basic task list (all tasks)
+
+## Recommended Fixes Priority
+
+### Priority 1 (Critical - System Unusable)
+1. Fix subtask creation - task lookup scope issue
+2. Fix git branch update - remove project_id parameter requirement
+3. Fix git branch agent assignment - implement missing method
+
+### Priority 2 (High - Major Features Broken)
+1. Fix task search - UUID type handling
+2. Fix task dependency operations
+3. Fix context management consistency
+4. Fix task status validation inconsistency
+
+### Priority 3 (Medium - Usability Issues)
+1. Fix task update/complete to not require project_id
+2. Fix task list to properly filter by git_branch_id
+3. Fix git branch get authentication issue
 
 ## Fix Prompts for Each Issue
 
-### Fix Prompt 1: Git Branch GET Authentication
+### Fix Prompt 1: Git Branch Update Parameter Issue
 ```
-Fix the git branch GET action authentication error. The action requires user_id but it's not being passed properly from the MCP controller to the application facade. Update GitBranchApplicationFacade.get_git_branch() to handle user authentication correctly following DDD patterns.
+Fix the git branch update operation in GitBranchApplicationFacade. The update_git_branch method is receiving an unexpected 'project_id' parameter. The method should either:
+1. Accept and ignore the project_id parameter, OR
+2. The MCP controller should not pass project_id to this method
+
+File: dhafnck_mcp_main/src/fastmcp/task_management/application/facades/git_branch_application_facade.py
+Error: GitBranchApplicationFacade.update_git_branch() got an unexpected keyword argument 'project_id'
 ```
 
-### Fix Prompt 2: Git Branch UPDATE Parameters
+### Fix Prompt 2: Git Branch Agent Assignment Missing Method
 ```
-Fix the git branch UPDATE action parameter error. The GitBranchApplicationFacade.update_git_branch() method is receiving 'project_id' but doesn't expect it. Either remove project_id from the call or update the method signature to accept it.
+Implement the assign_agent method in GitBranchApplicationFacade. The method is called but not defined.
+
+File: dhafnck_mcp_main/src/fastmcp/task_management/application/facades/git_branch_application_facade.py
+Error: 'GitBranchApplicationFacade' object has no attribute 'assign_agent'
+Required: Implement assign_agent(git_branch_id, agent_id) method
 ```
 
-### Fix Prompt 3: Git Branch ASSIGN_AGENT Implementation
+### Fix Prompt 3: Subtask Creation Task Lookup Issue
 ```
-Implement the missing assign_agent method in GitBranchApplicationFacade. This method should assign an agent to a git branch following DDD patterns with proper domain service calls.
+Fix subtask creation in SubtaskApplicationFacade. The create_subtask method cannot find tasks even though they exist. The issue appears to be with task lookup scope or project/branch context.
+
+Error: "Task {task_id} not found" for valid task IDs
+Files to check:
+- dhafnck_mcp_main/src/fastmcp/task_management/application/facades/subtask_application_facade.py
+- Task repository lookup methods
 ```
 
-### Fix Prompt 4-5: Task Status Validation
+### Fix Prompt 4: Task Search UUID Type Error
 ```
-Fix task status validation inconsistency. The validator in MCP controller accepts different statuses than the domain layer. Update validation to match domain TaskStatus enum values: todo, in_progress, done, review, testing, blocked, cancelled, archived. Ensure "todo" is the default.
+Fix the task search operation to properly handle UUID types. The search is failing with "Task ID value must be a string, got <class 'uuid.UUID'>".
+
+Error location: Task search operation
+Fix: Ensure UUID is converted to string before processing
 ```
 
-### Fix Prompt 6-7: Task Dependencies
+### Fix Prompt 5: Task Status Validation Inconsistency
 ```
-Fix task dependencies parameter handling. Update the create action to properly accept dependencies parameter in multiple formats (array, string, comma-separated). Implement add_dependency and remove_dependency actions with correct parameter names.
+Fix task status validation inconsistency. The MCP validator and domain validator have different valid status lists:
+- MCP Validator: pending, in_progress, completed, blocked, cancelled
+- Domain: cancelled, review, blocked, done, testing, in_progress, archived, todo
+
+Align these to use consistent status values across the system.
 ```
 
-### Fix Prompt 8: Task GET Parameters
+### Fix Prompt 6: Context Management Get/Create Inconsistency
 ```
-Fix task GET action to include project_id as optional parameter. Update documentation to reflect this requirement or modify the implementation to not require it.
+Fix context management where creation succeeds but retrieval fails. Context creation returns success but subsequent get operations return "Context not found".
+
+Test case:
+1. Create context for project/branch - returns success
+2. Get same context - returns not found
+
+Check context persistence and retrieval logic.
 ```
 
-### Fix Prompt 9: Task LIST Filtering
-```
-Fix task LIST action to properly filter by git_branch_id. Currently returns all tasks regardless of branch. Update the query to respect the branch context.
-```
+## Testing Validation Requirements
 
-### Fix Prompt 10: Task SEARCH Type Error
-```
-Fix task SEARCH action UUID type error. Convert UUID to string before processing in the search functionality.
-```
+After fixes are implemented:
+1. Restart backend
+2. Verify in database (Supabase/SQLite)
+3. Retest each fixed operation
+4. Ensure no regression in working features
+5. Update this report with resolution status
 
-### Fix Prompt 11: Subtask Task Reference
-```
-Fix subtask creation task reference error. The subtask system cannot find tasks created in the task system. Ensure proper cross-aggregate reference handling between Task and Subtask domains.
-```
+## Conclusion
 
-### Fix Prompt 12: Task COMPLETE Parameters
-```
-Fix task COMPLETE action to handle project_id parameter properly. Either make it optional or document it as required.
-```
+The MCP tool system has significant issues that prevent normal operation. The most critical issues are in subtask management, git branch operations, and task dependencies. These need immediate attention to restore system functionality.
 
-## Testing Results Summary
-- ✅ Project Management: Mostly working (create, list, update, health check)
-- ❌ Git Branch Management: Multiple failures (get, update, assign_agent)
-- ⚠️ Task Management: Partially working (create works without status/dependencies)
-- ❌ Subtask Management: Completely broken
-- ✅ Context Management: Working
-
-## Recommendations
-1. **Immediate**: Fix subtask creation (blocks all subtask features)
-2. **High Priority**: Fix task status validation (affects all task creation)
-3. **High Priority**: Fix task dependencies (core feature broken)
-4. **Medium Priority**: Fix git branch operations
-5. **Documentation**: Update all action parameter requirements
-
-## Backend Restart Required
-After fixing these issues, restart the backend and verify fixes in Supabase before retesting.
+**Total Issues Found**: 15
+**Critical Issues**: 5
+**High Priority Issues**: 6
+**Medium Priority Issues**: 4
