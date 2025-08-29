@@ -48,7 +48,7 @@ from .mcp_controllers.unified_context_controller import UnifiedContextMCPControl
 from .mcp_controllers.project_mcp_controller import ProjectMCPController
 from .mcp_controllers.git_branch_mcp_controller import GitBranchMCPController
 from .mcp_controllers.agent_mcp_controller import AgentMCPController
-from .mcp_controllers.claude_agent_controller import ClaudeAgentMCPController
+# Claude agent controller removed
 from .mcp_controllers.call_agent_mcp_controller import CallAgentMCPController
 from .mcp_controllers.compliance_mcp_controller import ComplianceMCPController
 from .mcp_controllers.file_resource_mcp_controller import FileResourceMCPController
@@ -206,8 +206,7 @@ class DDDCompliantMCPTools:
         self._call_agent_use_case = CallAgentUseCase(cursor_agent_dir)
         self._call_agent_controller = CallAgentMCPController(self._call_agent_use_case)
         
-        # Initialize Claude agent generation controller
-        self._claude_agent_controller = ClaudeAgentMCPController()
+        # Claude agent controller removed
         
         # Initialize compliance controller
         self._compliance_controller = ComplianceMCPController(project_root=self._path_resolver.project_root)

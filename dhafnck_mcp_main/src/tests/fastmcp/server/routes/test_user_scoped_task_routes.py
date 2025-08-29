@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import Mock, patch, AsyncMock
 from fastapi.testclient import TestClient
 from fastapi import FastAPI
-from fastmcp.server.routes.user_scoped_task_routes import router
+from fastmcp.server.routes.task_user_routes import router
 import uuid
 import json
 
@@ -38,7 +38,7 @@ class TestUserScopedTaskRoutes:
             "status": "todo"
         }
         
-        with patch('fastmcp.server.routes.user_scoped_task_routes.task_facade') as mock_facade:
+        with patch('fastmcp.server.routes.task_user_routes.task_facade') as mock_facade:
             expected_task = {
                 "id": str(uuid.uuid4()),
                 **task_data,
@@ -67,7 +67,7 @@ class TestUserScopedTaskRoutes:
             "status": "todo"
         }
         
-        with patch('fastmcp.server.routes.user_scoped_task_routes.task_facade') as mock_facade:
+        with patch('fastmcp.server.routes.task_user_routes.task_facade') as mock_facade:
             mock_facade.get_task.return_value = expected_task
             
             response = test_client.get(
@@ -84,7 +84,7 @@ class TestUserScopedTaskRoutes:
         """Test getting non-existent task returns 404"""
         task_id = str(uuid.uuid4())
         
-        with patch('fastmcp.server.routes.user_scoped_task_routes.task_facade') as mock_facade:
+        with patch('fastmcp.server.routes.task_user_routes.task_facade') as mock_facade:
             mock_facade.get_task.return_value = None
             
             response = test_client.get(
@@ -112,7 +112,7 @@ class TestUserScopedTaskRoutes:
             "updated_at": "2024-01-01T00:00:00Z"
         }
         
-        with patch('fastmcp.server.routes.user_scoped_task_routes.task_facade') as mock_facade:
+        with patch('fastmcp.server.routes.task_user_routes.task_facade') as mock_facade:
             mock_facade.update_task.return_value = expected_task
             
             response = test_client.put(
@@ -130,7 +130,7 @@ class TestUserScopedTaskRoutes:
         """Test task deletion endpoint"""
         task_id = str(uuid.uuid4())
         
-        with patch('fastmcp.server.routes.user_scoped_task_routes.task_facade') as mock_facade:
+        with patch('fastmcp.server.routes.task_user_routes.task_facade') as mock_facade:
             mock_facade.delete_task.return_value = True
             
             response = test_client.delete(
@@ -160,7 +160,7 @@ class TestUserScopedTaskRoutes:
             }
         ]
         
-        with patch('fastmcp.server.routes.user_scoped_task_routes.task_facade') as mock_facade:
+        with patch('fastmcp.server.routes.task_user_routes.task_facade') as mock_facade:
             mock_facade.list_tasks.return_value = expected_tasks
             
             response = test_client.get(
@@ -188,7 +188,7 @@ class TestUserScopedTaskRoutes:
             "completion_summary": completion_data["completion_summary"]
         }
         
-        with patch('fastmcp.server.routes.user_scoped_task_routes.task_facade') as mock_facade:
+        with patch('fastmcp.server.routes.task_user_routes.task_facade') as mock_facade:
             mock_facade.complete_task.return_value = expected_task
             
             response = test_client.post(
@@ -210,7 +210,7 @@ class TestUserScopedTaskRoutes:
             {"id": str(uuid.uuid4()), "title": "Another Test Task"}
         ]
         
-        with patch('fastmcp.server.routes.user_scoped_task_routes.task_facade') as mock_facade:
+        with patch('fastmcp.server.routes.task_user_routes.task_facade') as mock_facade:
             mock_facade.search_tasks.return_value = expected_results
             
             response = test_client.get(
@@ -234,7 +234,7 @@ class TestUserScopedTaskRoutes:
             "status": "todo"
         }
         
-        with patch('fastmcp.server.routes.user_scoped_task_routes.task_facade') as mock_facade:
+        with patch('fastmcp.server.routes.task_user_routes.task_facade') as mock_facade:
             mock_facade.get_next_task.return_value = expected_task
             
             response = test_client.get(
@@ -277,7 +277,7 @@ class TestUserScopedTaskRoutes:
             "description": "Test"
         }
         
-        with patch('fastmcp.server.routes.user_scoped_task_routes.task_facade') as mock_facade:
+        with patch('fastmcp.server.routes.task_user_routes.task_facade') as mock_facade:
             mock_facade.create_task.side_effect = ValueError("Title cannot be empty")
             
             response = test_client.post(
@@ -298,7 +298,7 @@ class TestUserScopedTaskRoutes:
             "description": "Test Description"
         }
         
-        with patch('fastmcp.server.routes.user_scoped_task_routes.task_facade') as mock_facade:
+        with patch('fastmcp.server.routes.task_user_routes.task_facade') as mock_facade:
             mock_facade.create_task.side_effect = Exception("Database connection failed")
             
             response = test_client.post(
@@ -318,7 +318,7 @@ class TestUserScopedTaskRoutesIntegration:
     
     def test_full_task_crud_flow(self, test_client):
         """Test complete CRUD flow for tasks"""
-        with patch('fastmcp.server.routes.user_scoped_task_routes.task_facade') as mock_facade:
+        with patch('fastmcp.server.routes.task_user_routes.task_facade') as mock_facade:
             # Create task
             create_data = {
                 "title": "Integration Test Task",
@@ -372,7 +372,7 @@ class TestUserScopedTaskRoutesIntegration:
     
     def test_route_error_consistency(self, test_client):
         """Test consistent error response format across routes"""
-        with patch('fastmcp.server.routes.user_scoped_task_routes.task_facade') as mock_facade:
+        with patch('fastmcp.server.routes.task_user_routes.task_facade') as mock_facade:
             mock_facade.get_task.side_effect = Exception("Test error")
             
             response = test_client.get(

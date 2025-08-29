@@ -365,9 +365,9 @@ def create_sse_app(
     
     # Add user-scoped V2 routes using the same pattern as Supabase auth
     try:
-        from .routes.user_scoped_project_routes import router as project_router
-        from .routes.user_scoped_task_routes import router as task_router
-        from .routes.task_summary_routes import task_summary_router
+        from .routes.project_routes import router as project_router
+        from .routes.task_user_routes import router as task_router
+        from .routes.task_routes import task_summary_router
         from fastapi import FastAPI
         
         # Create a minimal FastAPI app for V2 routes
@@ -386,7 +386,7 @@ def create_sse_app(
         
         # Add API token management routes for frontend
         try:
-            from .routes.token_management_routes import router as token_management_router
+            from .routes.token_mgmt_routes import router as token_management_router
             v2_app.include_router(token_management_router)
             logger.info("API token management routes registered at /api/v2/tokens")
         except ImportError as token_mgmt_e:
@@ -469,7 +469,7 @@ def create_sse_app(
     
     # Register agent metadata routes
     try:
-        from .routes.agent_metadata_routes import register_agent_metadata_routes
+        from .routes.agent_routes import register_agent_metadata_routes
         register_agent_metadata_routes(app)
         logger.info("Agent metadata routes registered successfully")
     except ImportError as e:
@@ -638,7 +638,7 @@ def create_streamable_http_app(
     
     # Add branch summary routes for sidebar optimization
     try:
-        from .routes.branch_summary_routes import branch_summary_routes
+        from .routes.branch_routes import branch_summary_routes
         server_routes.extend(branch_summary_routes)
         logger.info("Branch summary routes registered for sidebar performance optimization")
     except ImportError as e:
@@ -656,9 +656,9 @@ def create_streamable_http_app(
     
     # Add user-scoped V2 routes for streamable HTTP
     try:
-        from .routes.user_scoped_project_routes import router as project_router
-        from .routes.user_scoped_task_routes import router as task_router
-        from .routes.task_summary_routes import task_summary_router
+        from .routes.project_routes import router as project_router
+        from .routes.task_user_routes import router as task_router
+        from .routes.task_routes import task_summary_router
         from fastapi import FastAPI
         
         # Create a minimal FastAPI app for V2 routes
@@ -669,7 +669,7 @@ def create_streamable_http_app(
         
         # Add user-scoped context routes
         try:
-            from .routes.user_scoped_context_routes import router as context_router
+            from .routes.context_routes import router as context_router
             v2_app.include_router(context_router)
             logger.info("User-scoped context routes registered at /api/v2/contexts")
         except ImportError as context_e:
@@ -685,7 +685,7 @@ def create_streamable_http_app(
         
         # Add API token management routes for frontend
         try:
-            from .routes.token_management_routes import router as token_management_router
+            from .routes.token_mgmt_routes import router as token_management_router
             v2_app.include_router(token_management_router)
             logger.info("API token management routes registered at /api/v2/tokens")
         except ImportError as token_mgmt_e:

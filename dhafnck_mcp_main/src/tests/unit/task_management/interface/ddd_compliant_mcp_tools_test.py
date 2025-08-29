@@ -44,7 +44,7 @@ class TestDDDCompliantMCPTools:
             stack.enter_context(patch('fastmcp.task_management.interface.ddd_compliant_mcp_tools.AgentMCPController'))
             stack.enter_context(patch('fastmcp.task_management.interface.ddd_compliant_mcp_tools.CallAgentUseCase'))
             stack.enter_context(patch('fastmcp.task_management.interface.ddd_compliant_mcp_tools.CallAgentMCPController'))
-            stack.enter_context(patch('fastmcp.task_management.interface.ddd_compliant_mcp_tools.ClaudeAgentMCPController'))
+            # Claude agent controller removed
             stack.enter_context(patch('fastmcp.task_management.interface.ddd_compliant_mcp_tools.ComplianceMCPController'))
             stack.enter_context(patch('fastmcp.task_management.interface.ddd_compliant_mcp_tools.FileResourceMCPController'))
             stack.enter_context(patch('fastmcp.task_management.interface.ddd_compliant_mcp_tools.RuleOrchestrationController'))
@@ -82,7 +82,7 @@ class TestDDDCompliantMCPTools:
             stack.enter_context(patch('fastmcp.task_management.interface.ddd_compliant_mcp_tools.AgentMCPController'))
             stack.enter_context(patch('fastmcp.task_management.interface.ddd_compliant_mcp_tools.CallAgentUseCase'))
             stack.enter_context(patch('fastmcp.task_management.interface.ddd_compliant_mcp_tools.CallAgentMCPController'))
-            stack.enter_context(patch('fastmcp.task_management.interface.ddd_compliant_mcp_tools.ClaudeAgentMCPController'))
+            # Claude agent controller removed
             stack.enter_context(patch('fastmcp.task_management.interface.ddd_compliant_mcp_tools.ComplianceMCPController'))
             stack.enter_context(patch('fastmcp.task_management.interface.ddd_compliant_mcp_tools.FileResourceMCPController'))
             stack.enter_context(patch('fastmcp.task_management.interface.ddd_compliant_mcp_tools.RuleOrchestrationController'))
@@ -118,7 +118,7 @@ class TestDDDCompliantMCPTools:
             stack.enter_context(patch('fastmcp.task_management.interface.ddd_compliant_mcp_tools.AgentMCPController'))
             stack.enter_context(patch('fastmcp.task_management.interface.ddd_compliant_mcp_tools.CallAgentUseCase'))
             stack.enter_context(patch('fastmcp.task_management.interface.ddd_compliant_mcp_tools.CallAgentMCPController'))
-            stack.enter_context(patch('fastmcp.task_management.interface.ddd_compliant_mcp_tools.ClaudeAgentMCPController'))
+            # Claude agent controller removed
             stack.enter_context(patch('fastmcp.task_management.interface.ddd_compliant_mcp_tools.ComplianceMCPController'))
             stack.enter_context(patch('fastmcp.task_management.interface.ddd_compliant_mcp_tools.FileResourceMCPController'))
             stack.enter_context(patch('fastmcp.task_management.interface.ddd_compliant_mcp_tools.RuleOrchestrationController'))
@@ -170,7 +170,7 @@ class TestDDDCompliantMCPTools:
             stack.enter_context(patch('fastmcp.task_management.interface.ddd_compliant_mcp_tools.AgentMCPController'))
             stack.enter_context(patch('fastmcp.task_management.interface.ddd_compliant_mcp_tools.CallAgentUseCase'))
             stack.enter_context(patch('fastmcp.task_management.interface.ddd_compliant_mcp_tools.CallAgentMCPController'))
-            stack.enter_context(patch('fastmcp.task_management.interface.ddd_compliant_mcp_tools.ClaudeAgentMCPController'))
+            # Claude agent controller removed
             stack.enter_context(patch('fastmcp.task_management.interface.ddd_compliant_mcp_tools.ComplianceMCPController'))
             stack.enter_context(patch('fastmcp.task_management.interface.ddd_compliant_mcp_tools.FileResourceMCPController'))
             stack.enter_context(patch('fastmcp.task_management.interface.ddd_compliant_mcp_tools.RuleOrchestrationController'))
