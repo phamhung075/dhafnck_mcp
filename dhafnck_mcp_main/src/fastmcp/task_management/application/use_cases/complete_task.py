@@ -14,7 +14,7 @@ from ...domain.services.task_completion_service import TaskCompletionService
 from ...domain.events import TaskUpdated
 from ...interface.utils.error_handler import UserFriendlyErrorHandler
 from ...infrastructure.repositories.task_context_repository import TaskContextRepository
-# from ..services.context_validation_service import ContextValidationService  # TODO: Fix circular import
+# from ..orchestrators.services.context_validation_service import ContextValidationService  # TODO: Fix circular import
 
 # Module-level logger - not used due to scoping issues, using logging.getLogger(__name__) directly instead
 

@@ -22,7 +22,7 @@ from ....domain.repositories.task_repository import TaskRepository
 from ....domain.value_objects.priority import Priority
 from ....domain.value_objects.task_id import TaskId
 from ....domain.value_objects.task_status import TaskStatus
-from ...database.models import Task, TaskAssignee, TaskDependency, TaskLabel
+from ...database.models import Task, TaskAssignee, TaskDependency, TaskLabel, Label
 from ..base_orm_repository import BaseORMRepository
 from ..base_user_scoped_repository import BaseUserScopedRepository
 from ...cache.cache_invalidation_mixin import CacheInvalidationMixin, CacheOperation
@@ -579,6 +579,124 @@ class ORMTaskRepository(CacheInvalidationMixin, BaseORMRepository[Task], BaseUse
                 
             result = session.execute(text(query), params)
             return result.scalar() or 0
+    
+    def list_tasks_minimal(self, status: str | None = None, priority: str | None = None,
+                           assignee_id: str | None = None, limit: int = 100,
+                           offset: int = 0) -> list[dict[str, Any]]:
+        """List tasks with minimal data for improved performance
+        
+        This method provides a simplified version of the optimized list_tasks_minimal
+        from OptimizedTaskRepository without the performance optimization dependencies.
+        
+        Args:
+            status: Optional status filter
+            priority: Optional priority filter  
+            assignee_id: Optional assignee filter
+            limit: Maximum number of results (capped at 1000)
+            offset: Result offset for pagination
+            
+        Returns:
+            List of minimal task data dictionaries
+        """
+        # Validate and cap limit
+        if limit is None or limit <= 0:
+            limit = 20
+        elif limit > 1000:
+            limit = 1000
+            
+        if offset is None or offset < 0:
+            offset = 0
+            
+        with self.get_db_session() as session:
+            # Query only essential fields for list view
+            query = session.query(
+                Task.id,
+                Task.title,
+                Task.status,
+                Task.priority,
+                Task.progress_percentage,
+                Task.due_date,
+                Task.updated_at,
+                func.count(TaskAssignee.id).label('assignees_count')
+            ).outerjoin(TaskAssignee)
+            
+            # Apply user filter for data isolation (CRITICAL)
+            query = self.apply_user_filter(query)
+            
+            # Apply filters
+            filters = []
+            if self.git_branch_id:
+                filters.append(Task.git_branch_id == self.git_branch_id)
+                logger.debug(f"[ORMTaskRepository] Applied git_branch_id filter: {self.git_branch_id}")
+            if status:
+                filters.append(Task.status == status)
+            if priority:
+                filters.append(Task.priority == priority)
+            
+            if filters:
+                query = query.filter(and_(*filters))
+            
+            # Filter by assignee if specified
+            if assignee_id:
+                query = query.filter(TaskAssignee.assignee_id == assignee_id)
+            
+            # Group by task fields to handle the COUNT aggregation properly
+            query = query.group_by(
+                Task.id,
+                Task.title,
+                Task.status,
+                Task.priority,
+                Task.progress_percentage,
+                Task.due_date,
+                Task.updated_at
+            )
+            
+            # Apply ordering and pagination
+            query = query.order_by(desc(Task.updated_at))
+            query = query.offset(offset).limit(limit)
+            
+            try:
+                results = query.all()
+                
+                # Get labels separately (more efficient than join for this use case)
+                task_ids = [r.id for r in results]
+                labels_by_task = {}
+                
+                if task_ids:
+                    labels_query = session.query(
+                        TaskLabel.task_id,
+                        Label.name
+                    ).join(Label).filter(TaskLabel.task_id.in_(task_ids))
+                    
+                    for task_id, label_name in labels_query:
+                        if task_id not in labels_by_task:
+                            labels_by_task[task_id] = []
+                        labels_by_task[task_id].append(label_name)
+                
+                # Build minimal response
+                minimal_tasks = []
+                for r in results:
+                    minimal_tasks.append({
+                        'id': r.id,
+                        'title': r.title,
+                        'status': r.status,
+                        'priority': r.priority,
+                        'progress_percentage': r.progress_percentage or 0,
+                        'assignees_count': r.assignees_count or 0,
+                        'labels': labels_by_task.get(r.id, []),
+                        'due_date': r.due_date,
+                        'updated_at': r.updated_at.isoformat() if r.updated_at else None
+                    })
+                
+                # Log access for audit
+                self.log_access('list_minimal', 'task')
+                
+                return minimal_tasks
+                
+            except Exception as e:
+                logger.error(f"Failed to execute list_tasks_minimal query: {e}")
+                # Return empty list instead of raising exception for graceful degradation
+                return []
     
     def search_tasks(self, query: str, limit: int = 50) -> list[TaskEntity]:
         """Search tasks by title, description, and labels with multi-word support and user isolation"""

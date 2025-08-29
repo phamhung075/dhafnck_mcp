@@ -2,6 +2,7 @@
 
 from abc import ABC, abstractmethod
 from typing import Dict, Any
+from ..entities.agent import Agent
 
 class AgentRepository(ABC):
     """
@@ -10,7 +11,7 @@ class AgentRepository(ABC):
     """
     
     @abstractmethod
-    def register_agent(self, project_id: str, agent_id: str, name: str, call_agent: str = None) -> Dict[str, Any]:
+    def register_agent(self, agent: Agent) -> Agent:
         """Register a new agent to a project"""
         pass
     
@@ -40,7 +41,7 @@ class AgentRepository(ABC):
         pass
     
     @abstractmethod
-    def update_agent(self, project_id: str, agent_id: str, name: str = None, call_agent: str = None) -> Dict[str, Any]:
+    def update_agent(self, agent: Agent) -> Agent:
         """Update agent details"""
         pass
     

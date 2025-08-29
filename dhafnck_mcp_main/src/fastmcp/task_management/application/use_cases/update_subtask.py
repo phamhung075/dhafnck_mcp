@@ -111,7 +111,7 @@ class UpdateSubtaskUseCase:
     def _update_parent_task_progress(self, task_id: str) -> None:
         """Update parent task progress based on subtask completion."""
         try:
-            from ..services.task_progress_service import TaskProgressService
+            from ..orchestrators.services.task_progress_service import TaskProgressService
             progress_service = TaskProgressService(self._task_repository, self._subtask_repository)
             progress_service.update_task_progress_from_subtasks(task_id)
         except Exception as e:
@@ -142,7 +142,7 @@ class UpdateSubtaskUseCase:
             
             # Lazy initialization of context sync service to avoid circular imports
             if self._context_sync_service is None:
-                from ..services.task_context_sync_service import TaskContextSyncService
+                from ..orchestrators.services.task_context_sync_service import TaskContextSyncService
                 self._context_sync_service = TaskContextSyncService(self._task_repository)
             
             # Use TaskContextSyncService to sync context asynchronously

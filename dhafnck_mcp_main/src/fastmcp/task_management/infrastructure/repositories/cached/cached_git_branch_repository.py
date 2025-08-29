@@ -147,13 +147,44 @@ class CachedGitBranchRepository:
         
         return result
     
-    def create_branch(self, branch: GitBranch) -> GitBranch:
-        """Create git branch with cache invalidation"""
-        result = self.base_repo.create_branch(branch)
+    async def find_by_name(self, project_id: str, branch_name: str) -> Optional[GitBranch]:
+        """Find branch by name within a project - async version"""
+        cache_key = f"project:{project_id}:name:{branch_name}"
+        
+        # Try cache first
+        cached = self._get_cached(cache_key)
+        if cached:
+            return GitBranch(**cached) if cached else None
+        
+        # Fetch from base repo
+        result = await self.base_repo.find_by_name(project_id, branch_name)
+        
+        # Cache the result
+        if result:
+            self._set_cached(cache_key, result.__dict__ if hasattr(result, '__dict__') else result)
+        
+        return result
+    
+    async def create_branch(self, project_id: str, branch_name: str, description: str = "") -> Any:
+        """Create git branch with cache invalidation - async version"""
+        result = await self.base_repo.create_branch(project_id, branch_name, description)
         
         # INVALIDATE CACHE (CRITICAL!)
         if self.enabled:
-            self._invalidate_pattern(f"project:{branch.project_id}:*")
+            self._invalidate_pattern(f"project:{project_id}:*")
+            self._invalidate_pattern("list:*")
+            self._invalidate_pattern("search:*")
+            logger.info(f"[Cache] Invalidated git branch caches after create")
+        
+        return result
+    
+    async def create_git_branch(self, project_id: str, git_branch_name: str, git_branch_description: str = "") -> Dict[str, Any]:
+        """Create a new git branch - implements abstract method with cache invalidation"""
+        result = await self.base_repo.create_git_branch(project_id, git_branch_name, git_branch_description)
+        
+        # INVALIDATE CACHE (CRITICAL!)
+        if self.enabled:
+            self._invalidate_pattern(f"project:{project_id}:*")
             self._invalidate_pattern("list:*")
             self._invalidate_pattern("search:*")
             logger.info(f"[Cache] Invalidated git branch caches after create")

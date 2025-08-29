@@ -135,58 +135,58 @@ for subtask in subtasks:
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│                  MCP Request Entry                    │
+│                  MCP Request Entry                   │
 └────────────────────┬─────────────────────────────────┘
                      ↓
 ┌──────────────────────────────────────────────────────┐
-│         INTERFACE LAYER (Controllers)                 │
-│  • Receive MCP requests                               │
-│  • Validate input parameters                          │
-│  • Format responses                                   │
+│         INTERFACE LAYER (Controllers)                │
+│  • Receive MCP requests                              │
+│  • Validate input parameters                         │
+│  • Format responses                                  │
 └────────────────────┬─────────────────────────────────┘
                      ↓
 ┌──────────────────────────────────────────────────────┐
-│      APPLICATION LAYER (Facades & Use Cases)          │
-│  • Orchestrate business logic                         │
-│  • Manage transactions                                │
-│  • Coordinate between services                        │
+│      APPLICATION LAYER (Facades & Use Cases)         │
+│  • Orchestrate business logic                        │
+│  • Manage transactions                               │
+│  • Coordinate between services                       │
 └────────────────────┬─────────────────────────────────┘
                      ↓
 ┌──────────────────────────────────────────────────────┐
-│         DOMAIN LAYER (Entities & Services)            │
-│  • Business rules and logic                           │
-│  • Domain entities and value objects                  │
-│  • Repository interfaces (abstractions)               │
+│         DOMAIN LAYER (Entities & Services)           │
+│  • Business rules and logic                          │
+│  • Domain entities and value objects                 │
+│  • Repository interfaces (abstractions)              │
 └────────────────────┬─────────────────────────────────┘
                      ↓
 ┌──────────────────────────────────────────────────────┐
-│     INFRASTRUCTURE LAYER (Implementations)            │
-│                                                        │
+│     INFRASTRUCTURE LAYER (Implementations)           │
+│                                                      │
 │  ┌─────────────────────────────────────────┐         │
-│  │         Repository Factory               │         │
-│  │  Decides which implementation to use     │         │
+│  │         Repository Factory               │        │
+│  │  Decides which implementation to use     │        │
 │  └──────────────┬──────────────────────────┘         │
-│                 ↓                                     │
+│                 ↓                                    │
 │  ┌──────────────────────────────────────────┐        │
-│  │     Environment Detection                 │        │
+│  │     Environment Detection                │        │
 │  └──────┬───────────────────┬───────────────┘        │
-│         ↓                   ↓                         │
-│    TEST MODE           PRODUCTION MODE                │
-│         ↓                   ↓                         │
-│  ┌──────────────┐   ┌──────────────┐                │
-│  │   SQLite     │   │   Supabase   │                │
-│  │  Repository  │   │  Repository  │                │
-│  └──────────────┘   └───────┬──────┘                │
-│                             ↓                         │
+│         ↓                   ↓                        │
+│    TEST MODE           PRODUCTION MODE               │
+│         ↓                   ↓                        │
+│  ┌──────────────┐   ┌──────────────┐                 │
+│  │   SQLite     │   │   Supabase   │                 │
+│  │  Repository  │   │  Repository  │                 │
+│  └──────────────┘   └───────┬──────┘                 │
+│                             ↓                        │
 │                    ┌─────────────────┐               │
 │                    │ Cache Enabled?  │               │
 │                    └────┬──────┬─────┘               │
-│                        YES     NO                     │
-│                         ↓       ↓                     │
-│                  ┌─────────┐  ┌──────────┐          │
-│                  │  Redis  │  │  Direct  │          │
-│                  │  Cache  │  │ Database │          │
-│                  └─────────┘  └──────────┘          │
+│                        YES     NO                    │
+│                         ↓       ↓                    │
+│                  ┌─────────┐  ┌──────────┐           │
+│                  │  Redis  │  │  Direct  │           │
+│                  │  Cache  │  │ Database │           │
+│                  └─────────┘  └──────────┘           │
 └──────────────────────────────────────────────────────┘
 ```
 

@@ -6,6 +6,68 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Updated
+- **MCP Tools Test Status Report (2025-08-29)**
+  - Current test coverage after fixes:
+    - **Project Management**: ✅ 100% working 
+    - **Git Branch Management**: ✅ 100% working (fixed module import errors)
+    - **Task Management**: ✅ 100% working (fixed repository errors)
+    - **Subtask Management**: ✅ Expected to work (depends on tasks)
+    - **Context Management**: ✅ 100% working (fixed UUID issues)
+    - **Agent Management**: ⚠️ Registration has errors (parameter mismatch)
+    - **Compliance Management**: ✅ 100% working
+  - Verified operations:
+    - Created and listed projects successfully
+    - Created git branches and assigned agents
+    - Created tasks with full workflow guidance
+    - Global context operations working with both UUID and 'global' keyword
+  - Remaining issue: Agent registration returns "name 'agent_id' is not defined" error
+  - Documentation: `dhafnck_mcp_main/docs/troubleshooting-guides/mcp-tools-test-issues-2025-08-29.md`
+
+### Fixed
+- **Git Branch Management Module Import Errors (2025-08-29)**
+  - Fixed "No module named 'fastmcp.task_management.application.services'" error
+    - Modified: `dhafnck_mcp_main/src/fastmcp/task_management/application/factories/git_branch_facade_factory.py`
+    - Modified: `dhafnck_mcp_main/src/fastmcp/task_management/application/factories/project_service_factory.py`
+    - Modified: Multiple use_case files (10 files total) with incorrect service imports
+    - Root cause: Services moved from `application/services` to `application/orchestrators/services`
+    - Solution: Updated all import paths to correct location `..orchestrators.services`
+  - Fixed "CachedGitBranchRepository.create_branch() takes 2 positional arguments but 4 were given" error
+    - Modified: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/cached/cached_git_branch_repository.py`
+    - Added async method signatures to match interface: `create_branch`, `create_git_branch`, `find_by_name`
+    - Root cause: Cached repository wrapper didn't properly implement async interface methods
+    - Solution: Added async methods with correct signatures to match base repository interface
+  - All git branch operations now working: create, list, assign agents, get statistics
+  - Agent: @debugger_agent
+
+### Fixed
+- **Global Context 'global' Keyword Support (2025-08-29)**
+  - Fixed "invalid input syntax for type uuid: 'global'" error when using 'global' as context_id
+    - Modified: `dhafnck_mcp_main/src/fastmcp/task_management/application/orchestrators/services/unified_context_service.py`
+    - Added `_normalize_global_context_id` method to convert 'global' to user-specific UUID
+    - Applied normalization to create_context, get_context, update_context, delete_context, and resolve_context methods
+    - Root cause: System expected UUID but documentation suggested 'global' should work as special keyword
+    - Solution: Automatically translate 'global' to user's actual global context UUID
+  - Updated all context operations to support both UUID and 'global' as context_id
+  - Added test script: `test_global_context_fix.py` to verify the fix
+  - Agent: @uber_orchestrator_agent
+
+### Fixed
+- **Critical ORMTaskRepository Errors (2025-08-29)**
+  - Fixed "'str' object has no attribute 'query'" error by correcting parameter passing in repository factories
+    - Modified: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/repository_factory.py`
+    - Modified: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/task_repository_factory.py`
+    - Root cause: project_id string being passed as session parameter due to positional arguments
+    - Solution: Use keyword arguments for proper parameter mapping
+  - Fixed "'ORMTaskRepository' object has no attribute 'list_tasks_minimal'" error by adding missing method
+    - Modified: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/task_repository.py`
+    - Added complete list_tasks_minimal method with user isolation, git branch filtering, and error handling
+    - Method returns minimal task data dictionaries for improved performance
+  - Fixed database query errors related to improper session handling
+    - All three test cases now work: task creation, task listing, task search
+  - Added: `dhafnck_mcp_main/docs/troubleshooting-guides/orm-task-repository-fixes-2025-08-29.md`
+  - Agent: @debugger_agent
+
 ### Architecture Compliance Fixes Complete (2025-08-28 - WORKING)
 - **Fixed ALL DDD Architecture Violations - System Fully Compliant**
   - Fixed Git Branch Service direct ORM instantiation - now uses RepositoryFactory

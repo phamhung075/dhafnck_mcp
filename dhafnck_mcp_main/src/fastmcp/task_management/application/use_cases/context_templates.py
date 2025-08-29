@@ -13,7 +13,7 @@ import logging
 from datetime import datetime
 
 from ...domain.models.unified_context import ContextLevel
-from ..services.unified_context_service import UnifiedContextService
+from ..orchestrators.services.unified_context_service import UnifiedContextService
 
 logger = logging.getLogger(__name__)
 

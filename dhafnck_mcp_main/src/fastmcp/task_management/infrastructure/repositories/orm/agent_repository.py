@@ -213,65 +213,62 @@ class ORMAgentRepository(BaseORMRepository[Agent], BaseUserScopedRepository, Age
             }
         }
     
-    def register_agent(self, project_id: str, agent_id: str, name: str, call_agent: str = None) -> Dict[str, Any]:
+    def register_agent(self, agent: AgentEntity) -> AgentEntity:
         """Register a new agent to a project"""
         try:
             # Pre-registration validation: Check if agent already exists
-            if self.exists(id=agent_id):
+            if self.exists(id=agent.id):
                 # Try to get the existing agent details for better user feedback
-                existing_agent = self.get_by_id(agent_id)
+                existing_agent = self.get_by_id(agent.id)
                 if existing_agent:
                     raise ValidationException(
                         message=(
-                            f"Agent with ID '{agent_id}' already exists. "
+                            f"Agent with ID '{agent.id}' already exists. "
                             f"Existing agent name: '{existing_agent.name}'. "
                             f"Use 'manage_agent' with action='get' to view details, "
                             f"or action='update' to modify the existing agent."
                         ),
                         field="id",
-                        value=agent_id
+                        value=agent.id
                     )
                 else:
                     raise ValidationException(
-                        message=f"Agent with ID '{agent_id}' already exists. Use the existing agent or choose a different ID.",
+                        message=f"Agent with ID '{agent.id}' already exists. Use the existing agent or choose a different ID.",
                         field="id",
-                        value=agent_id
+                        value=agent.id
                     )
             
             # Also check if an agent with the same name exists (for better UX)
-            existing_by_name = self.find_by_name(name)
-            if existing_by_name and existing_by_name.id != agent_id:
+            existing_by_name = self.find_by_name(agent.name)
+            if existing_by_name and existing_by_name.id != agent.id:
                 raise ValidationException(
                     message=(
-                        f"An agent with name '{name}' already exists (ID: {existing_by_name.id}). "
+                        f"An agent with name '{agent.name}' already exists (ID: {existing_by_name.id}). "
                         f"Consider using the existing agent or choosing a different name."
                     ),
                     field="name",
-                    value=name
+                    value=agent.name
                 )
             
-            # Create agent entity
-            agent_entity = AgentEntity(
-                id=agent_id,
-                name=name,
-                description=f"Agent for project {project_id}",
-                created_at=datetime.now(),
-                updated_at=datetime.now()
-            )
-            
+            # Use the passed agent entity directly
             # Convert to model dict
-            model_dict = self._entity_to_model_dict(agent_entity)
+            model_dict = self._entity_to_model_dict(agent)
             
-            # Add call_agent to model_metadata if provided
-            if call_agent:
-                model_dict["model_metadata"]["call_agent"] = call_agent
+            # Extract project_id from assigned_projects if available
+            project_id = None
+            if agent.assigned_projects:
+                project_id = next(iter(agent.assigned_projects))
+            
+            # Add call_agent to model_metadata if available in description
+            if agent.description:
+                model_dict["model_metadata"]["call_agent"] = agent.description
             
             # Add user_id for data isolation
             model_dict = self.set_user_id(model_dict)
             
             # Create agent in database with better error handling
             try:
-                agent = self.create(**model_dict)
+                agent_model = self.create(**model_dict)
             except Exception as create_error:
                 # Check for database-level duplicate key constraint violation
                 error_str = str(create_error).lower()
@@ -280,37 +277,25 @@ class ORMAgentRepository(BaseORMRepository[Agent], BaseUserScopedRepository, Age
                     logger.warning(f"Duplicate key error during agent creation (race condition): {create_error}")
                     raise ValidationException(
                         message=(
-                            f"Agent '{name}' (ID: {agent_id}) could not be created due to a duplicate key. "
+                            f"Agent '{agent.name}' (ID: {agent.id}) could not be created due to a duplicate key. "
                             f"Another process may have created it simultaneously. Please try again or use the existing agent."
                         ),
                         field="id",
-                        value=agent_id
+                        value=agent.id
                     )
                 else:
                     # Re-raise other database errors
                     raise create_error
             
-            # Convert back to dict for response
-            agent_data = {
-                "id": agent.id,
-                "name": agent.name,
-                "description": agent.description,
-                "capabilities": agent.capabilities or [],
-                "status": agent.status,
-                "availability_score": agent.availability_score,
-                "model_metadata": agent.model_metadata or {},
-                "created_at": agent.created_at.isoformat(),
-                "updated_at": agent.updated_at.isoformat()
-            }
-            
-            logger.info(f"Successfully registered agent '{name}' (ID: {agent_id}) for project {project_id}")
-            return agent_data
+            # Convert back to entity and return
+            logger.info(f"Successfully registered agent '{agent.name}' (ID: {agent.id}) for project {project_id}")
+            return self._model_to_entity(agent_model)
             
         except ValidationException:
             # Re-raise validation exceptions with their helpful messages
             raise
         except Exception as e:
-            logger.error(f"Error registering agent {agent_id}: {e}")
+            logger.error(f"Error registering agent {agent.id}: {e}")
             # Provide more helpful error message based on error type
             if "foreign key" in str(e).lower():
                 raise DatabaseException(
@@ -666,70 +651,33 @@ class ORMAgentRepository(BaseORMRepository[Agent], BaseUserScopedRepository, Age
                 table="agents"
             )
     
-    def update_agent(self, project_id: str, agent_id: str, name: str = None, call_agent: str = None) -> Dict[str, Any]:
+    def update_agent(self, agent: AgentEntity) -> AgentEntity:
         """Update agent details"""
         try:
-            # Get agent
-            agent = self.get_by_id(agent_id)
-            if not agent:
+            # Check if agent exists
+            existing = self.get_by_id(agent.id)
+            if not existing:
                 raise ResourceNotFoundException(
-                    message=f"Agent {agent_id} not found",
+                    message=f"Agent {agent.id} not found",
                     resource_type="agent",
-                    resource_id=agent_id
+                    resource_id=agent.id
                 )
             
-            # Prepare updates
-            updates = {"updated_at": datetime.now()}
-            
-            if name is not None:
-                updates["name"] = name
-            
-            if call_agent is not None:
-                model_metadata = agent.model_metadata or {}
-                model_metadata["call_agent"] = call_agent
-                updates["model_metadata"] = model_metadata
+            # Convert entity to model dict
+            model_dict = self._entity_to_model_dict(agent)
+            model_dict["updated_at"] = datetime.now()
             
             # Update agent
-            if len(updates) > 1:  # More than just updated_at
-                updated_agent = self.update(agent_id, **updates)
-            else:
-                updated_agent = agent
+            updated_model = self.update(agent.id, **model_dict)
             
-            # Get assignments from model_metadata
-            model_metadata = updated_agent.model_metadata or {}
-            assigned_trees_raw = model_metadata.get("assigned_trees", [])
-            
-            # Handle case where assigned_trees might be a single UUID instead of a list
-            if isinstance(assigned_trees_raw, str):
-                # Single UUID stored as string
-                assignments = [assigned_trees_raw]
-            elif hasattr(assigned_trees_raw, '__iter__') and not isinstance(assigned_trees_raw, str):
-                # List or other iterable (but not string)
-                assignments = list(assigned_trees_raw)
-            else:
-                # Fallback to empty list
-                assignments = []
-            
-            agent_data = {
-                "id": updated_agent.id,
-                "name": updated_agent.name,
-                "description": updated_agent.description,
-                "capabilities": updated_agent.capabilities or [],
-                "status": updated_agent.status,
-                "availability_score": updated_agent.availability_score,
-                "model_metadata": model_metadata,
-                "assignments": assignments,
-                "created_at": updated_agent.created_at.isoformat(),
-                "updated_at": updated_agent.updated_at.isoformat()
-            }
-            
-            logger.info(f"Updated agent {agent_id} in project {project_id}")
-            return agent_data
+            # Convert back to entity and return
+            logger.info(f"Updated agent {agent.id}")
+            return self._model_to_entity(updated_model)
             
         except ResourceNotFoundException:
             raise
         except Exception as e:
-            logger.error(f"Error updating agent {agent_id}: {e}")
+            logger.error(f"Error updating agent {agent.id}: {e}")
             raise DatabaseException(
                 message=f"Failed to update agent: {str(e)}",
                 operation="update_agent",

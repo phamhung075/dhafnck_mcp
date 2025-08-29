@@ -57,7 +57,7 @@ class DeleteProjectUseCase:
         
         # Initialize unified context repositories for hierarchical deletion
         try:
-            from ..services.unified_context_facade_factory import UnifiedContextFacadeFactory
+            from ..orchestrators.services.unified_context_facade_factory import UnifiedContextFacadeFactory
             factory = UnifiedContextFacadeFactory()
             self.unified_context_repo = factory.create_hierarchical_context_repository()
         except Exception as e:

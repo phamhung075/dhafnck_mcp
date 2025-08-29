@@ -123,7 +123,51 @@ class UnifiedContextService:
             return self._serialize_for_json(vars(data))
         else:
             return data
+    
+    def _normalize_global_context_id(self, context_id: str, user_id: Optional[str] = None) -> str:
+        """
+        Normalize global context ID, converting 'global' to user-specific UUID.
         
+        Args:
+            context_id: The context ID to normalize
+            user_id: The user ID for generating user-specific global context UUID
+            
+        Returns:
+            Normalized context ID (UUID string)
+        """
+        # Handle special case where "global" is used as context_id
+        if context_id and context_id.lower() == "global":
+            # Generate user-specific global context UUID
+            effective_user_id = user_id or self._user_id
+            if not effective_user_id:
+                # Try to get from current context
+                try:
+                    from ....auth.middleware.request_context_middleware import get_current_user_context
+                    current_user = get_current_user_context()
+                    if current_user and hasattr(current_user, 'user_id'):
+                        effective_user_id = current_user.user_id
+                    elif current_user and hasattr(current_user, 'id'):
+                        effective_user_id = current_user.id
+                except Exception:
+                    pass
+            
+            if effective_user_id:
+                # Generate user-specific global context ID
+                import uuid
+                namespace = uuid.UUID("a47ae7b9-1d4b-4e5f-8b5a-9c3e5d2f8a1c")
+                try:
+                    user_uuid = uuid.UUID(str(effective_user_id))
+                except ValueError:
+                    user_uuid = uuid.uuid5(namespace, str(effective_user_id))
+                normalized_id = str(uuid.uuid5(namespace, str(user_uuid)))
+                logger.info(f"Normalized 'global' to user-specific UUID: {normalized_id} for user: {effective_user_id}")
+                return normalized_id
+            else:
+                logger.warning("Cannot normalize 'global' context_id without user_id")
+                # Return as-is if we can't determine user_id
+                return context_id
+        
+        return context_id
         
     def create_context(
         self, 
@@ -141,13 +185,15 @@ class UnifiedContextService:
             if user_id:
                 self._user_id = user_id
             
-            # Normalize context_id for backward compatibility
+            # Validate level first to know if it's global
+            context_level = ContextLevel(level)
+            
+            # Normalize context_id for global contexts (convert "global" to user-specific UUID)
+            if context_level == ContextLevel.GLOBAL:
+                context_id = self._normalize_global_context_id(context_id, user_id or self._user_id)
             
             # Restore original user_id
             self._user_id = original_user_id
-            
-            # Validate level
-            context_level = ContextLevel(level)
             
             # Auto-detect project_id for branch contexts if not provided
             if context_level == ContextLevel.BRANCH and not data.get("project_id"):
@@ -372,28 +418,15 @@ class UnifiedContextService:
             if user_id:
                 self._user_id = user_id
             
-            # Normalize context_id for backward compatibility
+            # Validate level first to know if it's global
+            context_level = ContextLevel(level)
+            
+            # Normalize context_id for global contexts (convert "global" to user-specific UUID)
+            if context_level == ContextLevel.GLOBAL:
+                context_id = self._normalize_global_context_id(context_id, user_id or self._user_id)
             
             # Restore original user_id
             self._user_id = original_user_id
-            
-            # Validate level
-            context_level = ContextLevel(level)
-            
-            # Normalize context_id for user-specific global contexts (same logic as create)
-            if context_level == ContextLevel.GLOBAL:
-                # GLOBAL_SINGLETON_UUID removed - each user has their own global context
-                # Check if it's a composite ID (UUID_UUID format)
-                if '_' in context_id and len(context_id.split('_')) == 2:
-                    import uuid
-                    # Extract user_id from the concatenated ID
-                    parts = context_id.split("_", 1)
-                    if len(parts) == 2:
-                        user_uuid = parts[1]
-                        # Use a namespace UUID for context generation
-                        namespace = uuid.UUID("a47ae7b9-1d4b-4e5f-8b5a-9c3e5d2f8a1c")
-                        proper_uuid = str(uuid.uuid5(namespace, user_uuid))
-                        context_id = proper_uuid
             
             # Skip cache operations for now (cache service is async)
             # TODO: Make cache service sync or skip caching in sync mode
@@ -449,29 +482,17 @@ class UnifiedContextService:
         level: str, 
         context_id: str, 
         data: Dict[str, Any],
-        propagate_changes: bool = True
+        propagate_changes: bool = True,
+        user_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """Update context with inheritance propagation."""
         try:
-            # Normalize context_id for backward compatibility
-            
-            # Validate level
+            # Validate level first to know if it's global
             context_level = ContextLevel(level)
             
-            # Normalize context_id for user-specific global contexts (same logic as create)
+            # Normalize context_id for global contexts (convert "global" to user-specific UUID)
             if context_level == ContextLevel.GLOBAL:
-                # GLOBAL_SINGLETON_UUID removed - each user has their own global context
-                # Check if it's a composite ID (UUID_UUID format)
-                if '_' in context_id and len(context_id.split('_')) == 2:
-                    import uuid
-                    # Extract user_id from the concatenated ID
-                    parts = context_id.split("_", 1)
-                    if len(parts) == 2:
-                        user_uuid = parts[1]
-                        # Use a namespace UUID for context generation
-                        namespace = uuid.UUID("a47ae7b9-1d4b-4e5f-8b5a-9c3e5d2f8a1c")
-                        proper_uuid = str(uuid.uuid5(namespace, user_uuid))
-                        context_id = proper_uuid
+                context_id = self._normalize_global_context_id(context_id, user_id or self._user_id)
             
             # Get existing context
             repository = self._get_user_scoped_repository(self.repositories.get(context_level))
@@ -520,20 +541,21 @@ class UnifiedContextService:
                 cache = get_context_cache()
                 
                 # Invalidate the specific context and its inheritance chain
+                effective_user_id = user_id or self._user_id
                 cache.invalidate_context(
-                    user_id=user_id,
+                    user_id=effective_user_id,
                     level=context_level.value,
                     context_id=context_id
                 )
                 cache.invalidate_inheritance(
-                    user_id=user_id,
+                    user_id=effective_user_id,
                     level=context_level.value,
                     context_id=context_id
                 )
                 
                 # If propagating changes, invalidate child contexts
                 if propagate_changes:
-                    self._invalidate_child_caches(context_level, context_id, user_id, cache)
+                    self._invalidate_child_caches(context_level, context_id, effective_user_id, cache)
                 
                 logger.debug(f"Cache invalidated for updated context {level}:{context_id}")
             except Exception as cache_error:
@@ -560,29 +582,17 @@ class UnifiedContextService:
     def delete_context(
         self, 
         level: str, 
-        context_id: str
+        context_id: str,
+        user_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """Delete context with cleanup."""
         try:
-            # Normalize context_id for backward compatibility
-            
-            # Validate level
+            # Validate level first to know if it's global
             context_level = ContextLevel(level)
             
-            # Normalize context_id for user-specific global contexts (same logic as create)
+            # Normalize context_id for global contexts (convert "global" to user-specific UUID)
             if context_level == ContextLevel.GLOBAL:
-                # GLOBAL_SINGLETON_UUID removed - each user has their own global context
-                # Check if it's a composite ID (UUID_UUID format)
-                if '_' in context_id and len(context_id.split('_')) == 2:
-                    import uuid
-                    # Extract user_id from the concatenated ID
-                    parts = context_id.split("_", 1)
-                    if len(parts) == 2:
-                        user_uuid = parts[1]
-                        # Use a namespace UUID for context generation
-                        namespace = uuid.UUID("a47ae7b9-1d4b-4e5f-8b5a-9c3e5d2f8a1c")
-                        proper_uuid = str(uuid.uuid5(namespace, user_uuid))
-                        context_id = proper_uuid
+                context_id = self._normalize_global_context_id(context_id, user_id or self._user_id)
             
             # Get repository
             repository = self._get_user_scoped_repository(self.repositories.get(context_level))
@@ -648,11 +658,17 @@ class UnifiedContextService:
         self, 
         level: str, 
         context_id: str, 
-        force_refresh: bool = False
+        force_refresh: bool = False,
+        user_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """Resolve full inheritance chain with caching."""
         try:
-            # Normalize context_id for backward compatibility
+            # Validate level first to know if it's global
+            context_level = ContextLevel(level)
+            
+            # Normalize context_id for global contexts (convert "global" to user-specific UUID)
+            if context_level == ContextLevel.GLOBAL:
+                context_id = self._normalize_global_context_id(context_id, user_id or self._user_id)
             
             # Always resolve with inheritance for this method
             result = self.get_context(

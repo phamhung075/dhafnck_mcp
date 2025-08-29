@@ -134,7 +134,7 @@ class UnifiedContextFacadeFactory:
     
     def _create_mock_service(self):
         """Create a mock unified service for database-less operation"""
-        from ..services.mock_unified_context_service import MockUnifiedContextService
+        from ..orchestrators.services.mock_unified_context_service import MockUnifiedContextService
         self.unified_service = MockUnifiedContextService()
         logger.warning("Using MockUnifiedContextService - context operations will have limited functionality")
     

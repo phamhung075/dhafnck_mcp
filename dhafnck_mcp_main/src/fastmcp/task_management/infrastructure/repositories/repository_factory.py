@@ -69,7 +69,13 @@ class RepositoryFactory:
         # Fallback to ORM repository
         if not base_repository:
             from .orm.task_repository import ORMTaskRepository
-            base_repository = ORMTaskRepository(project_id, git_branch_name, user_id)
+            base_repository = ORMTaskRepository(
+                session=None,
+                git_branch_id=git_branch_name,  # Map git_branch_name to git_branch_id
+                project_id=project_id,
+                git_branch_name=git_branch_name,
+                user_id=user_id
+            )
             logger.info("[RepositoryFactory] Using ORMTaskRepository (fallback)")
         
         # Wrap with cache if enabled and not in test environment

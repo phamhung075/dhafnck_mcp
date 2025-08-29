@@ -21,6 +21,62 @@ For each issue, generate a prompt following this structured format:
 ## 📋 TECHNICAL SPECIFICATIONS
 **System**: DhafnckMCP Multi-Project AI Orchestration Platform
 **Architecture**: Domain-Driven Design (DDD) with 4-tier context hierarchy
+```
+┌──────────────────────────────────────────────────────┐
+│                  MCP Request Entry                   │
+└────────────────────┬─────────────────────────────────┘
+                     ↓
+┌──────────────────────────────────────────────────────┐
+│         INTERFACE LAYER (Controllers)                │
+│  • Receive MCP requests                              │
+│  • Validate input parameters                         │
+│  • Format responses                                  │
+└────────────────────┬─────────────────────────────────┘
+                     ↓
+┌──────────────────────────────────────────────────────┐
+│      APPLICATION LAYER (Facades & Use Cases)         │
+│  • Orchestrate business logic                        │
+│  • Manage transactions                               │
+│  • Coordinate between services                       │
+└────────────────────┬─────────────────────────────────┘
+                     ↓
+┌──────────────────────────────────────────────────────┐
+│         DOMAIN LAYER (Entities & Services)           │
+│  • Business rules and logic                          │
+│  • Domain entities and value objects                 │
+│  • Repository interfaces (abstractions)              │
+└────────────────────┬─────────────────────────────────┘
+                     ↓
+┌──────────────────────────────────────────────────────┐
+│     INFRASTRUCTURE LAYER (Implementations)           │
+│                                                      │
+│  ┌─────────────────────────────────────────┐         │
+│  │         Repository Factory               │        │
+│  │  Decides which implementation to use     │        │
+│  └──────────────┬──────────────────────────┘         │
+│                 ↓                                    │
+│  ┌──────────────────────────────────────────┐        │
+│  │     Environment Detection                │        │
+│  └──────┬───────────────────┬───────────────┘        │
+│         ↓                   ↓                        │
+│    TEST MODE           PRODUCTION MODE               │
+│         ↓                   ↓                        │
+│  ┌──────────────┐   ┌──────────────┐                 │
+│  │   SQLite     │   │   Supabase   │                 │
+│  │  Repository  │   │  Repository  │                 │
+│  └──────────────┘   └───────┬──────┘                 │
+│                             ↓                        │
+│                    ┌─────────────────┐               │
+│                    │ Cache Enabled?  │               │
+│                    └────┬──────┬─────┘               │
+│                        YES     NO                    │
+│                         ↓       ↓                    │
+│                  ┌─────────┐  ┌──────────┐           │
+│                  │  Redis  │  │  Direct  │           │
+│                  │  Cache  │  │ Database │           │
+│                  └─────────┘  └──────────┘           │
+└──────────────────────────────────────────────────────┘
+```
 **Database**: SQLite/PostgreSQL with hierarchical context support
 **Framework**: FastMCP with MCP tools integration
 **Testing**: TDD approach with unit/integration/e2e coverage

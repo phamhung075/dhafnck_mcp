@@ -4,8 +4,8 @@ Factory for creating project management services with proper dependency injectio
 """
 
 from typing import Optional
-from ..services.project_management_service import ProjectManagementService
-from ..services.project_application_service import ProjectApplicationService
+from ..orchestrators.services.project_management_service import ProjectManagementService
+from ..orchestrators.services.project_application_service import ProjectApplicationService
 from ...infrastructure.utilities.path_resolver import PathResolver
 from ...domain.repositories.project_repository import ProjectRepository
 from ...infrastructure.repositories.project_repository_factory import (

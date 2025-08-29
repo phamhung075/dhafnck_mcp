@@ -122,7 +122,7 @@ class UpdateTaskUseCase:
             
             # Lazy initialization of context sync service to avoid circular imports
             if self._context_sync_service is None:
-                from ..services.task_context_sync_service import TaskContextSyncService
+                from ..orchestrators.services.task_context_sync_service import TaskContextSyncService
                 self._context_sync_service = TaskContextSyncService(self._task_repository)
             
             # Use TaskContextSyncService to sync context asynchronously

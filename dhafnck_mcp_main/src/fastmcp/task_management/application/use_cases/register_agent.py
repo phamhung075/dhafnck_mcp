@@ -8,6 +8,7 @@ from ...application.dtos.agent import (
 )
 from ...domain.repositories.agent_repository import AgentRepository
 from ...domain.exceptions import ProjectNotFoundError
+from ...domain.entities.agent import Agent
 
 logger = logging.getLogger(__name__)
 
@@ -21,16 +22,28 @@ class RegisterAgentUseCase:
     def execute(self, request: RegisterAgentRequest) -> RegisterAgentResponse:
         """Execute the register agent use case"""
         try:
-            # Execute domain operation
-            result = self._agent_repository.register_agent(
-                request.project_id,
-                request.agent_id,
-                request.name,
-                request.call_agent
+            # Create Agent entity with the provided information
+            agent = Agent(
+                id=request.agent_id,
+                name=request.name,
+                description=request.call_agent or "",  # Using call_agent as description
             )
             
-            # Convert to response DTO
-            agent_response = AgentResponse.from_dict(result)
+            # Add the project to agent's assigned projects
+            agent.assign_to_project(request.project_id)
+            
+            # Execute domain operation - pass the Agent entity
+            result = self._agent_repository.register_agent(agent)
+            
+            # Convert AgentEntity to response DTO
+            agent_dict = {
+                "id": result.id,
+                "name": result.name,
+                "call_agent": result.description,  # Using description as call_agent
+                "assignments": list(result.assigned_trees) if result.assigned_trees else []
+            }
+                
+            agent_response = AgentResponse.from_dict(agent_dict)
             return RegisterAgentResponse.success_response(
                 agent_response,
                 f"Agent {request.agent_id} registered successfully to project {request.project_id}"

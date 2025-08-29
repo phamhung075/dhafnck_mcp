@@ -173,6 +173,8 @@ class TaskRepositoryFactory:
             db_config = get_db_config()
             if db_config and db_config.engine:
                 return ORMTaskRepository(
+                    session=None,
+                    git_branch_id=git_branch_name,  # Map git_branch_name to git_branch_id
                     project_id=project_id,
                     git_branch_name=git_branch_name,
                     user_id=user_id
@@ -197,6 +199,8 @@ class TaskRepositoryFactory:
             db_config = get_db_config()
             if db_config and db_config.engine:
                 return ORMTaskRepository(
+                    session=None,
+                    git_branch_id=None,
                     project_id=None,
                     git_branch_name=None,
                     user_id=None

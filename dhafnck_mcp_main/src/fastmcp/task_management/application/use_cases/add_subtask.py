@@ -76,7 +76,7 @@ class AddSubtaskUseCase:
     def _update_parent_task_progress(self, task_id: str) -> None:
         """Update parent task progress based on subtask completion."""
         try:
-            from ..services.task_progress_service import TaskProgressService
+            from ..orchestrators.services.task_progress_service import TaskProgressService
             progress_service = TaskProgressService(self._task_repository, self._subtask_repository)
             progress_service.update_task_progress_from_subtasks(task_id)
         except Exception as e:
