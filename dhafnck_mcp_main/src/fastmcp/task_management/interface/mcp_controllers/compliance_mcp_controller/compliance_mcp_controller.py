@@ -12,7 +12,7 @@ from pathlib import Path
 if TYPE_CHECKING:
     from fastmcp.server.server import FastMCP
 
-from ..desc import description_loader
+from .manage_compliance_description import MANAGE_COMPLIANCE_DESCRIPTION, MANAGE_COMPLIANCE_PARAMETERS
 from ....application.orchestrators.compliance_orchestrator import ComplianceOrchestrator
 from .factories.compliance_controller_factory import ComplianceControllerFactory
 
@@ -34,9 +34,8 @@ class ComplianceMCPController:
 
     def register_tools(self, mcp: "FastMCP"):
         """Register compliance management MCP tools with the FastMCP server"""
-        # Load descriptions from external files
-        descriptions = self._get_compliance_management_descriptions()
-        manage_compliance_desc = descriptions["manage_compliance"]
+        # Load descriptions from local file
+        manage_compliance_desc = {"description": MANAGE_COMPLIANCE_DESCRIPTION, "parameters": MANAGE_COMPLIANCE_PARAMETERS}
 
         @mcp.tool(name="manage_compliance", description=manage_compliance_desc["description"])
         def manage_compliance(
@@ -63,16 +62,6 @@ class ComplianceMCPController:
                 timeout=timeout,
                 limit=limit
             )
-
-    def _get_compliance_management_descriptions(self) -> Dict[str, Any]:
-        """Flatten compliance descriptions for robust access"""
-        all_desc = description_loader.get_all_descriptions()
-        flat = {}
-        # Look for 'manage_compliance' in any subdict (e.g., all_desc['compliance']['manage_compliance'])
-        for sub in all_desc.values():
-            if isinstance(sub, dict) and "manage_compliance" in sub:
-                flat["manage_compliance"] = sub["manage_compliance"]
-        return flat
 
     def manage_compliance(self, action: str, operation: Optional[str] = None, 
                          file_path: Optional[str] = None, content: Optional[str] = None,

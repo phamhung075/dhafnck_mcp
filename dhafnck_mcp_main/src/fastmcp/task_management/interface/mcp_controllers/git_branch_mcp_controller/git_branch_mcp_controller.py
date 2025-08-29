@@ -16,7 +16,8 @@ if TYPE_CHECKING:
 from .factories.operation_factory import GitBranchOperationFactory
 
 # Import existing dependencies
-from ..desc import description_loader
+# Import the description directly from the local file
+from .manage_git_branch_description import MANAGE_GIT_BRANCH_DESCRIPTION
 from ...utils.response_formatter import StandardResponseFormatter, ResponseStatus, ErrorCodes
 from ....application.facades.git_branch_application_facade import GitBranchApplicationFacade
 from fastmcp.task_management.infrastructure.factories.git_branch_facade_factory import GitBranchFacadeFactory
@@ -90,7 +91,7 @@ class GitBranchMCPController(ContextPropagationMixin):
         """Register MCP tools with the server."""
         
         # Load description
-        tool_description = description_loader.get_git_branch_manage_description()
+        tool_description = MANAGE_GIT_BRANCH_DESCRIPTION
         
         def manage_git_branch(
             action: Annotated[str, "Git branch management action"],

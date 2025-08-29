@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from fastmcp.server.server import FastMCP
     from ....application.facades.rule_application_facade import RuleApplicationFacade
 
-from ..desc import description_loader
+from .manage_rule_description import MANAGE_RULE_DESCRIPTION, get_manage_rule_description
 from .handlers import RuleManagementHandler
 
 logger = logging.getLogger(__name__)
@@ -40,8 +40,7 @@ class CursorRulesController:
     
     def register_tools(self, mcp: "FastMCP"):
         """Register cursor rules MCP tools with the FastMCP server"""
-        descriptions = description_loader.get_all_descriptions()
-        rule_desc = descriptions["rule"]["manage_rule"]
+        rule_desc = get_manage_rule_description()
 
         @mcp.tool(description=rule_desc["description"])
         def manage_rule(

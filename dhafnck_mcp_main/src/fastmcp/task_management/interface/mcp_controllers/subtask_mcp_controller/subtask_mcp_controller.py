@@ -19,8 +19,8 @@ if TYPE_CHECKING:
 # Import modular components
 from .factories.operation_factory import SubtaskOperationFactory
 
-# Import existing dependencies
-from ..desc import description_loader
+# Import the description directly from the local file
+from .manage_subtask_description import MANAGE_SUBTASK_DESCRIPTION
 from ...utils.response_formatter import StandardResponseFormatter, ResponseStatus, ErrorCodes
 from ...utils.parameter_validation_fix import coerce_parameter_types
 from ...utils.schema_monkey_patch import apply_all_schema_patches
@@ -124,7 +124,7 @@ class SubtaskMCPController(ContextPropagationMixin):
         """Register MCP tools with the server."""
         
         # Load description
-        tool_description = description_loader.get_subtask_manage_description()
+        tool_description = MANAGE_SUBTASK_DESCRIPTION
         
         def manage_subtask(
             action: Annotated[str, "Action: create, update, delete, get, list, complete"],

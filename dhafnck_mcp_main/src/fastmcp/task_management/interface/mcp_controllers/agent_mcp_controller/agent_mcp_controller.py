@@ -19,7 +19,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from fastmcp.server.server import FastMCP
 
-from ..desc import description_loader
+# Import the description directly from the local file
+from .manage_agent_description import MANAGE_AGENT_DESCRIPTION
 from fastmcp.task_management.infrastructure.factories.agent_facade_factory import AgentFacadeFactory
 from ....application.facades.agent_application_facade import AgentApplicationFacade
 from ..workflow_guidance.agent.agent_workflow_factory import AgentWorkflowFactory
@@ -84,8 +85,7 @@ class AgentMCPController:
     def register_tools(self, mcp: "FastMCP"):
         """Register agent management MCP tools with the FastMCP server"""
         # Load descriptions from external files
-        descriptions = self._get_agent_management_descriptions()
-        manage_agent_desc = descriptions.get("manage_agent", {})
+        manage_agent_desc = {"description": MANAGE_AGENT_DESCRIPTION, "parameters": {}}
 
         @mcp.tool(name="manage_agent", description=manage_agent_desc["description"])
         def manage_agent(
@@ -229,7 +229,7 @@ class AgentMCPController:
         """
         Flatten agent descriptions for robust access, similar to other controllers.
         """
-        all_desc = description_loader.get_all_descriptions()
+        all_desc = {}
         flat = {}
         # Look for 'manage_agent' in any subdict
         for sub in all_desc.values():

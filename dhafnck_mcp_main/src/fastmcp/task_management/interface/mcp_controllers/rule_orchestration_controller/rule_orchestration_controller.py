@@ -13,7 +13,7 @@ from pydantic import Field  # type: ignore
 if TYPE_CHECKING:
     from fastmcp.server.server import FastMCP
 
-from ..desc import description_loader
+from ..cursor_rules_controller.manage_rule_description import MANAGE_RULE_DESCRIPTION, get_manage_rule_description
 from ....application.facades.rule_orchestration_facade import IRuleOrchestrationFacade
 from .factories.rule_orchestration_controller_factory import RuleOrchestrationControllerFactory
 
@@ -39,8 +39,7 @@ class RuleOrchestrationController:
     
     def register_tools(self, mcp: "FastMCP"):
         """Register MCP tools with descriptions"""
-        descriptions = description_loader.get_all_descriptions()
-        manage_rule_desc = descriptions["rule"]["manage_rule"]
+        manage_rule_desc = get_manage_rule_description()
 
         @mcp.tool(description=manage_rule_desc["description"])
         def manage_rule(

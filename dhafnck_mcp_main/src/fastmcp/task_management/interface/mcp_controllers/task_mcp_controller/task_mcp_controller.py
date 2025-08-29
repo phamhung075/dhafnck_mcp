@@ -22,7 +22,8 @@ from .factories.validation_factory import ValidationFactory
 from .factories.response_factory import ResponseFactory
 
 # Import existing dependencies
-from ..desc import description_loader
+# Import the description directly from the local file
+from .manage_task_description import MANAGE_TASK_DESCRIPTION, get_manage_task_description
 from ..workflow_hint_enhancer import WorkflowHintEnhancer
 from ..workflow_guidance.task import TaskWorkflowFactory
 from ...utils.error_handler import UserFriendlyErrorHandler
@@ -163,7 +164,7 @@ class TaskMCPController(ContextPropagationMixin):
         """Register MCP tools with the server."""
         
         # Load description
-        tool_description = description_loader.get_task_manage_description()
+        tool_description = get_manage_task_description()
         
         def manage_task(
             action: Annotated[str, "Action to perform: create, update, delete, get, list, search, next, complete, count"],

@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from fastmcp.server.server import FastMCP
 
-from ..desc import description_loader
+from .call_agent_description import CALL_AGENT_DESCRIPTION
 from .handlers import AgentInvocationHandler
 from .services import AgentDiscoveryService
 
@@ -39,7 +39,7 @@ class CallAgentMCPController:
     def register_tools(self, mcp: "FastMCP"):
         """Register call agent MCP tools with the FastMCP server"""
         # Load documentation for the call_agent tool
-        call_agent_desc = description_loader.get_all_descriptions()["agent"]["call_agent"]
+        call_agent_desc = {"description": CALL_AGENT_DESCRIPTION, "parameters": {"name_agent": "Name of the agent to load and invoke. Must be a valid, registered agent name (string)."}}
 
         @mcp.tool(name="call_agent", description=call_agent_desc["description"])
         def call_agent(

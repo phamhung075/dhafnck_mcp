@@ -39,7 +39,7 @@ from fastmcp.utilities.logging import configure_logging
 from fastmcp.auth import AuthMiddleware, TokenValidator, TokenValidationError, RateLimitError
 
 # Import connection management tools
-from .connection_manager import get_connection_manager, cleanup_connection_manager
+from fastmcp.server.connection_manager import get_connection_manager, cleanup_connection_manager
 
 # Import Starlette components for middleware
 from starlette.middleware.base import BaseHTTPMiddleware

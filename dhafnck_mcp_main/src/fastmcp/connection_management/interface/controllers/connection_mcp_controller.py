@@ -12,7 +12,6 @@ from pydantic import Field
 if TYPE_CHECKING:
     from fastmcp.server.server import FastMCP
 
-from .desc import connection_description_loader
 from ...application.facades.connection_application_facade import ConnectionApplicationFacade
 from ....task_management.interface.utils.json_parameter_parser import JSONParameterParser
 
@@ -40,11 +39,20 @@ class ConnectionMCPController:
     def register_tools(self, mcp: "FastMCP"):
         """Register connection management MCP tools with the FastMCP server using external descriptions"""
         
-        # Load descriptions from external files
-        descriptions = connection_description_loader.get_connection_management_descriptions()
-        manage_connection_desc = descriptions.get("manage_connection", {})
+        # Use hardcoded description for now since the description file structure is different
+        manage_connection_desc = {
+            "description": "🔗 UNIFIED CONNECTION MANAGEMENT ENGINE - Complete connection, health, and monitoring operations",
+            "parameters": {
+                "action": "Connection management action to perform. Valid actions: 'health_check', 'server_capabilities', 'connection_health', 'status', 'register_updates'",
+                "include_details": "Whether to include detailed information in responses. Default: true",
+                "session_id": "Client session identifier for update registration",
+                "connection_id": "Specific connection identifier for targeted diagnostics",
+                "client_info": "Optional client metadata for registration customization",
+                "user_id": "User identifier for authentication and audit trails"
+            }
+        }
         
-        @mcp.tool(description=manage_connection_desc.get("description", "🔗 UNIFIED CONNECTION MANAGEMENT - Complete connection, health, and status operations"))
+        @mcp.tool(description=manage_connection_desc["description"])
         def manage_connection(
             action: Annotated[str, Field(description=manage_connection_desc.get("parameters", {}).get("action", "Connection management action to perform"))],
             include_details: Annotated[bool, Field(description=manage_connection_desc.get("parameters", {}).get("include_details", "Whether to include detailed information"))] = True,

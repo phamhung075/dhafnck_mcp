@@ -16,7 +16,8 @@ if TYPE_CHECKING:
 from .factories.operation_factory import ProjectOperationFactory
 
 # Import existing dependencies
-from ..desc import description_loader
+# Import the description directly from the local file
+from .manage_project_description import MANAGE_PROJECT_DESCRIPTION
 from ...utils.response_formatter import StandardResponseFormatter, ResponseStatus, ErrorCodes
 from ....application.facades.project_application_facade import ProjectApplicationFacade
 from fastmcp.task_management.infrastructure.factories.project_facade_factory import ProjectFacadeFactory
@@ -92,7 +93,7 @@ class ProjectMCPController(ContextPropagationMixin):
         """Register MCP tools with the server."""
         
         # Load description
-        tool_description = description_loader.get_project_manage_description()
+        tool_description = MANAGE_PROJECT_DESCRIPTION
         
         def manage_project(
             action: Annotated[str, "Project management action"],

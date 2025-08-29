@@ -26,33 +26,102 @@ REQUIRED BEHAVIORS:
 
 ## Missing Test Files - CREATE IMMEDIATELY:
 
-## Stale Test Files (Source Newer Than Test)
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/lazy_task_routes.py`
-  - **Test**: `dhafnck_mcp_main/src/tests/server/routes/lazy_task_routes_test.py`
-  - **Days stale**: 1
-
-
 ## Missing Test Files
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/agent_metadata_routes.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/server/routes/agent_metadata_routes_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/ddd_compliant_mcp_tools.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/ddd_compliant_mcp_tools_test.py`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/branch_summary_routes.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/server/routes/branch_summary_routes_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/agent_mcp_controller/manage_agent_description.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/agent_mcp_controller/manage_agent_description_test.py`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/server/routes/task_summary_routes.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/server/routes/task_summary_routes_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/call_agent_mcp_controller/call_agent_description.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/call_agent_mcp_controller/call_agent_description_test.py`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/api_controllers/agent_api_controller.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/api_controllers/agent_api_controller_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/compliance_mcp_controller/manage_compliance_description.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/compliance_mcp_controller/manage_compliance_description_test.py`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/api_controllers/branch_api_controller.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/api_controllers/branch_api_controller_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/compliance_mcp_controller/manage_connection_description.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/compliance_mcp_controller/manage_connection_description_test.py`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/api_controllers/subtask_api_controller.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/api_controllers/subtask_api_controller_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/context_id_detector/context_id_detector.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/context_id_detector/context_id_detector_test.py`
 
-- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/api_controllers/task_api_controller.py`
-  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/api_controllers/task_api_controller_test.py`
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/cursor_rules_controller/cursor_rules_controller.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/cursor_rules_controller/cursor_rules_controller_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/cursor_rules_controller/cursor_rules_description.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/cursor_rules_controller/cursor_rules_description_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/dependency_mcp_controller/manage_dependency_description.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/dependency_mcp_controller/manage_dependency_description_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/desc/agent/__init__.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/desc/agent/__init___test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/desc/compliance/__init__.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/desc/compliance/__init___test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/desc/context/__init__.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/desc/context/__init___test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/desc/dependency/__init__.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/desc/dependency/__init___test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/desc/git_branch/__init__.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/desc/git_branch/__init___test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/desc/project/__init__.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/desc/project/__init___test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/desc/rule/__init__.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/desc/rule/__init___test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/desc/subtask/__init__.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/desc/subtask/__init___test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/desc/task/__init__.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/desc/task/__init___test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/desc/template/__init__.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/desc/template/__init___test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/file_resource_mcp_controller/file_resource_description.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/file_resource_mcp_controller/file_resource_description_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/git_branch_mcp_controller/manage_git_branch_description.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/git_branch_mcp_controller/manage_git_branch_description_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/progress_tools_controller/progress_tools_controller.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/progress_tools_controller/progress_tools_controller_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/project_mcp_controller/manage_project_description.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/project_mcp_controller/manage_project_description_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/rule_orchestration_controller/handlers/rule_management_handler.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/rule_orchestration_controller/handlers/rule_management_handler_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/rule_orchestration_controller/manage_rule_description.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/rule_orchestration_controller/manage_rule_description_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/rule_orchestration_controller/rule_orchestration_controller.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/rule_orchestration_controller/rule_orchestration_controller_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/subtask_mcp_controller/manage_subtask_description.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/subtask_mcp_controller/manage_subtask_description_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/task_mcp_controller/manage_task_description.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/task_mcp_controller/manage_task_description_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/task_mcp_controller/task_mcp_controller.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/task_mcp_controller/task_mcp_controller_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/template_controller/manage_template_description.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/template_controller/manage_template_description_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/template_controller/template_controller.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/template_controller/template_controller_test.py`
+
+- **Source**: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/unified_context_controller/manage_unified_context_description.py`
+  - **Create test at**: `dhafnck_mcp_main/src/tests/task_management/interface/mcp_controllers/unified_context_controller/manage_unified_context_description_test.py`
 
 
 ## EXECUTION COMMANDS - DO NOW:
