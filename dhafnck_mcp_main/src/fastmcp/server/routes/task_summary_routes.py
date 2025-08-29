@@ -138,12 +138,7 @@ subtask_controller = SubtaskAPIController()
 @router.post("/tasks/summaries")
 @redis_cache(ttl=300, key_prefix="task_summaries")
 async def get_task_summaries(
-    git_branch_id: str,
-    page: int = 1,
-    limit: int = 20,
-    include_counts: bool = True,
-    status_filter: Optional[str] = None,
-    priority_filter: Optional[str] = None,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -175,21 +170,9 @@ async def get_task_summaries(
         
         logger.info(f"Loading task summaries for branch {git_branch_id}, page {page}")
         
-        # Initialize repository factories
-        task_repository_factory = TaskRepositoryFactory()
-        subtask_repository_factory = SubtaskRepositoryFactory()
-        
         # Use authenticated user
         user_id = current_user.id
         logger.info(f"Loading data for user: {current_user.email}")
-        
-        # Initialize facades using proper factory pattern with git_branch_id
-        logger.info(f"Creating task facade with git_branch_id: {git_branch_id}")
-        task_facade_factory = TaskFacadeFactory(task_repository_factory, subtask_repository_factory)
-        task_facade = task_facade_factory.create_task_facade_with_git_branch_id("default_project", "main", user_id, git_branch_id)
-        
-        context_factory = UnifiedContextFacadeFactory()
-        context_facade = context_factory.create_facade()
         
         # Calculate offset for pagination
         offset = (page - 1) * limit
@@ -201,16 +184,18 @@ async def get_task_summaries(
         if priority_filter:
             filters["priority"] = priority_filter
         
-        # Get total count first (for pagination calculation)
-        total_result = task_facade.count_tasks(filters)
-        total_count = total_result.get("count", 0) if total_result.get("success") else 0
+        # Get total count first (for pagination calculation) - use API controller
+        count_result = task_controller.count_tasks(filters, user_id, db)
+        total_count = count_result.get("count", 0) if count_result.get("success") else 0
         
-        # Get paginated task list with minimal data
-        task_result = task_facade.list_tasks_summary(
+        # Get paginated task list with minimal data - use API controller
+        task_result = task_controller.list_tasks_summary(
             filters=filters,
             offset=offset,
             limit=limit,
-            include_counts=include_counts
+            include_counts=include_counts,
+            user_id=user_id,
+            session=db
         )
         
         if not task_result.get("success"):
@@ -224,11 +209,11 @@ async def get_task_summaries(
         # Convert to task summaries
         task_summaries = []
         for task_data in tasks_data:
-            # Check if task has context
+            # Check if task has context - use API controller
             has_context = False
             if include_counts:
-                context_result = context_facade.get_context_summary(task_data.get("id"))
-                has_context = context_result.get("success", False) and context_result.get("has_context", False)
+                context_result = context_controller.get_context("task", task_data.get("id"), False, user_id, db)
+                has_context = context_result.get("success", False)
             
             summary = {
                 "id": task_data["id"],
@@ -290,18 +275,12 @@ async def get_full_task(
         
         logger.info(f"Loading full task data for task {task_id}")
         
-        # Initialize repository factories and facade
-        task_repository_factory = TaskRepositoryFactory()
-        subtask_repository_factory = SubtaskRepositoryFactory()
-        
         # Use authenticated user
         user_id = current_user.id
         logger.info(f"Loading data for user: {current_user.email}")
         
-        task_facade_factory = TaskFacadeFactory(task_repository_factory, subtask_repository_factory)
-        task_facade = task_facade_factory.create_task_facade("default_project", None, user_id)
-        
-        result = task_facade.get_task(task_id)
+        # Use API controller for full task data
+        result = task_controller.get_full_task(task_id, user_id, db)
         
         if not result.get("success"):
             if "not found" in result.get("error", "").lower():
@@ -363,10 +342,6 @@ async def get_subtask_summaries(
         
         logger.info(f"Loading subtask summaries for parent task {parent_task_id}")
         
-        # Initialize repository factories and facade
-        task_repository_factory = TaskRepositoryFactory()
-        subtask_repository_factory = SubtaskRepositoryFactory()
-        
         # Use dual authentication to support both Supabase and local JWT
         current_user = await get_current_user_dual(request, db)
         
@@ -382,13 +357,12 @@ async def get_subtask_summaries(
         user_id = current_user.id
         logger.info(f"Loading subtask summaries for user: {current_user.email if hasattr(current_user, 'email') else user_id}")
         
-        task_facade_factory = TaskFacadeFactory(task_repository_factory, subtask_repository_factory)
-        task_facade = task_facade_factory.create_task_facade("default_project", None, user_id)
-        
-        # Get subtasks for the parent task
-        result = task_facade.list_subtasks_summary(
+        # Use API controller for subtask summaries
+        result = subtask_controller.list_subtasks_summary(
             parent_task_id=parent_task_id,
-            include_counts=include_counts
+            include_counts=include_counts,
+            user_id=user_id,
+            session=db
         )
         
         if not result.get("success"):
@@ -467,11 +441,11 @@ async def get_task_context_summary(
                 detail="task_id is required"
             )
         
-        # Initialize facade
-        context_factory = UnifiedContextFacadeFactory()
-        context_facade = context_factory.create_facade()
+        # Use authenticated user
+        user_id = current_user.id
         
-        result = context_facade.get_context_summary(task_id)
+        # Use API controller for context check
+        result = context_controller.get_context("task", task_id, False, user_id, db)
         
         if not result.get("success"):
             return {
@@ -479,10 +453,11 @@ async def get_task_context_summary(
                 "error": result.get("error")
             }
         
+        context_data = result.get("context", {})
         return {
-            "has_context": result.get("has_context", False),
-            "context_size": result.get("context_size", 0),
-            "last_updated": result.get("last_updated")
+            "has_context": bool(context_data),
+            "context_size": len(str(context_data)) if context_data else 0,
+            "last_updated": context_data.get("updated_at") if context_data else None
         }
         
     except Exception as e:

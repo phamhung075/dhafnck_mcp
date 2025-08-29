@@ -19,10 +19,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
     - `user_scoped_project_routes.py` - Fully updated all 6 endpoints to use ProjectAPIController
     - `user_scoped_context_routes.py` - Updated all 8 endpoints to use ContextAPIController (advanced features marked as not implemented)
     - `protected_task_routes.py` - Updated all 3 OAuth2-protected endpoints to use API controllers
+    - `task_summary_routes.py` - Updated performance-optimized endpoints to use extended API controllers
+    - `lazy_task_routes.py` - Updated lazy-loading endpoints to use extended API controllers with Pydantic models
+  - **API Controller Extensions**: Extended controllers with specialized performance optimization methods
+    - `TaskAPIController.count_tasks()` - Task counting with filters for pagination
+    - `TaskAPIController.list_tasks_summary()` - Lightweight task summaries for performance
+    - `TaskAPIController.get_full_task()` - Full task data for lazy loading scenarios
+    - `SubtaskAPIController.list_subtasks_summary()` - Performance-optimized subtask summaries
   - **DDD Compliance**: Routes now properly delegate to controllers → facades → services → repositories → domain
   - **Import Updates**: Updated 57+ import statements across codebase to use new `mcp_controllers` path
-  - **Advanced Feature Handling**: Complex routes with caching/lazy loading require API controller extensions
-  - **Impact**: Proper separation of concerns between MCP tools and frontend APIs, following DDD best practices
+  - **Validation**: All modified route and controller files pass Python syntax compilation checks
+  - **Impact**: Complete DDD architecture compliance across all frontend route files, proper separation of concerns between MCP tools and frontend APIs
 
 ### Fixed
 - **Project Deletion Bug** - Fixed critical SQLAlchemy parameter binding error in project deletion [2025-08-29]

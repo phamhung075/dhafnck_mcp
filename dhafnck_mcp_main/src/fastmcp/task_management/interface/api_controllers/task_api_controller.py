@@ -349,18 +349,31 @@ class TaskAPIController:
             Task statistics
         """
         try:
-            # This would need to be implemented with a proper statistics service
-            # For now, return a placeholder
+            # Create task facade with proper user context
+            task_facade_factory = TaskFacadeFactory(
+                self.task_repository_factory,
+                self.subtask_repository_factory
+            )
+            
+            task_facade = task_facade_factory.create_task_facade(
+                project_id="default_project",
+                git_branch_id=None,
+                user_id=user_id
+            )
+            
+            # Get statistics from facade
+            result = task_facade.get_user_task_statistics()
+            
             return {
                 "success": True,
-                "stats": {
+                "stats": result.get("stats", {
                     "total_tasks": 0,
                     "completed_tasks": 0,
                     "in_progress_tasks": 0,
                     "pending_tasks": 0,
                     "high_priority_tasks": 0,
                     "user_id": user_id
-                },
+                }),
                 "message": "Statistics retrieved successfully"
             }
             
@@ -370,4 +383,127 @@ class TaskAPIController:
                 "success": False,
                 "error": str(e),
                 "message": "Failed to get task statistics"
+            }
+    
+    def count_tasks(self, filters: Dict[str, Any], user_id: str, session) -> Dict[str, Any]:
+        """
+        Count tasks matching filters for performance optimization.
+        
+        Args:
+            filters: Filter criteria
+            user_id: Authenticated user ID
+            session: Database session
+            
+        Returns:
+            Task count result
+        """
+        try:
+            # Create task facade with proper user context
+            task_facade_factory = TaskFacadeFactory(
+                self.task_repository_factory,
+                self.subtask_repository_factory
+            )
+            
+            task_facade = task_facade_factory.create_task_facade(
+                project_id="default_project",
+                git_branch_id=filters.get("git_branch_id"),
+                user_id=user_id
+            )
+            
+            # Count tasks with filters
+            result = task_facade.count_tasks(filters)
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error counting tasks for user {user_id}: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "count": 0
+            }
+    
+    def list_tasks_summary(self, filters: Dict[str, Any], offset: int, limit: int, 
+                          include_counts: bool, user_id: str, session) -> Dict[str, Any]:
+        """
+        List tasks with lightweight summary data for performance optimization.
+        
+        Args:
+            filters: Filter criteria
+            offset: Pagination offset
+            limit: Pagination limit
+            include_counts: Whether to include counts
+            user_id: Authenticated user ID
+            session: Database session
+            
+        Returns:
+            Task summary list result
+        """
+        try:
+            # Create task facade with proper user context
+            task_facade_factory = TaskFacadeFactory(
+                self.task_repository_factory,
+                self.subtask_repository_factory
+            )
+            
+            task_facade = task_facade_factory.create_task_facade(
+                project_id="default_project",
+                git_branch_id=filters.get("git_branch_id"),
+                user_id=user_id
+            )
+            
+            # Get tasks summary
+            result = task_facade.list_tasks_summary(
+                filters=filters,
+                offset=offset,
+                limit=limit,
+                include_counts=include_counts
+            )
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error listing task summaries for user {user_id}: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "tasks": []
+            }
+    
+    def get_full_task(self, task_id: str, user_id: str, session) -> Dict[str, Any]:
+        """
+        Get full task data for lazy loading.
+        
+        Args:
+            task_id: Task identifier
+            user_id: Authenticated user ID
+            session: Database session
+            
+        Returns:
+            Full task data
+        """
+        try:
+            # Create task facade with proper user context
+            task_facade_factory = TaskFacadeFactory(
+                self.task_repository_factory,
+                self.subtask_repository_factory
+            )
+            
+            task_facade = task_facade_factory.create_task_facade(
+                project_id="default_project",
+                git_branch_id=None,
+                user_id=user_id
+            )
+            
+            # Get full task data
+            result = task_facade.get_task(task_id, include_full_data=True)
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error getting full task {task_id} for user {user_id}: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "message": "Failed to get full task data"
             }

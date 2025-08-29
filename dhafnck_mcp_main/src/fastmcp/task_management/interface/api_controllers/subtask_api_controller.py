@@ -360,3 +360,45 @@ class SubtaskAPIController:
                 "error": str(e),
                 "message": "Failed to complete subtask"
             }
+    
+    def list_subtasks_summary(self, parent_task_id: str, include_counts: bool, user_id: str, session) -> Dict[str, Any]:
+        """
+        List subtasks with summary data for performance optimization.
+        
+        Args:
+            parent_task_id: Parent task identifier
+            include_counts: Whether to include counts
+            user_id: Authenticated user ID
+            session: Database session
+            
+        Returns:
+            Subtask summary list result
+        """
+        try:
+            # Create task facade with proper user context
+            task_facade_factory = TaskFacadeFactory(
+                self.task_repository_factory,
+                self.subtask_repository_factory
+            )
+            
+            task_facade = task_facade_factory.create_task_facade(
+                project_id="default_project",
+                git_branch_id=None,
+                user_id=user_id
+            )
+            
+            # Get subtask summaries
+            result = task_facade.list_subtasks_summary(
+                parent_task_id=parent_task_id,
+                include_counts=include_counts
+            )
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error listing subtask summaries for task {parent_task_id} by user {user_id}: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "subtasks": []
+            }

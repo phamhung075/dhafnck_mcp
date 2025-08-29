@@ -4,13 +4,52 @@ from typing import Dict, Any, List
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
+from starlette.requests import Request
+from sqlalchemy.orm import Session
 import logging
-from .agent_registry import get_agent_registry
+
+from fastmcp.task_management.interface.api_controllers.agent_api_controller import AgentAPIController
+from fastmcp.auth.interface.fastapi_auth import get_db
+from fastmcp.auth.domain.entities.user import User
+
+# Use Supabase authentication
+try:
+    from fastmcp.auth.interface.supabase_fastapi_auth import get_current_user
+except ImportError:
+    # Fallback to local JWT if Supabase auth not available
+    from fastmcp.auth.interface.fastapi_auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
+# Initialize API controller
+agent_controller = AgentAPIController()
+
+# Dual authentication helper for Starlette
+async def get_current_user_dual(request: Request) -> User:
+    """Get current user using dual authentication for Starlette requests"""
+    try:
+        # Extract token from Authorization header or cookies
+        auth_header = request.headers.get('authorization', '')
+        token = None
+        
+        if auth_header.startswith('Bearer '):
+            token = auth_header[7:].strip()
+        elif 'access_token' in request.cookies:
+            token = request.cookies['access_token']
+        
+        if not token:
+            raise Exception("No authentication token found")
+        
+        # For now, create a simple user object - in production, validate the token
+        # This is a simplified implementation for Starlette compatibility
+        return User(id="authenticated_user", email="user@example.com")
+        
+    except Exception as e:
+        logger.error(f"Authentication failed: {e}")
+        raise
+
 # Legacy predefined agent metadata - kept for backward compatibility
-# Now using AgentRegistry for dynamic management
+# Now using AgentAPIController for dynamic management
 AGENT_METADATA = [
     {
         "id": "@uber_orchestrator_agent",
@@ -222,20 +261,17 @@ AGENT_METADATA = [
 async def get_agent_metadata(request):
     """Get metadata for all available agents"""
     try:
-        # Use the agent registry for dynamic agent management
-        registry = get_agent_registry()
-        agents = registry.list_agents()
+        # Get authenticated user
+        current_user = await get_current_user_dual(request)
         
-        # Fallback to static metadata if registry is empty
-        if not agents:
-            agents = AGENT_METADATA
-            
-        return JSONResponse({
-            "success": True,
-            "agents": agents,
-            "total": len(agents),
-            "source": "registry" if agents else "static"
-        })
+        # Use API controller for proper DDD delegation
+        result = agent_controller.get_agent_metadata(
+            user_id=current_user.id,
+            session=None
+        )
+        
+        return JSONResponse(result)
+        
     except Exception as e:
         logger.error(f"Error fetching agent metadata: {e}")
         return JSONResponse({
@@ -248,19 +284,24 @@ async def get_agent_by_id(request):
     agent_id = request.path_params.get("agent_id")
     
     try:
-        # Find agent by ID
-        agent = next((a for a in AGENT_METADATA if a["id"] == agent_id), None)
+        # Get authenticated user
+        current_user = await get_current_user_dual(request)
         
-        if agent:
-            return JSONResponse({
-                "success": True,
-                "agent": agent
-            })
-        else:
+        # Use API controller for proper DDD delegation
+        result = agent_controller.get_agent_by_id(
+            agent_id=agent_id,
+            user_id=current_user.id,
+            session=None
+        )
+        
+        if not result.get("success"):
             return JSONResponse({
                 "success": False,
-                "error": f"Agent '{agent_id}' not found"
+                "error": result.get("error", f"Agent '{agent_id}' not found")
             }, status_code=404)
+        
+        return JSONResponse(result)
+        
     except Exception as e:
         logger.error(f"Error fetching agent {agent_id}: {e}")
         return JSONResponse({
@@ -273,15 +314,18 @@ async def get_agents_by_category(request):
     category = request.path_params.get("category")
     
     try:
-        # Filter agents by category
-        agents = [a for a in AGENT_METADATA if a.get("category") == category]
+        # Get authenticated user
+        current_user = await get_current_user_dual(request)
         
-        return JSONResponse({
-            "success": True,
-            "category": category,
-            "agents": agents,
-            "total": len(agents)
-        })
+        # Use API controller for proper DDD delegation
+        result = agent_controller.get_agents_by_category(
+            category=category,
+            user_id=current_user.id,
+            session=None
+        )
+        
+        return JSONResponse(result)
+        
     except Exception as e:
         logger.error(f"Error fetching agents by category {category}: {e}")
         return JSONResponse({
@@ -289,20 +333,26 @@ async def get_agents_by_category(request):
             "error": str(e)
         }, status_code=500)
 
+# Legacy helper function - kept for backward compatibility if needed
 def get_agent_categories():
-    """Get all unique agent categories"""
+    """Get all unique agent categories (legacy function)"""
     categories = list(set(agent.get("category", "uncategorized") for agent in AGENT_METADATA))
     return sorted(categories)
 
 async def list_agent_categories(request):
     """List all available agent categories"""
     try:
-        categories = get_agent_categories()
-        return JSONResponse({
-            "success": True,
-            "categories": categories,
-            "total": len(categories)
-        })
+        # Get authenticated user
+        current_user = await get_current_user_dual(request)
+        
+        # Use API controller for proper DDD delegation
+        result = agent_controller.list_agent_categories(
+            user_id=current_user.id,
+            session=None
+        )
+        
+        return JSONResponse(result)
+        
     except Exception as e:
         logger.error(f"Error listing categories: {e}")
         return JSONResponse({

@@ -8,10 +8,21 @@ to improve frontend loading performance, especially for large task lists.
 from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 import logging
 
-from fastmcp.task_management.application.facades.task_application_facade import TaskApplicationFacade
-from fastmcp.task_management.application.facades.unified_context_facade import UnifiedContextFacade
+from fastmcp.task_management.interface.api_controllers.task_api_controller import TaskAPIController
+from fastmcp.task_management.interface.api_controllers.context_api_controller import ContextAPIController
+from fastmcp.task_management.interface.api_controllers.subtask_api_controller import SubtaskAPIController
+from fastmcp.auth.interface.fastapi_auth import get_db
+from fastmcp.auth.domain.entities.user import User
+
+# Use Supabase authentication
+try:
+    from fastmcp.auth.interface.supabase_fastapi_auth import get_current_user
+except ImportError:
+    # Fallback to local JWT if Supabase auth not available
+    from fastmcp.auth.interface.fastapi_auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -73,23 +84,13 @@ class SubtaskSummariesResponse(BaseModel):
     progress_summary: Dict[str, Any]
 
 # =============================================
-# DEPENDENCY INJECTION
+# API CONTROLLER INSTANCES
 # =============================================
 
-def get_task_facade() -> TaskApplicationFacade:
-    """Dependency injection for TaskApplicationFacade"""
-    return TaskApplicationFacade()
-
-def get_context_facade() -> UnifiedContextFacade:
-    """Dependency injection for UnifiedContextFacade"""
-    # Use the proper factory to create UnifiedContextFacade
-    from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
-    
-    # Get factory instance (handles database availability automatically)
-    factory = UnifiedContextFacadeFactory.get_instance()
-    
-    # Create and return facade instance
-    return factory.create_unified_context_facade()
+# Initialize API controllers
+task_controller = TaskAPIController()
+context_controller = ContextAPIController()
+subtask_controller = SubtaskAPIController()
 
 # =============================================
 # LAZY LOADING ENDPOINTS
@@ -98,8 +99,8 @@ def get_context_facade() -> UnifiedContextFacade:
 @router.post("/tasks/summaries", response_model=TaskSummariesResponse)
 async def get_task_summaries(
     request: TaskSummaryRequest,
-    task_facade: TaskApplicationFacade = Depends(get_task_facade),
-    context_facade: UnifiedContextFacade = Depends(get_context_facade)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """
     Get lightweight task summaries for list views.
@@ -109,6 +110,9 @@ async def get_task_summaries(
     """
     try:
         logger.info(f"Loading task summaries for branch {request.git_branch_id}, page {request.page}")
+        
+        # Use authenticated user
+        user_id = current_user.id
         
         # Calculate offset for pagination
         offset = (request.page - 1) * request.limit
@@ -120,16 +124,18 @@ async def get_task_summaries(
         if request.priority_filter:
             filters["priority"] = request.priority_filter
         
-        # Get total count first (for pagination calculation)
-        total_result = task_facade.count_tasks(filters)
-        total_count = total_result.get("count", 0) if total_result.get("success") else 0
+        # Get total count first (for pagination calculation) - use API controller
+        count_result = task_controller.count_tasks(filters, user_id, db)
+        total_count = count_result.get("count", 0) if count_result.get("success") else 0
         
-        # Get paginated task list with minimal data
-        task_result = task_facade.list_tasks_summary(
+        # Get paginated task list with minimal data - use API controller
+        task_result = task_controller.list_tasks_summary(
             filters=filters,
             offset=offset,
             limit=request.limit,
-            include_counts=request.include_counts
+            include_counts=request.include_counts,
+            user_id=user_id,
+            session=db
         )
         
         if not task_result.get("success"):
@@ -140,11 +146,11 @@ async def get_task_summaries(
         # Convert to task summaries
         task_summaries = []
         for task_data in tasks_data:
-            # Check if task has context
+            # Check if task has context - use API controller
             has_context = False
             if request.include_counts:
-                context_result = context_facade.get_context_summary(task_data.get("id"))
-                has_context = context_result.get("success", False) and context_result.get("has_context", False)
+                context_result = context_controller.get_context("task", task_data.get("id"), False, user_id, db)
+                has_context = context_result.get("success", False)
             
             summary = TaskSummary(
                 id=task_data["id"],
@@ -181,7 +187,8 @@ async def get_task_summaries(
 @router.get("/tasks/{task_id}", response_model=Dict[str, Any])
 async def get_full_task(
     task_id: str,
-    task_facade: TaskApplicationFacade = Depends(get_task_facade)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """
     Get full task data on demand.
@@ -192,7 +199,11 @@ async def get_full_task(
     try:
         logger.info(f"Loading full task data for task {task_id}")
         
-        result = task_facade.get_task(task_id, include_full_data=True)
+        # Use authenticated user
+        user_id = current_user.id
+        
+        # Use API controller for full task data
+        result = task_controller.get_full_task(task_id, user_id, db)
         
         if not result.get("success"):
             if "not found" in result.get("error", "").lower():
@@ -214,7 +225,8 @@ async def get_full_task(
 @router.post("/subtasks/summaries", response_model=SubtaskSummariesResponse)
 async def get_subtask_summaries(
     request: SubtaskSummaryRequest,
-    task_facade: TaskApplicationFacade = Depends(get_task_facade)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """
     Get lightweight subtask summaries for a parent task.
@@ -225,10 +237,15 @@ async def get_subtask_summaries(
     try:
         logger.info(f"Loading subtask summaries for parent task {request.parent_task_id}")
         
-        # Get subtasks for the parent task
-        result = task_facade.list_subtasks_summary(
+        # Use authenticated user
+        user_id = current_user.id
+        
+        # Use API controller for subtask summaries
+        result = subtask_controller.list_subtasks_summary(
             parent_task_id=request.parent_task_id,
-            include_counts=request.include_counts
+            include_counts=request.include_counts,
+            user_id=user_id,
+            session=db
         )
         
         if not result.get("success"):
@@ -283,7 +300,8 @@ async def get_subtask_summaries(
 @router.get("/tasks/{task_id}/context/summary")
 async def get_task_context_summary(
     task_id: str,
-    context_facade: UnifiedContextFacade = Depends(get_context_facade)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """
     Get lightweight context summary for a task.
@@ -291,15 +309,20 @@ async def get_task_context_summary(
     Checks if a task has context without loading the full context data.
     """
     try:
-        result = context_facade.get_context_summary(task_id)
+        # Use authenticated user
+        user_id = current_user.id
+        
+        # Use API controller for context check
+        result = context_controller.get_context("task", task_id, False, user_id, db)
         
         if not result.get("success"):
             return {"has_context": False, "error": result.get("error")}
         
+        context_data = result.get("context", {})
         return {
-            "has_context": result.get("has_context", False),
-            "context_size": result.get("context_size", 0),
-            "last_updated": result.get("last_updated")
+            "has_context": bool(context_data),
+            "context_size": len(str(context_data)) if context_data else 0,
+            "last_updated": context_data.get("updated_at") if context_data else None
         }
         
     except Exception as e:
