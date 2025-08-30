@@ -97,7 +97,18 @@ class TestGitBranchFilteringIntegration:
         
         logger.info(f"Created test data:")
         logger.info(f"  Branch A ({self.branch_a_id}): 2 tasks")
+        logger.info(f"    Task A1 ID: {self.task_a1.task['id']}")
+        logger.info(f"    Task A2 ID: {self.task_a2.task['id']}")
         logger.info(f"  Branch B ({self.branch_b_id}): 2 tasks")
+        logger.info(f"    Task B1 ID: {self.task_b1.task['id']}")
+        logger.info(f"    Task B2 ID: {self.task_b2.task['id']}")
+        
+        # Debug: Verify tasks were created with correct git_branch_id
+        logger.info(f"Task creation verification:")
+        logger.info(f"  Task A1 git_branch_id: {self.task_a1.task.get('git_branch_id', 'MISSING')}")
+        logger.info(f"  Task A2 git_branch_id: {self.task_a2.task.get('git_branch_id', 'MISSING')}")
+        logger.info(f"  Task B1 git_branch_id: {self.task_b1.task.get('git_branch_id', 'MISSING')}")
+        logger.info(f"  Task B2 git_branch_id: {self.task_b2.task.get('git_branch_id', 'MISSING')}")
     
     def test_list_tasks_filters_by_branch_a(self):
         """Test that listing tasks for branch A returns only branch A tasks."""
@@ -116,6 +127,22 @@ class TestGitBranchFilteringIntegration:
         
         returned_tasks = result["tasks"]
         logger.info(f"Branch A returned {len(returned_tasks)} tasks")
+        
+        # Debug: Show what tasks were actually returned
+        logger.info(f"List result debug:")
+        logger.info(f"  Result keys: {list(result.keys())}")
+        logger.info(f"  Success: {result.get('success')}")
+        logger.info(f"  Tasks count: {len(returned_tasks)}")
+        for i, task in enumerate(returned_tasks):
+            logger.info(f"  Task {i+1}: {task.get('title', 'NO TITLE')} | git_branch_id: {task.get('git_branch_id', 'MISSING')}")
+            
+        # Also test without any filters to see if tasks exist at all
+        no_filter_request = ListTasksRequest(limit=50)
+        no_filter_result = self.facade.list_tasks(no_filter_request)
+        no_filter_tasks = no_filter_result.get("tasks", [])
+        logger.info(f"No-filter query returned {len(no_filter_tasks)} tasks:")
+        for i, task in enumerate(no_filter_tasks):
+            logger.info(f"  All Task {i+1}: {task.get('title', 'NO TITLE')} | git_branch_id: {task.get('git_branch_id', 'MISSING')}")
         
         # Should return exactly 2 tasks for branch A
         assert len(returned_tasks) == 2, f"Expected 2 tasks for branch A, got {len(returned_tasks)}"

@@ -6,6 +6,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Fixed - 2025-08-30 Git Branch Task Filtering Bug
+
+- **Fixed git branch task filtering in frontend sidebar**
+  - **Issue**: When clicking on a git branch in the frontend sidebar, all tasks from all branches were displayed instead of only tasks for the selected branch
+  - **Root Cause**: TaskApplicationFacade performance mode was not passing git_branch_id parameter to optimized repository methods
+  - **Solution**: Implemented TDD approach with comprehensive unit tests and fixed both OptimizedTaskRepository and ORMTaskRepository
+  - **Files Modified**:
+    - `src/fastmcp/task_management/application/facades/task_application_facade.py` - Added git_branch_id parameter to list_tasks_minimal call
+    - `src/fastmcp/task_management/infrastructure/repositories/orm/optimized_task_repository.py` - Added git_branch_id parameter override support  
+    - `src/fastmcp/task_management/infrastructure/repositories/orm/task_repository.py` - Added git_branch_id parameter to list_tasks_minimal method
+  - **Tests Added**:
+    - `src/tests/unit/task_management/interface/controllers/task_git_branch_filtering_test.py` - Comprehensive unit tests with mock-based testing
+    - `src/tests/integration/task_management/interface/git_branch_filtering_integration_test.py` - Integration tests against real database
+  - **Testing**: All 5 core unit tests passing, verifying branch-specific filtering works correctly
+
 ### Fixed - 2025-08-30 DDD Architecture Compliance Fixes
 
 - **Fixed Domain-Driven Design layer boundary violations**
@@ -47,6 +62,27 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
   - **Issue**: Test expecting ValueError when credentials missing, but service was falling back to mock
   - **Solution**: Changed service to raise ValueError for missing credentials instead of silent fallback
   - **Files Fixed**: `src/fastmcp/auth/infrastructure/supabase_auth.py`
+
+### Fixed - 2025-08-30 Critical Test Infrastructure Issues
+
+- **Fixed task_context_sync_service test expectations**
+  - **Issue**: Tests failing with UUID mismatch - expecting "task-123" but getting "12345678-1234-5678-1234-567812345678"
+  - **Root Cause**: Task entity properly converts string to TaskId UUID format but tests weren't updated
+  - **Solution**: Updated test expectations to use correct UUID format from mock task entity
+  - **Files Fixed**: `src/tests/unit/task_management/application/services/task_context_sync_service_test.py`
+  - **Impact**: Fixed 3 failing tests that were incorrectly using string IDs instead of UUIDs
+
+- **Fixed missing test fixtures in TestContextDerivation class**
+  - **Issue**: `fixture 'facade_with_factories' not found` error in subtask facade tests
+  - **Root Cause**: Test class was separated from fixtures defined in main test class
+  - **Solution**: Added required fixtures (`mock_task_repository_factory`, `mock_subtask_repository_factory`, `facade_with_factories`) to TestContextDerivation class
+  - **Files Fixed**: `src/tests/task_management/application/facades/subtask_application_facade_test.py`
+  - **Impact**: Resolved fixture dependency issues preventing test execution
+
+- **Resolved non-existent fastmcp.task_management.utils import error**
+  - **Investigation**: Searched codebase for references to missing utils module
+  - **Finding**: No actual imports of this module exist - error was stale/phantom
+  - **Status**: Confirmed this is not an active issue in current codebase
 
 - **Fixed MockStatus missing HTTP status codes in test infrastructure**
   - **Issue**: `AttributeError: type object 'MockStatus' has no attribute 'HTTP_400_BAD_REQUEST'`

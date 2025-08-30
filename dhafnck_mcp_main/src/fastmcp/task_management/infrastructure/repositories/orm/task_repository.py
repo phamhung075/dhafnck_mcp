@@ -589,8 +589,8 @@ class ORMTaskRepository(CacheInvalidationMixin, BaseORMRepository[Task], BaseUse
             return result.scalar() or 0
     
     def list_tasks_minimal(self, status: str | None = None, priority: str | None = None,
-                           assignee_id: str | None = None, limit: int = 100,
-                           offset: int = 0) -> list[dict[str, Any]]:
+                           assignee_id: str | None = None, git_branch_id: str | None = None,
+                           limit: int = 100, offset: int = 0) -> list[dict[str, Any]]:
         """List tasks with minimal data for improved performance
         
         This method provides a simplified version of the optimized list_tasks_minimal
@@ -600,6 +600,7 @@ class ORMTaskRepository(CacheInvalidationMixin, BaseORMRepository[Task], BaseUse
             status: Optional status filter
             priority: Optional priority filter  
             assignee_id: Optional assignee filter
+            git_branch_id: Optional git branch filter (overrides repository's git_branch_id)
             limit: Maximum number of results (capped at 1000)
             offset: Result offset for pagination
             
@@ -625,6 +626,7 @@ class ORMTaskRepository(CacheInvalidationMixin, BaseORMRepository[Task], BaseUse
                 Task.progress_percentage,
                 Task.due_date,
                 Task.updated_at,
+                Task.git_branch_id,
                 func.count(TaskAssignee.id).label('assignees_count')
             ).outerjoin(TaskAssignee)
             
@@ -633,9 +635,14 @@ class ORMTaskRepository(CacheInvalidationMixin, BaseORMRepository[Task], BaseUse
             
             # Apply filters
             filters = []
-            if self.git_branch_id:
-                filters.append(Task.git_branch_id == self.git_branch_id)
-                logger.debug(f"[ORMTaskRepository] Applied git_branch_id filter: {self.git_branch_id}")
+            # Use provided git_branch_id or fall back to repository's git_branch_id
+            effective_git_branch_id = git_branch_id if git_branch_id is not None else self.git_branch_id
+            logger.debug(f"[ORMTaskRepository] list_tasks_minimal - effective_git_branch_id: {effective_git_branch_id}")
+            if effective_git_branch_id:
+                filters.append(Task.git_branch_id == effective_git_branch_id)
+                logger.debug(f"[ORMTaskRepository] Applied git_branch_id filter: {effective_git_branch_id}")
+            else:
+                logger.debug(f"[ORMTaskRepository] NO git_branch_id filter - returning ALL tasks")
             if status:
                 filters.append(Task.status == status)
             if priority:
@@ -656,7 +663,8 @@ class ORMTaskRepository(CacheInvalidationMixin, BaseORMRepository[Task], BaseUse
                 Task.priority,
                 Task.progress_percentage,
                 Task.due_date,
-                Task.updated_at
+                Task.updated_at,
+                Task.git_branch_id
             )
             
             # Apply ordering and pagination
@@ -693,7 +701,8 @@ class ORMTaskRepository(CacheInvalidationMixin, BaseORMRepository[Task], BaseUse
                         'assignees_count': r.assignees_count or 0,
                         'labels': labels_by_task.get(r.id, []),
                         'due_date': r.due_date,
-                        'updated_at': r.updated_at.isoformat() if r.updated_at else None
+                        'updated_at': r.updated_at.isoformat() if r.updated_at else None,
+                        'git_branch_id': r.git_branch_id
                     })
                 
                 # Log access for audit

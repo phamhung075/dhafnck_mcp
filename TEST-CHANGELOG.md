@@ -1,5 +1,31 @@
 # TEST-CHANGELOG
 
+## [2025-08-30] Critical Test Infrastructure Fixes
+
+### Fixed
+- **Subtask Facade Test Fixture Issues**
+  - Fixed missing fixture errors in `TestSubtaskCreation` and `TestContextDerivation` classes
+  - Added required fixtures (facade_with_static_repos, facade_with_factories, mock repositories) to each test class
+  - Each test class now has its own complete set of fixtures to avoid cross-class dependencies
+  - File: `src/tests/task_management/application/facades/subtask_application_facade_test.py`
+
+### Investigation Results
+- **Git Branch Service "Database Error" Investigation**
+  - Examined error logs showing "Database error" for all git_branch_service operations
+  - Found these were phantom/stale errors - actual service is working correctly
+  - Verified database connectivity to Supabase PostgreSQL is functional
+  - All 44 git branch service tests are passing
+
+- **Missing Module 'fastmcp.task_management.utils'**
+  - Searched entire codebase for references to this module
+  - No actual imports of this module exist in current codebase
+  - This was a stale error from previous version or phantom import
+
+### Test Infrastructure Improvements
+- Fixed test isolation issues by ensuring each test class has complete fixture sets
+- Resolved fixture dependencies between test classes
+- Improved test maintainability by reducing cross-class fixture coupling
+
 ## [2025-08-30] Test Fixes and Code Issue Corrections
 
 ### Fixed

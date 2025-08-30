@@ -123,6 +123,83 @@ class TestSubtaskApplicationFacade:
 class TestSubtaskCreation:
     """Test subtask creation operations."""
     
+    @pytest.fixture
+    def mock_task_repository(self):
+        """Create mock task repository."""
+        return Mock()
+    
+    @pytest.fixture
+    def mock_subtask_repository(self):
+        """Create mock subtask repository."""
+        return Mock()
+    
+    @pytest.fixture
+    def facade_with_static_repos(self, mock_task_repository, mock_subtask_repository):
+        """Create facade with static repositories (backward compatibility mode)."""
+        return SubtaskApplicationFacade(
+            task_repository=mock_task_repository,
+            subtask_repository=mock_subtask_repository
+        )
+    
+    @pytest.fixture
+    def mock_task_repository_factory(self):
+        """Create mock task repository factory."""
+        factory = Mock(spec=TaskRepositoryFactory)
+        factory.create_repository = Mock()
+        factory.create_system_repository = Mock()
+        return factory
+    
+    @pytest.fixture
+    def mock_subtask_repository_factory(self):
+        """Create mock subtask repository factory."""
+        factory = Mock(spec=SubtaskRepositoryFactory)
+        factory.create_subtask_repository = Mock()
+        return factory
+    
+    @pytest.fixture
+    def facade_with_factories(self, mock_task_repository_factory, mock_subtask_repository_factory):
+        """Create facade with repository factories (factory mode)."""
+        return SubtaskApplicationFacade(
+            task_repository_factory=mock_task_repository_factory,
+            subtask_repository_factory=mock_subtask_repository_factory
+        )
+    
+    @pytest.fixture
+    def mock_task(self):
+        """Create mock task."""
+        task = Mock(spec=Task)
+        task.id = TaskId.from_string("12312312-3123-1231-2312-312312312312")
+        task.title = "Test Task"
+        task.git_branch_id = "branch_456"
+        task.subtask_ids = []
+        return task
+    
+    @pytest.fixture
+    def mock_add_subtask_response(self):
+        """Create mock add subtask response."""
+        response = Mock(spec=SubtaskResponse)
+        response.subtask = MockSubtask(
+            id="subtask_123",
+            title="Test Subtask",
+            description="Test description"
+        ).to_dict()
+        response.task_id = "task_123"
+        response.progress = {"completed": 0, "total": 1}
+        return response
+    
+    @pytest.fixture
+    def mock_update_subtask_response(self):
+        """Create mock update subtask response."""
+        response = Mock(spec=SubtaskResponse)
+        subtask_data = MockSubtask(
+            id="subtask_123",
+            title="Updated Subtask",
+            status="in_progress"
+        ).to_dict()
+        response.subtask = subtask_data
+        response.to_dict = lambda: subtask_data
+        return response
+    
     def test_create_subtask_with_static_repos(self, facade_with_static_repos, mock_add_subtask_response):
         """Test creating a subtask with static repositories."""
         # Mock the use case execution
