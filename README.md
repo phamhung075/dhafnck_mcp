@@ -1,606 +1,584 @@
-# DhafnckMCP - Agentic Project Platform
+# 🚀 DhafnckMCP - AI-Human Collaboration Platform
 
-[![Architecture Status](https://img.shields.io/badge/Architecture-Production%20NOT%20Ready-brightgreen)](https://github.com/dhafnck/dhafnck_mcp)
-[![MCP Version](https://img.shields.io/badge/MCP-2.1.0-blue)](https://github.com/dhafnck/dhafnck_mcp)
-[![Docker Support](https://img.shields.io/badge/Docker-Multi%20Mode-orange)](https://github.com/dhafnck/dhafnck_mcp)
+<div align="center">
 
-## 🎯 **Project Overview**
+[![Architecture Status](https://img.shields.io/badge/Architecture-Production%20NOT%20Ready-orange?style=for-the-badge)](https://github.com/dhafnck/dhafnck_mcp)
+[![MCP Protocol](https://img.shields.io/badge/MCP%20Protocol-2.1.0-blue?style=for-the-badge&logo=protocol)](https://modelcontextprotocol.io)
+[![Docker Support](https://img.shields.io/badge/Docker-Multi%20Config-success?style=for-the-badge&logo=docker)](https://docker.com)
+[![AI Agents](https://img.shields.io/badge/AI%20Agents-60%2B-purple?style=for-the-badge&logo=robot)](https://github.com/dhafnck/dhafnck_mcp)
 
-DhafnckMCP is an enterprise-grade Model Context Protocol (MCP) platform designed for agentic project management and multi-agent orchestration. The platform provides comprehensive task management, project coordination, and AI agent collaboration capabilities with cloud-scale architecture.
+**The Future of Human-AI Collaboration in Software Development**
 
-### 🏗️ **Core Architecture**
+*Orchestrate 60+ specialized AI agents through an intuitive web interface designed for humans who want to harness the power of AI without complexity*
 
-- **MCP Server**: FastMCP-based server with streamable HTTP transport
-- **Task Management**: Comprehensive DDD-compliant task lifecycle management
-- **Agent Orchestration**: Multi-agent coordination with role-based switching
-- **Project Management**: Hierarchical project organization with context inheritance
-- **Frontend Dashboard**: React-based monitoring and control interface
-- **Docker Infrastructure**: Multi-mode containerized deployment
+[🎯 Quick Start](#-quick-start) • [🌟 Live Demo](#-live-demo) • [🤖 Agent Gallery](#-agent-gallery) • [📚 Documentation](#-documentation) • [💬 Community](#-community)
 
-## 🚀 **Quick Start**
+</div>
 
-### Prerequisites
+---
 
-- **Python 3.8+** with virtual environment support
-- **Docker & Docker Compose** for containerized deployment
-- **Node.js 18+** for frontend development (optional)
-- **WSL2** (Windows users) or **Linux/macOS**
+## ✨ **What Makes DhafnckMCP Special?**
 
-### 🐳 **Docker Setup (Recommended)**
+🎭 **Human-First AI Orchestration** — Control 60+ specialized AI agents through a beautiful web interface  
+🧠 **Intelligent Context Management** — 4-tier hierarchy ensures AI agents never lose context between sessions  
+🔗 **MCP Protocol Native** — Built on the Model Context Protocol for seamless AI integration  
+🎯 **Visual Task Management** — See your AI agents working in real-time through our React dashboard  
+🚀 **Multi-Agent Workflows** — Chain specialized agents for complex development workflows  
+🌐 **Web-First Experience** — Designed for humans who prefer web interfaces over command lines
 
-The project includes a sophisticated Docker management system with multiple operational modes:
+## 🎯 **Perfect For Teams Who Want To...**
 
-```bash
-# Clone the repository
-git clone <repository-url>
-cd agentic-project
+- 🤝 **Collaborate with AI agents** like they're team members
+- 📊 **Visualize AI workflows** through an intuitive web dashboard  
+- 🔄 **Maintain context** across multiple AI sessions and agents
+- 🎭 **Specialize AI agents** for different development roles
+- 🌟 **Scale development** without losing quality or oversight
+- 📈 **Track progress** of both human and AI contributions
 
-# Quick start with Docker (interactive menu)
-./docker-menu.sh  # Can run from project root
-# OR
-cd docker-system && ./docker-menu.sh
+---
 
-# The menu provides multiple configuration options:
-# - PostgreSQL Local (Backend + Frontend) 
-# - Supabase Cloud (No Redis) - RECOMMENDED
-# - Supabase Cloud + Redis (Full Stack)
-# - Performance Mode for low-resource PCs
+## 🌟 **Live Demo - See It In Action**
+
+<table>
+<tr>
+<td width="50%">
+
+### 📱 **Web Dashboard**
+```
+http://localhost:3800
+```
+- 🎯 **Real-time agent activity**
+- 📊 **Visual task management** 
+- 🔄 **Context flow visualization**
+- 👥 **Multi-agent coordination**
+- 📈 **Progress tracking**
+
+</td>
+<td width="50%">
+
+### 🔧 **MCP Server**
+```
+http://localhost:8000
+```
+- 🤖 **60+ specialized AI agents**
+- 🛠️ **15+ MCP tool categories**
+- 📋 **4-tier context hierarchy**
+- 🔌 **RESTful API endpoints**
+- 🔍 **Health monitoring**
+
+</td>
+</tr>
+</table>
+
+### 🎬 **Experience Highlights**
+
+🎭 **Agent Theater** — Watch AI agents collaborate on your tasks in real-time  
+📊 **Smart Dashboards** — Beautiful visualizations of project progress and agent activity  
+🧠 **Context Streams** — See how context flows between agents and sessions  
+🎯 **One-Click Orchestration** — Deploy complex multi-agent workflows with simple clicks  
+⚡ **Instant Feedback** — Real-time updates as agents complete tasks and make decisions
+
+---
+
+## 🏗️ **Platform Architecture**
+
+<div align="center">
+
+```mermaid
+graph TD
+    A[👨‍💻 Human User] --> B[🌐 Web Dashboard<br/>React + TypeScript]
+    B --> C[🔗 MCP Server<br/>FastMCP + Python]
+    C --> D[🤖 Agent Orchestra<br/>60+ Specialized Agents]
+    C --> E[📊 4-Tier Context<br/>Global→Project→Branch→Task]
+    C --> F[🗄️ Database Layer<br/>PostgreSQL + Redis]
+    
+    D --> G[🎭 Task Planning Agent]
+    D --> H[💻 Coding Agent]
+    D --> I[🔍 Debugger Agent]
+    D --> J[🎨 UI Designer Agent]
+    D --> K[🛡️ Security Auditor]
+    D --> L[📚 Documentation Agent]
+    D --> M[🚀 And 54 More...]
+    
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style C fill:#e8f5e8
+    style D fill:#fff3e0
 ```
 
-### 🎯 **MCP Usage Examples**
+</div>
 
-#### First Steps with MCP Tools:
+### 🧩 **Core Components**
+
+- 🔗 **MCP Server**: FastMCP-based server with streamable HTTP transport and RESTful APIs
+- 🎯 **Task Management**: Comprehensive DDD-compliant lifecycle management with visual tracking
+- 🤖 **Agent Orchestration**: Multi-agent coordination with intelligent role-based switching  
+- 📋 **Project Management**: Hierarchical organization with automatic context inheritance
+- 🌐 **Web Dashboard**: React-based interface optimized for human-AI collaboration
+- 🐳 **Docker Infrastructure**: Multi-mode containerized deployment with one-click setup
+
+## 🤖 **Agent Gallery - Meet Your AI Team**
+
+<table>
+<tr>
+<td width="33%">
+
+### 🎭 **Creative & Design**
+- `@ui_designer_agent` - UI/UX design
+- `@graphic_design_agent` - Visual content
+- `@branding_agent` - Brand strategy
+- `@video_production_agent` - Media creation
+
+</td>
+<td width="33%">
+
+### 💻 **Development & Engineering**  
+- `@coding_agent` - Implementation
+- `@debugger_agent` - Bug hunting
+- `@system_architect_agent` - System design
+- `@devops_agent` - Infrastructure
+
+</td>
+<td width="33%">
+
+### 🔍 **Analysis & Planning**
+- `@task_planning_agent` - Project planning  
+- `@deep_research_agent` - Investigation
+- `@root_cause_analysis_agent` - Problem solving
+- `@uber_orchestrator_agent` - Coordination
+
+</td>
+</tr>
+<tr>
+<td width="33%">
+
+### 🛡️ **Security & Compliance**
+- `@security_auditor_agent` - Security review
+- `@compliance_scope_agent` - Regulatory
+- `@security_penetration_tester_agent` - Testing
+
+</td>
+<td width="33%">
+
+### 🧪 **Quality & Testing**
+- `@test_orchestrator_agent` - QA coordination
+- `@performance_load_tester_agent` - Performance
+- `@exploratory_tester_agent` - Exploration
+
+</td>
+<td width="33%">
+
+### 📈 **Business & Marketing**
+- `@marketing_strategy_orchestrator_agent` - Strategy
+- `@growth_hacking_idea_agent` - Growth
+- `@market_research_agent` - Research
+
+</td>
+</tr>
+</table>
+
+**🎯 Agent Highlights:**
+- **Smart Context Sharing** — Agents inherit knowledge from previous work
+- **Role Specialization** — Each agent excels in their specific domain
+- **Collaborative Workflows** — Agents work together seamlessly on complex tasks
+- **Dynamic Assignment** — System automatically selects the best agent for each task
+
+---
+
+## 🚀 **Quick Start - Get Running in 3 Minutes**
+
+### 🎯 **One-Line Setup**
+
+```bash
+# Clone → Setup → Run (that's it!)
+git clone <repository-url> && cd agentic-project && ./docker-system/docker-menu.sh
+```
+
+### 📋 **Prerequisites** 
+🐳 **Docker & Docker Compose** (that's all you need!)  
+Optional: Python 3.8+, Node.js 18+, WSL2 (Windows)
+
+### 🎬 **Interactive Docker Menu**
+
+<div align="center">
+
+```
+╔════════════════════════════════════════════════════════╗
+║             DhafnckMCP Docker Management               ║
+║                  Build System v3.0                    ║
+╚════════════════════════════════════════════════════════╝
+
+🚀 Quick Start Options
+────────────────────────────────────────────────────────
+  1) 🐘 PostgreSQL Local (Recommended for beginners)
+  2) ☁️  Supabase Cloud (Best for teams)  
+  3) ☁️🔴 Supabase + Redis (Enterprise mode)
+  P) ⚡ Performance Mode (Low-resource PCs)
+
+🛠️  Management
+────────────────────────────────────────────────────────
+  4) 📊 Show Status     5) 🛑 Stop Services
+  6) 📜 View Logs       7) 🗄️  Database Shell
+  8) 🧹 Clean System    9) 🔄 Force Rebuild
+```
+
+</div>
+
+### ⚡ **2-Minute Setup Guide**
+
+1️⃣ **Launch the menu**: `./docker-system/docker-menu.sh`  
+2️⃣ **Pick your setup**: Choose option `1` for local development  
+3️⃣ **Access your dashboard**: Open http://localhost:3800  
+4️⃣ **Start collaborating**: Your AI agents are ready to work!
+
+---
+
+## 🎯 **Your First AI Collaboration - A 5-Minute Journey**
+
+### 🎬 **Scenario**: Build a Login System with AI Agents
+
+<table>
+<tr>
+<td width="60%">
+
+#### 👨‍💻 **What You Do** (Web Dashboard)
+1. **Open dashboard** → http://localhost:3800
+2. **Create project** → "User Authentication"
+3. **Click "New Task"** → "Implement login system"
+4. **Assign agents** → Select `@task_planning_agent`
+5. **Watch magic happen** → Agents collaborate automatically
+
+</td>
+<td width="40%">
+
+#### 🤖 **What AI Agents Do** (Behind the Scenes)
+1. `@task_planning_agent` → Breaks down requirements
+2. `@system_architect_agent` → Designs architecture  
+3. `@coding_agent` → Implements code
+4. `@test_orchestrator_agent` → Creates tests
+5. `@documentation_agent` → Writes docs
+
+</td>
+</tr>
+</table>
+
+### 💡 **Power User: MCP Protocol Integration**
+
+Transform any AI tool into a collaborative agent with our MCP protocol:
+
 ```python
-# 1. Switch to appropriate agent for your task
-mcp__dhafnck_mcp_http__call_agent(name_agent="@uber_orchestrator_agent")
+# 🎭 1. Orchestrate agents through MCP
+agent = mcp__dhafnck_mcp_http__call_agent(name_agent="@task_planning_agent")
 
-# 2. Check system health
-mcp__dhafnck_mcp_http__manage_connection(action="health_check")
-
-# 3. Create or get a project
+# 📋 2. Create collaborative workspace  
 project = mcp__dhafnck_mcp_http__manage_project(
     action="create",
-    name="my-new-feature",
-    description="Implementing user authentication"
+    name="user-authentication-system",
+    description="Complete JWT-based authentication with React frontend"
 )
 
-# 4. Create a git branch (task tree)
+# 🌿 3. Set up development branch
 branch = mcp__dhafnck_mcp_http__manage_git_branch(
     action="create",
     project_id=project["project"]["id"],
-    git_branch_name="feature/auth",
-    git_branch_description="JWT authentication implementation"
+    git_branch_name="feature/auth-system",
+    git_branch_description="Authentication system implementation"
 )
 
-# 5. Create a task
+# 🎯 4. Define AI-human collaborative task
 task = mcp__dhafnck_mcp_http__manage_task(
     action="create",
     git_branch_id=branch["git_branch"]["id"],
-    title="Implement login endpoint",
-    description="Create POST /auth/login with JWT",
+    title="Build complete authentication system",
+    description="JWT backend + React frontend + tests + docs",
     priority="high"
 )
 
-# 6. Update context for knowledge sharing
+# 🧠 5. Share context across AI sessions (the magic!)
 mcp__dhafnck_mcp_http__manage_context(
     action="create",
     level="task",
     context_id=task["task"]["id"],
     git_branch_id=branch["git_branch"]["id"],
     data={
-        "technical_approach": "Using JWT with refresh tokens",
-        "dependencies": ["bcrypt", "jsonwebtoken"],
-        "api_design": {"endpoint": "/auth/login", "method": "POST"}
+        "requirements": {
+            "backend": "Node.js with JWT and bcrypt",
+            "frontend": "React with auth context",
+            "database": "User profiles and sessions",
+            "testing": "Unit + integration tests"
+        },
+        "human_preferences": {
+            "ui_framework": "Material-UI",
+            "validation": "Yup schema validation",
+            "state_management": "React Context API"
+        }
     }
 )
+
+# 🎊 Result: Agents now know your preferences and work together!
 ```
 
-#### Available Docker Configurations
+### 🌟 **The Context Magic**
 
-| Configuration | Menu Option | Description | Requirements |
-|---------------|-------------|-------------|--------------|
-| **PostgreSQL Local** | Option 1 | Local PostgreSQL database | No external dependencies |
-| **Supabase Cloud** | Option 2 ⭐ | Cloud database (Supabase) - RECOMMENDED | Requires .env with Supabase credentials |
-| **Supabase + Redis** | Option 3 | Cloud DB with Redis cache | Requires .env + Redis setup |
-| **Performance Mode** | Option P | Optimized for low-resource PCs | For systems with limited RAM/CPU |
+**🧠 Context Inheritance**: Every agent automatically knows what previous agents discovered  
+**📈 Progress Tracking**: Watch tasks evolve from idea to completion  
+**🔄 Session Continuity**: Stop and resume work - agents remember everything  
+**👥 Team Collaboration**: Multiple humans can collaborate with the same agent team
 
-### 📊 **Frontend Dashboard**
+---
 
-The project includes a comprehensive React-based dashboard:
+## 📚 **Documentation**
 
-- **Access via Docker**: http://localhost:3000 (automatic when using Docker)
-- **Backend API**: http://localhost:8000
-- **Health Check**: http://localhost:8000/health
+| Resource | Description | Link |
+|----------|-------------|------|
+| 🏗️ **Architecture Guide** | Deep dive into system design | `dhafnck_mcp_main/docs/CORE_ARCHITECTURE/` |
+| 🔧 **Development Guide** | Setup and contribution guide | `dhafnck_mcp_main/docs/DEVELOPMENT_GUIDES/` |
+| 🛠️ **Operations Manual** | Deployment and maintenance | `dhafnck_mcp_main/docs/OPERATIONS/` |
+| 🔍 **Troubleshooting** | Common issues and solutions | `dhafnck_mcp_main/docs/TROUBLESHOOTING/` |
+| ✨ **Vision System** | AI enhancement documentation | `dhafnck_mcp_main/docs/vision/` |
+
+---
+
+## 🌈 **Human-AI Collaboration Patterns**
+
+### 🔄 **Collaborative Workflows**
+
+<table>
+<tr>
+<td width="50%">
+
+#### 🎯 **Feature Development**
+```
+Human: Define requirements
+  ↓
+@task_planning_agent: Break down tasks
+  ↓  
+@system_architect_agent: Design system
+  ↓
+@coding_agent: Implement code
+  ↓
+@test_orchestrator_agent: Create tests
+  ↓
+Human: Review and approve
+```
+
+</td>
+<td width="50%">
+
+#### 🐛 **Bug Resolution**
+```
+Human: Report issue
+  ↓
+@debugger_agent: Investigate problem
+  ↓
+@root_cause_analysis_agent: Find cause
+  ↓
+@coding_agent: Implement fix
+  ↓
+@test_orchestrator_agent: Verify fix
+  ↓
+Human: Validate solution
+```
+
+</td>
+</tr>
+</table>
+
+### 🧠 **Context Intelligence**
+
+**🌐 Global Context** → Organization-wide patterns and standards  
+**📋 Project Context** → Project-specific decisions and architecture  
+**🌿 Branch Context** → Feature-specific implementation details  
+**🎯 Task Context** → Granular work progress and discoveries
+
+**The Magic**: Every AI agent automatically inherits relevant context, ensuring consistency and eliminating repetitive explanations.
+
+---
 
 ## 🛠️ **MCP Tools & Capabilities**
 
-### Core MCP Tools
+<div align="center">
 
-The platform provides 50+ MCP tools organized into functional categories:
+### **15+ Tool Categories • 50+ Individual Tools • Endless Possibilities**
 
-#### 🎯 **Task Management**
-- `mcp__dhafnck_mcp_http__manage_task`: Complete task lifecycle management
-- `mcp__dhafnck_mcp_http__manage_subtask`: Subtask creation and tracking
-- `mcp__dhafnck_mcp_http__manage_dependencies`: Task dependency management
-- `mcp__dhafnck_mcp_http__manage_git_branch`: Hierarchical task organization
+</div>
 
-#### 🤖 **Agent Orchestration**
-- `mcp__dhafnck_mcp_http__call_agent`: Dynamic agent role switching
-- `mcp__dhafnck_mcp_http__manage_agent`: Agent registration and management
-- `mcp__dhafnck_mcp_http__agent_coordination`: Multi-agent collaboration
+<table>
+<tr>
+<td width="33%">
 
-#### 📋 **Project Management**
-- `mcp__dhafnck_mcp_http__manage_project`: Project creation and management
-- `mcp__dhafnck_mcp_http__manage_git_branch`: Git branch coordination
+#### 🎯 **Task & Project Management**
+- Task lifecycle orchestration
+- Subtask creation & tracking  
+- Project hierarchy management
+- Git branch coordination
+- Dependency management
 
-#### 🔄 **Context Management**
-- `mcp__dhafnck_mcp_http__manage_context`: Unified context management with inheritance
-- `mcp__dhafnck_mcp_http__manage_delegation_queue`: Context delegation
-- `mcp__dhafnck_mcp_http__validate_context_inheritance`: Context validation
+</td>
+<td width="33%">
+
+#### 🤖 **Agent Orchestration** 
+- Dynamic agent role switching
+- Multi-agent collaboration
+- Agent registration & management
+- Workflow coordination
+- Context sharing between agents
+
+</td>
+<td width="33%">
+
+#### 🧠 **Context Intelligence**
+- 4-tier context hierarchy
+- Automatic inheritance  
+- Cross-session persistence
+- Real-time synchronization
+- Context validation
+
+</td>
+</tr>
+<tr>
+<td width="33%">
 
 #### 🛡️ **Security & Compliance**
-- `mcp__dhafnck_mcp_http__manage_compliance`: Compliance tracking
-- `mcp__dhafnck_mcp_http__validate_token`: Authentication validation
-- `mcp__dhafnck_mcp_http__manage_connection`: Connection management
+- Authentication & authorization
+- Compliance tracking
+- Security validation
+- Connection management
+- Audit logging
 
-### 🎨 **Agent Roles & Specializations**
+</td>
+<td width="33%">
 
-The platform supports 20+ specialized AI agents:
+#### 📊 **Analytics & Monitoring**
+- Performance metrics
+- Health monitoring  
+- Usage analytics
+- Progress tracking
+- System diagnostics
 
-| Agent | Role | Specialization |
-|-------|------|----------------|
-| `@uber_orchestrator_agent` | System Orchestrator | Complex task coordination |
-| `@coding_agent` | Development | Code implementation |
-| `@debugger_agent` | Debugging | Error resolution |
-| `@test_orchestrator_agent` | Testing | QA and validation |
-| `@ui_designer_agent` | Design | UI/UX development |
-| `@security_auditor_agent` | Security | Security assessment |
-| `@devops_agent` | DevOps | Infrastructure management |
-| `@documentation_agent` | Documentation | Technical writing |
-| `@deep_research_agent` | Research | Analysis and investigation |
-| `@task_planning_agent` | Planning | Project planning |
+</td>
+<td width="33%">
 
-## 🐳 **Docker Management**
+#### 🔧 **Developer Tools**
+- Rule management
+- Configuration handling
+- Debugging utilities
+- Testing frameworks
+- Documentation generation
 
-### ⚠️ **IMPORTANT: Use Docker System Menu Only**
+</td>
+</tr>
+</table>
 
-**Always use the Docker system menu (`docker-system/docker-menu.sh`) for ALL Docker operations.**  
-**DO NOT use direct docker or docker-compose commands.**
+---
 
-```bash
-# ✅ CORRECT - Use the interactive menu
-./docker-system/docker-menu.sh
+## 🚀 **Performance & Scale**
 
-# ❌ WRONG - Never use these directly:
-# docker-compose up
-# docker build
-# docker-compose -f docker-compose.yml up
-```
+<table>
+<tr>
+<td width="50%">
 
-### 📋 **Docker System Menu Guide**
-
-When you run `./docker-system/docker-menu.sh`, you'll see this interactive menu:
-
-```
-╔════════════════════════════════════════════════╗
-║        DhafnckMCP Docker Management            ║
-║           Build System v3.0                    ║
-╚════════════════════════════════════════════════╝
-
-Build Configurations
-────────────────────────────────────────────────
-  1) 🐘 PostgreSQL Local (Backend + Frontend)
-  2) ☁️  Supabase Cloud (No Redis)
-  3) ☁️🔴 Supabase Cloud + Redis (Full Stack)
-
-⚡ Performance Mode (Low-Resource PC)
-────────────────────────────────────────────────
-  P) 🚀 Start Optimized Mode (Uses less RAM/CPU)
-  M) 📊 Monitor Performance (Live stats)
-
-Management Options
-────────────────────────────────────────────────
-  4) 📊 Show Status
-  5) 🛑 Stop All Services
-  6) 📜 View Logs
-  7) 🗄️  Database Shell
-  8) 🧹 Clean Docker System
-  9) 🔄 Force Complete Rebuild (removes all images)
-  0) 🚪 Exit
-```
-
-### 🚀 **Step-by-Step Docker Setup**
-
-#### First Time Setup:
-1. Run `./docker-system/docker-menu.sh`
-2. Choose your configuration:
-   - **Option 1**: PostgreSQL Local (most common)
-   - **Option 2**: Supabase Cloud (requires .env setup)
-   - **Option 3**: Supabase + Redis (full stack)
-
-#### Daily Development:
-1. Run `./docker-system/docker-menu.sh`
-2. Select your preferred configuration (1, 2, or 3)
-3. **Note**: All builds use `--no-cache` to ensure latest code changes
-
-#### After Code Changes:
-1. Run `./docker-system/docker-menu.sh`
-2. Select **Option 9** (Force Complete Rebuild) to remove all images
-3. Then select your configuration (1, 2, or 3) to rebuild and start
-
-#### Low-Resource PC:
-1. Run `./docker-system/docker-menu.sh`
-2. Select **P** for Performance Mode (uses less RAM/CPU)
-3. Select **M** to monitor performance
-
-### 📊 **Menu Options Explained**
-
-| Option | Purpose | When to Use |
-|--------|---------|-------------|
-| **1** | PostgreSQL Local | Standard local development |
-| **2** | Supabase Cloud | Cloud database (needs .env) |
-| **3** | Supabase + Redis | Full stack with caching |
-| **P** | Performance Mode | Low-resource computers |
-| **M** | Monitor Performance | Check resource usage |
-| **4** | Show Status | Check running services |
-| **5** | Stop All Services | End work session |
-| **6** | View Logs | Debug issues |
-| **7** | Database Shell | Direct DB access |
-| **8** | Clean Docker System | Free up space |
-| **9** | Force Complete Rebuild | After major changes |
-| **0** | Exit | Leave menu |
-
-### ⚠️ **Common Mistakes to Avoid**
-
-```bash
-# ❌ DON'T use these commands:
-docker-compose up -d
-docker build -t dhafnck-mcp .
-docker-compose down
-docker ps
-docker exec -it container-name bash
-
-# ✅ ALWAYS use the menu:
-./docker-system/docker-menu.sh
-# Then select the appropriate option
-```
-
-### 🆘 **Troubleshooting Guide**
-
-**If containers won't start:**
-```bash
-./docker-system/docker-menu.sh
-# Select 5 (Stop all)
-# Select 7 (Rebuild)
-# Select 1-4 (Start in desired mode)
-```
-
-**For database issues:**
-```bash
-./docker-system/docker-menu.sh
-# Select 10 (Database operations)
-# Choose "Fix database permissions"
-```
-
-**To view logs:**
-```bash
-./docker-system/docker-menu.sh
-# Select 8 (View logs)
-```
-
-### Docker Architecture (Managed by Menu)
-
-The menu system manages these Docker configurations:
-
-#### Configuration Files:
-- **PostgreSQL Local**: `docker-compose.postgresql.yml`
-- **Supabase Cloud**: `docker-compose.supabase.yml`
-- **Redis Extension**: `docker-compose.redis.yml`
-
-#### Key Features:
-- **Automatic Port Management**: Frees ports 8000 and 3800 before starting
-- **--no-cache Builds**: Ensures latest code changes are always included
-- **Clean Build System**: Option 9 removes all images for fresh rebuild
-- **Performance Mode**: Special optimization for low-resource PCs
-- **Python Cache Cleanup**: Automatically clears `__pycache__` files
-
-## 🏗️ **Architecture Overview**
-
-### System Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Frontend Dashboard                        │
-│                 (React + TypeScript)                        │
-│                  Port: 3800                                 │
-└─────────────────────┬───────────────────────────────────────┘
-                      │ HTTP/WebSocket
-┌─────────────────────▼───────────────────────────────────────┐
-│                  MCP Server                                 │
-│              (FastMCP + Python)                             │
-│                  Port: 8000                                 │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐          │
-│  │ Task Mgmt   │ │ Agent Orch  │ │ Project Mgmt│          │
-│  │             │ │             │ │             │          │
-│  └─────────────┘ └─────────────┘ └─────────────┘          │
-└─────────────────────┬───────────────────────────────────────┘
-                      │ PostgreSQL
-┌─────────────────────▼───────────────────────────────────────┐
-│                  Database Layer                             │
-│          (PostgreSQL + Redis Cache)                        │
-│                                                             │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐          │
-│  │ Tasks       │ │ Projects    │ │ Agents      │          │
-│  │ Context     │ │ Rules       │ │ Sessions    │          │
-│  └─────────────┘ └─────────────┘ └─────────────┘          │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### DDD Architecture
-
-The platform follows Domain-Driven Design principles:
-
-```
-Interface Layer (MCP Controllers)
-    ↓
-Application Layer (Facades & Use Cases)
-    ↓
-Domain Layer (Entities & Business Logic)
-    ↓
-Infrastructure Layer (Repositories & Services)
-```
-
-## 📊 **Performance & Scaling**
-
-### Current Performance Metrics
-
-- **Scale**: 50-100 RPS (Python monolith)
+### ⚡ **Current Performance**
 - **Response Time**: <200ms average
-- **Concurrent Users**: 10-50 users
-- **Database**: PostgreSQL with Redis cache (primary), Supabase cloud option
-- **Availability**: 95%+
+- **Concurrent Users**: 10-50 users  
+- **Agent Coordination**: Real-time
+- **Context Sync**: <5ms overhead
+- **Database**: PostgreSQL + Redis
 
-### Scaling Roadmap
+</td>
+<td width="50%">
 
-| Tier | Target RPS | Architecture | Timeline | Investment |
-|------|------------|--------------|----------|------------|
-| **MVP** | 100 | Docker + PostgreSQL | Current | $0 |
-| **Tier 1** | 1K | Microservices | 3 months | $210K |
-| **Tier 2** | 10K | Service Mesh | 6 months | $580K |
-| **Tier 4** | 1M+ | Global Edge | 12 months | $2.24M |
+### 📈 **Scaling Roadmap**
+- **MVP** (Current): 100 RPS
+- **Tier 1** (Q2 2025): 1K RPS + Microservices
+- **Tier 2** (Q3 2025): 10K RPS + Service Mesh
+- **Enterprise** (Q4 2025): 1M+ RPS + Global Edge
 
-## 🔒 **Security & Authentication**
-
-### Security Features
-
-- **Token-based Authentication**: JWT with Supabase integration
-- **Rate Limiting**: Per-user and per-endpoint limits
-- **Access Control**: Role-based permissions
-- **Audit Logging**: Comprehensive security event tracking
-- **Connection Security**: TLS/SSL encryption
-
-### Authentication Flow
-
-```bash
-# Generate authentication token
-curl -X POST http://localhost:8000/auth/token
-
-# Use token in MCP calls
-mcp__dhafnck_mcp_http__validate_token(token="your-token-here")
-
-# Check authentication status
-mcp__dhafnck_mcp_http__get_auth_status()
-```
-
-## 🧪 **Testing & Quality Assurance**
-
-### Test Categories
-
-- **Unit Tests**: Domain logic and business rules
-- **Integration Tests**: MCP tool integration
-- **E2E Tests**: Full workflow testing
-- **Performance Tests**: Load and stress testing
-- **Security Tests**: Penetration testing
-
-### Running Tests
-
-```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=src
-
-# Run E2E tests in Docker
-docker exec -it dhafnck-mcp-server pytest /app/tests/e2e
-
-# Performance testing
-python tests/performance/mcp_performance_tests.py
-```
-
-## 📈 **Monitoring & Observability**
-
-### Health Monitoring
-
-```bash
-# Server health check
-curl http://localhost:8000/health
-
-```
-
-## 🛠️ **Development Guide**
-
-### Project Structure
-
-```
-agentic-project/
-├── dhafnck_mcp_main/           # MCP server implementation
-│   ├── src/fastmcp/            # FastMCP framework
-│   │   ├── task_management/    # Task management domain
-│   │   ├── server/             # MCP server core
-│   │   └── auth/               # Authentication system
-│   ├── docker/                 # Docker configuration
-│   ├── tests/                  # Test suites
-│   └── scripts/                # Utility scripts
-├── dhafnck-frontend/           # React dashboard
-│   ├── src/                    # Frontend source
-│   ├── public/                 # Static assets
-│   └── docker/                 # Frontend Docker config
-├── docker-system/              # Docker management system
-│   ├── docker-menu.sh          # Main Docker menu script
-│   └── docker/                 # Docker configurations
-└── README.md                   # This file
-```
-
-### Development Workflow
-
-1. **Setup Environment**
-   ```bash
-   ./docker-system/docker-menu.sh
-   # Select Option 1, 2, or 3 based on your needs
-   ```
-
-2. **Make Changes**
-   - Backend: Edit files in `dhafnck_mcp_main/src/`
-   - Frontend: Edit files in `dhafnck-frontend/src/`
-   - Note: All builds use `--no-cache`, no hot reload
-
-3. **Rebuild After Changes**
-   ```bash
-   ./docker-system/docker-menu.sh
-   # Select Option 9 (Force Complete Rebuild)
-   # Then select your configuration (1, 2, or 3)
-   ```
-
-4. **Debug Issues**
-   - View logs: Option 6 in Docker menu
-   - Database shell: Option 7 in Docker menu
-   - Check container status: Option 4 in Docker menu
-
-### Contributing Guidelines
-
-1. **Code Style**: Follow PEP 8 for Python, ESLint for TypeScript
-2. **Testing**: Maintain 80%+ test coverage
-3. **Documentation**: Update README and inline docs
-4. **Security**: Follow security best practices
-5. **Performance**: Consider performance impact of changes
-
-## 🚀 **Deployment**
-
-### Production Deployment
-
-```bash
-# Use Docker menu for production
-./docker-system/docker-menu.sh
-# Select Option 1 (PostgreSQL Local) for standard deployment
-# Or Option 2/3 for cloud-based deployment
-```
-
-### Environment Configuration
-
-```bash
-# Key environment variables
-FASTMCP_TRANSPORT=streamable-http
-FASTMCP_HOST=0.0.0.0
-FASTMCP_PORT=8000
-DHAFNCK_AUTH_ENABLED=true
-SUPABASE_URL=your-supabase-url
-SUPABASE_KEY=your-supabase-key
-```
-
-### Health Checks
-
-The platform includes comprehensive health monitoring:
-
-```bash
-# Use Docker menu for all health checks
-./docker-system/docker-menu.sh
-
-# Option 4: Show Status (container health)
-# Option 6: View Logs (application logs)
-# Option 7: Database Shell (direct DB access)
-
-# Quick health check via API
-curl http://localhost:8000/health
-```
-
-## 📞 **Support & Troubleshooting**
-
-### Common Issues
-
-1. **Port Conflicts**: Change ports in docker-compose files
-2. **Database Permissions**: Use "Fix Database Permissions" in Docker menu
-3. **Memory Issues**: Increase Docker memory allocation
-4. **SSL Errors**: Check network configuration and certificates
-
-### Troubleshooting Tools
-
-- **MCP Inspector**: Debug MCP server communication
-- **Container Logs**: Real-time log monitoring
-- **Health Endpoints**: System status validation
-- **Database Tools**: Direct database access and repair
-
-### Getting Help
-
-- **Documentation**: Check `/docs` directory for detailed guides
-- **Logs**: Use Docker menu to view real-time logs
-- **Community**: Join our Discord/Slack channels
-- **Issues**: Report bugs on GitHub issues
-
-## 🎯 **Roadmap**
-
-### Current Phase: Production NOT Ready MVP
-
-- ✅ **Core MCP Tools**: 50+ tools implemented
-- ✅ **Docker Infrastructure**: Multi-mode deployment
-- ✅ **Agent Orchestration**: 20+ specialized agents
-- ✅ **Frontend Dashboard**: React-based monitoring
-- ❌ **Security Framework**: Authentication and authorization
-
-### Next Phase: Scaling (Q2 2025)
-
-- 🎯 **Microservices**: Break monolith into services
-- 🎯 **Kubernetes**: Container orchestration
-- 🎯 **API Gateway**: Centralized API management
-- 🎯 **Monitoring**: Prometheus + Grafana
-- 🎯 **CI/CD**: Automated deployment pipelines
-
-### Future Phase: Enterprise (Q3-Q4 2025)
-
-- 🔮 **Global CDN**: Edge deployment
-- 🔮 **Auto-scaling**: Dynamic resource allocation
-- 🔮 **AI Enhancement**: ML-powered optimization
-- 🔮 **Enterprise Integration**: SSO and compliance
-- 🔮 **Multi-tenant**: SaaS deployment model
-
-## 📄 **License**
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🤝 **Contributing**
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details on how to get started.
+</td>
+</tr>
+</table>
 
 ---
 
-**Last Updated**: 2025-01-15  
-**Version**: 0.0.1beta  
-**Status**: Production Not Ready MVP  
-**Next Milestone**: Microservices Architecture (Q2 2025)
+## 💬 **Community**
+
+<div align="center">
+
+### **Join the Human-AI Collaboration Revolution**
+
+🌟 **Star us on GitHub** • 🐛 **Report Issues** • 💡 **Suggest Features** • 📚 **Contribute Docs**
+
+[**GitHub Issues**](https://github.com/dhafnck/dhafnck_mcp/issues) • [**Discussions**](https://github.com/dhafnck/dhafnck_mcp/discussions) • [**Contributing Guide**](CONTRIBUTING.md)
+
+</div>
 
 ---
 
-### 🔗 **Quick Links**
+## 🎉 **Why DhafnckMCP Will Transform Your Development**
 
-- **Frontend Dashboard**: http://localhost:3800
-- **MCP Server**: http://localhost:8000
-- **Health Check**: http://localhost:8000/health  
-- **Docker Management**: `./docker-system/docker-menu.sh`
+<div align="center">
 
-### 📊 **Key Metrics**
+### **Stop Fighting AI Tools. Start Collaborating With Them.**
 
-- **MCP Tools**: 50+ implemented
-- **Agent Roles**: 20+ specialized agents
-- **Docker Modes**: 4 operational modes
-- **Test Coverage**: 80%+ across all components
-- **Performance**: 100 RPS current, 1M+ RPS target
+</div>
+
+<table>
+<tr>
+<td width="50%">
+
+#### 😫 **Before DhafnckMCP**
+- Switching between multiple AI tools
+- Losing context between sessions  
+- Repeating the same explanations
+- Managing complex prompts manually
+- No visibility into AI work progress
+- Isolated AI interactions
+
+</td>
+<td width="50%">
+
+#### 🚀 **With DhafnckMCP**
+- One platform, 60+ specialized agents
+- Persistent context across all sessions
+- Agents remember your preferences  
+- Visual dashboard shows everything
+- Track AI work like team members
+- Collaborative AI workflows
+
+</td>
+</tr>
+</table>
+
+### 🎯 **The DhafnckMCP Promise**
+
+> **"What if working with AI felt as natural as working with your best teammate?"**
+
+✅ **Context that Never Dies** — Agents remember everything, forever  
+✅ **Visual AI Collaboration** — See your AI team working in real-time  
+✅ **Specialized AI Experts** — 60+ agents, each mastering their craft  
+✅ **Human-First Design** — Built for people who love web interfaces  
+✅ **Enterprise Ready** — Scales from solo dev to global teams
+
+---
+
+<div align="center">
+
+## 🌟 **Ready to Experience the Future?**
+
+### Get started in 3 minutes and transform how you collaborate with AI
+
+```bash
+git clone <repository-url> && cd agentic-project && ./docker-system/docker-menu.sh
+```
+
+**Then visit:** http://localhost:3800 **and watch the magic happen** ✨
+
+</div>
+
+---
+
+<div align="center">
+
+**DhafnckMCP v0.0.2** • **Production NOT Ready** • **Built with ❤️ for Human-AI Collaboration**
+
+</div>

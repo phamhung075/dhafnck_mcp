@@ -78,13 +78,8 @@ class TaskManagementLogger:
             
         # Set up log directory
         if log_dir is None:
-            # Check if running in Docker container
-            if os.path.exists("/.dockerenv") or os.environ.get("DOCKER_CONTAINER"):
-                # In Docker, use /data/logs which is writable
-                log_dir = os.environ.get("LOG_DIR", "/data/logs")
-            else:
-                # On host, use local logs directory
-                log_dir = os.environ.get("LOG_DIR", "logs")
+            from ....dual_mode_config import dual_mode_config
+            log_dir = str(dual_mode_config.get_logs_directory())
         
         log_path = Path(log_dir)
         try:

@@ -50,8 +50,62 @@ class TestGitBranchFilteringIntegration:
         )
         self.facade = self.facade_factory.create_task_facade()
         
+        # Create project and git branches first
+        self._create_project_and_branches()
+        
         # Create test data in the database
         self._create_test_data()
+    
+    def _create_project_and_branches(self):
+        """Create project and git branches in the database."""
+        from fastmcp.task_management.infrastructure.database.models import Project, ProjectGitBranch
+        from fastmcp.task_management.infrastructure.database.database_config import SessionLocal
+        
+        # Create a database session
+        session = SessionLocal()
+        try:
+            # Create the project
+            project = Project(
+                id=self.project_id,
+                name=f"Test Project {self.project_id[:8]}",
+                description="Integration test project",
+                user_id=self.user_id
+            )
+            session.add(project)
+            
+            # Create git branch A
+            branch_a = ProjectGitBranch(
+                id=self.branch_a_id,
+                project_id=self.project_id,
+                git_branch_name=f"branch-a-{self.branch_a_id[:8]}",
+                git_branch_description="Test branch A",
+                user_id=self.user_id
+            )
+            session.add(branch_a)
+            
+            # Create git branch B
+            branch_b = ProjectGitBranch(
+                id=self.branch_b_id,
+                project_id=self.project_id,
+                git_branch_name=f"branch-b-{self.branch_b_id[:8]}",
+                git_branch_description="Test branch B",
+                user_id=self.user_id
+            )
+            session.add(branch_b)
+            
+            # Commit the changes
+            session.commit()
+            
+            logger.info(f"Created project: {self.project_id}")
+            logger.info(f"Created git branch A: {self.branch_a_id}")
+            logger.info(f"Created git branch B: {self.branch_b_id}")
+            
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Failed to create project and branches: {e}")
+            raise
+        finally:
+            session.close()
     
     def _create_test_data(self):
         """Create test tasks in different branches."""
@@ -95,20 +149,43 @@ class TestGitBranchFilteringIntegration:
         self.task_b1 = self.facade.create_task(self.task_b1_request)
         self.task_b2 = self.facade.create_task(self.task_b2_request)
         
+        # Debug: Check what was actually returned
+        logger.info(f"Debug - Task A1 response type: {type(self.task_a1)}")
+        logger.info(f"Debug - Task A1 response: {self.task_a1}")
+        
+        # Check if creation was successful
+        if not self.task_a1.get('success', False):
+            raise RuntimeError(f"Failed to create task A1: {self.task_a1.get('error', 'Unknown error')}")
+        if not self.task_a2.get('success', False):
+            raise RuntimeError(f"Failed to create task A2: {self.task_a2.get('error', 'Unknown error')}")
+        if not self.task_b1.get('success', False):
+            raise RuntimeError(f"Failed to create task B1: {self.task_b1.get('error', 'Unknown error')}")
+        if not self.task_b2.get('success', False):
+            raise RuntimeError(f"Failed to create task B2: {self.task_b2.get('error', 'Unknown error')}")
+        
         logger.info(f"Created test data:")
         logger.info(f"  Branch A ({self.branch_a_id}): 2 tasks")
-        logger.info(f"    Task A1 ID: {self.task_a1.task['id']}")
-        logger.info(f"    Task A2 ID: {self.task_a2.task['id']}")
+        if 'task' in self.task_a1:
+            logger.info(f"    Task A1 ID: {self.task_a1['task']['id']}")
+            logger.info(f"    Task A2 ID: {self.task_a2['task']['id']}")
+        else:
+            logger.info(f"    Task A1 keys: {self.task_a1.keys()}")
+            logger.info(f"    Task A2 keys: {self.task_a2.keys()}")
         logger.info(f"  Branch B ({self.branch_b_id}): 2 tasks")
-        logger.info(f"    Task B1 ID: {self.task_b1.task['id']}")
-        logger.info(f"    Task B2 ID: {self.task_b2.task['id']}")
+        if 'task' in self.task_b1:
+            logger.info(f"    Task B1 ID: {self.task_b1['task']['id']}")
+            logger.info(f"    Task B2 ID: {self.task_b2['task']['id']}")
+        else:
+            logger.info(f"    Task B1 keys: {self.task_b1.keys()}")
+            logger.info(f"    Task B2 keys: {self.task_b2.keys()}")
         
         # Debug: Verify tasks were created with correct git_branch_id
         logger.info(f"Task creation verification:")
-        logger.info(f"  Task A1 git_branch_id: {self.task_a1.task.get('git_branch_id', 'MISSING')}")
-        logger.info(f"  Task A2 git_branch_id: {self.task_a2.task.get('git_branch_id', 'MISSING')}")
-        logger.info(f"  Task B1 git_branch_id: {self.task_b1.task.get('git_branch_id', 'MISSING')}")
-        logger.info(f"  Task B2 git_branch_id: {self.task_b2.task.get('git_branch_id', 'MISSING')}")
+        if 'task' in self.task_a1:
+            logger.info(f"  Task A1 git_branch_id: {self.task_a1['task'].get('git_branch_id', 'MISSING')}")
+            logger.info(f"  Task A2 git_branch_id: {self.task_a2['task'].get('git_branch_id', 'MISSING')}")
+            logger.info(f"  Task B1 git_branch_id: {self.task_b1['task'].get('git_branch_id', 'MISSING')}")
+            logger.info(f"  Task B2 git_branch_id: {self.task_b2['task'].get('git_branch_id', 'MISSING')}")
     
     def test_list_tasks_filters_by_branch_a(self):
         """Test that listing tasks for branch A returns only branch A tasks."""

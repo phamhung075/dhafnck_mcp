@@ -89,6 +89,10 @@ class DualModeConfig:
     
     def get_logs_directory(self) -> Path:
         """Get logs directory"""
+        # Check for environment variable override first
+        if "LOG_DIR" in os.environ:
+            return Path(os.environ["LOG_DIR"])
+        
         if self.runtime_mode == "http":
             return Path("/app/logs")
         else:

@@ -30,55 +30,68 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <header className="theme-nav px-4 py-3 shadow-sm transition-theme">
+    <header className="theme-nav px-6 py-4 shadow-lg backdrop-blur-xl bg-surface/95 border-b border-surface-border transition-theme">
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Link to="/dashboard" className="flex items-center space-x-2">
-            <h1 className="text-2xl font-bold text-base-primary">DhafnckMCP</h1>
+        <div className="flex items-center space-x-6">
+          <Link to="/dashboard" className="flex items-center space-x-3 group">
+            <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center shadow-lg">
+              <span className="text-white font-bold text-lg">D</span>
+            </div>
+            <div className="flex flex-col">
+              <h1 className="text-2xl font-bold text-base-primary group-hover:text-primary transition-colors">DhafnckMCP</h1>
+              <span className="text-xs text-base-tertiary -mt-1">AI Orchestration Platform</span>
+            </div>
           </Link>
-          <span className="text-sm text-base-secondary">Multi-Project AI Orchestration Platform</span>
         </div>
         
         {user ? (
           <div className="flex items-center space-x-4">
-            {/* Navigation Links */}
-            <nav className="hidden md:flex items-center space-x-4">
+            {/* Modern Navigation Links */}
+            <nav className="hidden md:flex items-center space-x-2">
               <Link 
                 to="/dashboard" 
-                className="theme-nav-item transition-colors"
+                className="flex items-center space-x-2 px-4 py-2 rounded-xl theme-nav-item transition-all duration-200 hover:bg-primary/10 hover:text-primary"
               >
                 <Home className="h-5 w-5" />
+                <span className="font-medium">Dashboard</span>
               </Link>
               <Link 
                 to="/tokens" 
-                className="theme-nav-item transition-colors"
+                className="flex items-center space-x-2 px-4 py-2 rounded-xl theme-nav-item transition-all duration-200 hover:bg-primary/10 hover:text-primary"
               >
                 <Key className="h-5 w-5" />
+                <span className="font-medium">Tokens</span>
               </Link>
               <Link 
                 to="/profile" 
-                className="theme-nav-item transition-colors"
+                className="flex items-center space-x-2 px-4 py-2 rounded-xl theme-nav-item transition-all duration-200 hover:bg-primary/10 hover:text-primary"
               >
                 <Settings className="h-5 w-5" />
+                <span className="font-medium">Settings</span>
               </Link>
             </nav>
 
             {/* Theme Toggle */}
             <ThemeToggle />
 
-            {/* User Dropdown */}
+            {/* Modern User Dropdown */}
             <div className="relative">
               <button
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-background-hover transition-colors"
+                className="flex items-center space-x-3 px-4 py-2 rounded-2xl hover:bg-primary/10 transition-all duration-200 border border-surface-border hover:border-primary/20"
               >
-                <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-semibold">
+                <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white text-sm font-bold shadow-lg">
                   {getInitials(user.username)}
                 </div>
-                <span className="hidden sm:block text-sm font-medium text-base-primary">
-                  {user.username}
-                </span>
-                <ChevronDown className="h-4 w-4 text-base-secondary" />
+                <div className="hidden sm:flex flex-col items-start">
+                  <span className="text-sm font-semibold text-base-primary">
+                    {user.username}
+                  </span>
+                  <span className="text-xs text-base-tertiary">
+                    {user.email?.split('@')[0]}
+                  </span>
+                </div>
+                <ChevronDown className="h-4 w-4 text-base-secondary transition-transform duration-200" />
               </button>
 
               {/* Dropdown Menu */}
@@ -88,49 +101,58 @@ export const Header: React.FC = () => {
                     className="fixed inset-0 z-10" 
                     onClick={() => setDropdownOpen(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-56 bg-surface rounded-lg shadow-lg border border-surface-border z-20">
-                    <div className="p-3 border-b border-surface-border">
-                      <p className="text-sm font-medium text-base-primary">
-                        {user.username}
-                      </p>
-                      <p className="text-xs text-base-tertiary mt-1">
-                        {user.email}
-                      </p>
+                  <div className="absolute right-0 mt-3 w-64 bg-surface/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-surface-border-hover z-20">
+                    <div className="p-4 border-b border-surface-border">
+                      <div className="flex items-center space-x-3">
+                        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white text-lg font-bold shadow-lg">
+                          {getInitials(user.username)}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-base-primary">
+                            {user.username}
+                          </p>
+                          <p className="text-xs text-base-tertiary mt-1">
+                            {user.email}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                     
-                    <div className="p-2">
+                    <div className="p-3 space-y-1">
                       <Link
                         to="/profile"
                         onClick={() => setDropdownOpen(false)}
-                        className="flex items-center space-x-2 px-3 py-2 text-sm text-base-primary hover:bg-background-hover rounded-md transition-colors"
+                        className="flex items-center space-x-3 px-4 py-3 text-sm font-medium text-base-primary hover:bg-primary/5 hover:text-primary rounded-xl transition-all duration-200"
                       >
-                        <User className="h-4 w-4" />
-                        <span>Profile</span>
+                        <User className="h-5 w-5" />
+                        <span>Profile Settings</span>
                       </Link>
                       
                       <Link
                         to="/tokens"
                         onClick={() => setDropdownOpen(false)}
-                        className="flex items-center space-x-2 px-3 py-2 text-sm text-base-primary hover:bg-background-hover rounded-md transition-colors"
+                        className="flex items-center space-x-3 px-4 py-3 text-sm font-medium text-base-primary hover:bg-primary/5 hover:text-primary rounded-xl transition-all duration-200"
                       >
-                        <Key className="h-4 w-4" />
+                        <Key className="h-5 w-5" />
                         <span>API Tokens</span>
                       </Link>
                       
                       <Link
                         to="/dashboard"
                         onClick={() => setDropdownOpen(false)}
-                        className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors md:hidden"
+                        className="flex items-center space-x-3 px-4 py-3 text-sm font-medium text-base-primary hover:bg-primary/5 hover:text-primary rounded-xl transition-all duration-200 md:hidden"
                       >
-                        <Home className="h-4 w-4" />
+                        <Home className="h-5 w-5" />
                         <span>Dashboard</span>
                       </Link>
                       
+                      <div className="h-px bg-surface-border my-2"></div>
+                      
                       <button
                         onClick={handleLogout}
-                        className="flex items-center space-x-2 px-3 py-2 text-sm text-error hover:bg-error-light rounded-md transition-colors w-full text-left"
+                        className="flex items-center space-x-3 px-4 py-3 text-sm font-medium text-error hover:bg-error/5 hover:text-error-dark rounded-xl transition-all duration-200 w-full text-left"
                       >
-                        <LogOut className="h-4 w-4" />
+                        <LogOut className="h-5 w-5" />
                         <span>Sign Out</span>
                       </button>
                     </div>

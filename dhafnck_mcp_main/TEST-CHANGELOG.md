@@ -1,5 +1,44 @@
 # Test Suite Changelog
 
+## [2025-08-30] - Git Branch Zero Tasks Deletion Bug Fix and TDD Tests
+
+### Added - TDD Test Suite for Git Branch Deletion
+- **git_branch_zero_tasks_deletion_test.py** - Comprehensive TDD unit test suite for git branch deletion functionality
+  - 11 test cases covering empty branch deletion, business rules, and edge cases
+  - Tests controller-level deletion workflow with mocked facades
+  - Verifies that branch deletion should not depend on task count
+  - Establishes business requirements that empty branches should be deletable
+- **git_branch_zero_tasks_deletion_integration_test.py** - Full-stack integration test suite
+  - Tests complete deletion workflow from controller to database
+  - Creates actual test data in database with 0-task and multi-task branches
+  - Verifies branches are actually deleted from database after operation
+  - Includes comprehensive lifecycle testing (create → verify → delete)
+
+### Fixed - Critical Git Branch Deletion Bug  
+- **GitBranchApplicationFacade.delete_git_branch() method signature mismatch**:
+  - **Root Cause**: Method only accepted `git_branch_id` parameter but controller was passing both `project_id` and `git_branch_id`
+  - **Error**: `got an unexpected keyword argument 'project_id'` causing ALL branch deletions to fail
+  - **Fix**: Updated method signature to accept `delete_git_branch(self, git_branch_id: str, project_id: Optional[str] = None)`
+  - **Impact**: Users can now successfully delete git branches with 0 tasks (and any other branches)
+
+### Fixed - Service Layer Parameter Passing
+- **GitBranchService.delete_git_branch() calls**: Updated facade to pass both `project_id` and `git_branch_id` parameters to service layer
+- **Backward compatibility**: Made `project_id` optional with fallback to instance `_project_id`
+
+### Impact
+- **BUG RESOLUTION**: Users can now delete empty git branches via the sidebar delete button
+- **USER EXPERIENCE**: No more confusing failures when attempting to delete branches with 0 tasks  
+- **TEST COVERAGE**: Added comprehensive TDD test suite (18 new tests) covering deletion workflows
+- **TECHNICAL DEBT**: Fixed method signature inconsistency between controller and facade layers
+- **VERIFICATION**: Integration tests confirm branches are actually removed from database
+
+### TDD Methodology Applied
+1. **Investigation**: Analyzed existing deletion flow to understand the bug
+2. **Test Creation**: Created failing tests that exposed the method signature mismatch
+3. **Bug Identification**: TDD tests revealed the actual issue wasn't task-count validation but parameter mismatch
+4. **Implementation**: Fixed the facade method signature and parameter passing
+5. **Verification**: All tests now pass, confirming the fix works for both empty and non-empty branches
+
 ## [2025-08-26] - Test Suite Cleanup and Maintenance
 
 ### Removed - Deprecated Test Files

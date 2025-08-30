@@ -206,7 +206,7 @@ class GitBranchApplicationFacade:
                 "error_code": "GET_FAILED"
             }
 
-    def delete_git_branch(self, git_branch_id: str) -> Dict[str, Any]:
+    def delete_git_branch(self, git_branch_id: str, project_id: Optional[str] = None) -> Dict[str, Any]:
         """Delete a git branch - synchronous version for MCP controller."""
         try:
             import asyncio
@@ -227,7 +227,7 @@ class GitBranchApplicationFacade:
                 def run_in_thread():
                     nonlocal result, exception
                     try:
-                        result = asyncio.run(self._git_branch_service.delete_git_branch(git_branch_id))
+                        result = asyncio.run(self._git_branch_service.delete_git_branch(project_id or self._project_id, git_branch_id))
                     except Exception as e:
                         exception = e
                 
@@ -243,7 +243,7 @@ class GitBranchApplicationFacade:
                 
             except RuntimeError:
                 # No event loop is running, use asyncio.run()
-                result = asyncio.run(self._git_branch_service.delete_git_branch(git_branch_id))
+                result = asyncio.run(self._git_branch_service.delete_git_branch(project_id or self._project_id, git_branch_id))
                 logger.info(f"Git branch deletion result: {result}")
                 return result
                 
