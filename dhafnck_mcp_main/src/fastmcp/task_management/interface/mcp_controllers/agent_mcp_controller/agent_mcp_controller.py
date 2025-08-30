@@ -142,11 +142,8 @@ class AgentMCPController:
                     current_user_id = str(context_user_obj) if context_user_obj else None
                     logger.warning(f"⚠️ Agent Controller: Fallback string conversion: {current_user_id}")
             
-            if current_user_id:
-                validated_user_id = validate_user_id(current_user_id, "Agent facade creation")
-            else:
-                # NO FALLBACKS ALLOWED - user authentication is required
-                raise UserAuthenticationRequiredError("Agent facade creation")
+            # Let validate_user_id handle MVP mode fallbacks
+            validated_user_id = validate_user_id(current_user_id, "Agent facade creation")
         
         # Pass user_id to facade factory for proper data isolation
         return self._agent_facade_factory.create_agent_facade(project_id=project_id, user_id=validated_user_id)

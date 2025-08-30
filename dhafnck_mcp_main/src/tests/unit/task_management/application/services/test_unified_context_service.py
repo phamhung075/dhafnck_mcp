@@ -6,7 +6,7 @@ from datetime import datetime
 import uuid
 import json
 
-from fastmcp.task_management.application.services.unified_context_service import (
+from fastmcp.task_management.application.orchestrators.services.unified_context_service import (
     UnifiedContextService
 )
 
@@ -41,7 +41,7 @@ class TestUnifiedContextService:
     @pytest.fixture
     def service(self, mock_repositories, mock_cache_service, mock_delegation_service):
         """Create service instance with mocks"""
-        with patch('fastmcp.task_management.application.services.unified_context_service.logger'):
+        with patch('fastmcp.task_management.application.orchestrators.services.unified_context_service.logger'):
             service = UnifiedContextService(
                 global_context_repository=mock_repositories['global_context'],
                 project_context_repository=mock_repositories['project_context'],

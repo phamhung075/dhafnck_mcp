@@ -42,7 +42,7 @@ class TestGitBranchFacadeFactory:
 
     def test_create_git_branch_facade_new(self, factory):
         """Test creating a new git branch facade."""
-        with patch('fastmcp.task_management.application.services.git_branch_service.GitBranchService') as mock_service_class:
+        with patch('fastmcp.task_management.application.orchestrators.services.git_branch_service.GitBranchService') as mock_service_class:
             mock_service = MagicMock()
             mock_service_class.return_value = mock_service
             
@@ -64,7 +64,7 @@ class TestGitBranchFacadeFactory:
     def test_create_git_branch_facade_cached(self, factory):
         """Test returning cached git branch facade."""
         # Create first facade
-        with patch('fastmcp.task_management.application.services.git_branch_service.GitBranchService') as mock_service_class:
+        with patch('fastmcp.task_management.application.orchestrators.services.git_branch_service.GitBranchService') as mock_service_class:
             mock_service = MagicMock()
             mock_service_class.return_value = mock_service
             
@@ -87,7 +87,7 @@ class TestGitBranchFacadeFactory:
 
     def test_create_git_branch_facade_different_users(self, factory):
         """Test creating facades for different users."""
-        with patch('fastmcp.task_management.application.services.git_branch_service.GitBranchService') as mock_service_class:
+        with patch('fastmcp.task_management.application.orchestrators.services.git_branch_service.GitBranchService') as mock_service_class:
             mock_service1 = MagicMock()
             mock_service2 = MagicMock()
             mock_service_class.side_effect = [mock_service1, mock_service2]
@@ -114,7 +114,7 @@ class TestGitBranchFacadeFactory:
 
     def test_create_git_branch_facade_no_user(self, factory):
         """Test creating facade without user_id."""
-        with patch('fastmcp.task_management.application.services.git_branch_service.GitBranchService') as mock_service_class:
+        with patch('fastmcp.task_management.application.orchestrators.services.git_branch_service.GitBranchService') as mock_service_class:
             mock_service = MagicMock()
             mock_service_class.return_value = mock_service
             
@@ -131,7 +131,7 @@ class TestGitBranchFacadeFactory:
 
     def test_create_git_branch_facade_default_project(self, factory):
         """Test creating facade with default project_id."""
-        with patch('fastmcp.task_management.application.services.git_branch_service.GitBranchService') as mock_service_class:
+        with patch('fastmcp.task_management.application.orchestrators.services.git_branch_service.GitBranchService') as mock_service_class:
             mock_service = MagicMock()
             mock_service_class.return_value = mock_service
             
@@ -143,7 +143,7 @@ class TestGitBranchFacadeFactory:
 
     def test_clear_cache(self, factory):
         """Test clearing the facades cache."""
-        with patch('fastmcp.task_management.application.services.git_branch_service.GitBranchService'):
+        with patch('fastmcp.task_management.application.orchestrators.services.git_branch_service.GitBranchService'):
             # Create some facades
             facade1 = factory.create_git_branch_facade(project_id="project1")
             facade2 = factory.create_git_branch_facade(project_id="project2")
@@ -159,7 +159,7 @@ class TestGitBranchFacadeFactory:
 
     def test_get_cached_facade_exists(self, factory):
         """Test getting a cached facade that exists."""
-        with patch('fastmcp.task_management.application.services.git_branch_service.GitBranchService'):
+        with patch('fastmcp.task_management.application.orchestrators.services.git_branch_service.GitBranchService'):
             # Create a facade
             created_facade = factory.create_git_branch_facade(project_id="test-project")
             
@@ -179,7 +179,7 @@ class TestGitBranchFacadeFactory:
 
     def test_facade_isolation_by_user(self, factory):
         """Test that facades are properly isolated by user."""
-        with patch('fastmcp.task_management.application.services.git_branch_service.GitBranchService') as mock_service_class:
+        with patch('fastmcp.task_management.application.orchestrators.services.git_branch_service.GitBranchService') as mock_service_class:
             # Create facades for same project but different users
             facade_user1 = factory.create_git_branch_facade(
                 project_id="shared-project",
@@ -203,7 +203,7 @@ class TestGitBranchFacadeFactory:
         # Set logging level for the specific logger
         caplog.set_level(logging.DEBUG, logger="fastmcp.task_management.application.factories.git_branch_facade_factory")
         
-        with patch('fastmcp.task_management.application.services.git_branch_service.GitBranchService'):
+        with patch('fastmcp.task_management.application.orchestrators.services.git_branch_service.GitBranchService'):
             # Create new facade
             factory.create_git_branch_facade(project_id="log-test", user_id="user1")
             assert "Created new git branch facade for log-test:user1" in caplog.text

@@ -262,7 +262,7 @@ class TestAuthServiceLogin:
         """Test login fails with locked account"""
         # Arrange
         sample_user.failed_login_attempts = 10
-        sample_user.lockout_until = datetime.now(timezone.utc) + timedelta(minutes=30)
+        sample_user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=30)
         mock_user_repository.get_by_email.return_value = sample_user
         
         # Act

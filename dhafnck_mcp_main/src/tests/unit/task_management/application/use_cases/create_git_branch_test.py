@@ -119,7 +119,7 @@ class TestCreateGitBranchUseCaseExecute:
         mock_project_entity.create_git_branch.return_value = mock_git_branch_entity
         
         # Mock context creation dependencies
-        with patch('fastmcp.task_management.application.factories.unified_context_facade_factory.UnifiedContextFacadeFactory') as mock_factory_class:
+        with patch('fastmcp.task_management.infrastructure.factories.unified_context_facade_factory.UnifiedContextFacadeFactory') as mock_factory_class:
             with patch('fastmcp.config.auth_config.AuthConfig') as mock_auth_config:
                 with patch('fastmcp.task_management.domain.constants.validate_user_id') as mock_validate_user:
                     # Setup authentication
@@ -201,7 +201,7 @@ class TestCreateGitBranchUseCaseExecute:
         mock_project_entity.create_git_branch.return_value = mock_git_branch_entity
         
         # Mock context creation dependencies
-        with patch('fastmcp.task_management.application.factories.unified_context_facade_factory.UnifiedContextFacadeFactory') as mock_factory_class:
+        with patch('fastmcp.task_management.infrastructure.factories.unified_context_facade_factory.UnifiedContextFacadeFactory') as mock_factory_class:
             with patch('fastmcp.config.auth_config.AuthConfig') as mock_auth_config:
                 # Setup authentication
                 mock_auth_config.is_default_user_allowed.return_value = True
@@ -242,7 +242,7 @@ class TestCreateGitBranchUseCaseExecute:
         mock_project_entity.create_git_branch.return_value = mock_git_branch_entity
         
         # Mock context creation dependencies
-        with patch('fastmcp.task_management.application.factories.unified_context_facade_factory.UnifiedContextFacadeFactory') as mock_factory_class:
+        with patch('fastmcp.task_management.infrastructure.factories.unified_context_facade_factory.UnifiedContextFacadeFactory') as mock_factory_class:
             with patch('fastmcp.config.auth_config.AuthConfig') as mock_auth_config:
                 # Setup authentication
                 mock_auth_config.is_default_user_allowed.return_value = True
@@ -314,7 +314,7 @@ class TestCreateGitBranchUseCaseContextCreation:
         mock_project_entity.create_git_branch.return_value = mock_git_branch_entity
         
         # Mock context creation dependencies
-        with patch('fastmcp.task_management.application.factories.unified_context_facade_factory.UnifiedContextFacadeFactory') as mock_factory_class:
+        with patch('fastmcp.task_management.infrastructure.factories.unified_context_facade_factory.UnifiedContextFacadeFactory') as mock_factory_class:
             with patch('fastmcp.config.auth_config.AuthConfig') as mock_auth_config:
                 with patch('fastmcp.task_management.domain.constants.validate_user_id') as mock_validate_user:
                     # Setup authentication
@@ -369,7 +369,7 @@ class TestCreateGitBranchUseCaseContextCreation:
         mock_project_entity.create_git_branch.return_value = mock_git_branch_entity
         
         # Mock context creation dependencies
-        with patch('fastmcp.task_management.application.factories.unified_context_facade_factory.UnifiedContextFacadeFactory') as mock_factory_class:
+        with patch('fastmcp.task_management.infrastructure.factories.unified_context_facade_factory.UnifiedContextFacadeFactory') as mock_factory_class:
             with patch('fastmcp.config.auth_config.AuthConfig') as mock_auth_config:
                 with patch('fastmcp.task_management.domain.constants.validate_user_id') as mock_validate_user:
                     # Setup authentication - no default user allowed
@@ -408,7 +408,7 @@ class TestCreateGitBranchUseCaseContextCreation:
         mock_project_entity.create_git_branch.return_value = mock_git_branch_entity
         
         # Mock context creation dependencies
-        with patch('fastmcp.task_management.application.factories.unified_context_facade_factory.UnifiedContextFacadeFactory') as mock_factory_class:
+        with patch('fastmcp.task_management.infrastructure.factories.unified_context_facade_factory.UnifiedContextFacadeFactory') as mock_factory_class:
             with patch('fastmcp.config.auth_config.AuthConfig') as mock_auth_config:
                 # Setup authentication - no default user allowed and no user provided
                 mock_auth_config.is_default_user_allowed.return_value = False
@@ -439,7 +439,7 @@ class TestCreateGitBranchUseCaseContextCreation:
         mock_project_entity.create_git_branch.return_value = mock_git_branch_entity
         
         # Mock context creation dependencies
-        with patch('fastmcp.task_management.application.factories.unified_context_facade_factory.UnifiedContextFacadeFactory') as mock_factory_class:
+        with patch('fastmcp.task_management.infrastructure.factories.unified_context_facade_factory.UnifiedContextFacadeFactory') as mock_factory_class:
             with patch('fastmcp.config.auth_config.AuthConfig') as mock_auth_config:
                 # Setup authentication
                 mock_auth_config.is_default_user_allowed.return_value = True
@@ -470,7 +470,7 @@ class TestCreateGitBranchUseCaseContextCreation:
         mock_project_entity.create_git_branch.return_value = mock_git_branch_entity
         
         # Mock context creation dependencies to raise exception
-        with patch('fastmcp.task_management.application.factories.unified_context_facade_factory.UnifiedContextFacadeFactory') as mock_factory_class:
+        with patch('fastmcp.task_management.infrastructure.factories.unified_context_facade_factory.UnifiedContextFacadeFactory') as mock_factory_class:
             mock_factory_class.side_effect = Exception("Context factory error")
             
             result = await use_case.execute(
@@ -618,7 +618,7 @@ class TestCreateGitBranchUseCaseIntegration:
         mock_project.create_git_branch.return_value = mock_git_branch
         
         # Mock context creation workflow
-        with patch('fastmcp.task_management.application.factories.unified_context_facade_factory.UnifiedContextFacadeFactory') as mock_factory_class:
+        with patch('fastmcp.task_management.infrastructure.factories.unified_context_facade_factory.UnifiedContextFacadeFactory') as mock_factory_class:
             with patch('fastmcp.config.auth_config.AuthConfig') as mock_auth_config:
                 # Setup authentication
                 mock_auth_config.is_default_user_allowed.return_value = True

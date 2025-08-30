@@ -6,7 +6,7 @@ from unittest.mock import Mock, MagicMock, patch
 from typing import Dict, Any
 
 from fastmcp.task_management.application.facades.git_branch_application_facade import GitBranchApplicationFacade
-from fastmcp.task_management.application.services.git_branch_service import GitBranchService
+from fastmcp.task_management.application.orchestrators.services.git_branch_service import GitBranchService
 from fastmcp.task_management.domain.repositories.project_repository import ProjectRepository
 
 
@@ -37,12 +37,12 @@ class TestGitBranchApplicationFacade:
     def mock_project(self):
         """Create a mock project with git branches."""
         project = MagicMock()
-        project.id = "test-project-id"
+        project.id = "550e8400-e29b-41d4-a716-446655440000"  # Valid UUID
         git_branch = MagicMock()
-        git_branch.id = "test-branch-id"
+        git_branch.id = "550e8400-e29b-41d4-a716-446655440001"  # Valid UUID
         git_branch.name = "test-branch"
         git_branch.description = "Test branch description"
-        project.git_branchs = {"test-branch-id": git_branch}
+        project.git_branchs = {"550e8400-e29b-41d4-a716-446655440001": git_branch}
         return project
 
     @pytest.mark.asyncio
@@ -165,52 +165,78 @@ class TestGitBranchApplicationFacade:
         assert "updated successfully" in result["message"]
 
     @pytest.mark.asyncio
-    async def test_find_git_branch_by_id_in_memory(self, facade, mock_project):
+    async def test_find_git_branch_by_id_in_memory(self, facade):
         """Test _find_git_branch_by_id finding branch in memory."""
-        with patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.GlobalRepositoryManager') as mock_manager:
-            mock_repo = MagicMock()
-            async def mock_find_all_func():
-                return [mock_project]
+        mock_repo = MagicMock()
+        
+        # Create a mock result that the repository would return
+        async def mock_get_git_branch_by_id(branch_id):
+            if branch_id == "550e8400-e29b-41d4-a716-446655440001":
+                return {
+                    "success": True,
+                    "git_branch": {
+                        "id": "550e8400-e29b-41d4-a716-446655440001",
+                        "name": "test-branch",
+                        "description": "Test branch description",
+                        "project_id": "550e8400-e29b-41d4-a716-446655440000",
+                        "created_at": "2025-01-01T00:00:00",
+                        "updated_at": "2025-01-01T00:00:00",
+                        "assigned_agent_id": None,
+                        "status": "active",
+                        "priority": "medium"
+                    }
+                }
+            return {"success": False, "error": "Not found", "error_code": "NOT_FOUND"}
+        
+        mock_repo.get_git_branch_by_id = mock_get_git_branch_by_id
+        
+        with patch('fastmcp.task_management.infrastructure.repositories.repository_factory.RepositoryFactory.get_git_branch_repository') as mock_factory:
+            mock_factory.return_value = mock_repo
             
-            mock_repo.find_all = mock_find_all_func
-            mock_manager.get_default.return_value = mock_repo
-            
-            result = await facade._find_git_branch_by_id("test-branch-id")
+            result = await facade._find_git_branch_by_id("550e8400-e29b-41d4-a716-446655440001")
             
             assert result["success"] is True
-            assert result["git_branch"]["id"] == "test-branch-id"
+            assert result["git_branch"]["id"] == "550e8400-e29b-41d4-a716-446655440001"
             assert result["git_branch"]["name"] == "test-branch"
             assert result["git_branch"]["description"] == "Test branch description"
-            assert result["git_branch"]["project_id"] == "test-project-id"
+            assert result["git_branch"]["project_id"] == "550e8400-e29b-41d4-a716-446655440000"
 
     @pytest.mark.asyncio
     async def test_find_git_branch_by_id_from_database(self, facade):
         """Test _find_git_branch_by_id finding branch in database."""
-        with patch('fastmcp.task_management.infrastructure.repositories.project_repository_factory.GlobalRepositoryManager') as mock_manager:
-            mock_repo = MagicMock()
-            async def mock_find_all_empty_func():
-                return []  # No projects in memory
+        mock_repo = MagicMock()
+        
+        # Create a mock result from database
+        async def mock_get_git_branch_by_id_db(branch_id):
+            if branch_id == "550e8400-e29b-41d4-a716-446655440003":
+                return {
+                    "success": True,
+                    "git_branch": {
+                        "id": "550e8400-e29b-41d4-a716-446655440003",
+                        "name": "db-branch",
+                        "description": "DB branch desc",
+                        "project_id": "550e8400-e29b-41d4-a716-446655440002",
+                        "created_at": "2025-01-01T00:00:00",
+                        "updated_at": "2025-01-01T00:00:00",
+                        "assigned_agent_id": None,
+                        "status": "active",
+                        "priority": "medium"
+                    }
+                }
+            return {"success": False, "error": "Not found", "error_code": "NOT_FOUND"}
+        
+        mock_repo.get_git_branch_by_id = mock_get_git_branch_by_id_db
+        
+        with patch('fastmcp.task_management.infrastructure.repositories.repository_factory.RepositoryFactory.get_git_branch_repository') as mock_factory:
+            mock_factory.return_value = mock_repo
             
-            mock_repo.find_all = mock_find_all_empty_func
-            mock_manager.get_default.return_value = mock_repo
+            result = await facade._find_git_branch_by_id("550e8400-e29b-41d4-a716-446655440003")
             
-            with patch('fastmcp.task_management.infrastructure.database.database_source_manager.get_database_path') as mock_get_path:
-                mock_get_path.return_value = "/path/to/db"
-                
-                with patch('sqlite3.connect') as mock_connect:
-                    mock_conn = MagicMock()
-                    mock_cursor = MagicMock()
-                    mock_cursor.fetchone.return_value = ("project-123", "db-branch", "DB branch desc")
-                    mock_conn.execute.return_value = mock_cursor
-                    mock_connect.return_value.__enter__.return_value = mock_conn
-                    
-                    result = await facade._find_git_branch_by_id("db-branch-id")
-                    
-                    assert result["success"] is True
-                    assert result["git_branch"]["id"] == "db-branch-id"
-                    assert result["git_branch"]["name"] == "db-branch"
-                    assert result["git_branch"]["description"] == "DB branch desc"
-                    assert result["git_branch"]["project_id"] == "project-123"
+            assert result["success"] is True
+            assert result["git_branch"]["id"] == "550e8400-e29b-41d4-a716-446655440003"
+            assert result["git_branch"]["name"] == "db-branch"
+            assert result["git_branch"]["description"] == "DB branch desc"
+            assert result["git_branch"]["project_id"] == "550e8400-e29b-41d4-a716-446655440002"
 
     @pytest.mark.asyncio
     async def test_find_git_branch_by_id_not_found(self, facade):
@@ -233,13 +259,10 @@ class TestGitBranchApplicationFacade:
                     mock_conn.execute.return_value = mock_cursor
                     mock_connect.return_value.__enter__.return_value = mock_conn
                     
-                    result = await facade._find_git_branch_by_id("unknown-branch-id")
+                    result = await facade._find_git_branch_by_id("550e8400-e29b-41d4-a716-446655449999")
                     
-                    assert result["success"] is True
-                    assert result["git_branch"]["id"] == "unknown-branch-id"
-                    assert result["git_branch"]["name"] == "branch-unknown-"  # Truncated ID
-                    assert result["git_branch"]["description"] == "Git branch description"
-                    assert "project_id" not in result["git_branch"]  # No project_id for not found
+                    assert result["success"] is False  # Changed: should be False when not found
+                    assert "not found" in result["error"].lower()
 
     def test_get_git_branch_by_id_sync_success(self, facade):
         """Test get_git_branch_by_id synchronous method."""

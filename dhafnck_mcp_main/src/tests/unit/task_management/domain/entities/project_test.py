@@ -18,12 +18,11 @@ import uuid
 
 from fastmcp.task_management.domain.entities.project import Project
 from fastmcp.task_management.domain.entities.git_branch import GitBranch
-from fastmcp.task_management.domain.entities.agent import Agent
+from fastmcp.task_management.domain.entities.agent import Agent, AgentCapability
 from fastmcp.task_management.domain.entities.work_session import WorkSession
 from fastmcp.task_management.domain.entities.task import Task
 from fastmcp.task_management.domain.value_objects.task_id import TaskId
 from fastmcp.task_management.domain.value_objects.task_status import TaskStatus
-from fastmcp.task_management.domain.enums.agent_capabilities import AgentCapability
 
 
 class TestProjectCreation:
@@ -257,7 +256,7 @@ class TestAgentManagement:
         agent = Agent(
             id="agent-123",
             name="Test Agent",
-            capabilities={AgentCapability.TASK_MANAGEMENT},
+            capabilities={AgentCapability.PROJECT_MANAGEMENT},
             project_id=project.id
         )
         
@@ -276,7 +275,7 @@ class TestAgentManagement:
         agent = Agent(
             id="agent-123",
             name="Test Agent",
-            capabilities={AgentCapability.TASK_MANAGEMENT},
+            capabilities={AgentCapability.PROJECT_MANAGEMENT},
             project_id=project.id
         )
         project.register_agent(agent)
@@ -312,7 +311,7 @@ class TestAgentManagement:
         agent = Agent(
             id="agent-123",
             name="Test Agent",
-            capabilities={AgentCapability.TASK_MANAGEMENT},
+            capabilities={AgentCapability.PROJECT_MANAGEMENT},
             project_id=project.id
         )
         project.register_agent(agent)
@@ -327,7 +326,7 @@ class TestAgentManagement:
         agent = Agent(
             id="agent-123",
             name="Test Agent",
-            capabilities={AgentCapability.TASK_MANAGEMENT},
+            capabilities={AgentCapability.PROJECT_MANAGEMENT},
             project_id=project.id
         )
         project.register_agent(agent)
@@ -353,13 +352,13 @@ class TestAgentManagement:
         agent1 = Agent(
             id="agent-1",
             name="Agent 1",
-            capabilities={AgentCapability.TASK_MANAGEMENT},
+            capabilities={AgentCapability.PROJECT_MANAGEMENT},
             project_id=project.id
         )
         agent2 = Agent(
             id="agent-2",
             name="Agent 2",
-            capabilities={AgentCapability.TASK_MANAGEMENT},
+            capabilities={AgentCapability.PROJECT_MANAGEMENT},
             project_id=project.id
         )
         
@@ -491,7 +490,7 @@ class TestWorkSessionManagement:
         agent = Agent(
             id="agent-123",
             name="Test Agent",
-            capabilities={AgentCapability.TASK_MANAGEMENT},
+            capabilities={AgentCapability.PROJECT_MANAGEMENT},
             project_id=project.id
         )
         project.register_agent(agent)
@@ -540,7 +539,7 @@ class TestWorkSessionManagement:
         agent = Agent(
             id="agent-123",
             name="Test Agent",
-            capabilities={AgentCapability.TASK_MANAGEMENT},
+            capabilities={AgentCapability.PROJECT_MANAGEMENT},
             project_id=project.id
         )
         project.register_agent(agent)
@@ -556,7 +555,7 @@ class TestWorkSessionManagement:
         agent = Agent(
             id="agent-123",
             name="Test Agent",
-            capabilities={AgentCapability.TASK_MANAGEMENT},
+            capabilities={AgentCapability.PROJECT_MANAGEMENT},
             project_id=project.id
         )
         project.register_agent(agent)
@@ -708,7 +707,7 @@ class TestOrchestrationStatus:
         agent = Agent(
             id="agent-123",
             name="Test Agent",
-            capabilities={AgentCapability.TASK_MANAGEMENT},
+            capabilities={AgentCapability.PROJECT_MANAGEMENT},
             project_id=project.id
         )
         project.register_agent(agent)
@@ -746,7 +745,7 @@ class TestOrchestrationStatus:
                     assert agent.id in status["agents"]
                     agent_info = status["agents"][agent.id]
                     assert agent_info["name"] == "Test Agent"
-                    assert AgentCapability.TASK_MANAGEMENT.value in agent_info["capabilities"]
+                    assert AgentCapability.PROJECT_MANAGEMENT.value in agent_info["capabilities"]
                     assert git_branch.id in agent_info["assigned_trees"]
 
 
@@ -767,7 +766,7 @@ class TestGetAvailableWork:
         agent = Agent(
             id="agent-123",
             name="Test Agent",
-            capabilities={AgentCapability.TASK_MANAGEMENT},
+            capabilities={AgentCapability.PROJECT_MANAGEMENT},
             project_id=project.id
         )
         project.register_agent(agent)
@@ -782,7 +781,7 @@ class TestGetAvailableWork:
         agent = Agent(
             id="agent-123",
             name="Test Agent",
-            capabilities={AgentCapability.TASK_MANAGEMENT},
+            capabilities={AgentCapability.PROJECT_MANAGEMENT},
             project_id=project.id
         )
         project.register_agent(agent)

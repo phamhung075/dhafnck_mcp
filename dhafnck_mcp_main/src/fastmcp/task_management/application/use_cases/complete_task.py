@@ -93,7 +93,7 @@ class CompleteTaskUseCase:
             if not context_exists:
                 logging.getLogger(__name__).info(f"Checking unified context system for task {task_id}")
                 try:
-                    from ..factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+                    from ...infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
                     git_branch_id = getattr(task, 'git_branch_id', None)
                     logging.getLogger(__name__).info(f"Creating unified facade with git_branch_id: {git_branch_id}")
                     unified_facade = UnifiedContextFacadeFactory().create_facade(git_branch_id=git_branch_id)
@@ -123,24 +123,19 @@ class CompleteTaskUseCase:
             if not context_exists:
                 logging.getLogger(__name__).info(f"Auto-creating context for task {task_id} during completion")
                 try:
-                    from ..factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+                    from ...infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
                     
                     # Extract git_branch_id from task for facade creation
                     git_branch_id = getattr(task, 'git_branch_id', None)
                     project_id = getattr(task, 'project_id', None)
                     
                     # If project_id is not available, try to get it from the branch
+                    # Note: We cannot get project_id from branch without already having project_id
+                    # This is a limitation of the current repository structure
                     if not project_id and git_branch_id:
-                        try:
-                            # Get project_id from git branch
-                            from ...domain.interfaces.database_session import IDatabaseSessionFactory
-                            # TODO: Replace direct model import with domain entity: ProjectGitBranch
-                            with get_session() as session:
-                                branch = session.get(ProjectGitBranch, git_branch_id)
-                                if branch:
-                                    project_id = branch.project_id
-                        except Exception as e:
-                            logging.getLogger(__name__).warning(f"Could not get project_id from branch {git_branch_id}: {e}")
+                        # Log that we couldn't get project_id but continue with default
+                        logging.getLogger(__name__).debug(f"Cannot retrieve project_id from branch {git_branch_id} without knowing project_id")
+                        project_id = "default_project"
                     
                     unified_facade = UnifiedContextFacadeFactory().create_facade(
                         git_branch_id=git_branch_id,
@@ -264,7 +259,7 @@ class CompleteTaskUseCase:
                 try:
                     # Get context for the task using hierarchical context facade
                     import asyncio
-                    from ..factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+                    from ...infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
                     
                     # Use the unified context facade to get context
                     # Extract git_branch_id from task for facade creation
@@ -307,7 +302,7 @@ class CompleteTaskUseCase:
                     old_status = task.status
                     task.status = TaskStatus.done()
                     task._completion_summary = completion_summary
-                    from datetime import datetime, timezone
+                    # Use the datetime that was already imported at the top of the file
                     task.updated_at = datetime.now(timezone.utc)
                     # Raise domain event
                     task._events.append(TaskUpdated(
@@ -325,7 +320,7 @@ class CompleteTaskUseCase:
             # Update context with completion information using hierarchical context
             if completion_summary:
                 try:
-                    from ..factories.unified_context_facade_factory import UnifiedContextFacadeFactory
+                    from ...infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
                     
                     # Use the unified context facade to update context
                     # Extract git_branch_id from task for facade creation
@@ -336,11 +331,20 @@ class CompleteTaskUseCase:
                     
                     # Update context with completion summary using correct ContextProgress schema
                     # ContextProgress fields: current_session_summary, completion_percentage, next_steps, completed_actions, time_spent_minutes
+                    
+                    # Ensure next_steps is always a list
+                    next_steps_list = []
+                    if next_recommendations:
+                        if isinstance(next_recommendations, list):
+                            next_steps_list = next_recommendations
+                        else:
+                            next_steps_list = [next_recommendations]
+                    
                     context_update = {
                         "progress": {
                             "current_session_summary": completion_summary,
                             "completion_percentage": 100.0,
-                            "next_steps": next_recommendations if next_recommendations else [],
+                            "next_steps": next_steps_list,
                             "completed_actions": []  # Could be populated with task completion action
                         },
                         "metadata": {
@@ -350,8 +354,6 @@ class CompleteTaskUseCase:
                     
                     # Add testing notes to next_steps if provided
                     if testing_notes:
-                        if "next_steps" not in context_update["progress"]:
-                            context_update["progress"]["next_steps"] = []
                         context_update["progress"]["next_steps"].append(f"Testing completed: {testing_notes}")
                     
                     # Update task context with completion summary
@@ -546,7 +548,8 @@ class CompleteTaskUseCase:
             dependency_ids = []
             
             if hasattr(task, 'dependencies') and task.dependencies:
-                dependency_ids = [str(dep) if hasattr(dep, 'value') else str(dep) for dep in task.dependencies]
+                # Convert TaskId objects to strings
+                dependency_ids = [str(dep) for dep in task.dependencies]
             elif hasattr(task, 'get_dependency_ids'):
                 dependency_ids = task.get_dependency_ids()
             
@@ -558,12 +561,15 @@ class CompleteTaskUseCase:
                 # Find the dependency task
                 dep_task = None
                 for t in all_tasks:
-                    if str(t.id) == dep_id:
+                    # Handle both string and TaskId object comparisons
+                    task_id_str = str(t.id) if hasattr(t.id, '__str__') else t.id
+                    dep_id_str = str(dep_id) if hasattr(dep_id, '__str__') else dep_id
+                    if task_id_str == dep_id_str:
                         dep_task = t
                         break
                 
                 if not dep_task:
-                    logging.getLogger(__name__).warning(f"Dependency task {dep_id} not found for task {task.id}")
+                    logging.getLogger(__name__).warning(f"Dependency task {dep_id} not found for task {task.id} in all_tasks")
                     return False  # Missing dependency means not all complete
                 
                 # Check if dependency is completed

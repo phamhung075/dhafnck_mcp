@@ -28,8 +28,10 @@ class GitBranch:
     
     # Branch metadata
     assigned_agent_id: Optional[str] = None
+    assigned_agents: List[str] = field(default_factory=list)  # Support multiple agents
     priority: Priority = field(default_factory=Priority.medium)  # Branch-level priority
     status: TaskStatus = field(default_factory=TaskStatus.todo)    # todo, in_progress, blocked, review, testing, done, cancelled, archived
+    archived: bool = False  # Support for archiving branches
     
     @classmethod
     def create(cls, name: str, description: str, project_id: str) -> 'GitBranch':
@@ -247,8 +249,10 @@ class GitBranch:
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat(),
             'assigned_agent_id': self.assigned_agent_id,
+            'assigned_agents': self.assigned_agents.copy(),  # Include assigned_agents list
             'priority': self.priority.value if hasattr(self.priority, 'value') else str(self.priority),
             'status': self.status.value if hasattr(self.status, 'value') else str(self.status),
+            'archived': self.archived,
             'task_count': self.get_task_count(),
             'completed_task_count': self.get_completed_task_count(),
             'progress_percentage': self.get_progress_percentage()

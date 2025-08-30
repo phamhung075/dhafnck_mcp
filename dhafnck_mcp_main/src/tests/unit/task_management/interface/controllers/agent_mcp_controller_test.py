@@ -33,12 +33,12 @@ class TestAgentMCPController:
         self.mock_facade_factory.create_agent_facade.return_value = self.mock_facade
         
         # Mock workflow guidance
-        with patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.AgentWorkflowFactory'):
+        with patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.agent_mcp_controller.AgentWorkflowFactory'):
             self.controller = AgentMCPController(self.mock_facade_factory)
     
     def test_init(self):
         """Test controller initialization."""
-        with patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.AgentWorkflowFactory') as mock_workflow_factory:
+        with patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.agent_mcp_controller.AgentWorkflowFactory') as mock_workflow_factory:
             mock_workflow = Mock()
             mock_workflow_factory.create.return_value = mock_workflow
             
@@ -477,7 +477,7 @@ class TestAgentMCPControllerIntegration:
         self.mock_facade = Mock(spec=AgentApplicationFacade)
         self.mock_facade_factory.create_agent_facade.return_value = self.mock_facade
         
-        with patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.AgentWorkflowFactory'):
+        with patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.agent_mcp_controller.AgentWorkflowFactory'):
             self.controller = AgentMCPController(self.mock_facade_factory)
     
     @patch('fastmcp.task_management.interface.mcp_controllers.agent_mcp_controller.get_current_user_id')

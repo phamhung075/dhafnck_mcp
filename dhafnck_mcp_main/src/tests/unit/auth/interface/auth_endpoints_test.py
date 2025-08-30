@@ -71,7 +71,7 @@ class TestGetJWTService:
 class TestGetDatabaseDependencies:
     """Test suite for database dependency functions"""
     
-    @patch('fastmcp.auth.interface.auth_endpoints.DatabaseConfig')
+    @patch('fastmcp.task_management.infrastructure.database.database_config.DatabaseConfig')
     def test_get_db_config_lazy_loading(self, mock_db_config_class):
         """Test database config lazy loading"""
         # Reset global config
@@ -443,7 +443,7 @@ class TestGetCurrentUserEndpoint:
         assert response.username == "testuser"
         assert response.full_name == "Test User"
         assert response.email_verified is True
-        assert response.roles == ["USER", "ADMIN"]
+        assert response.roles == ["user", "admin"]
         assert response.created_at == "2023-01-01T12:00:00"
     
     @pytest.mark.asyncio
@@ -728,12 +728,12 @@ class TestRequestResponseModels:
             username="testuser",
             full_name="Test User",
             email_verified=True,
-            roles=["USER", "ADMIN"],
+            roles=["user", "admin"],
             created_at="2023-01-01T12:00:00"
         )
         assert response.id == "user-123"
         assert response.email == "test@example.com"
-        assert response.roles == ["USER", "ADMIN"]
+        assert response.roles == ["user", "admin"]
     
     def test_message_response_model(self):
         """Test MessageResponse model"""

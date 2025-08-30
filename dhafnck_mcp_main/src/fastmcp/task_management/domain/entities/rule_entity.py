@@ -170,4 +170,24 @@ class RuleInheritance:
 
     def get_merged_variable(self, key: str, default: Any = None) -> Any:
         """Get a merged variable"""
-        return self.merged_variables.get(key, default) 
+        return self.merged_variables.get(key, default)
+
+
+@dataclass
+class Rule:
+    """Main Rule aggregate - Domain Entity"""
+    metadata: RuleMetadata
+    content: Optional[RuleContent] = None
+    inheritance: Optional[RuleInheritance] = None
+
+    def __post_init__(self):
+        """Initialize content if not provided"""
+        if self.content is None:
+            self.content = RuleContent(
+                metadata=self.metadata,
+                raw_content="",
+                parsed_content={},
+                sections={},
+                references=[],
+                variables={}
+            ) 

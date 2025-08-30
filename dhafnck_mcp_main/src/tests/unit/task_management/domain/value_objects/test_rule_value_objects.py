@@ -155,12 +155,12 @@ class TestClientConfig:
             auth_method=ClientAuthMethod.TOKEN,
             auth_credentials={},
             sync_permissions=[],
-            allowed_rule_types=[RuleType.SYSTEM, RuleType.PROJECT]
+            allowed_rule_types=[RuleType.CORE, RuleType.PROJECT]
         )
         
-        assert config.can_sync_rule_type(RuleType.SYSTEM) is True
+        assert config.can_sync_rule_type(RuleType.CORE) is True
         assert config.can_sync_rule_type(RuleType.PROJECT) is True
-        assert config.can_sync_rule_type(RuleType.USER) is False
+        assert config.can_sync_rule_type(RuleType.CUSTOM) is False
     
     def test_sync_history_management(self):
         """Test sync history management with size limit"""
@@ -756,7 +756,7 @@ def sample_client_config():
         sync_permissions=["read", "write"],
         rate_limit=100,
         sync_frequency=300,
-        allowed_rule_types=[RuleType.SYSTEM, RuleType.PROJECT]
+        allowed_rule_types=[RuleType.CORE, RuleType.PROJECT]
     )
 
 
@@ -841,7 +841,7 @@ class TestValueObjectIntegration:
         result = SyncResult(
             request_id="req_conflict",
             client_id="client_test",
-            status=SyncStatus.PARTIAL,
+            status=SyncStatus.CONFLICT,
             operation=SyncOperation.PUSH,
             processed_rules=["rule1"],
             conflicts=[{

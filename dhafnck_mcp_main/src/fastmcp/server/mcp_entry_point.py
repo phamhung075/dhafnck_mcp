@@ -114,96 +114,108 @@ class DebugLoggingMiddleware:
         async def send_wrapper(message):
             nonlocal response_started, response_completed, status_code, response_headers, response_body
             
-            # Don't send anything if response is already completed
-            if response_completed:
-                self.logger.warning(f"⚠️ Attempted to send {message['type']} after response completed")
-                return
+            # ALWAYS send the message first - never block ASGI communication
+            await send(message)
             
+            # Track response state for logging purposes only (don't block on duplicates)
             if message["type"] == "http.response.start":
                 if response_started:
-                    self.logger.error("❌ Duplicate http.response.start detected")
-                    return
-                response_started = True
-                status_code = message["status"]
-                response_headers = dict(message.get("headers", []))
+                    # Log for diagnostics but don't prevent processing
+                    self.logger.debug("ℹ️ Duplicate http.response.start detected (may be normal for some applications)")
+                else:
+                    response_started = True
+                    status_code = message["status"]
+                    response_headers = dict(message.get("headers", []))
+                    
             elif message["type"] == "http.response.body":
                 chunk = message.get("body", b"")
                 response_body += chunk
                 
-                # If this is the last chunk, mark response as completed
-                if not message.get("more_body", False):
+                # Log response only when we receive the final chunk and haven't logged yet
+                if not message.get("more_body", False) and not response_completed:
                     response_completed = True
-                    await self._log_response(status_code, response_headers, response_body, url)
-            
-            await send(message)
+                    # Call synchronous logging method to avoid async complications
+                    self._log_response_sync(status_code, response_headers, response_body, url)
         
-        # Log request body if present
-        start_time = time.time()
+        # Store start time for request timing
+        self._start_time = time.time()
         
-        try:
-            await self.app(scope, receive_wrapper, send_wrapper)
-        except Exception as e:
-            self.logger.error(f"❌ EXCEPTION in request processing: {e}")
-            raise
-        finally:
-            # Log request body after processing
-            if body:
-                try:
-                    if headers.get(b'content-type', b'').startswith(b'application/json'):
-                        import json
-                        body_json = json.loads(body.decode())
-                        self.logger.debug("📦 Request Body (JSON):")
-                        self.logger.debug(json.dumps(body_json, indent=2))
-                    else:
-                        self.logger.debug(f"📦 Request Body: {body.decode()[:500]}...")
-                except Exception as e:
-                    self.logger.debug(f"📦 Request Body (raw): {body[:200]}...")
-    
-    async def _log_response(self, status_code, response_headers, response_body, url):
-        """Log response details."""
-        duration = time.time() - getattr(self, '_start_time', time.time())
+        # Process the request
+        await self.app(scope, receive_wrapper, send_wrapper)
         
-        # Decode headers
-        headers_dict = {}
-        for header_name, header_value in response_headers.items():
-            header_str = header_name.decode() if isinstance(header_name, bytes) else header_name
-            value_str = header_value.decode() if isinstance(header_value, bytes) else header_value
-            headers_dict[header_str] = value_str
-        
-        # Log response status and timing
-        if status_code >= 400:
-            self.logger.debug(f"❌ RESPONSE: {status_code} ({duration:.3f}s)")
-        else:
-            self.logger.debug(f"✅ RESPONSE: {status_code} ({duration:.3f}s)")
-        
-        # Log response headers
-        content_type = headers_dict.get('content-type', 'Not provided')
-        self.logger.debug(f"📋 Response Content-Type: {content_type}")
-        
-        self.logger.debug("📝 Response Headers:")
-        for header_name, header_value in headers_dict.items():
-            self.logger.debug(f"   {header_name}: {header_value}")
-        
-        # Log response body for errors or if it's JSON
-        if response_body:
+        # Log request body after processing (moved out of finally block to avoid duplicate warnings)
+        if body:
             try:
-                if content_type.startswith('application/json') or status_code >= 400:
+                if headers.get(b'content-type', b'').startswith(b'application/json'):
                     import json
-                    body_json = json.loads(response_body.decode())
-                    self.logger.debug("📦 Response Body (JSON):")
+                    body_json = json.loads(body.decode())
+                    self.logger.debug("📦 Request Body (JSON):")
                     self.logger.debug(json.dumps(body_json, indent=2))
                 else:
-                    self.logger.debug(f"📦 Response Body: {response_body.decode()[:500]}...")
+                    self.logger.debug(f"📦 Request Body: {body.decode()[:500]}...")
             except Exception as e:
-                self.logger.debug(f"📦 Response Body (raw): {response_body[:200]}...")
-        
-        if status_code >= 400:
-            self.logger.error(f"❌ ERROR RESPONSE: {status_code}")
-            if not response_body:
-                self.logger.error("❌ No response body provided for error")
-            self.logger.error("❌ Check application logs for error details")
-        
-        self.logger.debug("=" * 80)
+                self.logger.debug(f"📦 Request Body (raw): {body[:200]}...")
+    
+    def _log_response_sync(self, status_code, response_headers, response_body, url):
+        """Log response details synchronously."""
+        try:
+            duration = time.time() - getattr(self, '_start_time', time.time())
+            
+            # Decode headers safely
+            headers_dict = {}
+            for header_name, header_value in response_headers.items():
+                try:
+                    header_str = header_name.decode() if isinstance(header_name, bytes) else str(header_name)
+                    value_str = header_value.decode() if isinstance(header_value, bytes) else str(header_value)
+                    headers_dict[header_str] = value_str
+                except (UnicodeDecodeError, AttributeError):
+                    # Skip headers that can't be decoded
+                    continue
+            
+            # Log response status and timing
+            if status_code and status_code >= 400:
+                self.logger.debug(f"❌ RESPONSE: {status_code} ({duration:.3f}s)")
+            else:
+                self.logger.debug(f"✅ RESPONSE: {status_code or 'Unknown'} ({duration:.3f}s)")
+            
+            # Log response headers
+            content_type = headers_dict.get('content-type', 'Not provided')
+            self.logger.debug(f"📋 Response Content-Type: {content_type}")
+            
+            if headers_dict:
+                self.logger.debug("📝 Response Headers:")
+                for header_name, header_value in headers_dict.items():
+                    self.logger.debug(f"   {header_name}: {header_value}")
+            
+            # Log response body for errors or if it's JSON
+            if response_body:
+                try:
+                    if content_type.startswith('application/json') or (status_code and status_code >= 400):
+                        body_json = json.loads(response_body.decode())
+                        self.logger.debug("📦 Response Body (JSON):")
+                        self.logger.debug(json.dumps(body_json, indent=2))
+                    else:
+                        body_str = response_body.decode()[:500]
+                        if len(response_body) > 500:
+                            body_str += "..."
+                        self.logger.debug(f"📦 Response Body: {body_str}")
+                except (json.JSONDecodeError, UnicodeDecodeError, AttributeError):
+                    # Fall back to raw bytes display if decoding fails
+                    raw_preview = response_body[:200] if response_body else b""
+                    self.logger.debug(f"📦 Response Body (raw): {raw_preview}...")
+            
+            if status_code and status_code >= 400:
+                self.logger.error(f"❌ ERROR RESPONSE: {status_code}")
+                if not response_body:
+                    self.logger.error("❌ No response body provided for error")
+                self.logger.error("❌ Check application logs for error details")
+            
+            self.logger.debug("=" * 80)
+            
+        except Exception as e:
+            # Failsafe: if logging fails, don't crash the middleware
+            self.logger.error(f"❌ Error in response logging: {e}")
+            self.logger.debug("=" * 80)
 
 
 def create_dhafnck_mcp_server() -> FastMCP:
@@ -256,11 +268,14 @@ def create_dhafnck_mcp_server() -> FastMCP:
         
         db_config = get_db_config()
         if db_config and db_config.engine:
-            validation_result = asyncio.run(validate_schema_on_startup(db_config.engine))
-            if not validation_result:
-                logger.warning("Schema validation failed - some database operations may fail")
-            else:
-                logger.info("Schema validation completed successfully")
+            try:
+                validation_result = asyncio.run(validate_schema_on_startup(db_config.engine))
+                if not validation_result:
+                    logger.warning("Schema validation found warnings - database operations will continue with potential compatibility issues")
+                else:
+                    logger.info("Schema validation completed successfully")
+            except Exception as schema_e:
+                logger.warning(f"Schema validation failed: {schema_e} - database operations will continue without validation")
         else:
             logger.warning("Could not get database engine for schema validation")
             

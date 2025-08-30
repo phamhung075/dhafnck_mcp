@@ -43,7 +43,11 @@ class ORMSubtaskRepository(BaseORMRepository[TaskSubtask], BaseUserScopedReposit
     def __init__(self, session=None, user_id: Optional[str] = None):
         """Initialize the ORM subtask repository with user isolation."""
         BaseORMRepository.__init__(self, TaskSubtask)
-        BaseUserScopedRepository.__init__(self, session or self.get_db_session(), user_id)
+        # Don't pass session to BaseUserScopedRepository if None - let it handle the session management
+        if session is None:
+            BaseUserScopedRepository.__init__(self, get_session(), user_id)
+        else:
+            BaseUserScopedRepository.__init__(self, session, user_id)
     
     def save(self, subtask: Subtask) -> bool:
         """

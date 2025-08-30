@@ -204,7 +204,7 @@ class DomainServiceFactory:
             # Import here to avoid circular dependencies and layer violations
             try:
                 # This is the only allowed infrastructure import - through the factories
-                from ...infrastructure.adapters.service_adapter_factory import ServiceAdapterFactory
+                from ....infrastructure.adapters.service_adapter_factory import ServiceAdapterFactory
                 
                 # Initialize all services
                 cls._database_session_factory = ServiceAdapterFactory.get_database_session_factory()

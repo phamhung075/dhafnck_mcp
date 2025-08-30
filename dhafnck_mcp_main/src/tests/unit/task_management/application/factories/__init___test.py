@@ -31,7 +31,7 @@ class TestFactoriesInit:
     
     def test_all_exports(self):
         """Test that __all__ contains expected exports"""
-        from fastmcp.task_management.application import factories
+        from fastmcp.task_management.infrastructure import factories
         
         expected_exports = [
             "TaskFacadeFactory",

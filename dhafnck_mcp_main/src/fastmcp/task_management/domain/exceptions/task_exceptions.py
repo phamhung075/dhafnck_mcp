@@ -97,6 +97,20 @@ class ProjectNotFoundError(TaskDomainError):
         super().__init__(message)
 
 
+class TaskValidationError(TaskDomainError):
+    """Raised when task validation fails"""
+    
+    def __init__(self, message: str, validation_errors: Optional[List[str]] = None):
+        self.validation_errors = validation_errors or []
+        super().__init__(
+            message=message,
+            error_code="TASK_VALIDATION_ERROR",
+            severity=ErrorSeverity.MEDIUM,
+            context={"validation_errors": self.validation_errors},
+            recoverable=True
+        )
+
+
 class TaskCompletionError(TaskDomainError):
     """Raised when a task cannot be completed due to business rule violations"""
     
@@ -120,6 +134,13 @@ class TaskUpdateError(TaskDomainError):
 
 class DuplicateTaskError(TaskDomainError):
     """Raised when attempting to create a duplicate task"""
+    
+    def __init__(self, message: str):
+        super().__init__(message)
+
+
+class TaskStateTransitionError(TaskDomainError):
+    """Raised when a task state transition fails"""
     
     def __init__(self, message: str):
         super().__init__(message) 

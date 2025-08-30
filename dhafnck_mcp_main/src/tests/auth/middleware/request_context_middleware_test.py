@@ -77,8 +77,11 @@ class TestRequestContextMiddleware:
     @pytest.mark.asyncio
     async def test_dispatch_no_auth(self, middleware, mock_request):
         """Test dispatch with no authentication"""
-        # No auth info in request.state
+        # No auth info in request.state - explicitly set to None
         mock_request.state = MagicMock()
+        mock_request.state.user_id = None
+        mock_request.state.auth_type = None
+        mock_request.state.auth_info = None
         
         # Create a mock response
         expected_response = Response("OK")
@@ -349,6 +352,9 @@ class TestRequestContextMiddleware:
         # Test 2: MCP path without user_id shouldn't set scope
         mock_request.url.path = "/mcp/tools"
         mock_request.state = MagicMock()  # No user_id
+        mock_request.state.user_id = None
+        mock_request.state.auth_type = None
+        mock_request.state.auth_info = None
         mock_request.scope = {}
         
         async def check_no_user(request):

@@ -46,6 +46,19 @@ class ContextOperationHandler:
             
             # Route to appropriate facade method based on action
             if action == "create":
+                # For task level contexts, normalize git_branch_id parameter to branch_id in data
+                if level == "task" and git_branch_id and data:
+                    # Normalize git_branch_id to branch_id for TaskContext entity consistency
+                    if "branch_id" not in data:
+                        # TaskContext domain entity expects 'branch_id' field
+                        data["branch_id"] = git_branch_id
+                    
+                    # Also ensure parent references are set for 4-tier hierarchy
+                    if "parent_branch_id" not in data:
+                        data["parent_branch_id"] = git_branch_id
+                    if "parent_branch_context_id" not in data:
+                        data["parent_branch_context_id"] = git_branch_id
+                
                 result = facade.create_context(
                     level=level,
                     context_id=context_id,
@@ -110,7 +123,7 @@ class ContextOperationHandler:
                 return self._response_formatter.create_error_response(
                     operation=f"manage_context.{action}",
                     error=f"Unknown action: {action}",
-                    error_code=ErrorCodes.INVALID_OPERATION,
+                    error_code=ErrorCodes.OPERATION_FAILED,
                     metadata={
                         "valid_actions": [
                             "create", "get", "update", "delete", "resolve",

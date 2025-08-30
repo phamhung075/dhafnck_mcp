@@ -150,6 +150,101 @@ class MockGitBranchRepository(GitBranchRepository):
         self._branches[branch_id] = branch
         return {"success": True, "git_branch": branch}
     
+    async def create_branch(self, project_id: str, branch_name: str, description: str = "") -> GitBranch:
+        """Create a new git branch and return GitBranch entity"""
+        from fastmcp.task_management.domain.entities.git_branch import GitBranch
+        branch_id = f"branch-{self._next_id}"
+        self._next_id += 1
+        
+        # Create GitBranch entity with all required fields
+        git_branch = GitBranch(
+            id=branch_id,
+            name=branch_name,
+            description=description,
+            project_id=project_id,
+            created_at=datetime.now(),
+            updated_at=datetime.now()
+        )
+        
+        # Also store in internal dict for compatibility with other methods
+        branch_dict = {
+            "id": branch_id,
+            "project_id": project_id,
+            "name": branch_name,
+            "description": description,
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat()
+        }
+        self._branches[branch_id] = branch_dict
+        
+        return git_branch
+    
+    async def find_by_name(self, project_id: str, branch_name: str) -> Optional['GitBranch']:
+        """Find git branch by name within a project"""
+        from fastmcp.task_management.domain.entities.git_branch import GitBranch
+        for branch_dict in self._branches.values():
+            if branch_dict["project_id"] == project_id and branch_dict["name"] == branch_name:
+                return GitBranch(
+                    id=branch_dict["id"],
+                    name=branch_dict["name"],
+                    description=branch_dict["description"],
+                    project_id=branch_dict["project_id"],
+                    created_at=datetime.now(),
+                    updated_at=datetime.now()
+                )
+        return None
+    
+    async def find_by_id(self, branch_id: str) -> Optional['GitBranch']:
+        """Find git branch by ID"""
+        from fastmcp.task_management.domain.entities.git_branch import GitBranch
+        if branch_id in self._branches:
+            branch_dict = self._branches[branch_id]
+            return GitBranch(
+                id=branch_dict["id"],
+                name=branch_dict["name"],
+                description=branch_dict["description"],
+                project_id=branch_dict["project_id"],
+                created_at=datetime.now(),
+                updated_at=datetime.now()
+            )
+        return None
+    
+    async def find_all(self) -> List['GitBranch']:
+        """Find all git branches"""
+        from fastmcp.task_management.domain.entities.git_branch import GitBranch
+        branches = []
+        for branch_dict in self._branches.values():
+            branches.append(GitBranch(
+                id=branch_dict["id"],
+                name=branch_dict["name"],
+                description=branch_dict["description"],
+                project_id=branch_dict["project_id"],
+                created_at=datetime.now(),
+                updated_at=datetime.now()
+            ))
+        return branches
+    
+    async def delete_branch(self, branch_id: str) -> bool:
+        """Delete a git branch by ID"""
+        if branch_id in self._branches:
+            del self._branches[branch_id]
+            return True
+        return False
+    
+    async def update(self, git_branch: 'GitBranch') -> bool:
+        """Update a git branch"""
+        if git_branch.id in self._branches:
+            self._branches[git_branch.id] = {
+                "id": git_branch.id,
+                "project_id": git_branch.project_id,
+                "name": git_branch.name,
+                "description": git_branch.description,
+                "created_at": self._branches[git_branch.id]["created_at"],  # Keep original
+                "updated_at": datetime.now().isoformat()
+            }
+            return True
+        return False
+    
     async def get_git_branch_by_id(self, git_branch_id: str) -> Dict[str, Any]:
         """Get git branch by ID"""
         if git_branch_id in self._branches:

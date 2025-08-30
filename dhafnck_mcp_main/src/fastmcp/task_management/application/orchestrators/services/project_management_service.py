@@ -12,11 +12,10 @@ from datetime import datetime
 from pathlib import Path
 
 from ....infrastructure.utilities.path_resolver import PathResolver
-from ....infrastructure.repositories.project_repository_factory import GlobalRepositoryManager
-from ....application.use_cases.create_project import CreateProjectUseCase
-from ....application.use_cases.get_project import GetProjectUseCase
-from ....application.use_cases.list_projects import ListProjectsUseCase
-from ....application.use_cases.update_project import UpdateProjectUseCase
+from ...use_cases.create_project import CreateProjectUseCase
+from ...use_cases.get_project import GetProjectUseCase
+from ...use_cases.list_projects import ListProjectsUseCase
+from ...use_cases.update_project import UpdateProjectUseCase
 # from ....application.use_cases.delete_project import DeleteProjectUseCase  # Not used, commented out
 from ....application.use_cases.project_health_check import ProjectHealthCheckUseCase
 from ....application.use_cases.cleanup_obsolete_use_case import CleanupObsoleteUseCase

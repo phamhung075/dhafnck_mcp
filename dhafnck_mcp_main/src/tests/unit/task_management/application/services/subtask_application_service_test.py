@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import Mock, create_autospec
 from typing import Any, Dict, Optional
 
-from fastmcp.task_management.application.services.subtask_application_service import SubtaskApplicationService
+from fastmcp.task_management.application.orchestrators.services.subtask_application_service import SubtaskApplicationService
 from fastmcp.task_management.domain.repositories.task_repository import TaskRepository
 from fastmcp.task_management.domain.repositories.subtask_repository import SubtaskRepository
 from fastmcp.task_management.application.dtos.subtask import (

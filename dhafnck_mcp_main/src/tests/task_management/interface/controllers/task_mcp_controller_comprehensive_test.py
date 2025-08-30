@@ -33,22 +33,22 @@ from fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.task_
 from fastmcp.task_management.infrastructure.factories.task_facade_factory import TaskFacadeFactory
 from fastmcp.task_management.application.facades.task_application_facade import TaskApplicationFacade
 from fastmcp.task_management.infrastructure.factories.unified_context_facade_factory import UnifiedContextFacadeFactory
-from fastmcp.task_management.application.services.response_enrichment_service import (
+from fastmcp.task_management.application.orchestrators.services.response_enrichment_service import (
     ResponseEnrichmentService,
     ContextState,
     ContextStalnessLevel
 )
-from fastmcp.task_management.application.services.parameter_enforcement_service import (
+from fastmcp.task_management.application.orchestrators.services.parameter_enforcement_service import (
     ParameterEnforcementService,
     EnforcementLevel,
     EnforcementResult
 )
-from fastmcp.task_management.application.services.progressive_enforcement_service import ProgressiveEnforcementService
-from fastmcp.task_management.application.services.context_validation_service import ContextValidationService
-from fastmcp.task_management.application.services.progress_tracking_service import ProgressTrackingService
-from fastmcp.task_management.application.services.hint_generation_service import HintGenerationService
-from fastmcp.task_management.application.services.workflow_analysis_service import WorkflowAnalysisService
-from fastmcp.task_management.application.services.agent_coordination_service import AgentCoordinationService
+from fastmcp.task_management.application.orchestrators.services.progressive_enforcement_service import ProgressiveEnforcementService
+from fastmcp.task_management.application.orchestrators.services.context_validation_service import ContextValidationService
+from fastmcp.task_management.application.orchestrators.services.progress_tracking_service import ProgressTrackingService
+from fastmcp.task_management.application.orchestrators.services.hint_generation_service import HintGenerationService
+from fastmcp.task_management.application.orchestrators.services.workflow_analysis_service import WorkflowAnalysisService
+from fastmcp.task_management.application.orchestrators.services.agent_coordination_service import AgentCoordinationService
 from fastmcp.task_management.domain.exceptions.authentication_exceptions import (
     UserAuthenticationRequiredError,
     DefaultUserProhibitedError

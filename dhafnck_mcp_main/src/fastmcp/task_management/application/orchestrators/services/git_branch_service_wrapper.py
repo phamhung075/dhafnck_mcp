@@ -1,6 +1,6 @@
 """Git Branch Service Wrapper
 
-Synchronous wrapper for the async GitBranchApplicationService to maintain
+Synchronous wrapper for the async GitBranchService to maintain
 compatibility with the existing synchronous interface patterns.
 """
 
@@ -8,16 +8,16 @@ import asyncio
 import logging
 from typing import Dict, Any, Optional
 
-from .git_branch_application_service import GitBranchApplicationService
+from .git_branch_service import GitBranchService
 
 logger = logging.getLogger(__name__)
 
 
 class GitBranchServiceWrapper:
-    """Synchronous wrapper for GitBranchApplicationService"""
+    """Synchronous wrapper for GitBranchService"""
     
-    def __init__(self, git_branch_service: Optional[GitBranchApplicationService] = None):
-        self._git_branch_service = git_branch_service or GitBranchApplicationService()
+    def __init__(self, git_branch_service: Optional[GitBranchService] = None):
+        self._git_branch_service = git_branch_service or GitBranchService()
         logger.info("GitBranchServiceWrapper initialized")
     
     def _run_async(self, coro):

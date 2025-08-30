@@ -1,16 +1,16 @@
-"""Tests for GitBranchApplicationService"""
+"""Tests for GitBranchService"""
 
 import pytest
 from unittest.mock import AsyncMock, Mock, create_autospec
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 
-from fastmcp.task_management.application.services.git_branch_application_service import GitBranchApplicationService
+from fastmcp.task_management.application.orchestrators.services.git_branch_service import GitBranchService
 from fastmcp.task_management.domain.entities.git_branch import GitBranch
 
 
-class TestGitBranchApplicationService:
-    """Test suite for GitBranchApplicationService"""
+class TestGitBranchService:
+    """Test suite for GitBranchService"""
 
     @pytest.fixture
     def mock_git_branch_repo(self):
@@ -25,11 +25,13 @@ class TestGitBranchApplicationService:
         return repo
 
     @pytest.fixture
-    def mock_project(self):
+    def mock_project(self, mock_git_branch):
         """Create a mock project"""
         project = Mock()
         project.id = "project-123"
         project.name = "Test Project"
+        # Add git_branchs dict that the service expects
+        project.git_branchs = {"branch-456": mock_git_branch}
         return project
 
     @pytest.fixture
@@ -42,57 +44,130 @@ class TestGitBranchApplicationService:
         branch.project_id = "project-123"
         branch.created_at = datetime.now()
         branch.updated_at = datetime.now()
+        # Initialize assigned_agents as a regular list (not a mock)
+        branch.assigned_agents = []
+        branch.assigned_agent_id = None
+        branch.archived = False
+        
+        # Add the to_dict method that GitBranchService.get_git_branch_by_id() calls
+        def mock_to_dict():
+            return {
+                'id': branch.id,
+                'name': branch.name,
+                'description': branch.description,
+                'project_id': branch.project_id,
+                'created_at': branch.created_at.isoformat(),
+                'updated_at': branch.updated_at.isoformat(),
+                'assigned_agent_id': getattr(branch, 'assigned_agent_id', None),
+                'assigned_agents': getattr(branch, 'assigned_agents', []).copy(),
+                'archived': getattr(branch, 'archived', False),
+                'priority': 'medium',
+                'status': 'todo',
+                'task_count': 0,
+                'completed_task_count': 0,
+                'progress_percentage': 0.0
+            }
+        
+        branch.to_dict = Mock(side_effect=mock_to_dict)
         return branch
 
     @pytest.fixture
-    def service(self, mock_git_branch_repo, mock_project_repo):
-        """Create a GitBranchApplicationService instance"""
-        return GitBranchApplicationService(
-            git_branch_repo=mock_git_branch_repo,
-            project_repo=mock_project_repo
-        )
+    def mock_hierarchical_context_service(self):
+        """Create a mock hierarchical context service"""
+        service = Mock()
+        service.create_context = Mock(return_value={"success": True, "context": {}})
+        service.delete_context = Mock(return_value={"success": True})
+        return service
 
-    def test_init(self, mock_git_branch_repo, mock_project_repo):
-        """Test service initialization"""
-        service = GitBranchApplicationService(
-            git_branch_repo=mock_git_branch_repo,
-            project_repo=mock_project_repo
+    @pytest.fixture
+    def service(self, mock_project_repo, mock_git_branch_repo, mock_hierarchical_context_service, monkeypatch):
+        """Create a GitBranchService instance with mocked repositories"""
+        # Mock the RepositoryFactory to return our mock git_branch_repo
+        def mock_get_git_branch_repository(user_id=None):
+            return mock_git_branch_repo
+        
+        monkeypatch.setattr(
+            "fastmcp.task_management.infrastructure.repositories.repository_factory.RepositoryFactory.get_git_branch_repository",
+            mock_get_git_branch_repository
         )
-        assert service._git_branch_repo == mock_git_branch_repo
+        
+        service = GitBranchService(
+            project_repo=mock_project_repo,
+            hierarchical_context_service=mock_hierarchical_context_service,
+            user_id=None
+        )
+        return service
+
+    def test_init(self, mock_project_repo, mock_git_branch_repo, monkeypatch):
+        """Test service initialization"""
+        # Mock the RepositoryFactory
+        def mock_get_git_branch_repository(user_id=None):
+            return mock_git_branch_repo
+        
+        monkeypatch.setattr(
+            "fastmcp.task_management.infrastructure.repositories.repository_factory.RepositoryFactory.get_git_branch_repository",
+            mock_get_git_branch_repository
+        )
+        
+        service = GitBranchService(
+            project_repo=mock_project_repo,
+            hierarchical_context_service=None,
+            user_id=None
+        )
         assert service._project_repo == mock_project_repo
         assert service._user_id is None
+        assert hasattr(service, '_git_branch_repo')  # Initialized internally
 
-    def test_init_with_user_id(self, mock_git_branch_repo, mock_project_repo):
+    def test_init_with_user_id(self, mock_project_repo, mock_git_branch_repo, monkeypatch):
         """Test service initialization with user ID"""
-        service = GitBranchApplicationService(
-            git_branch_repo=mock_git_branch_repo,
+        # Mock the RepositoryFactory
+        def mock_get_git_branch_repository(user_id=None):
+            return mock_git_branch_repo
+        
+        monkeypatch.setattr(
+            "fastmcp.task_management.infrastructure.repositories.repository_factory.RepositoryFactory.get_git_branch_repository",
+            mock_get_git_branch_repository
+        )
+        
+        service = GitBranchService(
             project_repo=mock_project_repo,
+            hierarchical_context_service=None,
             user_id="user-123"
         )
         assert service._user_id == "user-123"
 
-    def test_with_user(self, service):
+    def test_with_user(self, service, mock_git_branch_repo, monkeypatch):
         """Test creating user-scoped service"""
+        # Mock the RepositoryFactory for the new instance
+        def mock_get_git_branch_repository(user_id=None):
+            return mock_git_branch_repo
+        
+        monkeypatch.setattr(
+            "fastmcp.task_management.infrastructure.repositories.repository_factory.RepositoryFactory.get_git_branch_repository",
+            mock_get_git_branch_repository
+        )
+        
         user_scoped_service = service.with_user("user-456")
-        assert isinstance(user_scoped_service, GitBranchApplicationService)
+        assert isinstance(user_scoped_service, GitBranchService)
         assert user_scoped_service._user_id == "user-456"
-        assert user_scoped_service._git_branch_repo == service._git_branch_repo
         assert user_scoped_service._project_repo == service._project_repo
 
-    def test_get_user_scoped_repository_no_user(self, service, mock_git_branch_repo):
+    def test_get_user_scoped_repository_no_user(self, service):
         """Test getting repository when no user is set"""
-        repo = service._get_user_scoped_repository(mock_git_branch_repo)
-        assert repo == mock_git_branch_repo
+        mock_repo = Mock()
+        repo = service._get_user_scoped_repository(mock_repo)
+        assert repo == mock_repo
 
-    def test_get_user_scoped_repository_with_user_method(self, service, mock_git_branch_repo):
+    def test_get_user_scoped_repository_with_user_method(self, service):
         """Test getting repository with with_user method"""
         service._user_id = "user-789"
-        mock_git_branch_repo.with_user = Mock(return_value=mock_git_branch_repo)
+        mock_repo = Mock()
+        mock_repo.with_user = Mock(return_value=mock_repo)
         
-        repo = service._get_user_scoped_repository(mock_git_branch_repo)
+        repo = service._get_user_scoped_repository(mock_repo)
         
-        mock_git_branch_repo.with_user.assert_called_once_with("user-789")
-        assert repo == mock_git_branch_repo
+        mock_repo.with_user.assert_called_once_with("user-789")
+        assert repo == mock_repo
 
     def test_get_user_scoped_repository_none(self, service):
         """Test getting repository when repository is None"""
@@ -111,15 +186,15 @@ class TestGitBranchApplicationService:
 
         result = await service.create_git_branch(
             project_id="project-123",
-            git_branch_name="feature/test",
-            git_branch_description="Test branch"
+            branch_name="feature/test",
+            description="Test branch"
         )
 
         assert result["success"] is True
         assert result["git_branch"]["id"] == "branch-456"
         assert result["git_branch"]["name"] == "feature/test"
         assert result["git_branch"]["project_id"] == "project-123"
-        assert result["message"] == "Git branch feature/test created successfully"
+        assert result["message"] == "Git branch 'feature/test' created successfully"
 
         mock_project_repo.find_by_id.assert_called_once_with("project-123")
         mock_git_branch_repo.find_by_name.assert_called_once_with("project-123", "feature/test")
@@ -132,7 +207,7 @@ class TestGitBranchApplicationService:
 
         result = await service.create_git_branch(
             project_id="project-999",
-            git_branch_name="feature/test"
+            branch_name="feature/test"
         )
 
         assert result["success"] is False
@@ -148,11 +223,11 @@ class TestGitBranchApplicationService:
 
         result = await service.create_git_branch(
             project_id="project-123",
-            git_branch_name="feature/test"
+            branch_name="feature/test"
         )
 
         assert result["success"] is False
-        assert result["error"] == "Git branch feature/test already exists"
+        assert result["error"] == "Git branch 'feature/test' already exists in project project-123"
 
     @pytest.mark.asyncio
     async def test_create_git_branch_exception(self, service, mock_project_repo):
@@ -161,7 +236,7 @@ class TestGitBranchApplicationService:
 
         result = await service.create_git_branch(
             project_id="project-123",
-            git_branch_name="feature/test"
+            branch_name="feature/test"
         )
 
         assert result["success"] is False
@@ -176,7 +251,7 @@ class TestGitBranchApplicationService:
 
         assert result["success"] is True
         assert result["project_id"] == "project-123"
-        assert result["git_branch_name"] == "feature/test"
+        assert result["branch_name"] == "feature/test"
         assert result["git_branch"]["id"] == "branch-456"
 
     @pytest.mark.asyncio
@@ -187,7 +262,7 @@ class TestGitBranchApplicationService:
         result = await service.get_git_branch_by_id("branch-999")
 
         assert result["success"] is False
-        assert result["error"] == "Git branch with git_branch_id branch-999 not found"
+        assert result["error"] == "Git branch branch-999 not found"
 
     @pytest.mark.asyncio
     async def test_get_git_branch_by_id_exception(self, service, mock_git_branch_repo):
@@ -231,6 +306,8 @@ class TestGitBranchApplicationService:
         self, service, mock_project_repo, mock_git_branch_repo, mock_project
     ):
         """Test git branches listing when no branches exist"""
+        # Override the git_branchs to be empty for this test
+        mock_project.git_branchs = {}
         mock_project_repo.find_by_id.return_value = mock_project
         mock_git_branch_repo.find_all_by_project.return_value = []
 
@@ -258,8 +335,8 @@ class TestGitBranchApplicationService:
 
         result = await service.update_git_branch(
             git_branch_id="branch-456",
-            git_branch_name="feature/updated",
-            git_branch_description="Updated description"
+            branch_name="feature/updated",
+            description="Updated description"
         )
 
         assert result["success"] is True
@@ -275,7 +352,7 @@ class TestGitBranchApplicationService:
 
         result = await service.update_git_branch(
             git_branch_id="branch-456",
-            git_branch_name="feature/new-name"
+            branch_name="feature/new-name"
         )
 
         assert result["success"] is True
@@ -289,7 +366,7 @@ class TestGitBranchApplicationService:
 
         result = await service.update_git_branch(
             git_branch_id="branch-456",
-            git_branch_description="New description"
+            description="New description"
         )
 
         assert result["success"] is True
@@ -302,7 +379,7 @@ class TestGitBranchApplicationService:
 
         result = await service.update_git_branch(
             git_branch_id="branch-999",
-            git_branch_name="feature/updated"
+            branch_name="feature/updated"
         )
 
         assert result["success"] is False
@@ -316,7 +393,7 @@ class TestGitBranchApplicationService:
         result = await service.update_git_branch(git_branch_id="branch-456")
 
         assert result["success"] is False
-        assert result["error"] == "No fields to update. Provide git_branch_name and/or git_branch_description."
+        assert result["error"] == "No fields to update. Provide branch_name and/or description."
 
     @pytest.mark.asyncio
     async def test_update_git_branch_exception(self, service, mock_git_branch_repo):
@@ -325,7 +402,7 @@ class TestGitBranchApplicationService:
 
         result = await service.update_git_branch(
             git_branch_id="branch-456",
-            git_branch_name="feature/updated"
+            branch_name="feature/updated"
         )
 
         assert result["success"] is False

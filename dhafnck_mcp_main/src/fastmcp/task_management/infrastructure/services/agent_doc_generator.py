@@ -222,11 +222,18 @@ def generate_agent_docs(agent_name=None, clear_all=False):
 
 def generate_docs_for_assignees(assignees, clear_all=False):
     """Generate agent docs for all unique assignees in the list."""
-    generator = AgentDocGenerator(
-        agent_yaml_lib=AGENT_YAML_LIB,
-        agents_output_dir=AGENTS_OUTPUT_DIR
-    )
-    generator.generate_docs_for_assignees(assignees, clear_all)
+    try:
+        generator = AgentDocGenerator(
+            agent_yaml_lib=AGENT_YAML_LIB,
+            agents_output_dir=AGENTS_OUTPUT_DIR
+        )
+        generator.generate_docs_for_assignees(assignees, clear_all)
+    except Exception as e:
+        # Log error and continue gracefully - don't break task operations
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Could not generate agent docs for assignees {assignees}: {e}")
+        # Return silently to not break task operations
 
 
 if __name__ == "__main__":

@@ -154,7 +154,7 @@ class TestDualAuthMiddleware:
     @patch.dict(os.environ, {"JWT_SECRET_KEY": "test_secret"})
     async def test_validate_api_token_success(self, middleware):
         """Test successful API token validation."""
-        with patch('fastmcp.auth.middleware.dual_auth_middleware.JWTService') as MockJWTService:
+        with patch('fastmcp.auth.domain.services.jwt_service.JWTService') as MockJWTService:
             mock_jwt_service = MockJWTService.return_value
             mock_jwt_service.verify_token.return_value = {
                 'user_id': 'user_123',
@@ -263,6 +263,7 @@ class TestDualAuthMiddleware:
         assert mock_request.state.auth_type == 'mvp_mode'
     
     @pytest.mark.asyncio
+    @patch.dict(os.environ, {"DHAFNCK_MVP_MODE": "false"})
     async def test_dispatch_authenticated_request(self, middleware, mock_request, mock_call_next):
         """Test dispatch with successful authentication."""
         mock_request.headers = Headers({'authorization': 'Bearer test_token'})
@@ -281,6 +282,7 @@ class TestDualAuthMiddleware:
             assert mock_request.state.auth_type == 'supabase'
     
     @pytest.mark.asyncio
+    @patch.dict(os.environ, {"DHAFNCK_MVP_MODE": "false"})
     async def test_dispatch_token_validation_error(self, middleware, mock_request, mock_call_next):
         """Test dispatch handles token validation errors."""
         mock_request.headers = Headers({'authorization': 'Bearer invalid_token'})
@@ -294,6 +296,7 @@ class TestDualAuthMiddleware:
             assert isinstance(response, JSONResponse)
     
     @pytest.mark.asyncio
+    @patch.dict(os.environ, {"DHAFNCK_MVP_MODE": "false"})
     async def test_dispatch_rate_limit_error(self, middleware, mock_request, mock_call_next):
         """Test dispatch handles rate limit errors."""
         mock_request.headers = Headers({'authorization': 'Bearer test_token'})

@@ -303,7 +303,7 @@ class TestTaskPriorityService:
             task_id="dependent-task",
             title="Task with Dependencies"
         )
-        task_with_deps.dependencies = [TaskId.from_string("dep-1"), TaskId.from_string("dep-2")]
+        task_with_deps.dependencies = [TaskId.from_string("11111111-1111-1111-1111-111111111111"), TaskId.from_string("22222222-2222-2222-2222-222222222222")]
         
         # Mock dependency task (incomplete)
         incomplete_dep_task = self._create_test_task(
@@ -332,7 +332,7 @@ class TestTaskPriorityService:
             task_id="dependent-task",
             title="Dependent Task"
         )
-        dependent_task.dependencies = [TaskId.from_string("blocking-task")]
+        dependent_task.dependencies = [TaskId.from_string("33333333-3333-3333-3333-333333333333")]
         
         all_tasks = [blocking_task, dependent_task]
         
@@ -629,7 +629,7 @@ class TestTaskPriorityServiceIntegration:
         return Task(
             title="Critical Production Bug",
             description="Fix critical bug affecting users",
-            id=TaskId.from_string("urgent-bug"),
+            id=TaskId.from_string("44444444-4444-4444-4444-444444444444"),
             status=TaskStatus.from_string("todo"),
             priority=Priority.from_string("critical"),
             git_branch_id="main-branch",
@@ -643,7 +643,7 @@ class TestTaskPriorityServiceIntegration:
         return Task(
             title="Feature Development",
             description="Implement new feature",
-            id=TaskId.from_string("feature-task"),
+            id=TaskId.from_string("55555555-5555-5555-5555-555555555555"),
             status=TaskStatus.from_string("in_progress"),
             priority=Priority.from_string("high"),
             git_branch_id="main-branch",
@@ -656,7 +656,7 @@ class TestTaskPriorityServiceIntegration:
         return Task(
             title="Old Refactoring Task",
             description="Clean up old code",
-            id=TaskId.from_string("stale-task"),
+            id=TaskId.from_string("66666666-6666-6666-6666-666666666666"),
             status=TaskStatus.from_string("todo"),
             priority=Priority.from_string("low"),
             git_branch_id="main-branch",
@@ -669,7 +669,7 @@ class TestTaskPriorityServiceIntegration:
         return Task(
             title="Blocked Integration Task",
             description="Task waiting for external dependency",
-            id=TaskId.from_string("blocked-task"),
+            id=TaskId.from_string("77777777-7777-7777-7777-777777777777"),
             status=TaskStatus.from_string("blocked"),
             priority=Priority.from_string("medium"),
             git_branch_id="main-branch",

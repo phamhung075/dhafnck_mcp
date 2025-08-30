@@ -8,7 +8,7 @@ import pytest
 from unittest.mock import Mock, patch
 from typing import Dict, Any, Tuple
 
-from fastmcp.task_management.application.services.context_hierarchy_validator import ContextHierarchyValidator
+from fastmcp.task_management.application.orchestrators.services.context_hierarchy_validator import ContextHierarchyValidator
 from fastmcp.task_management.domain.value_objects.context_enums import ContextLevel
 from fastmcp.task_management.infrastructure.database.models import GLOBAL_SINGLETON_UUID
 

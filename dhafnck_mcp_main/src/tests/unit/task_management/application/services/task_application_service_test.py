@@ -13,7 +13,7 @@ import pytest
 from datetime import datetime
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
 
-from fastmcp.task_management.application.services.task_application_service import TaskApplicationService
+from fastmcp.task_management.application.orchestrators.services.task_application_service import TaskApplicationService
 from fastmcp.task_management.application.dtos.task import (
     CreateTaskRequest,
     CreateTaskResponse,
@@ -66,7 +66,7 @@ class TestTaskApplicationService:
     @pytest.fixture
     def service(self, mock_task_repository, mock_context_service, mock_hierarchical_context_service, mock_use_cases):
         """Create service instance with mocked dependencies"""
-        with patch('fastmcp.task_management.application.factories.unified_context_facade_factory.UnifiedContextFacadeFactory') as MockFactory:
+        with patch('fastmcp.task_management.infrastructure.factories.unified_context_facade_factory.UnifiedContextFacadeFactory') as MockFactory:
             MockFactory.return_value.create_unified_service.return_value = mock_hierarchical_context_service
             
             service = TaskApplicationService(

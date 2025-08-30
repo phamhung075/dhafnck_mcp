@@ -64,10 +64,18 @@ class DatabaseConfig:
         if self._initialized:
             return
             
-        self.database_type = os.getenv("DATABASE_TYPE", "supabase").lower()
-        self.database_url = self._get_secure_database_url()
-        self.engine: Optional[Engine] = None
-        self.SessionLocal: Optional[sessionmaker] = None
+        # Prevent re-entrant initialization
+        if hasattr(self, '_initializing') and self._initializing:
+            return
+        
+        self._initializing = True
+        try:
+            self.database_type = os.getenv("DATABASE_TYPE", "supabase").lower()
+            self.database_url = self._get_secure_database_url()
+            self.engine: Optional[Engine] = None
+            self.SessionLocal: Optional[sessionmaker] = None
+        finally:
+            self._initializing = False
         
         # Check if we're in test mode
         import sys

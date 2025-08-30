@@ -99,6 +99,9 @@ async def get_current_user(
             detail="Invalid token",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    except HTTPException:
+        # Re-raise HTTPExceptions without catching them
+        raise
     except Exception as e:
         logger.error(f"Authentication error: {e}")
         raise HTTPException(

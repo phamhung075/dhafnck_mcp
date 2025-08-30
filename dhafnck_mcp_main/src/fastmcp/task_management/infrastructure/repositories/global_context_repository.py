@@ -107,6 +107,10 @@ class GlobalContextRepository(CacheInvalidationMixin, BaseUserScopedRepository):
             if custom_fields:
                 workflow_templates["_custom"] = custom_fields
             
+            # Ensure user_id is set - required for database constraint
+            if not self.user_id:
+                raise ValueError("user_id is required for global context creation. Repository must be scoped to a user.")
+            
             # Create new global context with user_id
             # Use the entity's ID which has already been normalized by the service
             db_model = GlobalContextModel(

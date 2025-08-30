@@ -9,10 +9,10 @@ from uuid import uuid4
 from datetime import datetime
 from typing import Optional
 
-from fastmcp.task_management.application.services.task_application_service import TaskApplicationService
-from fastmcp.task_management.application.services.project_application_service import ProjectApplicationService
-from fastmcp.task_management.application.services.unified_context_service import UnifiedContextService
-from fastmcp.task_management.application.services.git_branch_application_service import GitBranchApplicationService
+from fastmcp.task_management.application.orchestrators.services.task_application_service import TaskApplicationService
+from fastmcp.task_management.application.orchestrators.services.project_application_service import ProjectApplicationService
+from fastmcp.task_management.application.orchestrators.services.unified_context_service import UnifiedContextService
+from fastmcp.task_management.application.orchestrators.services.git_branch_service import GitBranchService
 
 
 class TestServicesUserContext:

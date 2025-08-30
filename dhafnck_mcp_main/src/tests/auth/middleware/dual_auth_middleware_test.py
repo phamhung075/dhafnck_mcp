@@ -35,6 +35,8 @@ class TestDualAuthMiddleware:
         monkeypatch.setenv("SUPABASE_JWT_SECRET", "test-supabase-secret")
         monkeypatch.setenv("SUPABASE_URL", "https://test.supabase.co")
         monkeypatch.setenv("SUPABASE_ANON_KEY", "test-anon-key")
+        # Explicitly disable MVP mode for tests
+        monkeypatch.setenv("DHAFNCK_MVP_MODE", "false")
 
     @pytest.fixture
     def mock_request(self):
@@ -257,11 +259,12 @@ class TestDualAuthMiddleware:
         
         # Mock token info
         mock_token_info = TokenInfo(
-            token_id="tok_mcp_789",
+            token_hash="mcp_token_hash_789",
             user_id="mcp-user-789",
-            scopes=["read:tasks", "write:tasks"],
             created_at=datetime.utcnow(),
-            expires_at=datetime.utcnow() + timedelta(hours=1)
+            expires_at=datetime.utcnow() + timedelta(hours=1),
+            is_active=True,
+            usage_count=0
         )
         
         with patch.object(middleware, '_extract_token', return_value=token):

@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 from typing import Dict, Any
 
 from fastmcp.task_management.application.facades.unified_context_facade import UnifiedContextFacade
-from fastmcp.task_management.application.services.unified_context_service import UnifiedContextService
+from fastmcp.task_management.application.orchestrators.services.unified_context_service import UnifiedContextService
 from fastmcp.task_management.domain.exceptions.base_exceptions import ValidationException
 
 
@@ -172,7 +172,7 @@ class TestUnifiedContextFacade:
         assert result["context"]["data"] == "test"
         
         mock_service.get_context.assert_called_once_with(
-            "task", "task-123", True, True
+            "task", "task-123", True, True, None
         )
     
     def test_get_context_default_parameters(self, facade, mock_service):
@@ -182,7 +182,7 @@ class TestUnifiedContextFacade:
         facade.get_context(level="branch", context_id="branch-456")
         
         mock_service.get_context.assert_called_once_with(
-            "branch", "branch-456", False, False
+            "branch", "branch-456", False, False, None
         )
     
     def test_get_context_service_exception(self, facade, mock_service):

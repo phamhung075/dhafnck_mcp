@@ -87,7 +87,7 @@ class TestSubtaskApplicationFacade:
     def mock_task(self):
         """Create mock task."""
         task = Mock(spec=Task)
-        task.id = TaskId.from_string("task_123")
+        task.id = TaskId.from_string("12312312-3123-1231-2312-312312312312")
         task.title = "Test Task"
         task.git_branch_id = "branch_456"
         task.subtask_ids = []
@@ -377,6 +377,29 @@ class TestSubtaskCompletion:
 
 class TestContextDerivation:
     """Test context derivation from tasks and git branches."""
+    
+    @pytest.fixture
+    def mock_task_repository_factory(self):
+        """Create mock task repository factory."""
+        factory = Mock(spec=TaskRepositoryFactory)
+        factory.create_repository = Mock()
+        factory.create_system_repository = Mock()
+        return factory
+    
+    @pytest.fixture
+    def mock_subtask_repository_factory(self):
+        """Create mock subtask repository factory."""
+        factory = Mock(spec=SubtaskRepositoryFactory)
+        factory.create_repository = Mock()
+        return factory
+    
+    @pytest.fixture
+    def facade_with_factories(self, mock_task_repository_factory, mock_subtask_repository_factory):
+        """Create facade with repository factories (factory mode)."""
+        return SubtaskApplicationFacade(
+            task_repository_factory=mock_task_repository_factory,
+            subtask_repository_factory=mock_subtask_repository_factory
+        )
     
     def test_derive_context_from_task_with_git_branch(self, facade_with_factories, mock_task_repository_factory):
         """Test deriving context from a task with git branch."""

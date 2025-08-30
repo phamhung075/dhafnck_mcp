@@ -9,7 +9,7 @@ from unittest.mock import Mock, patch, AsyncMock
 from datetime import datetime, timezone
 from typing import Dict, Any
 
-from fastmcp.task_management.application.services.context_delegation_service import (
+from fastmcp.task_management.application.orchestrators.services.context_delegation_service import (
     ContextDelegationService,
     DelegationRequest,
     DelegationResult
@@ -176,7 +176,7 @@ class TestSyncDelegateContextMethod:
         mock_loop.is_running.return_value = True
         
         with patch('asyncio.get_event_loop', return_value=mock_loop):
-            with patch('fastmcp.task_management.application.services.context_delegation_service.logger') as mock_logger:
+            with patch('fastmcp.task_management.application.orchestrators.services.context_delegation_service.logger') as mock_logger:
                 result = service.delegate_context(request)
                 
                 # Should return mock response when loop is running

@@ -5,7 +5,7 @@ import pytest_asyncio
 from unittest.mock import Mock, AsyncMock, call
 from datetime import datetime, timezone
 
-from fastmcp.task_management.application.services.project_application_service import ProjectApplicationService
+from fastmcp.task_management.application.orchestrators.services.project_application_service import ProjectApplicationService
 from fastmcp.task_management.domain.entities.project import Project
 from fastmcp.task_management.domain.entities.agent import Agent, AgentCapability, AgentStatus
 from fastmcp.task_management.domain.entities.task import Task

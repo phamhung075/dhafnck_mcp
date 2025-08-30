@@ -10,8 +10,8 @@ from uuid import UUID
 import json
 from decimal import Decimal
 
-from ....domain.entities.context import GlobalContext, ProjectContext, BranchContext, TaskContextUnified as TaskContext
-from ....domain.value_objects.context_enums import ContextLevel
+from fastmcp.task_management.domain.entities.context import GlobalContext, ProjectContext, BranchContext, TaskContextUnified as TaskContext
+from fastmcp.task_management.domain.value_objects.context_enums import ContextLevel
 from .context_cache_service import ContextCacheService
 from .context_inheritance_service import ContextInheritanceService
 from .context_delegation_service import ContextDelegationService
@@ -199,19 +199,19 @@ class UnifiedContextService:
             if context_level == ContextLevel.BRANCH and not data.get("project_id"):
                 # Try to get project_id from the git branch entity
                 try:
-                    from fastmcp.task_management.infrastructure.repositories.git_branch_repository_factory import GitBranchRepositoryFactory
-                    git_branch_factory = GitBranchDomainServiceFactory.get_repository_factory()
+                    from .domain_service_factory import DomainServiceFactory
+                    git_branch_factory = DomainServiceFactory.get_git_branch_repository_factory()
                     git_branch_repo = git_branch_factory.create()
                     
                     # Use sync method if available, otherwise handle async
                     if hasattr(git_branch_repo, 'get'):
                         branch = git_branch_repo.get(context_id)
+                    elif hasattr(git_branch_repo, 'find_by_id'):
+                        # Try sync find_by_id method first
+                        branch = git_branch_repo.find_by_id(context_id)
                     else:
-                        # For async repos, we need to handle differently
-                        import asyncio
-                        loop = asyncio.new_event_loop()
-                        branch = loop.run_until_complete(git_branch_repo.find_by_id(None, context_id))
-                        loop.close()
+                        # Fallback: branch lookup not supported
+                        branch = None
                     
                     if branch and hasattr(branch, 'project_id'):
                         data['project_id'] = branch.project_id
@@ -224,8 +224,8 @@ class UnifiedContextService:
             elif context_level == ContextLevel.TASK and not any(data.get(key) for key in ["branch_id", "parent_branch_id", "git_branch_id"]):
                 # Try to get git_branch_id from the task entity
                 try:
-                    from fastmcp.task_management.infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
-                    task_factory = TaskDomainServiceFactory.get_repository_factory()
+                    from .domain_service_factory import DomainServiceFactory
+                    task_factory = DomainServiceFactory.get_task_repository_factory()
                     task_repo = task_factory.create()
                     
                     # Use the correct sync method
@@ -620,7 +620,7 @@ class UnifiedContextService:
             try:
                 from ....infrastructure.cache.context_cache import get_context_cache
                 cache = get_context_cache()
-                user_id = self.user_id
+                user_id = self._user_id
                 
                 # Invalidate the specific context and its inheritance chain
                 cache.invalidate_context(
@@ -1712,21 +1712,19 @@ class UnifiedContextService:
             Optional project_id if found
         """
         try:
-            from fastmcp.task_management.infrastructure.repositories.git_branch_repository_factory import GitBranchRepositoryFactory
-            git_branch_factory = GitBranchDomainServiceFactory.get_repository_factory()
+            from .domain_service_factory import DomainServiceFactory
+            git_branch_factory = DomainServiceFactory.get_git_branch_repository_factory()
             git_branch_repo = git_branch_factory.create()
             
             # Use sync method if available
             if hasattr(git_branch_repo, 'get'):
                 git_branch = git_branch_repo.get(branch_id)
+            elif hasattr(git_branch_repo, 'find_by_id'):
+                # Try sync find_by_id method
+                git_branch = git_branch_repo.find_by_id(branch_id)
             else:
-                # Try alternative method
-                import asyncio
-                loop = asyncio.new_event_loop()
-                try:
-                    git_branch = loop.run_until_complete(git_branch_repo.find_by_id(None, branch_id))
-                finally:
-                    loop.close()
+                # No suitable sync method available
+                git_branch = None
             
             if git_branch and hasattr(git_branch, 'project_id'):
                 logger.info(f"Resolved project_id '{git_branch.project_id}' from git branch '{branch_id}'")
@@ -1803,7 +1801,7 @@ class UnifiedContextService:
             # Global context ID is user-specific
             import uuid
             namespace = uuid.UUID("a47ae7b9-1d4b-4e5f-8b5a-9c3e5d2f8a1c")
-            parent_id = str(uuid.uuid5(namespace, self.user_id)) if self.user_id else None
+            parent_id = str(uuid.uuid5(namespace, self._user_id)) if self._user_id else None
         elif context_level == ContextLevel.BRANCH:
             parent_level = ContextLevel.PROJECT
             parent_id = getattr(context_entity, 'project_id', None)
@@ -1836,16 +1834,16 @@ class UnifiedContextService:
     def _ensure_global_context_exists(self, user_id: Optional[str] = None) -> Dict[str, Any]:
         """Ensure global context exists, create if missing."""
         try:
-            # Determine global context ID
-            global_context_id = "global_singleton"
-            
-            # For user-scoped contexts, generate user-specific ID
-            if user_id:
-                # GLOBAL_SINGLETON_UUID removed - each user has their own global context
-                import uuid
-                # Use a namespace UUID for context generation
-                namespace = uuid.UUID("a47ae7b9-1d4b-4e5f-8b5a-9c3e5d2f8a1c")
-                global_context_id = str(uuid.uuid5(namespace, user_id))
+            # Always generate user-specific UUID for global context
+            effective_user_id = user_id or self._user_id or 'system'
+            import uuid
+            # Use a namespace UUID for context generation
+            namespace = uuid.UUID("a47ae7b9-1d4b-4e5f-8b5a-9c3e5d2f8a1c")
+            try:
+                user_uuid = uuid.UUID(str(effective_user_id))
+            except ValueError:
+                user_uuid = uuid.uuid5(namespace, str(effective_user_id))
+            global_context_id = str(uuid.uuid5(namespace, str(user_uuid)))
             
             # Check if global context exists
             global_repo = self._get_user_scoped_repository(self.repositories[ContextLevel.GLOBAL])

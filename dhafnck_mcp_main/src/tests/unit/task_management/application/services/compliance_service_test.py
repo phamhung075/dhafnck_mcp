@@ -9,7 +9,7 @@ from typing import Dict, Any
 import uuid
 from datetime import datetime
 
-from fastmcp.task_management.application.services.compliance_service import ComplianceService
+from fastmcp.task_management.application.orchestrators.services.compliance_service import ComplianceService
 from fastmcp.task_management.domain.enums.compliance_enums import ComplianceLevel, ValidationResult, SecurityLevel
 from fastmcp.task_management.domain.value_objects.compliance_objects import ComplianceRule, ValidationReport, SecurityContext
 from fastmcp.task_management.infrastructure.validation.document_validator import DocumentValidator
@@ -90,7 +90,7 @@ class TestComplianceRuleManagement:
             category="test_compliance"
         )
         
-        with patch('fastmcp.task_management.application.services.compliance_service.logger') as mock_logger:
+        with patch('fastmcp.task_management.application.orchestrators.services.compliance_service.logger') as mock_logger:
             service.add_compliance_rule(new_rule)
             mock_logger.info.assert_called_with("Added compliance rule: TEST_RULE")
         
@@ -105,7 +105,7 @@ class TestComplianceRuleManagement:
         """Test removing an existing compliance rule."""
         service = ComplianceService()
         
-        with patch('fastmcp.task_management.application.services.compliance_service.logger') as mock_logger:
+        with patch('fastmcp.task_management.application.orchestrators.services.compliance_service.logger') as mock_logger:
             removed = service.remove_compliance_rule("DOC_VALIDATION")
             mock_logger.info.assert_called_with("Removed compliance rule: DOC_VALIDATION")
         
@@ -118,7 +118,7 @@ class TestComplianceRuleManagement:
         """Test removing a non-existent compliance rule."""
         service = ComplianceService()
         
-        with patch('fastmcp.task_management.application.services.compliance_service.logger') as mock_logger:
+        with patch('fastmcp.task_management.application.orchestrators.services.compliance_service.logger') as mock_logger:
             removed = service.remove_compliance_rule("NONEXISTENT_RULE")
             mock_logger.info.assert_not_called()
         
@@ -267,7 +267,7 @@ class TestComplianceValidation:
         
         service = ComplianceService(mock_doc_validator, mock_access_controller)
         
-        with patch('fastmcp.task_management.application.services.compliance_service.logger') as mock_logger:
+        with patch('fastmcp.task_management.application.orchestrators.services.compliance_service.logger') as mock_logger:
             result = service.validate_operation(
                 "run_command",
                 resource_path="/bin/ls",
@@ -382,7 +382,7 @@ class TestDocumentValidation:
         
         service = ComplianceService(mock_doc_validator)
         
-        with patch('fastmcp.task_management.application.services.compliance_service.logger') as mock_logger:
+        with patch('fastmcp.task_management.application.orchestrators.services.compliance_service.logger') as mock_logger:
             result = service._validate_document_operation({
                 "file_path": "/test/file.md",
                 "content": "content"
@@ -499,7 +499,7 @@ class TestSecurityValidation:
         
         service = ComplianceService(access_controller=mock_access_controller)
         
-        with patch('fastmcp.task_management.application.services.compliance_service.logger') as mock_logger:
+        with patch('fastmcp.task_management.application.orchestrators.services.compliance_service.logger') as mock_logger:
             result = service._validate_security_operation("edit_file", {
                 "file_path": "/test/file.py"
             })

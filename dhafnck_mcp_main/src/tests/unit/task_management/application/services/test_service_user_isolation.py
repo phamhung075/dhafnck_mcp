@@ -10,10 +10,10 @@ from uuid import uuid4
 from unittest.mock import Mock, MagicMock, patch, AsyncMock
 from typing import Optional
 
-from fastmcp.task_management.application.services.task_application_service import TaskApplicationService
-from fastmcp.task_management.application.services.project_application_service import ProjectApplicationService
-from fastmcp.task_management.application.services.agent_coordination_service import AgentCoordinationService
-from fastmcp.task_management.application.services.subtask_application_service import SubtaskApplicationService
+from fastmcp.task_management.application.orchestrators.services.task_application_service import TaskApplicationService
+from fastmcp.task_management.application.orchestrators.services.project_application_service import ProjectApplicationService
+from fastmcp.task_management.application.orchestrators.services.agent_coordination_service import AgentCoordinationService
+from fastmcp.task_management.application.orchestrators.services.subtask_application_service import SubtaskApplicationService
 
 
 class TestServiceUserIsolation:

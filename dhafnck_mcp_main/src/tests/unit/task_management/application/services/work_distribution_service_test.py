@@ -12,7 +12,7 @@ from unittest.mock import Mock, AsyncMock, patch, MagicMock
 from typing import List, Dict, Any, Set
 from collections import defaultdict
 
-from fastmcp.task_management.application.services.work_distribution_service import (
+from fastmcp.task_management.application.orchestrators.services.work_distribution_service import (
     WorkDistributionService,
     DistributionStrategy,
     WorkDistributionException,
@@ -27,7 +27,7 @@ from fastmcp.task_management.domain.value_objects.agents import (
     AgentRole, AgentExpertise, AgentProfile, AgentCapabilities
 )
 from fastmcp.task_management.domain.value_objects.coordination import WorkAssignment
-from fastmcp.task_management.application.services.agent_coordination_service import AgentCoordinationService
+from fastmcp.task_management.application.orchestrators.services.agent_coordination_service import AgentCoordinationService
 
 
 class TestDistributionStrategy:

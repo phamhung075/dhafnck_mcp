@@ -8,7 +8,7 @@ import pytest
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
 from datetime import datetime
 
-from fastmcp.task_management.application.services.task_application_service import (
+from fastmcp.task_management.application.orchestrators.services.task_application_service import (
     TaskApplicationService
 )
 from fastmcp.task_management.application.dtos.task import (
@@ -66,16 +66,16 @@ class TestTaskApplicationService:
     @pytest.fixture
     def service(self, mock_task_repository, mock_context_service, mock_unified_context_service, mock_use_cases):
         """Create service instance with mocks"""
-        with patch('fastmcp.task_management.application.factories.unified_context_facade_factory.UnifiedContextFacadeFactory') as mock_factory:
+        with patch('fastmcp.task_management.infrastructure.factories.unified_context_facade_factory.UnifiedContextFacadeFactory') as mock_factory:
             mock_factory.return_value.create_unified_service.return_value = mock_unified_context_service
             
-            with patch('fastmcp.task_management.application.services.task_application_service.CreateTaskUseCase', return_value=mock_use_cases['create']):
-                with patch('fastmcp.task_management.application.services.task_application_service.GetTaskUseCase', return_value=mock_use_cases['get']):
-                    with patch('fastmcp.task_management.application.services.task_application_service.UpdateTaskUseCase', return_value=mock_use_cases['update']):
-                        with patch('fastmcp.task_management.application.services.task_application_service.ListTasksUseCase', return_value=mock_use_cases['list']):
-                            with patch('fastmcp.task_management.application.services.task_application_service.SearchTasksUseCase', return_value=mock_use_cases['search']):
-                                with patch('fastmcp.task_management.application.services.task_application_service.DeleteTaskUseCase', return_value=mock_use_cases['delete']):
-                                    with patch('fastmcp.task_management.application.services.task_application_service.CompleteTaskUseCase', return_value=mock_use_cases['complete']):
+            with patch('fastmcp.task_management.application.orchestrators.services.task_application_service.CreateTaskUseCase', return_value=mock_use_cases['create']):
+                with patch('fastmcp.task_management.application.orchestrators.services.task_application_service.GetTaskUseCase', return_value=mock_use_cases['get']):
+                    with patch('fastmcp.task_management.application.orchestrators.services.task_application_service.UpdateTaskUseCase', return_value=mock_use_cases['update']):
+                        with patch('fastmcp.task_management.application.orchestrators.services.task_application_service.ListTasksUseCase', return_value=mock_use_cases['list']):
+                            with patch('fastmcp.task_management.application.orchestrators.services.task_application_service.SearchTasksUseCase', return_value=mock_use_cases['search']):
+                                with patch('fastmcp.task_management.application.orchestrators.services.task_application_service.DeleteTaskUseCase', return_value=mock_use_cases['delete']):
+                                    with patch('fastmcp.task_management.application.orchestrators.services.task_application_service.CompleteTaskUseCase', return_value=mock_use_cases['complete']):
                                         with patch('fastmcp.task_management.infrastructure.repositories.task_context_repository.TaskContextRepository'):
                                             with patch('fastmcp.task_management.infrastructure.database.database_config.get_db_config'):
                                                 service = TaskApplicationService(
@@ -106,14 +106,14 @@ class TestTaskApplicationService:
         """Test service initialization"""
         user_id = "test_user"
         
-        with patch('fastmcp.task_management.application.factories.unified_context_facade_factory.UnifiedContextFacadeFactory'):
-            with patch('fastmcp.task_management.application.services.task_application_service.CreateTaskUseCase'):
-                with patch('fastmcp.task_management.application.services.task_application_service.GetTaskUseCase'):
-                    with patch('fastmcp.task_management.application.services.task_application_service.UpdateTaskUseCase'):
-                        with patch('fastmcp.task_management.application.services.task_application_service.ListTasksUseCase'):
-                            with patch('fastmcp.task_management.application.services.task_application_service.SearchTasksUseCase'):
-                                with patch('fastmcp.task_management.application.services.task_application_service.DeleteTaskUseCase'):
-                                    with patch('fastmcp.task_management.application.services.task_application_service.CompleteTaskUseCase'):
+        with patch('fastmcp.task_management.infrastructure.factories.unified_context_facade_factory.UnifiedContextFacadeFactory'):
+            with patch('fastmcp.task_management.application.orchestrators.services.task_application_service.CreateTaskUseCase'):
+                with patch('fastmcp.task_management.application.orchestrators.services.task_application_service.GetTaskUseCase'):
+                    with patch('fastmcp.task_management.application.orchestrators.services.task_application_service.UpdateTaskUseCase'):
+                        with patch('fastmcp.task_management.application.orchestrators.services.task_application_service.ListTasksUseCase'):
+                            with patch('fastmcp.task_management.application.orchestrators.services.task_application_service.SearchTasksUseCase'):
+                                with patch('fastmcp.task_management.application.orchestrators.services.task_application_service.DeleteTaskUseCase'):
+                                    with patch('fastmcp.task_management.application.orchestrators.services.task_application_service.CompleteTaskUseCase'):
                                         with patch('fastmcp.task_management.infrastructure.repositories.task_context_repository.TaskContextRepository'):
                                             with patch('fastmcp.task_management.infrastructure.database.database_config.get_db_config'):
                                                 service = TaskApplicationService(
@@ -144,7 +144,7 @@ class TestTaskApplicationService:
             del mock_task_repository.with_user  # Remove with_user method completely
         mock_task_repository.user_id = "different_user"
         
-        with patch('fastmcp.task_management.application.services.task_application_service.type') as mock_type:
+        with patch('fastmcp.task_management.application.orchestrators.services.task_application_service.type') as mock_type:
             mock_class = Mock()
             new_repo = Mock()
             mock_class.return_value = new_repo

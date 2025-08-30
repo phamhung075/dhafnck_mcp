@@ -70,11 +70,9 @@ class ComplianceMCPController:
                          timeout: Optional[int] = None, limit: int = 100) -> Dict[str, Any]:
         """Main compliance management method that routes actions to appropriate handlers"""
         try:
-            # Get user ID - NO FALLBACKS ALLOWED
-            if user_id is None:
-                # NO FALLBACKS ALLOWED - user authentication is required
-                from ....domain.exceptions.authentication_exceptions import UserAuthenticationRequiredError
-                raise UserAuthenticationRequiredError("Compliance operation")
+            # Validate user ID and handle MVP mode fallbacks
+            from ....domain.constants import validate_user_id
+            validated_user_id = validate_user_id(user_id, "Compliance operation")
             
             if action == "validate_compliance":
                 if not operation:

@@ -6,7 +6,7 @@ Tests the task description controller including parameter descriptions and tool 
 import pytest
 from unittest.mock import Mock, patch
 
-from fastmcp.task_management.interface.mcp_controllers.desc.task.manage_task_description import (
+from fastmcp.task_management.interface.mcp_controllers.task_mcp_controller.manage_task_description import (
     TOOL_NAME,
     TOOL_DESCRIPTION,
     get_manage_task_description,

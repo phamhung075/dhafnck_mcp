@@ -623,6 +623,7 @@ class TaskApplicationFacade:
                     status=request.status if hasattr(request, 'status') else None,
                     priority=request.priority if hasattr(request, 'priority') else None,
                     assignee_id=request.assignee_id if hasattr(request, 'assignee_id') else None,
+                    git_branch_id=request.git_branch_id if hasattr(request, 'git_branch_id') else None,  # FIX: Add git_branch_id filtering
                     limit=request.limit if hasattr(request, 'limit') else 100,
                     offset=request.offset if hasattr(request, 'offset') else 0
                 )
@@ -643,7 +644,8 @@ class TaskApplicationFacade:
                     "count": len(tasks_list),
                     "filters_applied": {
                         "status": request.status if hasattr(request, 'status') else None,
-                        "priority": request.priority if hasattr(request, 'priority') else None
+                        "priority": request.priority if hasattr(request, 'priority') else None,
+                        "git_branch_id": request.git_branch_id if hasattr(request, 'git_branch_id') else None
                     },
                     "minimal": minimal,
                     "performance_mode": True

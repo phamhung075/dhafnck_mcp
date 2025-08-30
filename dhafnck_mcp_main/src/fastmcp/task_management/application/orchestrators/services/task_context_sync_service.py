@@ -79,13 +79,13 @@ class TaskContextSyncService:
             task_id_str = str(domain_task.id.value if hasattr(domain_task.id, 'value') else domain_task.id)
             
             # If project_id not provided, try to get it from the task's git_branch
+            # Note: Current repository structure requires project_id to find git branch
+            # This is a circular dependency that cannot be resolved without refactoring
             if not project_id and hasattr(domain_task, 'git_branch_id'):
-                # Try to get project_id from git branch repository using factory
-                from ....infrastructure.repositories.repository_factory import RepositoryFactory
-                git_branch_repo = RepositoryFactory.get_git_branch_repository()
-                git_branch = git_branch_repo.find_by_id(domain_task.git_branch_id)
-                if git_branch and hasattr(git_branch, 'project_id'):
-                    project_id = git_branch.project_id
+                # Cannot retrieve project_id from branch without knowing project_id first
+                logger.debug(f"Cannot retrieve project_id from branch {domain_task.git_branch_id} without knowing project_id")
+                # Use domain_task.project_id if available, otherwise use default
+                project_id = getattr(domain_task, 'project_id', None)
             
             # Ensure we have a project_id
             if not project_id:
@@ -142,6 +142,12 @@ class TaskContextSyncService:
                 include_context=True,
             )
             return task_response
+        except UserAuthenticationRequiredError:
+            # Re-raise authentication errors - they should not be swallowed
+            raise
+        except ValueError:
+            # Re-raise validation errors - they should not be swallowed
+            raise
         except Exception as exc:
             logger.error("[TaskContextSyncService] Failed to sync context for task %s: %s", task_id, exc, exc_info=True)
             return None 

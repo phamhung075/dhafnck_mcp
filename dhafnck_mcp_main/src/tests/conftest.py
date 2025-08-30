@@ -62,9 +62,10 @@ class MockAPIRouter:
         return decorator
 
 class MockHTTPException(Exception):
-    def __init__(self, status_code, detail):
+    def __init__(self, status_code, detail, headers=None):
         self.status_code = status_code
         self.detail = detail
+        self.headers = headers or {}
 
 class MockDepends:
     def __init__(self, dependency):
@@ -72,6 +73,7 @@ class MockDepends:
 
 class MockStatus:
     HTTP_200_OK = 200
+    HTTP_400_BAD_REQUEST = 400
     HTTP_401_UNAUTHORIZED = 401
     HTTP_403_FORBIDDEN = 403
     HTTP_404_NOT_FOUND = 404
@@ -113,6 +115,23 @@ mock_fastapi_security.HTTPBearer = MockHTTPBearer
 mock_fastapi_security.HTTPAuthorizationCredentials = MockHTTPAuthorizationCredentials
 sys.modules['fastapi.security'] = mock_fastapi_security
 
+# Mock TestClient for FastAPI
+class MockTestClient:
+    def __init__(self, app):
+        self.app = app
+    
+    def get(self, *args, **kwargs):
+        return MockResponse()
+    
+    def post(self, *args, **kwargs):
+        return MockResponse()
+    
+    def put(self, *args, **kwargs):
+        return MockResponse()
+    
+    def delete(self, *args, **kwargs):
+        return MockResponse()
+
 # Create fastapi module mock
 mock_fastapi = type(sys)('fastapi')
 mock_fastapi.APIRouter = MockAPIRouter
@@ -124,8 +143,14 @@ mock_fastapi.Response = MockResponse
 mock_fastapi.responses = type(sys)('fastapi.responses')
 mock_fastapi.responses.JSONResponse = MockJSONResponse
 mock_fastapi.security = mock_fastapi_security
+
+# Add testclient module
+mock_fastapi.testclient = type(sys)('fastapi.testclient')
+mock_fastapi.testclient.TestClient = MockTestClient
+
 sys.modules['fastapi'] = mock_fastapi
 sys.modules['fastapi.responses'] = mock_fastapi.responses
+sys.modules['fastapi.testclient'] = mock_fastapi.testclient
 
 # Ensure src directory is on sys.path for fastmcp imports
 src_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -463,16 +488,6 @@ def set_mcp_db_path_for_tests(request):
     
     from fastmcp.task_management.infrastructure.database.database_initializer import reset_initialization_cache
     from fastmcp.task_management.infrastructure.database.database_source_manager import DatabaseSourceManager
-    from tests.unit.infrastructure.database.test_database_config import (
-        DatabaseTestConfig,
-        install_missing_dependencies
-    )
-    
-    # Install missing dependencies if needed
-    try:
-        install_missing_dependencies()
-    except Exception as e:
-        print(f"⚠️ Could not install dependencies: {e}")
     
     # Clear the initializer's cache to ensure schemas are re-run
     reset_initialization_cache()
@@ -490,26 +505,17 @@ def set_mcp_db_path_for_tests(request):
     original_test_db_url = os.environ.get("TEST_DATABASE_URL")
     
     try:
-        # Set up DatabaseTestConfig - it will respect DATABASE_TYPE environment variable
-        test_config = DatabaseTestConfig()
-        
-        # Configure test environment (respects DATABASE_TYPE - Supabase/PostgreSQL/SQLite)
-        test_config.configure_test_environment()
+        # Set test database environment variables
+        # Use SQLite for tests to avoid needing PostgreSQL
+        os.environ["DATABASE_TYPE"] = "sqlite"
+        os.environ["MCP_DB_PATH"] = "/tmp/dhafnck_test.db"
         
         # Display what database is being used
         db_type = os.environ.get('DATABASE_TYPE', 'not set')
-        if db_type == 'sqlite':
-            print(f"\n📦 Using SQLite test database")
-        elif db_type == 'supabase':
-            print(f"\n🎯 Using Supabase test database")
-        elif db_type == 'postgresql':
-            print(f"\n🐘 Using PostgreSQL test database")
-        else:
-            print(f"\n⚠️ Unknown database type: {db_type}")
-            
+        print(f"\n📦 Using {db_type} test database")
         print(f"📊 DATABASE_TYPE: {db_type}")
-        if db_type != 'sqlite':
-            print(f"🔗 DATABASE_URL: [configured for test database]")
+        if db_type == 'sqlite':
+            print(f"🔗 MCP_DB_PATH: {os.environ.get('MCP_DB_PATH', 'not set')}")
         
         # Initialize the test database with schema and basic test data
         # Note: For PostgreSQL, we don't need to pass a file path
@@ -527,9 +533,6 @@ def set_mcp_db_path_for_tests(request):
         
     finally:
         # Restore original environment
-        test_config.restore_environment()
-        
-        # Additional restoration for safety
         if original_db_type is not None:
             os.environ["DATABASE_TYPE"] = original_db_type
         elif "DATABASE_TYPE" in os.environ:
@@ -544,6 +547,13 @@ def set_mcp_db_path_for_tests(request):
             os.environ["TEST_DATABASE_URL"] = original_test_db_url
         elif "TEST_DATABASE_URL" in os.environ:
             del os.environ["TEST_DATABASE_URL"]
+            
+        # Clean up test database file
+        if os.path.exists("/tmp/dhafnck_test.db"):
+            try:
+                os.remove("/tmp/dhafnck_test.db")
+            except:
+                pass
 
 
 # =============================================

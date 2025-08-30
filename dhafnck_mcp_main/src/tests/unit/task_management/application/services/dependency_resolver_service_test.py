@@ -5,7 +5,7 @@ from unittest.mock import Mock, create_autospec
 from datetime import datetime
 from typing import List, Optional
 
-from fastmcp.task_management.application.services.dependency_resolver_service import DependencyResolverService
+from fastmcp.task_management.application.orchestrators.services.dependency_resolver_service import DependencyResolverService
 from fastmcp.task_management.domain.repositories.task_repository import TaskRepository
 from fastmcp.task_management.domain.value_objects.task_id import TaskId
 from fastmcp.task_management.domain.value_objects.task_status import TaskStatus

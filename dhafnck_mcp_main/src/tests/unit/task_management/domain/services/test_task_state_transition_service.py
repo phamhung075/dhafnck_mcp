@@ -45,7 +45,7 @@ class TestTaskStateTransitionService:
         self.test_task = Task(
             title="Test Task",
             description="Test description",
-            id=TaskId.from_string("test-task-id"),
+            id=TaskId.from_string("12345678-1234-5678-1234-567812345678"),
             status=TaskStatus.from_string("todo"),
             priority=Priority.from_string("medium"),
             git_branch_id="test-branch",
@@ -543,10 +543,13 @@ class TestTaskStateTransitionService:
 
     def _create_task_with_status(self, status: str) -> Task:
         """Helper to create task with specific status"""
+        import uuid
+        # Generate a deterministic UUID based on the status for test consistency
+        task_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"task-{status}"))
         return Task(
             title=f"Task with {status} status",
             description="Test task",
-            id=TaskId.from_string(f"task-{status}"),
+            id=TaskId.from_string(task_uuid),
             status=TaskStatus.from_string(status),
             priority=Priority.from_string("medium"),
             git_branch_id="test-branch",
@@ -574,7 +577,7 @@ class TestTaskStateTransitionServiceIntegration:
         task = Task(
             title="Workflow Task",
             description="Task going through complete workflow",
-            id=TaskId.from_string("workflow-task"),
+            id=TaskId.from_string("87654321-4321-8765-4321-876543218765"),
             status=TaskStatus.from_string("todo"),
             priority=Priority.from_string("high"),
             git_branch_id="workflow-branch",

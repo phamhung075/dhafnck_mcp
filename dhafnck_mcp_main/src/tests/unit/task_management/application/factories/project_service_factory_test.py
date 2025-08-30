@@ -20,8 +20,8 @@ from fastmcp.task_management.infrastructure.factories.project_service_factory im
     create_project_service_for_user,
     create_sqlite_project_service
 )
-from fastmcp.task_management.application.services.project_management_service import ProjectManagementService
-from fastmcp.task_management.application.services.project_application_service import ProjectApplicationService
+from fastmcp.task_management.application.orchestrators.services.project_management_service import ProjectManagementService
+from fastmcp.task_management.application.orchestrators.services.project_application_service import ProjectApplicationService
 from fastmcp.task_management.infrastructure.utilities.path_resolver import PathResolver
 from fastmcp.task_management.infrastructure.repositories.project_repository_factory import RepositoryConfig
 

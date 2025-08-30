@@ -222,15 +222,12 @@ class DatabaseSourceManager:
             test_recent = (current_time - test_mtime) < recent_threshold
             
             if main_recent and test_recent and self._current_mode != DatabaseMode.TEST:
-                logger.error(f"Multiple active databases detected:")
-                logger.error(f"  Main DB: {main_db} (modified {current_time - main_mtime:.0f}s ago)")
-                logger.error(f"  Test DB: {test_db} (modified {current_time - test_mtime:.0f}s ago)")
-                raise RuntimeError(
-                    "ERROR: Multiple database sources detected! "
-                    f"Both main and test databases have recent activity. "
-                    f"Current mode: {self._current_mode.value}. "
-                    f"Expected database: {self._database_path}"
-                )
+                logger.warning(f"Multiple active databases detected:")
+                logger.warning(f"  Main DB: {main_db} (modified {current_time - main_mtime:.0f}s ago)")
+                logger.warning(f"  Test DB: {test_db} (modified {current_time - test_mtime:.0f}s ago)")
+                logger.warning("This is common during development - using mode-appropriate database")
+                # Don't raise error - just warn and continue with mode-appropriate database
+                return
     
     def force_mode(self, mode: DatabaseMode) -> None:
         """

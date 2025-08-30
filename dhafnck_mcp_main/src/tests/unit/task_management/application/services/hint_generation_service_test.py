@@ -10,7 +10,7 @@ from datetime import datetime, timezone, timedelta
 from unittest.mock import Mock, AsyncMock, patch, MagicMock, call
 from typing import List, Dict, Any
 
-from fastmcp.task_management.application.services.hint_generation_service import HintGenerationService
+from fastmcp.task_management.application.orchestrators.services.hint_generation_service import HintGenerationService
 from fastmcp.task_management.domain.value_objects.hints import (
     WorkflowHint, HintCollection, HintType, HintPriority, HintMetadata
 )
@@ -503,8 +503,8 @@ class TestHintEnhancement:
         original_hint.metadata.related_tasks = []
         original_hint.metadata.patterns_detected = []
         
-        with patch('fastmcp.task_management.application.services.hint_generation_service.HintMetadata') as mock_metadata_class:
-            with patch('fastmcp.task_management.application.services.hint_generation_service.WorkflowHint') as mock_hint_class:
+        with patch('fastmcp.task_management.application.orchestrators.services.hint_generation_service.HintMetadata') as mock_metadata_class:
+            with patch('fastmcp.task_management.application.orchestrators.services.hint_generation_service.WorkflowHint') as mock_hint_class:
                 mock_enhanced_metadata = Mock()
                 mock_metadata_class.return_value = mock_enhanced_metadata
                 

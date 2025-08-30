@@ -9,7 +9,7 @@ import pytest
 from unittest.mock import Mock, patch
 from typing import Dict, Any
 
-from fastmcp.task_management.application.services.context_inheritance_service import ContextInheritanceService
+from fastmcp.task_management.application.orchestrators.services.context_inheritance_service import ContextInheritanceService
 
 
 class TestContextInheritanceService4Layer:

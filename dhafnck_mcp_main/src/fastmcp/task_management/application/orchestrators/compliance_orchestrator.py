@@ -10,8 +10,8 @@ from typing import Dict, Any
 from datetime import datetime
 
 from ...domain.enums.compliance_enums import ComplianceLevel
-from ..orchestrators.services.compliance_service import ComplianceService
-from ..orchestrators.services.audit_service import AuditService
+from .services.compliance_service import ComplianceService
+from .services.audit_service import AuditService
 from ...domain.interfaces.monitoring_service import IProcessMonitor
 from ...infrastructure.monitoring.process_monitor import ProcessMonitor
 

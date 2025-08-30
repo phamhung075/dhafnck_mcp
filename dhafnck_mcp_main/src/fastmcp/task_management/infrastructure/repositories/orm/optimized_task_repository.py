@@ -124,24 +124,28 @@ class OptimizedTaskRepository(ORMTaskRepository):
             return result
     
     def list_tasks_minimal(self, status: str | None = None, priority: str | None = None,
-                           assignee_id: str | None = None, limit: int = 100,
-                           offset: int = 0) -> List[Dict[str, Any]]:
+                           assignee_id: str | None = None, git_branch_id: str | None = None,
+                           limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
         """List tasks with minimal data for improved performance
         
         Args:
             status: Optional status filter
             priority: Optional priority filter
             assignee_id: Optional assignee filter
+            git_branch_id: Optional git branch filter (overrides repository's git_branch_id)
             limit: Maximum number of results
             offset: Result offset for pagination
             
         Returns:
             List of minimal task data dictionaries
         """
+        # Use provided git_branch_id or fall back to repository's git_branch_id
+        effective_git_branch_id = git_branch_id if git_branch_id is not None else self.git_branch_id
+        
         # Generate cache key
         cache_key = self.optimizer.get_cache_key(
             'list_tasks_minimal',
-            git_branch_id=self.git_branch_id,
+            git_branch_id=effective_git_branch_id,
             status=status,
             priority=priority,
             assignee_id=assignee_id,
@@ -170,10 +174,10 @@ class OptimizedTaskRepository(ORMTaskRepository):
             
             # Apply filters
             filters = []
-            logger.debug(f"[OPTIMIZED_REPO] list_tasks_minimal - self.git_branch_id: {self.git_branch_id}")
-            if self.git_branch_id:
-                filters.append(Task.git_branch_id == self.git_branch_id)
-                logger.debug(f"[OPTIMIZED_REPO] Applied git_branch_id filter: {self.git_branch_id}")
+            logger.debug(f"[OPTIMIZED_REPO] list_tasks_minimal - effective_git_branch_id: {effective_git_branch_id}")
+            if effective_git_branch_id:
+                filters.append(Task.git_branch_id == effective_git_branch_id)
+                logger.debug(f"[OPTIMIZED_REPO] Applied git_branch_id filter: {effective_git_branch_id}")
             else:
                 logger.debug(f"[OPTIMIZED_REPO] NO git_branch_id filter - returning ALL tasks")
             if status:

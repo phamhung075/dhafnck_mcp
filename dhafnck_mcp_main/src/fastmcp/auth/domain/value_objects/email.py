@@ -28,6 +28,14 @@ class Email:
         if not self.EMAIL_PATTERN.match(self.value):
             raise ValueError(f"Invalid email format: {self.value}")
         
+        # Check for consecutive dots (invalid in email addresses)
+        if '..' in self.value:
+            raise ValueError(f"Invalid email format: {self.value}")
+        
+        # Check that domain doesn't start with a dot
+        if '@.' in self.value:
+            raise ValueError(f"Invalid email format: {self.value}")
+        
         # Additional validation
         if len(self.value) > 254:  # Max email length per RFC
             raise ValueError("Email address too long")

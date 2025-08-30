@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
 from typing import List, Dict, Any, Optional
 
-from fastmcp.task_management.application.services.workflow_analysis_service import (
+from fastmcp.task_management.application.orchestrators.services.workflow_analysis_service import (
     WorkflowAnalysisService,
     WorkflowPattern,
     WorkflowAnalysis

@@ -374,12 +374,12 @@ class TestMCPTokenService:
         
         # Assert
         assert len(user_tokens) == 0
+
+
+# Global Instance Test (moved outside class)
+def test_global_mcp_token_service_instance():
+    """Test that global service instance is available."""
+    from fastmcp.auth.services.mcp_token_service import mcp_token_service
     
-    # Global Instance Test
-    
-    def test_global_mcp_token_service_instance():
-        """Test that global service instance is available."""
-        from fastmcp.auth.services.mcp_token_service import mcp_token_service
-        
-        assert mcp_token_service is not None
-        assert isinstance(mcp_token_service, MCPTokenService)
+    assert mcp_token_service is not None
+    assert isinstance(mcp_token_service, MCPTokenService)

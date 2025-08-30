@@ -53,7 +53,7 @@ class TestDeleteTaskUseCase:
     def sample_task(self):
         """Create a sample task"""
         task = Mock(spec=Task)
-        task.id = TaskId.from_string("123")
+        task.id = TaskId.from_string("45645645-6456-4564-5645-645645645645")
         task.title = "Test Task"
         task.status = TaskStatus.todo()
         task.git_branch_id = "branch-123"

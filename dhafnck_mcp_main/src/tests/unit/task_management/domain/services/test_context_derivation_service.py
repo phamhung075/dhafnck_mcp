@@ -46,7 +46,7 @@ class TestContextDerivationService:
         self.test_task = Task(
             title="Test Task",
             description="Test description",
-            id=TaskId.from_string("test-task-id"),
+            id=TaskId.from_string("88888888-8888-8888-8888-888888888888"),
             status=TaskStatus.from_string("todo"),
             priority=Priority.from_string("medium"),
             git_branch_id="test-branch-id",
@@ -86,7 +86,7 @@ class TestContextDerivationService:
         task_without_branch = Task(
             title="Task Without Branch",
             description="Test description",
-            id=TaskId.from_string("no-branch-task"),
+            id=TaskId.from_string("99999999-9999-9999-9999-999999999999"),
             status=TaskStatus.from_string("todo"),
             priority=Priority.from_string("medium"),
             git_branch_id=None,  # No branch ID
@@ -391,7 +391,7 @@ class TestContextDerivationServiceIntegration:
         task = Task(
             title="Feature Implementation",
             description="Implement authentication feature",
-            id=TaskId.from_string("auth-task"),
+            id=TaskId.from_string("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
             status=TaskStatus.from_string("in_progress"),
             priority=Priority.from_string("high"),
             git_branch_id="auth-branch",
@@ -429,7 +429,7 @@ class TestContextDerivationServiceIntegration:
         task_with_branch = Task(
             title="Complex Task",
             description="Task with complex context",
-            id=TaskId.from_string("complex-task"),
+            id=TaskId.from_string("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
             status=TaskStatus.from_string("todo"),
             priority=Priority.from_string("medium"),
             git_branch_id="complex-branch",
@@ -473,7 +473,7 @@ class TestContextDerivationServiceIntegration:
         partial_task = Task(
             title="Partial Task",
             description="Task with failing branch lookup",
-            id=TaskId.from_string("partial-task"),
+            id=TaskId.from_string("cccccccc-cccc-cccc-cccc-cccccccccccc"),
             status=TaskStatus.from_string("todo"),
             priority=Priority.from_string("medium"),
             git_branch_id="failing-branch",
@@ -525,7 +525,7 @@ class TestContextDerivationServiceIntegration:
         task_with_branch = Task(
             title="Task with Branch",
             description="Should inherit from branch",
-            id=TaskId.from_string("inherit-task"),
+            id=TaskId.from_string("dddddddd-dddd-dddd-dddd-dddddddddddd"),
             status=TaskStatus.from_string("todo"),
             priority=Priority.from_string("medium"),
             git_branch_id="inherit-branch",
@@ -553,7 +553,7 @@ class TestContextDerivationServiceIntegration:
         task_without_branch = Task(
             title="Task without Branch",
             description="Should use defaults",
-            id=TaskId.from_string("default-task"),
+            id=TaskId.from_string("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"),
             status=TaskStatus.from_string("todo"),
             priority=Priority.from_string("medium"),
             git_branch_id=None,  # No branch

@@ -55,10 +55,7 @@ class SupabaseAuthService:
         self.supabase_jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
         
         if not self.supabase_url or not self.supabase_anon_key:
-            logger.warning("Missing Supabase credentials in environment - using mock implementation")
-            self.client = None
-            self.admin_client = None
-            return
+            raise ValueError("Missing Supabase credentials: SUPABASE_URL and SUPABASE_ANON_KEY must be set")
         
         # Use anon key for client-side operations
         self.client: Client = create_client(self.supabase_url, self.supabase_anon_key)

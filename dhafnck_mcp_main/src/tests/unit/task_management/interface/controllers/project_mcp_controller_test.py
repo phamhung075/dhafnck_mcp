@@ -372,7 +372,7 @@ class TestProjectMCPController:
         """Test including project context in response."""
         response = {"success": True, "project": {"id": "project-123"}}
         
-        with patch('fastmcp.task_management.application.factories.unified_context_facade_factory.UnifiedContextFacadeFactory') as mock_factory:
+        with patch('fastmcp.task_management.infrastructure.factories.unified_context_facade_factory.UnifiedContextFacadeFactory') as mock_factory:
             mock_context_facade = Mock()
             mock_factory.return_value.create_facade.return_value = mock_context_facade
             mock_context_facade.get_context.return_value = {
@@ -399,7 +399,7 @@ class TestProjectMCPController:
         """Test handling exception when including project context."""
         response = {"success": True, "project": {"id": "project-123"}}
         
-        with patch('fastmcp.task_management.application.factories.unified_context_facade_factory.UnifiedContextFacadeFactory') as mock_factory:
+        with patch('fastmcp.task_management.infrastructure.factories.unified_context_facade_factory.UnifiedContextFacadeFactory') as mock_factory:
             mock_factory.side_effect = Exception("Context error")
             
             result = self.controller._include_project_context(response)

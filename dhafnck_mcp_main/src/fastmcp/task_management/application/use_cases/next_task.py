@@ -11,6 +11,7 @@ from ...application.orchestrators.services.unified_context_service import Unifie
 from ...domain.value_objects.task_status import TaskStatus
 from ...domain.value_objects.priority import Priority
 from ...application.dtos.context import GetContextRequest
+from ...infrastructure.services.agent_doc_generator import generate_docs_for_assignees
 
 logger = logging.getLogger(__name__)
 

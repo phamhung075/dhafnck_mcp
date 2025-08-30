@@ -5,7 +5,7 @@ from unittest.mock import Mock, MagicMock, patch
 from typing import Dict, Any, List
 
 from fastmcp.task_management.application.orchestrators.services.rule_application_service import RuleApplicationService
-from fastmcp.task_management.domain.entities.rule import Rule
+from fastmcp.task_management.domain.entities.rule_entity import Rule
 from fastmcp.task_management.domain.enums.rule_enums import RuleFormat, RuleType
 
 

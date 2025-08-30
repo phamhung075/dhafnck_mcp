@@ -13,7 +13,7 @@ from fastmcp.task_management.domain.entities.task import Task
 from fastmcp.task_management.domain.entities.subtask import Subtask
 from fastmcp.task_management.domain.entities.project import Project
 from fastmcp.task_management.domain.value_objects.task_status import TaskStatus
-from fastmcp.task_management.domain.value_objects.task_priority import TaskPriority
+from fastmcp.task_management.domain.value_objects.priority import Priority
 
 
 class FixtureGenerator:
@@ -70,7 +70,7 @@ def sample_task_data():
         "title": "Test Task",
         "description": "A test task for unit testing",
         "status": TaskStatus.TODO.value,
-        "priority": TaskPriority.medium().value,
+        "priority": Priority.medium().value,
         "project_id": "test-project-123",
         "git_branch_name": "feature/test-branch",
         "user_id": "test-user-789",
@@ -93,7 +93,7 @@ def sample_task_entity(sample_task_data):
         title=sample_task_data["title"],
         description=sample_task_data["description"],
         status=TaskStatus.TODO,
-        priority=TaskPriority.medium(),
+        priority=Priority.medium(),
         project_id=sample_task_data["project_id"],
         git_branch_name=sample_task_data["git_branch_name"],
         user_id=sample_task_data["user_id"]

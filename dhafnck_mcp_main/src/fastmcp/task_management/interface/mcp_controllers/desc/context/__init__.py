@@ -1,0 +1,1 @@
+"""Context description module for MCP controllers."""

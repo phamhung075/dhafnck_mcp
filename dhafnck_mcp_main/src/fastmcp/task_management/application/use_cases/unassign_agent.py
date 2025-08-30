@@ -6,6 +6,7 @@ from typing import List, Optional
 from ...domain.repositories.agent_repository import AgentRepository
 from ...domain.exceptions import AgentNotFoundError, ProjectNotFoundError
 from ...domain.interfaces.repository_factory import IRepositoryFactory
+from ...infrastructure.repositories.repository_factory import RepositoryFactory
 
 logger = logging.getLogger(__name__)
 

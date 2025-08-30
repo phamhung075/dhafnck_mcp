@@ -9,8 +9,8 @@ from unittest.mock import Mock, patch, AsyncMock
 from datetime import datetime, timezone
 from typing import Dict, Any, List
 
-from fastmcp.task_management.application.services.automated_context_sync_service import AutomatedContextSyncService
-from fastmcp.task_management.application.services.task_context_sync_service import TaskContextSyncService
+from fastmcp.task_management.application.orchestrators.services.automated_context_sync_service import AutomatedContextSyncService
+from fastmcp.task_management.application.orchestrators.services.task_context_sync_service import TaskContextSyncService
 from fastmcp.task_management.domain.entities.task import Task
 from fastmcp.task_management.domain.entities.subtask import Subtask
 from fastmcp.task_management.domain.repositories.task_repository import TaskRepository

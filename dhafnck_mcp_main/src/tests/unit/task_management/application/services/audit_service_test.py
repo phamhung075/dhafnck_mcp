@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 from datetime import datetime
 from typing import Dict, Any
 
-from fastmcp.task_management.application.services.audit_service import AuditService
+from fastmcp.task_management.application.orchestrators.services.audit_service import AuditService
 from fastmcp.task_management.domain.enums.compliance_enums import ComplianceLevel, ValidationResult
 from fastmcp.task_management.domain.value_objects.compliance_objects import ValidationReport
 
@@ -101,7 +101,7 @@ class TestAuditServiceLogging:
         operation = "test_operation"
         result = {"success": True, "compliance_score": 85.0}
         
-        with patch('fastmcp.task_management.application.services.audit_service.logger') as mock_logger:
+        with patch('fastmcp.task_management.application.orchestrators.services.audit_service.logger') as mock_logger:
             service.log_operation(operation, result, "medium")
             
             # Should log warning about string usage
@@ -119,7 +119,7 @@ class TestAuditServiceLogging:
         operation = "test_operation"
         result = {"success": True, "compliance_score": 85.0}
         
-        with patch('fastmcp.task_management.application.services.audit_service.logger') as mock_logger:
+        with patch('fastmcp.task_management.application.orchestrators.services.audit_service.logger') as mock_logger:
             service.log_operation(operation, result, "invalid_level")
             
             # Should log warnings about invalid level and default usage
@@ -366,7 +366,7 @@ class TestAuditServiceManagement:
         assert service._compliance_metrics["total_operations"] == 2
         
         # Clear the log
-        with patch('fastmcp.task_management.application.services.audit_service.logger') as mock_logger:
+        with patch('fastmcp.task_management.application.orchestrators.services.audit_service.logger') as mock_logger:
             service.clear_audit_log()
             mock_logger.info.assert_called_with("Audit log cleared")
         

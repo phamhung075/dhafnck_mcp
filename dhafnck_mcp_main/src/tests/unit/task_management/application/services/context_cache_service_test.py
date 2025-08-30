@@ -10,7 +10,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Dict, Any
 import json
 
-from fastmcp.task_management.application.services.context_cache_service import ContextCacheService
+from fastmcp.task_management.application.orchestrators.services.context_cache_service import ContextCacheService
 
 
 class TestContextCacheServiceInit:
@@ -114,7 +114,7 @@ class TestSyncWrapperMethods:
         mock_loop.is_running.return_value = True
         
         with patch('asyncio.get_event_loop', return_value=mock_loop):
-            with patch('fastmcp.task_management.application.services.context_cache_service.logger') as mock_logger:
+            with patch('fastmcp.task_management.application.orchestrators.services.context_cache_service.logger') as mock_logger:
                 result = service.get_context("task", "test_123")
                 
                 assert result is None  # Returns None when loop is running
@@ -125,7 +125,7 @@ class TestSyncWrapperMethods:
         service = ContextCacheService()
         
         with patch('asyncio.get_event_loop', side_effect=Exception("Unexpected error")):
-            with patch('fastmcp.task_management.application.services.context_cache_service.logger') as mock_logger:
+            with patch('fastmcp.task_management.application.orchestrators.services.context_cache_service.logger') as mock_logger:
                 result = service.get_context("task", "test_123")
                 
                 assert result is None

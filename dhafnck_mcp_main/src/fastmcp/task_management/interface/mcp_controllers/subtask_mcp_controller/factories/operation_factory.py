@@ -85,11 +85,24 @@ class SubtaskOperationFactory:
         
         # Filter out authentication parameters that shouldn't be passed to CRUD handlers
         # Following DDD: authentication is handled at interface layer, not passed to domain
-        # For create operation, only pass the parameters that create_subtask accepts
+        # For each operation, only pass the parameters that the specific method accepts
         if operation == 'create':
             # create_subtask only accepts: task_id, title, description, priority, assignees, progress_notes
             allowed_params = {'task_id', 'title', 'description', 'priority', 'assignees', 'progress_notes'}
             filtered_kwargs = {k: v for k, v in kwargs.items() if k in allowed_params}
+        elif operation == 'list':
+            # list_subtasks only accepts: task_id, status, priority, limit, offset
+            # Note: subtask_id is NOT needed for listing all subtasks
+            allowed_params = {'task_id', 'status', 'priority', 'limit', 'offset'}
+            filtered_kwargs = {k: v for k, v in kwargs.items() if k in allowed_params}
+            # Debug logging to understand the issue
+            if 'subtask_id' in kwargs:
+                logger.debug(f"Warning: subtask_id found in kwargs for list operation and will be filtered out: {kwargs.get('subtask_id')}")
+            logger.debug(f"List operation - Original kwargs: {list(kwargs.keys())}, Filtered kwargs: {list(filtered_kwargs.keys())}")
+        elif operation in ['update', 'get', 'delete', 'complete']:
+            # These operations require subtask_id, exclude only user_id
+            excluded_params = {'user_id'}
+            filtered_kwargs = {k: v for k, v in kwargs.items() if k not in excluded_params}
         else:
             # For other operations, just exclude user_id
             excluded_params = {'user_id'}
@@ -104,6 +117,10 @@ class SubtaskOperationFactory:
         elif operation == 'get':
             result = handler.get_subtask(facade, **filtered_kwargs)
         elif operation == 'list':
+            # Extra safety check to ensure subtask_id is not passed
+            if 'subtask_id' in filtered_kwargs:
+                logger.error(f"CRITICAL: subtask_id still in filtered_kwargs for list operation: {filtered_kwargs}")
+                filtered_kwargs.pop('subtask_id', None)
             result = handler.list_subtasks(facade, **filtered_kwargs)
         elif operation == 'complete':
             result = handler.complete_subtask(facade, **filtered_kwargs)

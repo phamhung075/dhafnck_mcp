@@ -148,6 +148,9 @@ class UserFilteredTaskRepository(UserFilteredRepository):
             # Add user filter
             filters = self._add_user_filter(filters)
             return self._base_repository.find_all(**filters)
+        except RuntimeError:
+            # Re-raise authentication errors
+            raise
         except Exception as e:
             logger.error(f"Error finding tasks: {e}")
             return []

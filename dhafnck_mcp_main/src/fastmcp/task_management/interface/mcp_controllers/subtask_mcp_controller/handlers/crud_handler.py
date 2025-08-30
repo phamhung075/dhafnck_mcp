@@ -305,8 +305,7 @@ class SubtaskCRUDHandler:
             )
     
     def complete_subtask(self, facade: SubtaskApplicationFacade, task_id: str, 
-                        subtask_id: str, completion_notes: Optional[str] = None,
-                        progress_notes: Optional[str] = None) -> Dict[str, Any]:
+                        subtask_id: str, completion_notes: Optional[str] = None) -> Dict[str, Any]:
         """Handle subtask completion with automatic parent progress tracking."""
         
         if not task_id:
@@ -342,8 +341,6 @@ class SubtaskCRUDHandler:
                     progress_content = f"Completed subtask {subtask_id}"
                     if completion_notes:
                         progress_content += f" - {completion_notes}"
-                    elif progress_notes:
-                        progress_content += f" - {progress_notes}"
                     
                     progress_result = self._context_facade.add_progress(
                         task_id=task_id,

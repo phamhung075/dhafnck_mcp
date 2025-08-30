@@ -12,6 +12,7 @@ from ...domain import TaskRepository, TaskId
 from ...domain.exceptions.task_exceptions import TaskNotFoundError
 from ...domain.events import TaskRetrieved
 from ...domain.interfaces.utility_service import IAgentDocGenerator
+from ...infrastructure.services.agent_doc_generator import generate_docs_for_assignees
 
 logger = logging.getLogger(__name__)
 

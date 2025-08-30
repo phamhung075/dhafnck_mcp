@@ -10,12 +10,12 @@ import pytest
 from unittest.mock import Mock, MagicMock, patch
 from datetime import datetime, timedelta
 
-from fastmcp.task_management.application.services.progressive_enforcement_service import (
+from fastmcp.task_management.application.orchestrators.services.progressive_enforcement_service import (
     ProgressiveEnforcementService,
     AgentProfile,
     EnforcementLevel
 )
-from fastmcp.task_management.application.services.parameter_enforcement_service import (
+from fastmcp.task_management.application.orchestrators.services.parameter_enforcement_service import (
     ParameterEnforcementService,
     EnforcementResult
 )

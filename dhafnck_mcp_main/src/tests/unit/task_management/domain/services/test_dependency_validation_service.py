@@ -75,7 +75,7 @@ class TestDependencyValidationService:
     def test_validate_dependency_chain_no_dependencies(self):
         """Test validation of task with no dependencies"""
         # Arrange
-        task_id = TaskId.from_string("no-deps-task")
+        task_id = TaskId.from_string("ffffffff-ffff-ffff-ffff-ffffffffffff")
         self.mock_repository.find_by_id.return_value = self.main_task
         
         # Act
@@ -91,7 +91,7 @@ class TestDependencyValidationService:
     def test_validate_dependency_chain_task_not_found(self):
         """Test validation when task is not found"""
         # Arrange
-        task_id = TaskId.from_string("missing-task")
+        task_id = TaskId.from_string("00000000-0000-0000-0000-000000000000")
         self.mock_repository.find_by_id.return_value = None
         
         # Act
@@ -234,7 +234,7 @@ class TestDependencyValidationService:
     def test_validate_dependency_chain_exception_handling(self):
         """Test exception handling in dependency validation"""
         # Arrange
-        task_id = TaskId.from_string("error-task")
+        task_id = TaskId.from_string("abcdef12-3456-7890-abcd-ef1234567890")
         self.mock_repository.find_by_id.side_effect = Exception("Database error")
         
         # Act
@@ -281,7 +281,7 @@ class TestDependencyValidationService:
     def test_get_dependency_chain_status_task_not_found(self):
         """Test dependency chain status when task not found"""
         # Arrange
-        task_id = TaskId.from_string("missing-task")
+        task_id = TaskId.from_string("00000000-0000-0000-0000-000000000000")
         self.mock_repository.find_by_id.return_value = None
         
         # Act

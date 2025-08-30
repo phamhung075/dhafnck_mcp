@@ -16,7 +16,7 @@ from datetime import datetime
 from uuid import uuid4
 from unittest.mock import Mock, AsyncMock, patch
 
-from fastmcp.task_management.application.services.agent_coordination_service import (
+from fastmcp.task_management.application.orchestrators.services.agent_coordination_service import (
     AgentCoordinationService,
     AgentCoordinationException,
     CoordinationContext,
