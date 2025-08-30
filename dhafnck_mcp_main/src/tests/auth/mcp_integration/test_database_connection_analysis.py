@@ -15,9 +15,10 @@ from unittest.mock import Mock, patch, MagicMock
 # Import the database configuration and repository classes
 from fastmcp.task_management.infrastructure.database.database_config import get_db_config, DatabaseConfig
 from fastmcp.task_management.infrastructure.repositories.global_context_repository import GlobalContextRepository
-from fastmcp.task_management.infrastructure.repositories.global_context_repository_user_scoped import (
-    GlobalContextRepository as UserScopedGlobalContextRepository
-)
+# Note: GlobalContextRepository is already user-scoped internally
+# from fastmcp.task_management.infrastructure.repositories.global_context_repository_user_scoped import (
+#     GlobalContextRepository as UserScopedGlobalContextRepository
+# )
 from fastmcp.task_management.infrastructure.repositories.orm.task_repository import ORMTaskRepository
 from fastmcp.task_management.infrastructure.repositories.orm.project_repository import ORMProjectRepository
 from fastmcp.task_management.infrastructure.repositories.base_orm_repository import BaseORMRepository
@@ -188,7 +189,7 @@ class DatabaseConnectionAnalyzer:
         """Analyze all repository classes."""
         repositories_to_check = {
             "global_context": GlobalContextRepository,
-            "global_context_user_scoped": UserScopedGlobalContextRepository,
+            "global_context_user_scoped": GlobalContextRepository,
             "task_repository": ORMTaskRepository,
             "project_repository": ORMProjectRepository,
             "base_orm": BaseORMRepository

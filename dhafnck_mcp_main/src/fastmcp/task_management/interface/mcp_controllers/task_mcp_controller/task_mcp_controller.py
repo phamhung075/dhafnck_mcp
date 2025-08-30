@@ -218,37 +218,57 @@ class TaskMCPController(ContextPropagationMixin):
             )
             log_authentication_details(user_id, f"manage_task:{action}")
             
-            # Step 2: Get facade for request
+            # Step 2: Extract task_id early and filter it from kwargs to prevent duplicates
+            task_id = kwargs.get('task_id')
+            git_branch_id = kwargs.get('git_branch_id')
+            
+            # Debug logging
+            logger.info(f"manage_task - action: {action}")
+            logger.info(f"manage_task - original kwargs keys: {list(kwargs.keys())}")
+            logger.info(f"manage_task - task_id extracted: {task_id}")
+            
+            filtered_kwargs = {k: v for k, v in kwargs.items() if k != 'task_id'}
+            logger.info(f"manage_task - filtered_kwargs keys: {list(filtered_kwargs.keys())}")
+            
+            # Step 3: Get facade for request
+            logger.debug(f"Getting facade for action={action}, task_id={task_id}, git_branch_id={git_branch_id}")
             facade = self._get_facade_for_request(
-                task_id=kwargs.get('task_id'),
-                git_branch_id=kwargs.get('git_branch_id'),
+                task_id=task_id,
+                git_branch_id=git_branch_id,
                 user_id=user_id
             )
             
-            # Step 3: Validation using factory
-            validation_result = self._validate_request(action, **kwargs)
+            # Step 4: Validation using factory (pass task_id explicitly)
+            validation_result = self._validate_request(action, task_id=task_id, **filtered_kwargs)
             if not validation_result[0]:
                 return validation_result[1]  # Return validation error
             
-            # Step 4: Execute operation using factory
+            # Step 5: Execute operation using factory (pass task_id explicitly)
             result = self._operation_factory.handle_operation(
                 operation=action,
                 facade=facade,
                 user_id=user_id,
-                **kwargs
+                task_id=task_id,
+                **filtered_kwargs
             )
             
-            # Step 5: Standardize response using factory
+            # Step 6: Standardize response using factory
             standardized_result = self._response_factory.standardize_facade_response(result, action)
             
-            # Step 6: Apply workflow hints and enrichment
+            # Step 7: Apply workflow hints and enrichment (use original kwargs for context)
             if self._workflow_hint_enhancer and standardized_result.get("success"):
-                enriched_result = await self._workflow_hint_enhancer.enhance_response(
-                    response=standardized_result,
-                    action=action,
-                    context=kwargs
-                )
-                return enriched_result
+                try:
+                    # Try without await first, as the method might not be async
+                    enriched_result = self._workflow_hint_enhancer.enhance_response(
+                        response=standardized_result,
+                        action=action,
+                        context=kwargs
+                    )
+                    return enriched_result
+                except Exception as e:
+                    logger.warning(f"Workflow hint enhancer failed: {e}")
+                    # Return the result without enhancement if enhancement fails
+                    return standardized_result
             
             return standardized_result
             
@@ -268,17 +288,23 @@ class TaskMCPController(ContextPropagationMixin):
         if not self._facade_factory:
             raise ValueError("TaskFacadeFactory is required but not provided")
         
+        logger.debug(f"_get_facade_for_request: task_id={task_id}, git_branch_id={git_branch_id}, user_id={user_id}")
+        
         # Create facade with appropriate context
         if git_branch_id:
-            return self._facade_factory.create_task_facade(git_branch_id, user_id)
+            # For operations with git_branch_id, use it (but project_id is None for now)
+            logger.debug("Creating facade with git_branch_id")
+            return self._facade_factory.create_task_facade(None, git_branch_id, user_id)
         elif task_id:
             # For task-specific operations, create facade without specific branch
-            return self._facade_factory.create_task_facade(None, user_id)
+            logger.debug("Creating facade for task-specific operation")
+            return self._facade_factory.create_task_facade(None, None, user_id)
         else:
             # For general operations
-            return self._facade_factory.create_task_facade(None, user_id)
+            logger.debug("Creating facade for general operation")
+            return self._facade_factory.create_task_facade(None, None, user_id)
 
-    def _validate_request(self, action: str, **kwargs):
+    def _validate_request(self, action: str, task_id: Optional[str] = None, **kwargs):
         """Validate request using validation factory."""
         
         if action == "create":
@@ -294,9 +320,20 @@ class TaskMCPController(ContextPropagationMixin):
                 dependencies=kwargs.get('dependencies')
             )
         elif action in ["update", "complete"]:
+            # Pass task_id explicitly to avoid duplicate parameter error
+            # Debug: log what's in kwargs
+            logger.info(f"_validate_request action: {action}")
+            logger.info(f"_validate_request kwargs keys: {list(kwargs.keys())}")
+            logger.info(f"_validate_request task_id param: {task_id}")
+            logger.info(f"_validate_request 'task_id' in kwargs: {'task_id' in kwargs}")
+            
+            # Filter out task_id from kwargs if it somehow still exists
+            filtered_validation_kwargs = {k: v for k, v in kwargs.items() if k != 'task_id'}
+            logger.info(f"_validate_request filtered_validation_kwargs keys: {list(filtered_validation_kwargs.keys())}")
+            
             return self._validation_factory.validate_update_request(
-                task_id=kwargs.get('task_id'),
-                **kwargs
+                task_id=task_id,
+                **filtered_validation_kwargs
             )
         elif action in ["list", "search"]:
             return self._validation_factory.validate_search_request(
@@ -305,8 +342,17 @@ class TaskMCPController(ContextPropagationMixin):
             )
         elif action == "delete":
             return self._validation_factory.validate_deletion_request(
-                task_id=kwargs.get('task_id')
+                task_id=task_id
             )
+        elif action == "get":
+            # For get action, only task_id is required
+            if not task_id:
+                return False, self._response_formatter.create_error_response(
+                    operation="get",
+                    error="task_id is required",
+                    error_code="VALIDATION_ERROR"
+                )
+            return True, None
         else:
             # For other actions, basic validation
             return True, None

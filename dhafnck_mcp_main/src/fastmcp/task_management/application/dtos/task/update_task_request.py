@@ -16,4 +16,7 @@ class UpdateTaskRequest:
     assignees: Optional[List[str]] = None
     labels: Optional[List[str]] = None
     due_date: Optional[str] = None
-    context_id: Optional[str] = None 
+    context_id: Optional[str] = None
+    completion_summary: Optional[str] = None
+    testing_notes: Optional[str] = None
+    completed_at: Optional[str] = None 

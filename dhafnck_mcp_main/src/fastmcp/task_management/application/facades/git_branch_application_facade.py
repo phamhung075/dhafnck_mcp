@@ -174,62 +174,37 @@ class GitBranchApplicationFacade:
     
     async def _find_git_branch_by_id(self, git_branch_id: str) -> Dict[str, Any]:
         """Helper method to find a git branch by ID across all projects."""
-        from ...domain.interfaces.repository_factory import IProjectRepositoryFactory
-        from ...infrastructure.repositories.project_repository_factory import GlobalRepositoryManager
         
-        project_repo = GlobalRepositoryManager.get_default()
-        projects = await project_repo.find_all()
-        
-        for project in projects:
-            if git_branch_id in project.git_branchs:
-                tree = project.git_branchs[git_branch_id]
-                return {
-                    "success": True,
-                    "git_branch": {
-                        "id": tree.id,
-                        "name": tree.name,
-                        "description": tree.description,
-                        "project_id": project.id  # Include project_id for context derivation
-                    }
-                }
-        
-        # If not found, try to look up from database directly
+        # AUTHENTICATION FIX: Use the git branch repository directly to avoid project repository authentication issues
         try:
-            from ...infrastructure.database.database_source_manager import get_database_path
-            import sqlite3
+            from ...infrastructure.repositories.repository_factory import RepositoryFactory
             
-            db_path = get_database_path()
-            with sqlite3.connect(db_path) as conn:
-                result = conn.execute(
-                    'SELECT project_id, name, description FROM project_git_branchs WHERE id = ?',
-                    (git_branch_id,)
-                ).fetchone()
+            # Create git branch repository with fallback authentication
+            # Use the user_id if available, otherwise use a default system user
+            user_id = self._user_id or "00000000-0000-0000-0000-000000012345"
+            git_branch_repo = RepositoryFactory.get_git_branch_repository(user_id=user_id)
+            
+            # Use the git branch repository's get method directly
+            result = await git_branch_repo.get_git_branch_by_id(git_branch_id)
+            
+            if result.get("success"):
+                return result
+            else:
+                return {
+                    "success": False,
+                    "error": f"Git branch not found: {git_branch_id}",
+                    "error_code": "NOT_FOUND"
+                }
                 
-                if result:
-                    project_id, name, description = result
-                    return {
-                        "success": True,
-                        "git_branch": {
-                            "id": git_branch_id,
-                            "name": name,
-                            "description": description or "",
-                            "project_id": project_id
-                        }
-                    }
         except Exception as e:
             import logging
             logger = logging.getLogger(__name__)
-            logger.warning(f"Failed to lookup git branch {git_branch_id} from database: {e}")
-        
-        # If not found anywhere, return default response without project_id
-        return {
-            "success": True,
-            "git_branch": {
-                "id": git_branch_id,
-                "name": f"branch-{git_branch_id[:8]}",
-                "description": "Git branch description"
+            logger.error(f"Failed to lookup git branch {git_branch_id}: {e}")
+            return {
+                "success": False,
+                "error": f"Failed to get git branch: {str(e)}",
+                "error_code": "GET_FAILED"
             }
-        }
 
     def delete_git_branch(self, git_branch_id: str) -> Dict[str, Any]:
         """Delete a git branch - synchronous version for MCP controller."""

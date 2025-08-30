@@ -71,7 +71,9 @@ class OperationFactory:
                 )
         
         except Exception as e:
+            import traceback
             logger.error(f"Error handling operation {operation}: {str(e)}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return self._response_formatter.create_error_response(
                 operation=operation,
                 error=f"Operation failed: {str(e)}",
@@ -113,16 +115,23 @@ class OperationFactory:
             return result
             
         elif operation == 'update':
-            # Filter out user_id for DDD compliance
-            crud_kwargs = {k: v for k, v in kwargs.items() if k != 'user_id'}
+            # Filter to only include parameters accepted by update_task method
+            allowed_params = {
+                'task_id', 'title', 'description', 'status', 'priority', 
+                'details', 'estimated_effort', 'assignees', 'labels', 
+                'due_date', 'context_id', 'completion_summary', 'testing_notes'
+            }
+            crud_kwargs = {k: v for k, v in kwargs.items() if k in allowed_params}
             return handler.update_task(facade, **crud_kwargs)
         elif operation == 'delete':
-            # Filter out user_id for DDD compliance
-            crud_kwargs = {k: v for k, v in kwargs.items() if k != 'user_id'}
+            # Filter to only include parameters accepted by delete_task method
+            allowed_params = {'task_id'}
+            crud_kwargs = {k: v for k, v in kwargs.items() if k in allowed_params}
             return handler.delete_task(facade, **crud_kwargs)
         elif operation == 'get':
-            # Filter out user_id for DDD compliance
-            crud_kwargs = {k: v for k, v in kwargs.items() if k != 'user_id'}
+            # Filter to only include parameters accepted by get_task method
+            allowed_params = {'task_id', 'include_context'}
+            crud_kwargs = {k: v for k, v in kwargs.items() if k in allowed_params}
             result = handler.get_task(facade, **crud_kwargs)
             
             # Enrich response with workflow information
@@ -134,8 +143,9 @@ class OperationFactory:
             return result
             
         elif operation == 'complete':
-            # Filter out user_id for DDD compliance
-            crud_kwargs = {k: v for k, v in kwargs.items() if k != 'user_id'}
+            # Filter to only include parameters accepted by complete_task method
+            allowed_params = {'task_id', 'completion_summary', 'testing_notes'}
+            crud_kwargs = {k: v for k, v in kwargs.items() if k in allowed_params}
             return handler.complete_task(facade, **crud_kwargs)
         else:
             raise ValueError(f"Unknown CRUD operation: {operation}")

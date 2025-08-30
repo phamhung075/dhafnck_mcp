@@ -123,7 +123,8 @@ class ORMTaskRepository(CacheInvalidationMixin, BaseORMRepository[Task], BaseUse
         subtask_ids = []
         try:
             for subtask in task.subtasks:
-                subtask_ids.append(subtask.id)  # Only store subtask IDs, not full objects
+                # Ensure subtask ID is string
+                subtask_ids.append(str(subtask.id))  # Only store subtask IDs, not full objects
         except Exception as e:
             logger.warning(f"Failed to load subtasks for task {task.id}: {e}")
             subtask_ids = []
@@ -132,7 +133,10 @@ class ORMTaskRepository(CacheInvalidationMixin, BaseORMRepository[Task], BaseUse
         dependency_ids = []
         try:
             for dependency in task.dependencies:
-                dependency_ids.append(TaskId(dependency.depends_on_task_id))
+                # Ensure dependency ID is string
+                dep_id = str(dependency.depends_on_task_id) if dependency.depends_on_task_id else None
+                if dep_id:
+                    dependency_ids.append(TaskId(dep_id))
         except Exception as e:
             logger.warning(f"Failed to load dependencies for task {task.id}: {e}")
             dependency_ids = []
@@ -141,7 +145,8 @@ class ORMTaskRepository(CacheInvalidationMixin, BaseORMRepository[Task], BaseUse
         
         status_obj = TaskStatus(task.status) if task.status else None
         priority_obj = Priority(task.priority) if task.priority else None
-        task_id_obj = TaskId(task.id) if task.id else None
+        # Ensure task ID is string (handle UUID objects from database)
+        task_id_obj = TaskId(str(task.id)) if task.id else None
         
         # Create the entity
         entity = TaskEntity(

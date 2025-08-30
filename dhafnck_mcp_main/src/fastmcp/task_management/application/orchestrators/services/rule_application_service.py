@@ -4,12 +4,12 @@ DDD application service for rule management operations.
 """
 
 from typing import Dict, Any, Optional
-from ...use_cases.create_rule import CreateRuleUseCase
-from ...use_cases.get_rule import GetRuleUseCase
-from ...use_cases.list_rules import ListRulesUseCase
-from ...use_cases.update_rule import UpdateRuleUseCase
-from ...use_cases.delete_rule import DeleteRuleUseCase
-from ...use_cases.validate_rule import ValidateRuleUseCase
+from fastmcp.task_management.application.use_cases.create_rule import CreateRuleUseCase
+from fastmcp.task_management.application.use_cases.get_rule import GetRuleUseCase
+from fastmcp.task_management.application.use_cases.list_rules import ListRulesUseCase
+from fastmcp.task_management.application.use_cases.update_rule import UpdateRuleUseCase
+from fastmcp.task_management.application.use_cases.delete_rule import DeleteRuleUseCase
+from fastmcp.task_management.application.use_cases.validate_rule import ValidateRuleUseCase
 from ....domain.repositories.rule_repository import RuleRepository
 from ....domain.enums.rule_enums import RuleFormat, RuleType
 

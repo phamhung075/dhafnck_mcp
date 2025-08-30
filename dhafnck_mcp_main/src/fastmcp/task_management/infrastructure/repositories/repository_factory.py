@@ -142,7 +142,7 @@ class RepositoryFactory:
         return base_repository
     
     @staticmethod
-    def get_git_branch_repository():
+    def get_git_branch_repository(user_id: Optional[str] = None):
         """Get git branch repository based on environment configuration"""
         config = RepositoryFactory.get_environment_config()
         
@@ -176,7 +176,7 @@ class RepositoryFactory:
         # Fallback to ORM repository
         if not base_repository:
             from .orm.git_branch_repository import ORMGitBranchRepository
-            base_repository = ORMGitBranchRepository()
+            base_repository = ORMGitBranchRepository(user_id=user_id)
             logger.info("[RepositoryFactory] Using ORMGitBranchRepository (fallback)")
         
         # Wrap with cache if enabled and not in test environment

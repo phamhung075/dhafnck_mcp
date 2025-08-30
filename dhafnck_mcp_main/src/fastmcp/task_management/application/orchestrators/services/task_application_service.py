@@ -13,13 +13,13 @@ from fastmcp.task_management.application.dtos.task import (
 )
 from fastmcp.task_management.domain.exceptions.task_exceptions import TaskNotFoundError
 from fastmcp.task_management.domain.repositories.task_repository import TaskRepository
-from ...use_cases.create_task import CreateTaskUseCase
-from ...use_cases.get_task import GetTaskUseCase
-from ...use_cases.update_task import UpdateTaskUseCase
-from ...use_cases.list_tasks import ListTasksUseCase
-from ...use_cases.search_tasks import SearchTasksUseCase
-from ...use_cases.delete_task import DeleteTaskUseCase
-from ...use_cases.complete_task import CompleteTaskUseCase
+from fastmcp.task_management.application.use_cases.create_task import CreateTaskUseCase
+from fastmcp.task_management.application.use_cases.get_task import GetTaskUseCase
+from fastmcp.task_management.application.use_cases.update_task import UpdateTaskUseCase
+from fastmcp.task_management.application.use_cases.list_tasks import ListTasksUseCase
+from fastmcp.task_management.application.use_cases.search_tasks import SearchTasksUseCase
+from fastmcp.task_management.application.use_cases.delete_task import DeleteTaskUseCase
+from fastmcp.task_management.application.use_cases.complete_task import CompleteTaskUseCase
 
 
 class TaskApplicationService:

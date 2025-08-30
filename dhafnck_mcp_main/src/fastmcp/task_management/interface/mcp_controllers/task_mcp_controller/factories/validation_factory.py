@@ -95,19 +95,23 @@ class ValidationFactory:
         """
         
         # Step 1: Parameter validation
+        # Remove task_id from update_params to avoid duplicate parameter error
+        update_params_filtered = {k: v for k, v in update_params.items() if k != 'task_id'}
         param_valid, param_error = self._parameter_validator.validate_update_task_params(
             task_id=task_id,
-            **update_params
+            **update_params_filtered
         )
         
         if not param_valid:
             return False, param_error
         
         # Step 2: Context validation for context-related updates
-        if 'include_context' in update_params or 'context_data' in update_params:
+        # Only validate context if explicitly requested or context data is provided
+        if update_params.get('include_context') is True or 'context_data' in update_params:
             context_valid, context_error = self._context_validator.validate_context_requirements(
                 operation="update",
                 task_id=task_id,
+                git_branch_id=update_params.get('git_branch_id'),
                 include_context=update_params.get('include_context')
             )
             

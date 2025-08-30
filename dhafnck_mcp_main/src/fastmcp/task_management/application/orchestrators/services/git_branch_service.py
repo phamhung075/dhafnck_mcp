@@ -28,7 +28,7 @@ class GitBranchService:
             self._project_repo = GlobalRepositoryManager.get_default()
         # Initialize git branch repository with user context using factory
         from ....infrastructure.repositories.repository_factory import RepositoryFactory
-        self._git_branch_repo = RepositoryFactory.get_git_branch_repository()
+        self._git_branch_repo = RepositoryFactory.get_git_branch_repository(user_id=user_id)
         # Initialize hierarchical context service for branch context creation
         if hierarchical_context_service:
             self._hierarchical_context_service = hierarchical_context_service

@@ -9,7 +9,8 @@ from fastmcp.task_management.application.facades.subtask_application_facade impo
 from fastmcp.task_management.domain.exceptions import TaskNotFoundError
 from fastmcp.task_management.domain.value_objects.task_id import TaskId
 from fastmcp.task_management.domain.entities.task import Task
-from fastmcp.task_management.application.use_cases.add_subtask import AddSubtaskRequest, AddSubtaskResponse
+from fastmcp.task_management.application.use_cases.add_subtask import AddSubtaskRequest
+from fastmcp.task_management.application.dtos.subtask.subtask_response import SubtaskResponse as AddSubtaskResponse
 from fastmcp.task_management.application.use_cases.update_subtask import UpdateSubtaskRequest, UpdateSubtaskResponse
 from fastmcp.task_management.infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
 from fastmcp.task_management.infrastructure.repositories.subtask_repository_factory import SubtaskRepositoryFactory

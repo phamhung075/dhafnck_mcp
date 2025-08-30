@@ -80,6 +80,8 @@ class CRUDHandler:
                    completion_summary: Optional[str] = None, 
                    testing_notes: Optional[str] = None) -> Dict[str, Any]:
         """Handle task update operations."""
+        logger.info(f"update_task called with task_id={task_id}, type={type(task_id)}")
+        
         if not task_id:
             return self._create_standardized_error(
                 operation="update_task",
@@ -89,7 +91,7 @@ class CRUDHandler:
             )
         
         # Create update request with provided fields
-        request_data = {}
+        request_data = {'task_id': task_id}  # task_id is required for UpdateTaskRequest
         
         if title is not None:
             request_data['title'] = title
@@ -116,7 +118,12 @@ class CRUDHandler:
         if testing_notes is not None:
             request_data['testing_notes'] = testing_notes
         
-        request = UpdateTaskRequest(**request_data)
+        logger.info(f"Creating UpdateTaskRequest with data: {request_data}")
+        try:
+            request = UpdateTaskRequest(**request_data)
+        except Exception as e:
+            logger.error(f"Failed to create UpdateTaskRequest: {e}, request_data={request_data}")
+            raise
         return facade.update_task(task_id, request)
     
     def get_task(self, facade: TaskApplicationFacade, task_id: str, 
@@ -170,7 +177,8 @@ class CRUDHandler:
         
         # Create update request for completion
         request_data = {
-            "status": "completed",
+            "task_id": task_id,  # task_id is required for UpdateTaskRequest
+            "status": "done",
             "completed_at": datetime.now(timezone.utc).isoformat()
         }
         

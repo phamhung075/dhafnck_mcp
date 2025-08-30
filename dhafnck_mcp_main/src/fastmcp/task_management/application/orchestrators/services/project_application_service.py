@@ -1,12 +1,12 @@
 """Project Application Service following DDD patterns"""
 
 from typing import Dict, Any, Optional
-from ...use_cases.create_project import CreateProjectUseCase
-from ...use_cases.get_project import GetProjectUseCase
-from ...use_cases.list_projects import ListProjectsUseCase
-from ...use_cases.update_project import UpdateProjectUseCase
-from ...use_cases.create_git_branch import CreateGitBranchUseCase
-from ...use_cases.project_health_check import ProjectHealthCheckUseCase
+from fastmcp.task_management.application.use_cases.create_project import CreateProjectUseCase
+from fastmcp.task_management.application.use_cases.get_project import GetProjectUseCase
+from fastmcp.task_management.application.use_cases.list_projects import ListProjectsUseCase
+from fastmcp.task_management.application.use_cases.update_project import UpdateProjectUseCase
+from fastmcp.task_management.application.use_cases.create_git_branch import CreateGitBranchUseCase
+from fastmcp.task_management.application.use_cases.project_health_check import ProjectHealthCheckUseCase
 from ....domain.repositories.project_repository import ProjectRepository
 
 

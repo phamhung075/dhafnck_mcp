@@ -10,12 +10,12 @@ from fastmcp.task_management.application.dtos.subtask import (
 
 from fastmcp.task_management.domain.repositories.task_repository import TaskRepository
 from fastmcp.task_management.domain.repositories.subtask_repository import SubtaskRepository
-from ...use_cases.add_subtask import AddSubtaskUseCase
-from ...use_cases.update_subtask import UpdateSubtaskUseCase
-from ...use_cases.remove_subtask import RemoveSubtaskUseCase
-from ...use_cases.complete_subtask import CompleteSubtaskUseCase
-from ...use_cases.get_subtasks import GetSubtasksUseCase
-from ...use_cases.get_subtask import GetSubtaskUseCase
+from fastmcp.task_management.application.use_cases.add_subtask import AddSubtaskUseCase
+from fastmcp.task_management.application.use_cases.update_subtask import UpdateSubtaskUseCase
+from fastmcp.task_management.application.use_cases.remove_subtask import RemoveSubtaskUseCase
+from fastmcp.task_management.application.use_cases.complete_subtask import CompleteSubtaskUseCase
+from fastmcp.task_management.application.use_cases.get_subtasks import GetSubtasksUseCase
+from fastmcp.task_management.application.use_cases.get_subtask import GetSubtaskUseCase
 
 
 class SubtaskApplicationService:

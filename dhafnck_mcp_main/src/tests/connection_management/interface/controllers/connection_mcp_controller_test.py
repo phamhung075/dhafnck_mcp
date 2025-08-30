@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock
 from typing import Dict, Any, Optional, Union
 
-from fastmcp.connection_management.interface.mcp_controllers.connection_mcp_controller import ConnectionMCPController
+from fastmcp.connection_management.interface.controllers.connection_mcp_controller import ConnectionMCPController
 from fastmcp.connection_management.application.dtos.connection_dtos import (
     HealthCheckResponse, ServerCapabilitiesResponse, ConnectionHealthResponse,
     ServerStatusResponse, RegisterUpdatesResponse

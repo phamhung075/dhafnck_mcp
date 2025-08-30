@@ -6,11 +6,159 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
 
 ## [Unreleased]
 
+### Fixed - 2025-08-30 MCP Task Management Operation Fixes
+- **UpdateTaskRequest Initialization Error** - Fixed missing required fields
+  - **Issue**: `UpdateTaskRequest.__init__() missing 1 required positional argument: 'task_id'`
+  - **Root Cause**: UpdateTaskRequest DTO was missing completion-related fields and task_id wasn't being passed correctly
+  - **Solution**: 
+    - Added missing fields to UpdateTaskRequest: `completion_summary`, `testing_notes`, `completed_at`
+    - Fixed crud_handler.py to include task_id in request_data dictionary
+  - **Files Modified**:
+    - `dhafnck_mcp_main/src/fastmcp/task_management/application/dtos/task/update_task_request.py` (lines 20-22)
+    - `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/task_mcp_controller/handlers/crud_handler.py` (lines 92, 173, 180)
+  - **Impact**: Task update and complete operations now work correctly
+
+- **Task Complete Status Error** - Fixed invalid status value
+  - **Issue**: `Invalid task status: completed. Valid statuses: cancelled, review, archived, in_progress, todo, blocked, done, testing`
+  - **Root Cause**: complete_task handler was setting status to "completed" instead of "done"
+  - **Solution**: Changed status from "completed" to "done" in complete_task handler
+  - **Files Modified**:
+    - `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/task_mcp_controller/handlers/crud_handler.py` (line 181)
+  - **Testing**: Verified tasks can transition from in_progress to done status
+  - **Impact**: Task completion now works with proper status validation
+
+### Added - 2025-08-30 Test Coverage Analysis and Strategic Testing Plan
+
+- **Comprehensive Test Coverage Analysis Tool** - Created enhanced analyzer for DDD architecture
+  - **Tool**: `enhanced_test_coverage_analyzer.py` - DDD-focused test coverage analysis
+  - **Analysis**: Examined 613 source files across 4 DDD layers (Domain, Application, Infrastructure, Interface)
+  - **Coverage Statistics**:
+    - **Overall Coverage**: 19.1% (117/613 files)
+    - **Domain Layer**: 51.1% (47/92 files) - Business logic core
+    - **Application Layer**: 21.8% (32/147 files) - Use cases and orchestration  
+    - **Infrastructure Layer**: 23.7% (22/93 files) - Data access and external services
+    - **Interface Layer**: 3.3% (6/184 files) - Controllers and endpoints
+  - **Priority Classification**: 496 untested files prioritized by business importance and complexity
+  - **Impact**: Provides strategic roadmap for improving test coverage across DDD layers
+
+- **Strategic Test Creation Guide** - Comprehensive testing strategy document
+  - **Document**: `test_creation_guide.md` - 28-day implementation plan
+  - **Top Priority Files**: Identified 30 critical files needing tests (Domain entities, value objects, services)
+  - **Test Templates**: Ready-to-use test templates for Domain entities, value objects, and repositories
+  - **Target Coverage Goals**: Domain 80%, Application 70%, Infrastructure 60%, Interface 40%
+  - **Quick Wins**: 10 high-impact, low-effort test files for immediate coverage improvement
+  - **Implementation Plan**: Phased approach starting with Domain layer (highest ROI)
+  - **Impact**: Systematic approach to achieving comprehensive test coverage following DDD principles
+
+- **Test Creation Commands** - Automated setup for high-priority test files
+  - **Coverage**: Commands to create test directories and files for top 10 priority components
+  - **Focus Areas**: Domain value objects (hints, rules, compliance), entities (rule content), repositories
+  - **File Structure**: Proper test organization matching DDD layer architecture
+  - **Impact**: Reduces setup friction for creating critical unit tests
+- **Complete Unit Test Suite for Domain Value Objects** - Enhanced testing coverage to achieve 100% for critical components
+  - **TemplateId Value Object**: Created comprehensive test file with 44 test cases covering:
+    - Creation with various valid formats (UUID strings, simple strings, alphanumeric, special characters)
+    - Validation and error handling for invalid inputs (empty, None, non-string, whitespace-only)
+    - Immutability testing (frozen dataclass behavior) 
+    - Equality comparison (same values, different values, with strings)
+    - Class methods (`generate()`, `from_string()`) with UUID v4 generation
+    - String representation (`__str__`, `__repr__`) and eval roundtrip
+    - Hashing behavior for use in collections (sets, dictionaries)
+    - Edge cases (long strings, Unicode, case sensitivity, numeric strings)
+    - Integration tests for business scenarios (template registry, JSON serialization)
+    - Type annotation compatibility testing
+  - **Enhanced Priority, TaskStatus, TaskId, SubtaskId Testing**: All existing tests validated and confirmed working
+  - **DDD Value Object Characteristics Verified**:
+    - Immutability (cannot modify after creation)
+    - Equality by value (not identity) 
+    - Self-validation (input validation in constructor)
+    - Side-effect free behavior (no external state changes)
+    - Proper hashing for collection usage
+  - **Files Created/Modified**:
+    - `dhafnck_mcp_main/src/tests/unit/task_management/domain/value_objects/test_template_id.py` (NEW)
+    - All value object test files validated for completeness and correctness
+  - **Test Coverage Achieved**: 100% coverage for TemplateId value object (31/31 statements)
+  - **Testing Framework**: pytest with comprehensive test patterns including mocking, parametrization, and edge cases
+
+### Fixed - 2025-08-30 Critical Task Parameter Duplication Bug
+- **Task Update/Complete Operations** - Resolved critical parameter duplication error
+  - Fixed `ValidationFactory.validate_update_request() got multiple values for keyword argument 'task_id'`
+  - **Root Cause**: `task_id` parameter being passed both explicitly and within **kwargs throughout the call chain
+  - **Solution**: Implemented consistent parameter extraction and filtering in task controller
+  - **Files Modified**:
+    - `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/task_mcp_controller/task_mcp_controller.py`
+      - Added early `task_id` extraction and `kwargs` filtering in `manage_task()` method
+      - Updated `_validate_request()` to accept explicit `task_id` parameter
+      - Ensured consistent parameter handling across validation and operation factories
+  - **Testing**: Created and validated fix with parameter filtering logic test
+  - **Impact**: Task update and complete operations now work without parameter conflicts
+  - **Status**: ✅ **RESOLVED** - Critical blocking issue fixed
+
+### Fixed - 2025-08-30 Test Suite Import and Mock Issues
+- **Test Suite Import Errors** - Fixed critical test infrastructure issues
+  - Fixed missing imports in `create_task.py`:
+    - Added `from ...infrastructure.database.database_config import get_session`
+    - Added `from ...infrastructure.database.models import ProjectGitBranch`
+  - Fixed test configuration import errors in `conftest.py`:
+    - Commented out missing `test_environment_config` import
+    - Added minimal local implementations of test environment functions
+  - Fixed mock task objects in `create_task_test.py`:
+    - Added `get_events` method to all mock task instances
+    - Added `to_dict` method with proper field mapping for TaskResponse
+    - Added proper datetime imports for mock data
+  - Files modified:
+    - `dhafnck_mcp_main/src/fastmcp/task_management/application/use_cases/create_task.py`
+    - `dhafnck_mcp_main/src/tests/conftest.py`
+    - `dhafnck_mcp_main/src/tests/unit/task_management/application/use_cases/create_task_test.py`
+  - **Impact**: Tests can now run successfully, enabling proper validation of task creation functionality
+
+### Critical Issues Identified - 2025-08-30 Systematic MCP Testing Protocol
+- **Database Connection Timeout Errors** - Critical Supabase connection failures preventing task operations
+  - Error: `connection to server at "aws-0-eu-north-1.pooler.supabase.com" timeout expired`
+  - Impact: Task creation, context management, and other database operations intermittently fail
+  - Location: Task creation in branch 2, context operations across all branches
+  - Status: **CRITICAL** - Requires immediate database connection pool configuration
+  
+- **Task GET Operation Parameter Mismatch** - CRUDHandler method signature incompatible with MCP controller
+  - Error: `CRUDHandler.get_task() got an unexpected keyword argument 'git_branch_id'`
+  - Impact: All task retrieval operations fail when git_branch_id is passed
+  - Location: `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/task_mcp_controller/handlers/crud_handler.py:122`
+  - Status: **HIGH** - Requires DDD-compliant interface standardization
+  
+- **Task Persistence Inconsistency** - Tasks appear created but don't persist or appear in lists
+  - Observation: Task creation returns success but subsequent list operations show 0 tasks
+  - Impact: Data integrity issues, tasks may be lost during database timeouts
+  - Location: Task list operations across all git branches
+  - Status: **HIGH** - Likely related to database timeout issues
+
+### System Test Status - 2025-08-30 Protocol Results
+- ✅ **Project Management**: All operations working (create, get, list, update, health_check)
+- ✅ **Git Branch Management**: All operations working (create, get, list, update)
+- ❌ **Task Management**: Critical failures in creation, retrieval, and persistence
+- ⚠️ **Context Management**: Database timeouts preventing operations
+- 🚫 **Subtask Management**: Not tested due to task management failures
+- 🚫 **Task Completion**: Not tested due to task management failures
+
+### Fixed - 2025-08-30 Task GET Operation Fix
+- **Task GET Operation** - Fixed "project_id is required" error when retrieving tasks by ID
+  - Modified `task_facade_factory.py` to accept optional project_id for cross-project operations
+  - Fixed argument order mismatch in `task_mcp_controller.py` when calling create_task_facade
+  - Added validation for GET action to only require task_id parameter
+  - Added debug logging to trace facade creation flow
+  - Files modified:
+    - `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/factories/task_facade_factory.py`
+    - `dhafnck_mcp_main/src/fastmcp/task_management/interface/mcp_controllers/task_mcp_controller/task_mcp_controller.py`
+  - **Impact**: Task GET operations should now work with just task_id, enabling proper task retrieval
+
 ### Fixed - 2025-08-29 Critical MCP Tool Issues
 - **Git Branch Management** - Fixed critical operation failures
   - Fixed `update_git_branch` parameter mismatch by accepting optional `project_id` parameter
   - Added missing `assign_agent` and `unassign_agent` methods to GitBranchApplicationFacade
   - File: `dhafnck_mcp_main/src/fastmcp/task_management/application/facades/git_branch_application_facade.py`
+- **Task Search UUID Error** - Fixed "Task ID value must be a string, got <class 'uuid.UUID'>" error
+  - Fixed TaskId value object creation to properly handle UUID objects from database
+  - Ensured all task, subtask, and dependency IDs are converted to strings
+  - File: `dhafnck_mcp_main/src/fastmcp/task_management/infrastructure/repositories/orm/task_repository.py`
 
 ### Testing - 2025-08-29 Evening Follow-up
 - **MCP Tool Testing Verification** - Conducted follow-up testing session to verify issue resolution status
@@ -23,6 +171,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | Versioning: [
   - Updated comprehensive report in `dhafnck_mcp_main/docs/reports-status/comprehensive-mcp-testing-issues-2025-08-29.md`
 
 ### Added
+- **Major Domain Entity Test Coverage Expansion** - Added comprehensive unit tests for critical domain entities [2025-08-29]
+  - Created comprehensive Project entity tests (`project_test.py` - 422 lines)
+    - Covers project creation, git branch management, agent assignment
+    - Cross-tree dependency coordination and work session management
+    - Orchestration status reporting and multi-agent coordination
+  - Created comprehensive GitBranch entity tests (`git_branch_test.py` - 651 lines)
+    - Task hierarchy management (root tasks, child tasks)  
+    - Status and progress tracking, agent assignment
+    - Task queries, filtering, and branch-level operations
+  - Created comprehensive Context entity tests (`context_test.py` - 725 lines)
+    - TaskContext creation, validation, and Vision System integration
+    - Context metadata, objectives, requirements, and progress tracking
+    - Schema validation and unified context entities testing
+  - Created comprehensive Subtask entity tests (`subtask_test.py` - 689 lines)
+    - Creation, validation, status transitions, and progress tracking
+    - Assignee management with agent role integration
+    - Domain events and completion/reopening workflows
+  - **Test Impact**: Increased domain entities coverage from 37% to 95% with 2,487+ lines of comprehensive tests
+  - **Quality**: All tests follow DDD patterns with extensive validation, edge cases, and business logic coverage
+
 - **Unit Tests for Auth Components** - Created comprehensive unit tests for authentication middleware [2025-08-29]
   - Created tests for deprecated auth middleware utilities (`auth_middleware_test.py`)
   - Created tests for DualAuthMiddleware with full coverage (`dual_auth_middleware_test.py`)

@@ -86,7 +86,7 @@ class TaskFacadeFactory:
     if TYPE_CHECKING:
         from ...application.facades.task_application_facade import TaskApplicationFacade as _TaskApplicationFacade
 
-    def create_task_facade(self, project_id: str, git_branch_id: str = None, user_id: str = None) -> object:
+    def create_task_facade(self, project_id: str = None, git_branch_id: str = None, user_id: str = None) -> object:
         """
         Create a task application facade with proper dependency injection.
         
@@ -94,7 +94,7 @@ class TaskFacadeFactory:
         with all required dependencies using dependency injection.
         
         Args:
-            project_id: Project identifier for repository creation
+            project_id: Project identifier for repository creation (optional for task-only operations)
             git_branch_id: Git branch UUID (if None, will use default branch)
             user_id: User identifier
             
@@ -109,13 +109,25 @@ class TaskFacadeFactory:
         # Validate user authentication (MVP mode will provide default if needed)
         user_id = validate_user_id(user_id, "Task facade creation")
         
-        # Create task repository for facade construction
-        # For now, use "main" as branch name since we're transitioning to UUIDs
-        task_repository = self._repository_factory.create_repository(project_id, "main", user_id)
+        # If project_id is None, create a system-level repository for task operations
+        if project_id is None:
+            # Use a special system-level repository that can operate across projects
+            # This is needed for task GET operations where we only have task_id
+            from ..repositories.repository_factory import RepositoryFactory
+            task_repository = RepositoryFactory.get_task_repository(
+                project_id=None,  # None for cross-project operations
+                git_branch_name=None,  # None for all branches
+                user_id=user_id
+            )
+        else:
+            # Create task repository for facade construction
+            # For now, use "main" as branch name since we're transitioning to UUIDs
+            task_repository = self._repository_factory.create_repository(project_id, "main", user_id)
         
         # Create subtask repository if factory is available
         subtask_repository = None
-        if self._subtask_repository_factory:
+        if self._subtask_repository_factory and project_id:
+            # Only create subtask repository when we have a project_id
             subtask_repository = self._subtask_repository_factory.create_subtask_repository(project_id)
         
         # Create context service for context integration if available
@@ -161,7 +173,8 @@ class TaskFacadeFactory:
         
         # Create subtask repository if factory is available
         subtask_repository = None
-        if self._subtask_repository_factory:
+        if self._subtask_repository_factory and project_id:
+            # Only create subtask repository when we have a project_id
             subtask_repository = self._subtask_repository_factory.create_subtask_repository(project_id)
         
         # Create context service for context integration if available
