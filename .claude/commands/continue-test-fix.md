@@ -1,6 +1,10 @@
 # MCP Tool Testing Protocol - Decision Tree
 
 I no need make report, i want coder agent correct code issue by finding on test
+code correct need respect description of tools and DDD architectures.
+view logs/backend.log for more details. (tail 200 ligne each time)
+
+
 
 ## 🚀 Entry Point
 ```

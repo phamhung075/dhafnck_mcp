@@ -1,7 +1,7 @@
 """Test module for SubtaskApplicationFacade."""
 import pytest
 from unittest.mock import Mock, MagicMock, patch, call
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, Any, List
 import sqlite3
 
@@ -10,8 +10,8 @@ from fastmcp.task_management.domain.exceptions import TaskNotFoundError
 from fastmcp.task_management.domain.value_objects.task_id import TaskId
 from fastmcp.task_management.domain.entities.task import Task
 from fastmcp.task_management.application.use_cases.add_subtask import AddSubtaskRequest
-from fastmcp.task_management.application.dtos.subtask.subtask_response import SubtaskResponse as AddSubtaskResponse
-from fastmcp.task_management.application.use_cases.update_subtask import UpdateSubtaskRequest, UpdateSubtaskResponse
+from fastmcp.task_management.application.use_cases.update_subtask import UpdateSubtaskRequest
+from fastmcp.task_management.application.dtos.subtask.subtask_response import SubtaskResponse
 from fastmcp.task_management.infrastructure.repositories.task_repository_factory import TaskRepositoryFactory
 from fastmcp.task_management.infrastructure.repositories.subtask_repository_factory import SubtaskRepositoryFactory
 
@@ -24,7 +24,7 @@ class MockSubtask:
     description: str = ""
     status: str = "todo"
     priority: str = "medium"
-    assignees: List[str] = None
+    assignees: List[str] = field(default_factory=list)
     progress_percentage: int = 0
 
     def to_dict(self):
@@ -34,7 +34,7 @@ class MockSubtask:
             "description": self.description,
             "status": self.status,
             "priority": self.priority,
-            "assignees": self.assignees or [],
+            "assignees": self.assignees,
             "progress_percentage": self.progress_percentage
         }
 
@@ -96,7 +96,7 @@ class TestSubtaskApplicationFacade:
     @pytest.fixture
     def mock_add_subtask_response(self):
         """Create mock add subtask response."""
-        response = Mock(spec=AddSubtaskResponse)
+        response = Mock(spec=SubtaskResponse)
         response.subtask = MockSubtask(
             id="subtask_123",
             title="Test Subtask",
@@ -109,13 +109,14 @@ class TestSubtaskApplicationFacade:
     @pytest.fixture
     def mock_update_subtask_response(self):
         """Create mock update subtask response."""
-        response = Mock(spec=UpdateSubtaskResponse)
-        response.subtask = MockSubtask(
+        response = Mock(spec=SubtaskResponse)
+        subtask_data = MockSubtask(
             id="subtask_123",
             title="Updated Subtask",
             status="in_progress"
-        )
-        response.to_dict = lambda: response.subtask.to_dict()
+        ).to_dict()
+        response.subtask = subtask_data
+        response.to_dict = lambda: subtask_data
         return response
 
 
